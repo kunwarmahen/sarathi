@@ -129,10 +129,11 @@ $ echo $?
 
 ## What is not here yet
 
-* One settings file (`sarathi.toml`) turned into each sibling's own
-  settings. Siblings never read it.
-* `sarathi up` / `down`: start the pieces as plain processes, then as
-  Podman containers with Quadlet units.
+* ~~One settings file (`sarathi.toml`) turned into each sibling's own
+  settings.~~ Built: [notes/02](02-one-file-two-processes.md).
+* ~~`sarathi up` / `down` as plain processes.~~ Built:
+  [notes/02](02-one-file-two-processes.md). As Podman containers with
+  Quadlet units: not yet.
 * A way for Yantra's web page to take tabs from outside, so the Setu and
   Samay wiring Yantra carries today can move here.
 * The household road: Dvara's agents reaching each person's Setu and

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import os
-import stat
 from pathlib import Path
 
 import pytest
@@ -20,30 +19,12 @@ import pytest
 from sarathi import siblings
 from sarathi.cli import main
 
+from conftest import program
+
 SETU = {"format": "setu.status.v1", "connections": [{"ref": "gmail:mine"},
                                                      {"ref": "homeassistant:house"}]}
 SAMAY = {"format": "samay.status.v1", "serving": True, "url": "http://127.0.0.1:8780/",
          "schedules": {"active": 2, "paused": 1, "done": 0}}
-
-
-def program(where: Path, name: str, prints: str = "", code: int = 0) -> Path:
-    where.mkdir(parents=True, exist_ok=True)
-    path = where / name
-    path.write_text(f"#!/bin/sh\n/bin/cat <<'EOF'\n{prints}\nEOF\nexit {code}\n")
-    path.chmod(path.stat().st_mode | stat.S_IXUSR)
-    return path
-
-
-@pytest.fixture
-def world(tmp_path, monkeypatch):
-    """An empty PATH and an empty folder of checkouts; nothing else is seen."""
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    monkeypatch.setenv("PATH", str(bin_dir))
-    monkeypatch.setenv("SARATHI_SIBLINGS", str(tmp_path / "checkouts"))
-    for s in siblings.SIBLINGS:
-        monkeypatch.delenv(siblings.env_name(s), raising=False)
-    return tmp_path
 
 
 def everything(world: Path) -> None:
