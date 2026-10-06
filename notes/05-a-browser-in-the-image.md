@@ -235,9 +235,13 @@ network's service `inactive`.
 
 ## What is not here yet
 
-* **Amazon and X themselves, end to end in the containers**: a person
-  signing in from a phone through the door's window, and Yantra's site
-  tools reading orders. Each half was tried here (a profile opens signed
-  in; the window streams Amazon's real page) but not one person's whole
-  path.
+* ~~**A person signing in to Amazon from a phone through the door's
+  window, in the containers.**~~ Done from a real phone on home Wi-Fi:
+  `/connect amazon` to the bot, the window, email, password, connected.
+  It took four fixes no scripted phone had found: the Google client file
+  mounted (Gmail, the step before), a writable home for Chrome (above),
+  typed text focusing the page's empty box, and an Enter that presses
+  the form's own button when Amazon's page ignores the key (Setu).
+* **X in the containers**, and **Yantra's site tools reading Amazon's
+  orders** there with that sign-in. Not tried yet.
 * **The Chromium road** on arm64 (a Raspberry Pi) is written, not tried.

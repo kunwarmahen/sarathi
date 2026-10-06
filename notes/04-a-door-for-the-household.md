@@ -169,8 +169,11 @@ page container: no TOKEN in its environment
 
 `sarathi down --remove` left no units, containers or network behind.
 
-**Not tested live:** a real Telegram bot (no token was used), and a
-schedule made in the chat end to end. ~~dvara's example agents can't
+**Not tested live** when this was written: a real Telegram bot, and a
+schedule made in the chat end to end. ~~A real bot~~ has since run on
+the Podman road from a real phone: letting yourself in from `sarathi
+status`, Gmail connected from the chat, and Amazon through the window
+([note 05](05-a-browser-in-the-image.md)). ~~dvara's example agents can't
 make one: their tool lists don't include Samay's.~~ dvara now ships
 `minder`, which can, and `sarathi door` copies it with the others; its
 end-to-end receipt is in dvara's note 18.
