@@ -191,6 +191,12 @@ on a fixed port there (`window_port`, else 8790), published on
 `window_host` alone, and the link says `window_url` or
 `http://window_host:port`.
 
+Your own phone can use the same sign-ins as this computer's page: under
+`[actor.owner]`, `setu = "~/.local/state/setu"` with `setu_manage = true`,
+so `/connect amazon` from the chat signs in there (dvara's note 27). The
+image installs dvara with its browse extra, so an agent behind the door
+can read Amazon or X when its package asks for them.
+
 A door that can't start (no actors file, a bot with no token) says why,
 and the clock and page start anyway. On the Podman road it's a third
 unit, `sarathi-door`, on a network shared with the others

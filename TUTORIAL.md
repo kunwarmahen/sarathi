@@ -405,6 +405,35 @@ setu = true                    # a separate folder, starting empty: you connect 
 `setu = true` is the safe way to try things first: nothing you do from
 the phone touches the accounts on your computer.
 
+With the first, the phone and the page share one set of sign-ins, but
+`/connect` from the chat answers that the owner looks after them, the
+same as it would for a guest. You are the owner, so add:
+
+```toml
+setu_manage = true             # /connect, /disconnect and /accounts reach that folder
+```
+
+Then when Amazon asks for its password again (it does, for its orders
+page, after a while), you send `/connect amazon` and sign in in the
+window it streams to your phone. Tick *Keep me signed in* there; a
+sign-in without it is asked for again sooner. `/lock` still belongs to
+the computer, since a passphrase on that folder would lock the page out
+too (dvara's note 27).
+
+An agent reads Amazon only if its package asks for it. For `minder`,
+add to `~/dvara/agents/minder/agent.toml`:
+
+```toml
+[tools]
+allow = ["web_fetch", "read_file", "write_file", "mcp__samay__*", "amazon_*"]
+
+[connections]
+needs = ["amazon:read"]        # open, follow, scroll, search -- never a click or a purchase
+```
+
+Then ask *"What were my last three Amazon orders? Just the titles and
+the dates."*
+
 **Try each piece from your phone.** Both ways of running (plain programs
 or containers, Step 5) work for all of this. Say `minder` was the agent
 you gave the bot:

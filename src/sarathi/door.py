@@ -75,8 +75,11 @@ def starter_actors(telegram_id: str | None) -> str:
 
 [actor.owner]
 permissions = "ask"     # you may be asked before an agent changes anything
-# Your own accounts (Gmail, Home Assistant...) from your phone too:
+# Your own accounts (Gmail, Home Assistant...) from your phone too --
+# the same sign-ins this computer's page uses, and /connect, /disconnect
+# from the chat reach them:
 # setu = "~/.local/state/setu"
+# setu_manage = true
 
 {channel}
 # Someone else, with a Setu folder of their own (they connect their
