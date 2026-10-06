@@ -39,6 +39,10 @@ JSON it prints. Sarathi itself has no dependencies.
 
 ## Setup
 
+**New to all of this? Start with [the tutorial](TUTORIAL.md):** from
+choosing a model to a helper that reads your mail and keeps a schedule,
+in plain English.
+
 ```bash
 git clone https://github.com/kunwarmahen/sarathi
 cd sarathi
