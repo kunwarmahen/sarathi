@@ -126,6 +126,43 @@ with the last lines of its log, not as "started".
 
 `sarathi down` stops what `up` started and nothing else.
 
+### Or as containers: the Podman road
+
+```bash
+sarathi init --podman          # or set  [run] road = "podman"  in sarathi.toml
+sarathi image                  # build the image (a few minutes, once per update)
+sarathi up
+```
+
+On this road `up` writes two Quadlet units, `sarathi-clock` and
+`sarathi-page`, into `~/.config/containers/systemd/`, and systemd starts
+them. They come back on their own after a crash, and they start again
+when you log in. `sarathi down` stops them; `sarathi down --remove` also
+takes the units out, so nothing starts at login.
+
+What goes into the containers:
+
+* **One image holding Yantra, Setu and Samay.** They call each other as
+  programs, so each container needs all of them. `sarathi image` builds
+  it from the **committed** code of the checkouts beside Sarathi, and
+  names any uncommitted changes it left out.
+* **Your data, at the same paths.** Samay's schedules, Setu's sign-ins
+  and Yantra's memory are mounted from where they are on your machine,
+  at the same paths, and the containers run as you. Nothing is copied,
+  and the process road and the Podman road see the same things.
+* **Ollama stays on your machine.** The containers reach it at
+  `host.containers.internal`, so Ollama has to listen on more than
+  127.0.0.1 (`OLLAMA_HOST=0.0.0.0`).
+* **A cloud key only from `secrets.env`.** A systemd unit can't see the
+  shell you ran `sarathi up` from, so on this road a key there wouldn't
+  arrive. `up` refuses to start rather than start without it. The unit
+  files themselves hold no key.
+
+Not in the containers: a browser. Setu accounts that work through a
+browser (Amazon, X) and Yantra's browser tools need the process road.
+Gmail and Home Assistant, which Setu reaches through their APIs, work on
+both roads.
+
 ### Any time: `sarathi status`
 
 ```
@@ -176,6 +213,7 @@ In this order; the first hit wins:
 |---|---|
 | `~/.config/sarathi/sarathi.toml` | the settings (`$SARATHI_CONFIG` for another folder) |
 | `~/.config/sarathi/secrets.env` | a cloud key, if you typed one; readable only by you |
+| `~/.config/containers/systemd/sarathi-*.container` | the Podman road's units, written by `up` (edit `sarathi.toml`, not these) |
 | `~/.local/share/sarathi/` | `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
@@ -192,17 +230,20 @@ src/sarathi/
   first_run.py  sarathi init: which model answers, asked once  (notes/02)
   services.py   sarathi up / down: start the clock and the page, know
                 which are ours  (notes/02)
+  podman.py     the same on the podman road: the image, the Quadlet
+                units, systemd  (notes/03)
+  Containerfile one image, every program
   cli.py        sarathi init | up | down | status [--json]
 tests/
-  test_status.py  test_config.py  test_up.py
+  test_status.py  test_config.py  test_up.py  test_podman.py
 ```
 
 ## Status
 
-Finding the pieces, the settings and starting them as plain processes
-are built. Next: the same pieces as Podman containers with Quadlet units.
-After that, the Setu and Samay wiring Yantra carries today moves here,
-and then the road for a household on Telegram through Dvara.
+Finding the pieces, the settings, and starting them as plain processes
+or as Podman containers are all built. Next comes deciding which parts
+of what Yantra carries today move here, and then the road for a
+household on Telegram through Dvara.
 
 ## Tests
 

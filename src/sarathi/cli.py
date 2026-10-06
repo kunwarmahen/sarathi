@@ -1,6 +1,7 @@
 """`sarathi`: set it up once, start it, see what is here, stop it.
 
     sarathi init              which model answers; writes sarathi.toml
+    sarathi image             build the image the podman road runs
     sarathi up                start Yantra's page and Samay's clock
     sarathi down              stop what `up` started, and nothing else
     sarathi status            each piece: found where, what it says, and
@@ -15,6 +16,8 @@ can run with nobody there.
 and 1 when one is missing or its status could not be read. Dvara and
 Smritikosh are optional: missing, they are reported, never failed on.
 ``up`` exits 1 when anything it should have started is not answering.
+``up`` and ``down`` start and stop plain processes, or -- with
+``run.road = "podman"`` -- the systemd units podman.py writes.
 """
 
 from __future__ import annotations
@@ -25,7 +28,7 @@ import os
 import sys
 from pathlib import Path
 
-from sarathi import __version__, first_run, services
+from sarathi import __version__, first_run, podman, services
 from sarathi.config import PROVIDERS, ConfigError, load
 from sarathi.siblings import Found, env_name, find_all
 
@@ -49,10 +52,16 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--clock-port", dest="clock_port", type=int, help="Samay's page")
     init.add_argument("--no-clock", dest="no_clock", action="store_true",
                       help="do not start Samay")
+    init.add_argument("--podman", action="store_true",
+                      help="start things as Podman containers (see `sarathi image`)")
     init.add_argument("--force", action="store_true", help="replace sarathi.toml")
 
+    subs.add_parser("image", help="build the image for the podman road, from the "
+                                  "checkouts' committed code")
     subs.add_parser("up", help="start Yantra's page and Samay's clock")
-    subs.add_parser("down", help="stop what `sarathi up` started")
+    down = subs.add_parser("down", help="stop what `sarathi up` started")
+    down.add_argument("--remove", action="store_true",
+                      help="podman road: also remove the units, so nothing starts at login")
     status = subs.add_parser("status", help="what is here, and what each piece says")
     status.add_argument("--json", dest="json_out", action="store_true",
                         help=f"print {FORMAT} instead of lines")
@@ -90,13 +99,14 @@ def _running_lines(started: list[dict]) -> list[str]:
         return []
     out = ["", "started by `sarathi up`:"]
     for r in started:
+        address = r.get("address") or r["url"]
+        where = f"unit {r['unit']}" if "unit" in r else f"pid {r['pid']}, since {r['started']}"
         if r["alive"]:
-            address = r.get("address") or r["url"]
-            out.append(f"  {r['name']:<6} running at {address}  (pid {r['pid']}, "
-                       f"since {r['started']})")
+            out.append(f"  {r['name']:<6} running at {address}  ({where})")
         else:
-            out.append(f"  {r['name']:<6} STOPPED -- it exited; the end of "
-                       f"{_home(str(services.log_path(r['name'])))}:")
+            log = f"its journal ({r['unit']})" if "unit" in r else \
+                _home(str(services.log_path(r["name"])))
+            out.append(f"  {r['name']:<6} STOPPED -- it exited; the end of {log}:")
             out += [f"         | {line}" for line in r["log"]]
     return out
 
@@ -106,24 +116,41 @@ def _ok(found: list[Found]) -> bool:
                for f in found)
 
 
+def _settings_or_none():
+    try:
+        return load()
+    except ConfigError:
+        return None
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "init":
         return first_run.run(args)
-    if args.command == "down":
-        print("\n".join(services.down()))
-        return 0
-    found = find_all()
-    if args.command == "up":
-        try:
-            lines, ok = services.up(load(), {f.sibling.name: f for f in found})
-        except ConfigError as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
-        print("\n".join(lines))
-        return 0 if ok else 1
+    try:
+        if args.command == "image":
+            return podman.build()
+        if args.command == "down":
+            config = _settings_or_none()
+            on_podman = config is not None and config.road == "podman"
+            print("\n".join(podman.down(args.remove) if on_podman else services.down()))
+            return 0
+        found = find_all()
+        if args.command == "up":
+            config = load()
+            if config.road == "podman":
+                lines, ok = podman.up(config)
+            else:
+                lines, ok = services.up(config, {f.sibling.name: f for f in found})
+            print("\n".join(lines))
+            return 0 if ok else 1
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     # status
-    started = services.running()
+    config = _settings_or_none()
+    started = podman.running(config) if config and config.road == "podman" \
+        else services.running()
     if args.json_out:
         print(json.dumps({"format": FORMAT, "version": __version__, "ok": _ok(found),
                           "siblings": [f.as_json() for f in found], "started": started}))

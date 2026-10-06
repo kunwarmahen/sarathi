@@ -203,14 +203,13 @@ nothing started by `sarathi up` is running
 
 ## What is not here yet
 
-* The same two processes as Podman containers with Quadlet units: one
-  image holding every sibling, so the program-to-program links keep
-  working, and one unit per process.
-* Keeping them running after a reboot or a crash. On the plain road
-  that's `samay unit` for the clock today. For both, it is what the
-  Quadlet units will do.
+* ~~The same two processes as Podman containers with Quadlet units.~~
+  Built: [notes/03](03-two-containers-one-clock.md).
+* ~~Keeping them running after a reboot or a crash.~~ The Podman road
+  does: [notes/03](03-two-containers-one-clock.md). On the process road
+  it's still `samay unit` for the clock.
 * Each sibling's data in one place. Sarathi deliberately leaves Samay's
   schedules in `~/.samay` and Setu's sign-ins where Setu put them, so
   installing Sarathi on a machine that already uses them changes
-  nothing. Containers will need a decision about which folders to
-  mount.
+  nothing. The containers mount those same folders at the same paths
+  ([notes/03](03-two-containers-one-clock.md)).

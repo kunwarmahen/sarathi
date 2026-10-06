@@ -1,0 +1,41 @@
+# Sarathi -- Yantra, Setu and Samay in one image.
+#
+# Not built by hand: `sarathi image` puts a clean copy of each project's
+# committed code beside this file and builds from there. The context is
+#
+#   yantra/  setu/  samay/  Containerfile
+#
+# ONE IMAGE, SEVERAL CONTAINERS. The projects call each other as programs
+# -- the page runs `setu run gmail:mine` and `samay mcp`, the clock runs
+# `yantra --json` -- so every program has to be in every container. Each
+# project keeps its own environment under /opt, as on a desktop, so their
+# dependencies never have to agree; /usr/local/bin holds one link to each.
+#
+# The image carries code only. Keys, sign-ins, schedules and memories are
+# mounted at run time by the units `sarathi units` writes.
+
+FROM python:3.12-slim
+
+RUN pip install --no-cache-dir uv
+# Copies, not hard links into uv's cache (which is not in the image), and
+# the Python this image already has.
+ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never UV_NO_CACHE=1
+
+# Least-changing first, so a change to Samay does not reinstall Yantra.
+COPY yantra/pyproject.toml yantra/uv.lock /opt/yantra/
+RUN cd /opt/yantra && uv sync --frozen --no-dev --extra web --no-install-project
+COPY yantra/ /opt/yantra/
+RUN cd /opt/yantra && uv sync --frozen --no-dev --extra web
+
+COPY setu/ /opt/setu/
+RUN cd /opt/setu && uv sync --frozen --no-dev --all-packages
+
+COPY samay/ /opt/samay/
+RUN cd /opt/samay && uv sync --frozen --no-dev
+
+RUN ln -s /opt/yantra/.venv/bin/yantra /opt/setu/.venv/bin/setu \
+          /opt/samay/.venv/bin/samay /usr/local/bin/
+
+# A pipe, not a terminal: without this, `podman logs` stays empty until
+# the process exits.
+ENV PYTHONUNBUFFERED=1

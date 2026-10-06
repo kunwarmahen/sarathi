@@ -20,12 +20,13 @@ from sarathi.config import Config, ConfigError, parse, render
 
 def init_args(**given) -> argparse.Namespace:
     base = dict(provider=None, model=None, base_url=None, web_port=None, clock_port=None,
-                no_clock=False, force=False)
+                no_clock=False, podman=False, force=False)
     return argparse.Namespace(**{**base, **given})
 
 
 def test_what_init_writes_reads_back_as_the_same_settings(world):
-    for chosen in (Config("ollama", "gemma4:12b", "http://box:11434/v1", 8400, False, 8781),
+    for chosen in (Config("ollama", "gemma4:12b", "http://box:11434/v1", 8400, False, 8781,
+                          "podman"),
                    Config("anthropic")):
         assert parse(render(chosen)) == chosen
 
@@ -36,6 +37,7 @@ def test_what_init_writes_reads_back_as_the_same_settings(world):
     ('[model]\nprovider = "gemini"\n', "model.provider must be one of"),
     ('[model]\nprovider = "ollama"\n[web]\nport = "8321"\n', "web.port must be a port"),
     ('[model]\nprovider = "ollama"\n[clock]\non = "yes"\n', "clock.on must be true or false"),
+    ('[model]\nprovider = "ollama"\n[run]\nroad = "docker"\n', "run.road must be one of"),
     ('[model\n', "not valid TOML"),
 ])
 def test_a_setting_it_does_not_know_stops_everything_by_name(text, says):

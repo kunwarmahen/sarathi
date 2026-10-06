@@ -141,7 +141,8 @@ def run(args, *, ask: Callable[[str], str] = input,
     config = Config(provider=provider, model=model, base_url=args.base_url,
                     web_port=args.web_port or DEFAULT_WEB_PORT,
                     clock_on=not args.no_clock,
-                    clock_port=args.clock_port or DEFAULT_CLOCK_PORT)
+                    clock_port=args.clock_port or DEFAULT_CLOCK_PORT,
+                    road="podman" if getattr(args, "podman", False) else "process")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(render(config))
     answering = f"{provider}, {model}" if model else f"{provider}, its default model"

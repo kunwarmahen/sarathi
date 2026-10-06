@@ -44,7 +44,12 @@ KNOWN: dict[str, set[str]] = {
     "model": {"provider", "model", "base_url"},
     "web": {"port"},
     "clock": {"on", "port"},
+    "run": {"road"},
 }
+
+#: How `up` starts things: plain processes, or Podman containers under
+#: systemd (podman.py).
+ROADS = ("process", "podman")
 
 
 class ConfigError(ValueError):
@@ -59,6 +64,7 @@ class Config:
     web_port: int = DEFAULT_WEB_PORT
     clock_on: bool = True
     clock_port: int = DEFAULT_CLOCK_PORT
+    road: str = "process"
 
 
 def config_dir() -> Path:
@@ -107,7 +113,10 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     clock = data.get("clock", {})
     if not isinstance(clock.get("on", True), bool):
         raise ConfigError(f"{where}: clock.on must be true or false")
-    return Config(provider=provider, model=model.get("model") or None,
+    road = data.get("run", {}).get("road", "process")
+    if road not in ROADS:
+        raise ConfigError(f"{where}: run.road must be one of {', '.join(ROADS)}, not {road!r}")
+    return Config(provider=provider, road=road, model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   web_port=_port(data.get("web", {}), "port", DEFAULT_WEB_PORT, "web"),
                   clock_on=clock.get("on", True),
@@ -149,6 +158,11 @@ port = {config.web_port}
 [clock]
 on = {"true" if config.clock_on else "false"}
 port = {config.clock_port}
+
+# How `sarathi up` starts them: process (plain programs on this machine)
+# | podman (containers kept running by systemd; build with `sarathi image`).
+[run]
+road = "{config.road}"
 """
 
 
