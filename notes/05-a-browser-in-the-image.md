@@ -242,6 +242,11 @@ network's service `inactive`.
   mounted (Gmail, the step before), a writable home for Chrome (above),
   typed text focusing the page's empty box, and an Enter that presses
   the form's own button when Amazon's page ignores the key (Setu).
-* **X in the containers**, and **Yantra's site tools reading Amazon's
-  orders** there with that sign-in. Not tried yet.
-* **The Chromium road** on arm64 (a Raspberry Pi) is written, not tried.
+* **X through the window** is turned away by X itself (*"we have
+  temporarily limited your access"*). Signing in to X at the computer
+  instead, in an ordinary window, may get round it; not tried.
+* **Yantra's site tools reading Amazon's orders** in the containers,
+  with the sign-in from the phone. Not tried yet: ask the page *"what
+  were my last three Amazon orders?"*.
+* **Later:** a phone over Tailscale, and the Chromium road on arm64 (a
+  Raspberry Pi), written but with no machine to try it on.
