@@ -31,6 +31,7 @@ Where things live:
 
 from __future__ import annotations
 
+import json
 import os
 import tomllib
 from dataclasses import dataclass
@@ -55,7 +56,8 @@ KNOWN: dict[str, set[str]] = {
     "web": {"port"},
     "clock": {"on", "port"},
     "run": {"road"},
-    "door": {"on", "port", "telegram", "root", "actors", "state"},
+    "door": {"on", "port", "telegram", "root", "actors", "state", "window_host",
+             "window_port", "window_url"},
 }
 
 #: How `up` starts things: plain processes, or Podman containers under
@@ -89,6 +91,18 @@ class Door:
     root: str = DOOR_ROOT
     actors: str = DOOR_ACTORS
     state: str = DOOR_STATE
+    #: Where Setu's streamed sign-in window listens, for a site signed in
+    #: to in a browser (Amazon) from someone's phone; None: at the machine.
+    window_host: str | None = None
+    window_port: int | None = None
+    window_url: str | None = None
+
+    def window_env(self) -> dict[str, str]:
+        """Setu's own names for the window settings."""
+        pairs = (("SETU_WINDOW_HOST", self.window_host),
+                 ("SETU_WINDOW_PORT", str(self.window_port) if self.window_port else None),
+                 ("SETU_WINDOW_URL", self.window_url))
+        return {k: v for k, v in pairs if v}
 
     def path(self, which: str) -> Path:
         return Path(getattr(self, which)).expanduser()
@@ -146,14 +160,18 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     door_table = data.get("door", {})
     if not isinstance(door_table.get("on", False), bool):
         raise ConfigError(f"{where}: door.on must be true or false")
-    for key in ("telegram", "root", "actors", "state"):
+    for key in ("telegram", "root", "actors", "state", "window_host", "window_url"):
         if not isinstance(door_table.get(key, ""), str):
             raise ConfigError(f"{where}: door.{key} must be text")
     door = Door(port=_port(door_table, "port", DEFAULT_DOOR_PORT, "door"),
                 telegram=door_table.get("telegram") or None,
                 root=door_table.get("root") or DOOR_ROOT,
                 actors=door_table.get("actors") or DOOR_ACTORS,
-                state=door_table.get("state") or DOOR_STATE) \
+                state=door_table.get("state") or DOOR_STATE,
+                window_host=door_table.get("window_host") or None,
+                window_port=_port(door_table, "window_port", 0, "door") or None
+                if "window_port" in door_table else None,
+                window_url=door_table.get("window_url") or None) \
         if door_table.get("on", False) else None
     return Config(provider=provider, road=road, door=door, model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
@@ -220,13 +238,22 @@ on = false
         else f'# {key} = "{default}"\n'
         for key, default in (("root", DOOR_ROOT), ("actors", DOOR_ACTORS),
                              ("state", DOOR_STATE)))
+    window = "".join(
+        f"{key} = {json.dumps(value)}\n" if value else f"# {key} = ...\n"
+        for key, value in (("window_host", door.window_host), ("window_port", door.window_port),
+                           ("window_url", door.window_url)))
     return f"""# dvara: your agents for other people, and for you on your phone.
 # Its tokens are in secrets.env; who it serves is in the actors file.
 [door]
 on = true
 port = {door.port}
 {bot}
-{folders}"""
+{folders}
+# Signing in to Amazon or X from someone's phone: a browser window here,
+# streamed to them. Where it listens (your home network's address, a
+# Tailscale address, or 127.0.0.1 behind your own HTTPS with window_url).
+# Unset: those sites are signed in to at this computer.
+{window}"""
 
 
 def write_private(path: Path, text: str) -> None:

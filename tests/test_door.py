@@ -25,6 +25,7 @@ from test_up import run, seen
 
 def door_args(**given) -> argparse.Namespace:
     return argparse.Namespace(**{**dict(telegram=None, telegram_id=None, port=None,
+                                        window_host=None, window_port=None, window_url=None,
                                         off=False), **given})
 
 
@@ -177,3 +178,25 @@ def test_a_door_section_reads_back_as_written():
     assert config.parse(config.render(chosen)) == chosen
     with pytest.raises(config.ConfigError, match="door.on must be true or false"):
         config.parse('[model]\nprovider = "ollama"\n[door]\non = "yes"\n')
+
+
+def test_the_window_settings_reach_the_door_in_setus_own_names(stage, home, capsys):
+    door_on(stage, home)
+    text = config.settings_path().read_text().replace(
+        "telegram = \"greeter\"\n",
+        'telegram = "greeter"\nwindow_host = "100.101.102.103"\nwindow_port = 8767\n')
+    config.settings_path().write_text(text)
+    run(capsys, "up")
+    gate = seen(stage, "dvara")["env"]
+    assert gate["SETU_WINDOW_HOST"] == "100.101.102.103"
+    assert gate["SETU_WINDOW_PORT"] == "8767" and "SETU_WINDOW_URL" not in gate
+    assert "SETU_WINDOW_HOST" not in seen(stage, "yantra")["env"]
+
+
+def test_the_door_command_keeps_the_window_address(world, home, dvara_checkout):
+    settings(world, {"web": 8321, "clock": 8780})
+    door.run(door_args(telegram="", window_host="100.101.102.103",
+                       window_url="https://door.example.net"), dvara_checkout,
+             interactive=False)
+    assert load().door.window_env() == {"SETU_WINDOW_HOST": "100.101.102.103",
+                                        "SETU_WINDOW_URL": "https://door.example.net"}

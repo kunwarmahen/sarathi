@@ -9,6 +9,7 @@ that say what was chosen.
     sarathi door                         ask: which agent a Telegram bot answers as
     sarathi door --telegram greeter      the same, without asking
     sarathi door --telegram-id 8675309   you, in a new actors file, on Telegram
+    sarathi door --window-host 100.101.102.103   Amazon/X sign-ins streamed to phones
     sarathi door --off                   stop starting it
 
 WHAT IT WRITES, AND WHERE.
@@ -126,7 +127,10 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
         telegram = ask("Which agent should a Telegram bot answer as? "
                        "(Enter: no bot, only the door's HTTP address) ").strip() or None
     door = replace(door, telegram=telegram or None,
-                   port=args.port or door.port or DEFAULT_DOOR_PORT)
+                   port=args.port or door.port or DEFAULT_DOOR_PORT,
+                   window_host=getattr(args, "window_host", None) or door.window_host,
+                   window_port=getattr(args, "window_port", None) or door.window_port,
+                   window_url=getattr(args, "window_url", None) or door.window_url)
 
     have = read_secrets()
     if DOOR_TOKEN not in have:

@@ -170,6 +170,22 @@ What a person would otherwise wire by hand in two places:
            messaged the bot but not in the actors file (telegram id): 8675309
   ```
 
+**Amazon or X from someone's phone.** Those sites are signed in to in a
+browser window on this computer. Give the door a window address and Setu
+streams that window to their phone when they send `/connect amazon`
+(dvara's note 22):
+
+```bash
+sarathi door --window-host 100.101.102.103      # your Tailscale address, say
+sarathi door --window-host 127.0.0.1 --window-url https://door.example.net   # behind your HTTPS
+```
+
+They become `[door] window_host / window_port / window_url`, passed to dvara
+as Setu's `SETU_WINDOW_*`. A home network address works for people at home
+but is plain HTTP; Tailscale or your own HTTPS is the safe choice beyond it.
+On the Podman road the image has no browser yet, so `up` says those sites
+are signed in to at this computer.
+
 A door that can't start (no actors file, a bot with no token) says why,
 and the clock and page start anyway. On the Podman road it's a third
 unit, `sarathi-door`, on a network shared with the others

@@ -376,6 +376,23 @@ connect their own Gmail from their phone by sending `/connect gmail` to
 the bot. Their sign-ins are kept on your computer, in a folder of their
 own, so you could read them. Tell them that.
 
+**Amazon or X for them, too.** Those sites can't send a sign-in link;
+they're signed in to in a browser on your computer. If you tell the door
+where its pages can be reached, it sends the person a link that shows
+that browser live on their phone, and they sign in by tapping and typing:
+
+```bash
+sarathi door --window-host <your computer's address>
+sarathi down && sarathi up
+```
+
+Which address: if everyone is on your home Wi-Fi, your computer's
+address there works, but what they type travels as plain web traffic
+across your Wi-Fi. If you use **Tailscale**, its address is the safe
+choice, encrypted and reachable wherever they are. Your computer runs
+that browser, so it handles what they type, their password included:
+offer it to people who already trust you with their agent.
+
 To turn the door off again: `sarathi door --off`, then
 `sarathi down && sarathi up`.
 

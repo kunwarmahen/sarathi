@@ -52,7 +52,7 @@ if args[:2] == ["status", "--json"]:
 seen = os.environ["FAKE_SEEN"]
 keep = {{k: v for k, v in os.environ.items()
         if k.startswith(("YANTRA_", "SAMAY_", "OLLAMA_", "ANTHROPIC_", "OPENAI_",
-                          "DVARA_", "TELEGRAM_"))}}
+                          "DVARA_", "TELEGRAM_", "SETU_WINDOW_"))}}
 with open(os.path.join(seen, name + ".json"), "w") as out:
     json.dump({{"argv": args, "env": keep, "cwd": os.getcwd(), "at": time.monotonic()}}, out)
 if os.environ.get("FAKE_CRASH") == name:

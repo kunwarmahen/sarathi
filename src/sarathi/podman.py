@@ -400,6 +400,9 @@ def up(config: Config) -> tuple[list[str], bool]:
         folder.mkdir(parents=True, exist_ok=True)
     write_env_files(config)
     lines = ["units rewritten from sarathi.toml"] if install(units(config)) else []
+    if config.door is not None and config.door.window_env():
+        lines.append("door   the streamed sign-in window needs a browser in the image, which "
+                     "it does not have yet: Amazon and X are signed in to at this computer")
     if not config.clock_on:
         lines.append("clock  off in sarathi.toml")
     ok = True

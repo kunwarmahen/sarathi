@@ -219,7 +219,7 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     secrets = read_secrets()
     tokens = {k: secrets[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in secrets}
     return Service("door", "dvara", argv, door.port,
-                   {**env, **tokens, **door_env(config)})
+                   {**env, **tokens, **door_env(config), **door.window_env()})
 
 
 def work_dir() -> Path:

@@ -65,6 +65,12 @@ def build_parser() -> argparse.ArgumentParser:
     door_cmd.add_argument("--telegram-id", dest="telegram_id", metavar="ID",
                           help="your own Telegram user id, for a new actors file")
     door_cmd.add_argument("--port", type=int, help="the door's HTTP port (default 8765)")
+    door_cmd.add_argument("--window-host", dest="window_host", metavar="ADDRESS",
+                          help="where a streamed sign-in window listens (home network, "
+                               "Tailscale, or 127.0.0.1 behind your own HTTPS)")
+    door_cmd.add_argument("--window-port", dest="window_port", type=int, metavar="PORT")
+    door_cmd.add_argument("--window-url", dest="window_url", metavar="URL",
+                          help="the address in the link, when it differs from the host")
     door_cmd.add_argument("--off", action="store_true", help="stop starting the door")
 
     subs.add_parser("image", help="build the image for the podman road, from the "
