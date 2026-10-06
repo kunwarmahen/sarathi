@@ -434,8 +434,10 @@ you gave the bot:
    The link shows Amazon's real sign-in page, live, at your phone's
    size. Type your email in the box at the bottom and press **Send**: it
    goes into the page's empty box by itself (tap a box on the picture
-   first to type somewhere else). Then **Enter**. The same for your
-   password and any code Amazon texts you.
+   first to type somewhere else). Then **Enter**, or just your
+   keyboard's Go, which sends and presses Enter in one. The same for
+   your password and any code Amazon texts you. Tapping a button on the
+   picture (Continue, Sign in) always works too.
    When you're in, the page says so and the bot says *connected*.
 
 If something doesn't answer, `sarathi status` says which piece stopped,
