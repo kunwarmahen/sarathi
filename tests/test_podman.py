@@ -49,6 +49,8 @@ def host(world, monkeypatch):
     monkeypatch.delenv("SAMAY_STATE", raising=False)
     recorder = Recorder()
     monkeypatch.setattr(podman, "run", recorder)
+    recorder.taken = set()            # host ports something else listens on
+    monkeypatch.setattr(podman, "answers", lambda port: port in recorder.taken)
     return recorder
 
 
@@ -332,3 +334,74 @@ def test_removing_stops_the_networks_service_before_the_network_goes(host):
     stop = host.calls.index(["systemctl", "--user", "stop", "sarathi-network.service"])
     gone = host.calls.index(["podman", "network", "rm", "sarathi"])
     assert stop < gone
+
+
+def test_a_port_something_else_holds_is_said_and_the_unit_not_left_looping(host, world):
+    """Published, it fails inside systemd every few seconds with the reason
+    deep in a journal -- as it did behind another program on 8765."""
+    with_door_secrets(world)
+    (world / "home" / "dvara" / "agents").mkdir(parents=True)
+    (world / "home" / "dvara" / "actors.toml").write_text("[actor.owner]\n")
+    host.answers[("systemctl", "--user", "is-active")] = subprocess.CompletedProcess(
+        [], 3, "", "")
+    host.taken = {8766}
+    lines, ok = podman.up(DOOR)
+    assert not ok
+    assert ("door   not started: something else is listening on port 8766 "
+            "(change door.port in sarathi.toml)") in lines
+    assert host.said("systemctl", "--user", "start", "sarathi-door.service") == 0
+    assert host.said("systemctl", "--user", "stop", "sarathi-door.service") == 1
+
+
+def test_the_windows_port_is_checked_too(host, world):
+    with_door_secrets(world)
+    (world / "home" / "dvara" / "agents").mkdir(parents=True)
+    (world / "home" / "dvara" / "actors.toml").write_text("[actor.owner]\n")
+    host.answers[("systemctl", "--user", "is-active")] = subprocess.CompletedProcess(
+        [], 3, "", "")
+    host.taken = {8790}
+    config = Config("ollama", road="podman", clock_port=8781,
+                    door=Door(window_host="127.0.0.1"))
+    lines, _ = podman.up(config)
+    assert any("port 8790 (change door.window_port" in line for line in lines)
+
+
+# ---- switching roads ---------------------------------------------------------------
+
+
+def _settings(world, road):
+    (world / "config").mkdir(exist_ok=True)
+    (world / "config" / "sarathi.toml").write_text(
+        f'[model]\nprovider = "ollama"\n[run]\nroad = "{road}"\n')
+
+
+def test_the_road_is_said_with_how_to_take_the_other(host, world, capsys):
+    from sarathi.cli import main
+    _settings(world, "process")
+    assert main(["road"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("road: process -- plain programs")
+    assert "`sarathi road podman`" in out
+
+
+def test_leaving_the_podman_road_removes_its_units_so_login_cannot_bring_them_back(
+        host, world, capsys):
+    """Both roads use the same ports."""
+    from sarathi.cli import main
+    from sarathi.config import load
+    _settings(world, "podman")
+    podman.install(podman.units(LOCAL))
+    assert main(["road", "process"]) == 0
+    assert load().road == "process"
+    assert not any(podman.unit_dir().glob("sarathi-*.container"))
+    assert "next: `sarathi up`" in capsys.readouterr().out
+
+
+def test_taking_the_podman_road_without_an_image_says_to_build_one(host, world, capsys):
+    from sarathi.cli import main
+    from sarathi.config import load
+    _settings(world, "process")
+    host.answers[("podman", "image", "exists")] = subprocess.CompletedProcess([], 1, "", "")
+    assert main(["road", "podman"]) == 0
+    assert load().road == "podman"
+    assert "next: `sarathi image` (once), then `sarathi up`" in capsys.readouterr().out

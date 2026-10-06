@@ -102,7 +102,7 @@ from sarathi.config import (
     secrets_path,
     write_private,
 )
-from sarathi.services import alive, door_problems, records, work_dir
+from sarathi.services import alive, answers, door_problems, records, work_dir
 from sarathi.siblings import beside_dir
 
 IMAGE = "localhost/sarathi:latest"
@@ -118,6 +118,8 @@ WINDOW_PORT = 8790
 #: The browser in the image, and the one a desktop's Setu records.
 BROWSER = "/usr/bin/google-chrome"
 UNITS = {"clock": "sarathi-clock", "door": "sarathi-door", "page": "sarathi-page"}
+#: The sarathi.toml key that moves each one's host port.
+SETTINGS = {"clock": "clock.port", "door": "door.port", "page": "web.port"}
 NETWORK = "sarathi"
 READY_TIMEOUT = 90.0
 HEADER = ("# Written by `sarathi up` from sarathi.toml, and rewritten whenever it\n"
@@ -501,6 +503,18 @@ def up(config: Config) -> tuple[list[str], bool]:
         if active(unit):
             address = (clock_address(config) if name == "clock" else None) or url
             lines.append(f"{name:<6} already running at {address}  (unit {unit})")
+            continue
+        taken = [(port, SETTINGS[name])] if answers(port) else []
+        shown = window(config) if name == "door" else None
+        if shown and answers(int(shown[1])):
+            taken.append((int(shown[1]), "door.window_port"))
+        if taken:
+            # a published port something else holds fails inside systemd,
+            # restarted every few seconds, with the reason deep in a journal
+            ok = False
+            run(["systemctl", "--user", "stop", f"{unit}.service"])   # if it was looping
+            lines += [f"{name:<6} not started: something else is listening on port "
+                      f"{busy} (change {setting} in sarathi.toml)" for busy, setting in taken]
             continue
         started = run(["systemctl", "--user", "start", f"{unit}.service"])
         deadline = time.monotonic() + READY_TIMEOUT

@@ -262,20 +262,28 @@ one is still running.
 
 ---
 
-## Step 5 (optional) · Keep it running, even after a restart
+## Step 5 (optional) · Plain programs, or containers
 
-`sarathi up` starts the programs from your terminal session. When the
-computer restarts, they're gone until you run it again, and that
+Sarathi runs everything two ways, and you can switch back and forth.
+Everything in this tutorial works either way, with the same accounts,
+schedules and memories.
+
+**Plain programs (what you have now).** `sarathi up` starts the
+programs from your terminal session, using your own Chrome and your
+own bubblewrap (`sudo apt install bubblewrap` if `setu status` says
+connectors aren't walled off). Nothing to build, and a `git pull` in a
+project folder is picked up at the next `sarathi up`. But when the
+computer restarts they're gone until you run it again, and that
 includes the clock, so a schedule set for 8:00 won't run if the machine
 rebooted at 7:00.
 
-If you have **Podman** (a program for containers), Sarathi can instead
-run them as containers that your computer keeps running: restarted if
-they crash, started again when you log in.
+**Containers.** If you have **Podman** (a program for containers),
+Sarathi can run them as containers your computer keeps running:
+restarted if they crash, started again when you log in.
 
 ```bash
-sarathi init --force --podman     # same questions, plus: use containers
-sarathi image                     # builds the container image (a few minutes)
+sarathi road podman               # use containers from now on
+sarathi image                     # builds the container image (a few minutes, ~1.3 GB)
 sarathi up
 ```
 
@@ -308,6 +316,15 @@ that too: `sarathi down --remove`.
 When the projects get an update (`git pull` in their folders), run
 `sarathi image` again and then `sarathi down && sarathi up`.
 
+**Back to plain programs** any time:
+
+```bash
+sarathi road process              # stops the containers and removes their units
+sarathi up
+```
+
+`sarathi road` on its own says which way you're running.
+
 ---
 
 ## Step 6 (optional) · On your phone, and for your family
@@ -332,7 +349,7 @@ sarathi door
 ```
 Which agent should a Telegram bot answer as? greeter
 Your bot's token from BotFather (TELEGRAM_TOKEN; hidden as you type): ••••
-the door is on in ~/.config/sarathi/sarathi.toml: port 8765, a Telegram bot answering as greeter
+the door is on in ~/.config/sarathi/sarathi.toml: port 8770, a Telegram bot answering as greeter
   made the door's own token (DVARA_TOKEN, in secrets.env)
   TELEGRAM_TOKEN saved to secrets.env (readable only by you)
   wrote ~/dvara/actors.toml: you, as the owner (your Telegram id still to add)
@@ -352,7 +369,7 @@ sarathi down && sarathi up
 
 ```
 clock  up at http://127.0.0.1:8780/#token=…
-door   up at http://127.0.0.1:8765/
+door   up at http://127.0.0.1:8770/
 page   up at http://127.0.0.1:8321/
 ```
 
@@ -368,7 +385,7 @@ sarathi status
 ```
 
 ```
-  door   running at http://127.0.0.1:8765/
+  door   running at http://127.0.0.1:8770/
          messaged the bot but not in the actors file (telegram id): 8675309
 ```
 
@@ -425,6 +442,7 @@ you're most likely to meet:
 | `door not started: no actors file at ~/dvara/actors.toml` | dvara's list of people is missing | `sarathi door` writes a starter one |
 | the bot never answers you | you're not in the actors file yet | Step 6, "Let yourself in" |
 | `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi down && sarathi up` |
+| `door not started: something else is listening on port 8770 (change door.port in sarathi.toml)` | another program on your computer uses that port | `sarathi door --port 8771` (any free number), then `sarathi up` |
 | `the door cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
 
 Each program also writes down what it printed:

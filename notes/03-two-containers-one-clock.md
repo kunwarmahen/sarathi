@@ -144,6 +144,35 @@ clock  stopped  (unit sarathi-clock)
 they start again at your next login (`sarathi down --remove` to stop that too)
 ```
 
+**A PORT SOMETHING ELSE HOLDS IS SAID BEFORE ANYTHING STARTS.** A
+published port that another program already holds fails inside systemd:
+`rootlessport listen tcp 127.0.0.1:8765: bind: address already in use`,
+exit 126, restarted every few seconds, with the reason a page deep in
+the journal. That's how the door first met a program of the owner's
+that was already on 8765. So `up` now checks each host port (the
+window's too) before it starts a unit, stops a unit that was already
+looping, and says what the process road says:
+
+```
+door   not started: something else is listening on port 8765 (change door.port in sarathi.toml)
+```
+
+## Switching roads
+
+Both roads run the same things on the same ports and read the same
+files, so switching is a setting, not a migration. `sarathi road
+process|podman` changes it, and first stops what the other road
+started. **LEAVING PODMAN REMOVES ITS UNITS.** Stopped units start again
+at the next login and take the ports back from the process road, so
+`down` alone isn't enough; `road` does `down --remove`. It starts
+nothing; `up` does that.
+
+```
+$ sarathi road
+road: podman -- containers that systemd keeps running and starts at login
+  (`sarathi road process` for plain programs on this machine, using its own browser and bubblewrap)
+```
+
 ## Live receipt
 
 `qwen3.8:latest` on the host's Ollama, the image built from yantra

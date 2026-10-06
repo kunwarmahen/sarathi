@@ -47,7 +47,11 @@ bot's token at a hidden prompt, and does the rest:
   tutorial, and Sarathi never edits them again. The agents are dvara's
   examples, not Sarathi's: Sarathi has no agent of its own (the plan's
   "not doing", kept);
-* **turns `[door]` on** in `sarathi.toml`.
+* **turns `[door]` on** in `sarathi.toml`, on port 8770 unless told
+  otherwise (`--port`). Not dvara's own 8765: that's the port a person
+  running dvara by hand, or some other program, is likeliest to have
+  taken already, and on this machine something had. Inside a container
+  the door still listens on 8765; only the published port moved.
 
 Then `sarathi up` starts clock, door, page, in that order. Steps 4 and 5
 are done once, in one place: both programs get `SAMAY_DVARA_URL` (the
@@ -104,7 +108,7 @@ its log, for the owner. So `sarathi status` reads the door's log (or its
 journal) and names them:
 
 ```
-  door   running at http://127.0.0.1:8765/  (pid 3426486)
+  door   running at http://127.0.0.1:8770/  (pid 3426486)
          messaged the bot but not in the actors file (telegram id): 8675309
 ```
 

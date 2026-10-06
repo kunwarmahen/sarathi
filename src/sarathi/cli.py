@@ -3,6 +3,8 @@
     sarathi init              which model answers; writes sarathi.toml
     sarathi door              turn on dvara, the door for other people and your
                               phone: its tokens, a Telegram bot, starter files
+    sarathi road [ROAD]       how `up` starts things: process (plain programs) or
+                              podman (containers); switching stops the other road
     sarathi image             build the image the podman road runs
     sarathi up                start Yantra's page and Samay's clock (and the door)
     sarathi down              stop what `up` started, and nothing else
@@ -28,10 +30,11 @@ import argparse
 import json
 import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from sarathi import __version__, door, first_run, podman, services
-from sarathi.config import PROVIDERS, ConfigError, load
+from sarathi.config import PROVIDERS, ConfigError, load, render, settings_path
 from sarathi.siblings import Found, env_name, find_all
 
 FORMAT = "sarathi.status.v1"
@@ -64,7 +67,7 @@ def build_parser() -> argparse.ArgumentParser:
                           help="the agent a Telegram bot answers as ('' for no bot)")
     door_cmd.add_argument("--telegram-id", dest="telegram_id", metavar="ID",
                           help="your own Telegram user id, for a new actors file")
-    door_cmd.add_argument("--port", type=int, help="the door's HTTP port (default 8765)")
+    door_cmd.add_argument("--port", type=int, help="the door's HTTP port (default 8770)")
     door_cmd.add_argument("--window-host", dest="window_host", metavar="ADDRESS",
                           help="where a streamed sign-in window listens (home network, "
                                "Tailscale, or 127.0.0.1 behind your own HTTPS)")
@@ -72,6 +75,12 @@ def build_parser() -> argparse.ArgumentParser:
     door_cmd.add_argument("--window-url", dest="window_url", metavar="URL",
                           help="the address in the link, when it differs from the host")
     door_cmd.add_argument("--off", action="store_true", help="stop starting the door")
+
+    road = subs.add_parser("road", help="how `up` starts things: plain programs or "
+                           "containers; with no road, say which")
+    road.add_argument("road", nargs="?", choices=("process", "podman"),
+                      help="process: plain programs on this machine; podman: containers "
+                           "systemd keeps running")
 
     subs.add_parser("image", help="build the image for the podman road, from the "
                                   "checkouts' committed code")
@@ -137,6 +146,34 @@ def _ok(found: list[Found]) -> bool:
                for f in found)
 
 
+ROADS = {"process": "plain programs on this machine, using its own browser and bubblewrap",
+         "podman": "containers that systemd keeps running and starts at login"}
+
+
+def switch_road(wanted: str | None) -> int:
+    """Say the road, or change it. LEAVING A ROAD STOPS IT: both roads use
+    the same ports, and Podman's units would otherwise start again at the
+    next login and take them. Nothing new is started; `up` does that."""
+    config = load()
+    if wanted is None:
+        print(f"road: {config.road} -- {ROADS[config.road]}")
+        other = "podman" if config.road == "process" else "process"
+        print(f"  (`sarathi road {other}` for {ROADS[other]})")
+        return 0
+    if wanted == config.road:
+        print(f"already on the {wanted} road")
+        return 0
+    stopped = podman.down(remove=True) if config.road == "podman" else services.down()
+    print("\n".join(stopped))
+    settings_path().write_text(render(replace(config, road=wanted)))
+    print(f"road: {wanted} -- {ROADS[wanted]}")
+    if wanted == "podman" and not podman.image_exists():
+        print("next: `sarathi image` (once), then `sarathi up`")
+    else:
+        print("next: `sarathi up`")
+    return 0
+
+
 def door_folders(config) -> list[str] | None:
     """dvara's own options naming the door's folders, as sarathi.toml has
     them: its status is then about the door `up` starts. None when the
@@ -163,6 +200,8 @@ def main(argv: list[str] | None = None) -> int:
         dvara = next(f for f in find_all() if f.sibling.name == "dvara")
         return door.run(args, dvara)
     try:
+        if args.command == "road":
+            return switch_road(args.road)
         if args.command == "image":
             return podman.build()
         if args.command == "down":

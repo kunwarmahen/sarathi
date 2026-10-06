@@ -44,7 +44,7 @@ KEY_NAMES = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 
 DEFAULT_WEB_PORT = 8321
 DEFAULT_CLOCK_PORT = 8780
-DEFAULT_DOOR_PORT = 8765
+DEFAULT_DOOR_PORT = 8770
 #: Dvara's own defaults, used when [door] names no folder.
 DOOR_ROOT, DOOR_ACTORS, DOOR_STATE = "~/dvara/agents", "~/dvara/actors.toml", "~/dvara/state"
 #: The two secrets the door needs: dvara's own bearer token (Sarathi

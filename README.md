@@ -130,6 +130,9 @@ with the last lines of its log, not as "started".
 
 `sarathi down` stops what `up` started and nothing else.
 
+That's the process road, plain programs. The same commands run
+everything as containers instead, after `sarathi road podman` (below).
+
 ### For other people, and your phone: `sarathi door`
 
 ```bash
@@ -166,7 +169,7 @@ What a person would otherwise wire by hand in two places:
   you find your own:
 
   ```
-    door   running at http://127.0.0.1:8765/  (pid 3426486)
+    door   running at http://127.0.0.1:8770/  (pid 3426486)
            messaged the bot but not in the actors file (telegram id): 8675309
   ```
 
@@ -196,17 +199,51 @@ Each unit reads its own secrets from `~/.config/sarathi/units/<unit>.env`,
 copied from `secrets.env` by `up`. The image includes dvara when its
 checkout sits beside the others.
 
-### Or as containers: the Podman road
+### Two ways to run it: plain programs, or containers
+
+Everything above runs the same two ways, and you can switch whenever you
+like. **The process road** (the default) starts plain programs from your
+session, using what's on your computer. **The Podman road** runs them in
+containers that systemd keeps running.
 
 ```bash
-sarathi init --podman          # or set  [run] road = "podman"  in sarathi.toml
+sarathi road                   # which one you're on
+sarathi road podman            # containers (then `sarathi image` once, and `sarathi up`)
+sarathi road process           # plain programs again (then `sarathi up`)
+```
+
+Switching stops what the other road started, and on leaving Podman it
+removes the units, since both roads use the same ports and the units
+would otherwise start again at your next login. It starts nothing new;
+`sarathi up` does that.
+
+| | process road | Podman road |
+|---|---|---|
+| how it starts | `sarathi up`, from your session | systemd units, also at every login |
+| after a crash, a reboot, logging out | gone until the next `sarathi up` | started again on its own |
+| what it needs | the checkouts (or installs) of each piece | Podman, and `sarathi image` (~1.3 GB) |
+| after `git pull` in a checkout | nothing: it runs the checkout | `sarathi image` again |
+| Amazon and X | your own Chrome | Chrome in the image |
+| connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
+| the door's streamed window | listens on `window_host` itself | published from the door's container |
+| a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
+| Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
+
+Your accounts, schedules and memories are the same files either way, so
+switching loses nothing. A port something else already uses stops that
+piece on either road, with the setting that moves it.
+
+#### On the Podman road
+
+```bash
+sarathi road podman            # or  sarathi init --podman
 sarathi image                  # build the image (a few minutes, once per update; ~1.3 GB)
 sarathi up
 ```
 
-On this road `up` writes two Quadlet units, `sarathi-clock` and
-`sarathi-page`, into `~/.config/containers/systemd/`, and systemd starts
-them. They come back on their own after a crash, and they start again
+On this road `up` writes Quadlet units (`sarathi-clock`, `sarathi-page`,
+and `sarathi-door` when the door is on) into
+`~/.config/containers/systemd/`, and systemd starts them. They come back on their own after a crash, and they start again
 when you log in. `sarathi down` stops them; `sarathi down --remove` also
 takes the units out, so nothing starts at login.
 
@@ -237,7 +274,7 @@ What goes into the containers:
   files themselves hold no key.
 
 Everything works on both roads: Gmail and Home Assistant through their
-APIs, Amazon and X through the browser in the image
+APIs, Amazon and X through your own Chrome or the one in the image
 ([notes/05](notes/05-a-browser-in-the-image.md)).
 
 ### Any time: `sarathi status`
@@ -254,7 +291,7 @@ samay       ~/agent/samay/.venv/bin/samay  (beside)
             clock not running (start it: samay serve); schedules: 0 active, 0 paused
 dvara       ~/agent/dvara/.venv/bin/dvara  (beside)
             the door: many people and agents behind one service
-            door serving at http://127.0.0.1:8765 (dvara serve); 3 agents, 2 people
+            door serving at http://127.0.0.1:8770 (dvara serve); 3 agents, 2 people
 smritikosh  not found (optional) -- install it, or set SARATHI_SMRITIKOSH=/path/to/smritikosh-mcp
             a memory store (Yantra keeps its own without it)
 ```
@@ -317,7 +354,7 @@ src/sarathi/
   door.py       sarathi door: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
-  cli.py        sarathi init | door | image | up | down | status [--json]
+  cli.py        sarathi init | door | road | image | up | down | status [--json]
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py
 ```
