@@ -166,8 +166,10 @@ page container: no TOKEN in its environment
 `sarathi down --remove` left no units, containers or network behind.
 
 **Not tested live:** a real Telegram bot (no token was used), and a
-schedule made in the chat end to end (dvara's example agents can't make
-one: their tool lists don't include Samay's).
+schedule made in the chat end to end. ~~dvara's example agents can't
+make one: their tool lists don't include Samay's.~~ dvara now ships
+`minder`, which can, and `sarathi door` copies it with the others; its
+end-to-end receipt is in dvara's note 18.
 
 **Found on the way:** the image has no bubblewrap, so Setu's
 connectors there run without their sandbox. They still hold no key,

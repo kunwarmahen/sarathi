@@ -26,9 +26,11 @@ WHERE TO LOOK, IN ORDER:
 The first hit wins, and the answer says which rule found it, so "why is
 it running THAT one?" always has an answer on screen.
 
-ONLY WHAT THE SIBLING SAYS. Setu knows its connections and Samay knows
-whether its clock is running; Sarathi repeats them and adds nothing.
-Yantra, Dvara and Smritikosh have no status command, so for them the
+ONLY WHAT THE SIBLING SAYS. Setu knows its connections, Samay knows
+whether its clock is running, and Dvara knows whether the door is
+serving (asked of its folders as sarathi.toml names them, so the answer
+is about the door Sarathi starts). Sarathi repeats them and adds
+nothing. Yantra and Smritikosh have no status command, so for them the
 answer is "found, here" -- not a guess about whether something is
 listening on a port.
 """
@@ -63,7 +65,7 @@ SIBLINGS: tuple[Sibling, ...] = (
     Sibling("samay", "samay", "the clock: work done later, with receipts",
             status_format="samay.status.v1"),
     Sibling("dvara", "dvara", "the door: many people and agents behind one service",
-            optional=True),
+            status_format="dvara.status.v1", optional=True),
     Sibling("smritikosh", "smritikosh-mcp",
             "a memory store (Yantra keeps its own without it)", optional=True),
 )
@@ -117,10 +119,14 @@ def locate(sibling: Sibling, env: dict[str, str] | None = None) -> tuple[str, st
     return None
 
 
-def read_status(program: str, expected: str) -> dict[str, Any]:
-    """Run ``program status --json``; the parsed object, or ValueError saying why not."""
+def read_status(program: str, expected: str, before: list[str] | None = None
+                ) -> dict[str, Any]:
+    """Run ``program [before...] status --json``; the parsed object, or
+    ValueError saying why not. ``before`` are the program's own options
+    (dvara's folders)."""
     try:
-        done = subprocess.run([program, "status", "--json"], capture_output=True,
+        done = subprocess.run([program, *(before or []), "status", "--json"],
+                              capture_output=True,
                               text=True, timeout=STATUS_TIMEOUT, check=False)
     except subprocess.TimeoutExpired:
         raise ValueError(f"`status --json` took longer than {STATUS_TIMEOUT:.0f}s") from None
@@ -155,10 +161,33 @@ def _say_samay(data: dict[str, Any]) -> str:
     return f"clock not running (start it: samay serve); schedules: {tally}"
 
 
-SAY = {"setu": _say_setu, "samay": _say_samay}
+def _say_dvara(data: dict[str, Any]) -> str:
+    running = data.get("running") or {}
+    agents = len(data.get("agents") or [])
+    tally = f"{agents} agent{'s' * (agents != 1)}, {data.get('people', 0)} people"
+    url = data.get("url") or ""
+    if data.get("serving"):
+        # a container's own bind says nothing about where to reach it
+        where = f" at {url}" if url and "//0.0.0.0" not in url else ""
+        said = f"door serving{where} ({running.get('command')}); {tally}"
+    elif running:
+        said = f"door not serving: {running.get('command')} is using its folder; {tally}"
+    else:
+        said = f"door not serving; {tally}"
+    problems = data.get("problems") or []
+    return said + "".join(f"; {p}" for p in problems)
 
 
-def find(sibling: Sibling, env: dict[str, str] | None = None) -> Found:
+SAY = {"setu": _say_setu, "samay": _say_samay, "dvara": _say_dvara}
+
+
+#: A ``before`` that means "do not ask": the door is off in sarathi.toml,
+#: and dvara's answer about its default folders would be about nothing.
+NOT_ASKED = "door off in sarathi.toml (`sarathi door` turns it on)"
+
+
+def find(sibling: Sibling, env: dict[str, str] | None = None,
+         before: list[str] | None = None, ask: bool = True) -> Found:
     found = Found(sibling)
     hit = locate(sibling, env)
     if hit is None:
@@ -166,8 +195,11 @@ def find(sibling: Sibling, env: dict[str, str] | None = None) -> Found:
     found.program, found.how = hit
     if sibling.status_format is None:
         return found
+    if not ask:
+        found.said = NOT_ASKED
+        return found
     try:
-        found.status = read_status(found.program, sibling.status_format)
+        found.status = read_status(found.program, sibling.status_format, before)
     except ValueError as exc:
         found.error = str(exc)
         return found
@@ -175,5 +207,11 @@ def find(sibling: Sibling, env: dict[str, str] | None = None) -> Found:
     return found
 
 
-def find_all(env: dict[str, str] | None = None) -> list[Found]:
-    return [find(s, env) for s in SIBLINGS]
+def find_all(env: dict[str, str] | None = None,
+             before: dict[str, list[str] | None] | None = None) -> list[Found]:
+    """Every sibling. ``before``: options a sibling's status is asked
+    with, by name -- the door's folders, from sarathi.toml; None for a
+    name means not asked at all (the door is off)."""
+    before = before or {}
+    return [find(s, env, before.get(s.name), ask=before.get(s.name, []) is not None)
+            for s in SIBLINGS]

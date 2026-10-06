@@ -87,10 +87,30 @@ setu        9 accounts connected: amazon:personal, gmail:mine, ...
 samay       clock not running (start it: samay serve); schedules: 0 active, 0 paused
 ```
 
-Yantra, Dvara and Smritikosh have no status command. Sarathi could probe
-a port and guess that a listener there is Dvara, but a guess printed in
-the same font as a fact is worse than no line. For those three, "found,
-here" is the whole answer until they can say more for themselves.
+Yantra and Smritikosh have no status command. Sarathi could probe a
+port and guess that a listener there is one of them, but a guess
+printed in the same font as a fact is worse than no line. For those
+two, "found, here" is the whole answer until they can say more for
+themselves.
+
+Dvara can now. `dvara status --json` answers from the lock a serving
+dvara holds on its state folder (dvara's note 23), so it's right after
+a crash and from another container. Sarathi asks it about the folders
+`[door]` names in sarathi.toml, not dvara's defaults, so the answer is
+about the door `up` starts:
+
+```
+dvara       ~/Documents/ai/agent/dvara/.venv/bin/dvara  (beside)
+            the door: many people and agents behind one service
+            door serving at http://127.0.0.1:8798 (dvara serve); 3 agents, 2 people
+```
+
+With the door off, dvara isn't asked at all. Its answer about folders
+nobody set up would only be a list of problems nobody has:
+
+```
+            door off in sarathi.toml (`sarathi door` turns it on)
+```
 
 **A MISSING PIECE COMES WITH ITS FIX.** "not found" alone sends the
 reader to the docs. The line names the variable that would fix it:
@@ -136,5 +156,8 @@ $ echo $?
   Quadlet units: not yet.
 * A way for Yantra's web page to take tabs from outside, so the Setu and
   Samay wiring Yantra carries today can move here.
-* The household road: Dvara's agents reaching each person's Setu and
-  Samay, with Telegram set up from here.
+* ~~The household road: Dvara's agents reaching each person's Setu and
+  Samay, with Telegram set up from here.~~ Built:
+  [notes/04](04-a-door-for-the-household.md).
+* ~~Whether the door is serving, not just that dvara was found.~~ Built:
+  above, from `dvara status --json`.

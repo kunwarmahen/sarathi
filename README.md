@@ -245,15 +245,17 @@ samay       ~/agent/samay/.venv/bin/samay  (beside)
             clock not running (start it: samay serve); schedules: 0 active, 0 paused
 dvara       ~/agent/dvara/.venv/bin/dvara  (beside)
             the door: many people and agents behind one service
+            door serving at http://127.0.0.1:8765 (dvara serve); 3 agents, 2 people
 smritikosh  not found (optional) -- install it, or set SARATHI_SMRITIKOSH=/path/to/smritikosh-mcp
             a memory store (Yantra keeps its own without it)
 ```
 
 Each line says **where** a piece was found and **which rule** found it.
 The line under it is that piece's own account of itself: Setu's
-connections, Samay's clock. Sarathi repeats it and adds nothing. Yantra,
-Dvara and Smritikosh have no status command, so for them "found, here"
-is the whole answer.
+connections, Samay's clock, and whether the door is serving (asked about
+the folders `[door]` names; with the door off, dvara isn't asked).
+Sarathi repeats it and adds nothing. Yantra and Smritikosh have no
+status command, so for them "found, here" is the whole answer.
 
 After `sarathi up`, `status` also lists what it started, and whether
 each one is still running. If one has exited, it shows the end of its

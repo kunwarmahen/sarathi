@@ -334,12 +334,13 @@ the door is on in ~/.config/sarathi/sarathi.toml: port 8765, a Telegram bot answ
   made the door's own token (DVARA_TOKEN, in secrets.env)
   TELEGRAM_TOKEN saved to secrets.env (readable only by you)
   wrote ~/dvara/actors.toml: you, as the owner (your Telegram id still to add)
-  copied dvara's example agents to ~/dvara/agents (greeter, scribe): replace them with your own
+  copied dvara's example agents to ~/dvara/agents (greeter, minder, scribe): replace them with your own
 ```
 
 `greeter` is a small example helper that only talks. It's there to
-prove everything works; your own helpers go in `~/dvara/agents` later
-(dvara's tutorial shows how).
+prove everything works. `minder` checks a web page for you, and can do
+it on a schedule you say yes to in the chat. Your own helpers go in
+`~/dvara/agents` later (dvara's tutorial shows how).
 
 **Start it:**
 
@@ -352,6 +353,10 @@ clock  up at http://127.0.0.1:8780/#token=…
 door   up at http://127.0.0.1:8765/
 page   up at http://127.0.0.1:8321/
 ```
+
+`sarathi status` asks the door itself whether it's serving, so the
+dvara line says `door serving …` once it's open, and `door not serving`
+if it stopped.
 
 **Let yourself in.** Message your bot. It won't answer yet: it doesn't
 know who you are. Then:

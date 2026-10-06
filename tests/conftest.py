@@ -46,7 +46,7 @@ def world(tmp_path, monkeypatch):
 FAKE = """#!{python}
 import http.server, json, os, sys, time
 name, args = {name!r}, sys.argv[1:]
-if args[:2] == ["status", "--json"]:
+if args[-2:] == ["status", "--json"]:
     print(json.dumps({status}))
     sys.exit(0)
 seen = os.environ["FAKE_SEEN"]

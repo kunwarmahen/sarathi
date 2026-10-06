@@ -137,6 +137,17 @@ def _ok(found: list[Found]) -> bool:
                for f in found)
 
 
+def door_folders(config) -> list[str] | None:
+    """dvara's own options naming the door's folders, as sarathi.toml has
+    them: its status is then about the door `up` starts. None when the
+    door is off, and dvara is not asked."""
+    door = config.door
+    if door is None:
+        return None
+    return ["--root", str(door.path("root")), "--actors", str(door.path("actors")),
+            "--state", str(door.path("state"))]
+
+
 def _settings_or_none():
     try:
         return load()
@@ -159,7 +170,8 @@ def main(argv: list[str] | None = None) -> int:
             on_podman = config is not None and config.road == "podman"
             print("\n".join(podman.down(args.remove) if on_podman else services.down()))
             return 0
-        found = find_all()
+        config = _settings_or_none()
+        found = find_all(before={"dvara": door_folders(config)} if config else None)
         if args.command == "up":
             config = load()
             if config.road == "podman":
@@ -172,7 +184,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     # status
-    config = _settings_or_none()
     started = podman.running(config) if config and config.road == "podman" \
         else services.running()
     if args.json_out:
