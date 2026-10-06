@@ -187,6 +187,11 @@ def _say_yantra(data: dict[str, Any]) -> str:
     said = f"yantra {data.get('version', '?')}"
     if data.get("provider"):
         said += f"; would ask {data['provider']} for {data.get('model')}"
+    # Only what it does NOT find: Setu's and Samay's own lines already say
+    # what they are, and a Yantra that cannot see one is the news.
+    for name in ("setu", "samay"):
+        if isinstance(data.get(name), dict) and not data[name].get("found"):
+            said += f"; finds no {name}"
     problems = data.get("problems") or []
     return said + "".join(f"; {p}" for p in problems)
 

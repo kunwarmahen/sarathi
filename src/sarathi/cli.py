@@ -35,7 +35,7 @@ from pathlib import Path
 
 from sarathi import __version__, door, first_run, podman, services
 from sarathi.config import PROVIDERS, ConfigError, load, render, settings_path
-from sarathi.siblings import Found, env_name, find_all
+from sarathi.siblings import SIBLINGS, Found, env_name, find_all, locate
 
 FORMAT = "sarathi.status.v1"
 
@@ -192,14 +192,23 @@ def _settings_or_none():
         return None
 
 
-def _yantra_env(config) -> dict[str, str] | None:
-    """The model settings ``up`` gives Yantra, so its status is about that
-    Yantra; None (its own settings) when there is no key to give it yet --
-    the missing key is ``up``'s to report."""
+def _yantra_env(config) -> dict[str, str]:
+    """What ``up`` gives Yantra, so its status is about that Yantra: the
+    model settings (left out when there is no key to give it yet -- the
+    missing key is ``up``'s to report), and the Setu and Samay programs
+    ``up`` names with --setu and --samay, as the variables that say the
+    same (``off`` for a clock turned off)."""
     try:
-        return services.model_env(config)
+        env = services.model_env(config)
     except ConfigError:
-        return None
+        env = {}
+    for name, var in (("setu", "YANTRA_SETU"), ("samay", "YANTRA_SAMAY")):
+        hit = locate(next(s for s in SIBLINGS if s.name == name))
+        if hit is not None:
+            env[var] = hit[0]
+    if not config.clock_on:
+        env["YANTRA_SAMAY"] = "off"
+    return env
 
 
 def main(argv: list[str] | None = None) -> int:

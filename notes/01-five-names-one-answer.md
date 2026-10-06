@@ -93,10 +93,11 @@ fact is worse than no line. For it, "found, here" is the whole answer
 until it can say more for itself.
 
 Yantra can now. `yantra status --json` gives its release and the model
-a turn would ask (Yantra's note 117). Sarathi asks it with the model
-settings `up` gives Yantra, so the answer is about the Yantra Sarathi
-starts, and a model Ollama hasn't pulled shows up here rather than as
-the first message that fails:
+a turn would ask (Yantra's note 117). Sarathi asks it with what `up`
+gives Yantra (the model settings, and the Setu and Samay it names), so
+the answer is about the Yantra Sarathi starts. A model Ollama hasn't
+pulled shows up here rather than as the first message that fails, and
+so does a sibling Yantra can't see (`finds no samay`):
 
 ```
 yantra      ~/Documents/ai/agent/yantra/.venv/bin/yantra  (beside)

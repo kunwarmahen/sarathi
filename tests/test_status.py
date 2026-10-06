@@ -218,3 +218,31 @@ def test_yantra_is_asked_with_the_model_settings_up_would_give_it(world, capsys)
         '[model]\nprovider = "ollama"\nmodel = "gemma4:12b"\n')
     code, out = run(capsys, "status")
     assert "would ask ollama for gemma4:12b" in out
+
+
+def test_yantra_is_told_the_setu_and_samay_up_names(world, capsys):
+    """``up`` starts the page with --setu and --samay; asked without them,
+    Yantra would look on its own and might not find what Sarathi did."""
+    everything(world)
+    echo = world / "bin" / "yantra"
+    echo.write_text('#!/bin/sh\nprintf \'{"format": "yantra.status.v1", "version": "0.1.0", '
+                    '"provider": "ollama", "model": "%s|%s", "problems": [], '
+                    '"samay": {"found": false}}\' "$YANTRA_SETU" "$YANTRA_SAMAY"\n')
+    config = Path(os.environ["SARATHI_CONFIG"])
+    config.mkdir(parents=True, exist_ok=True)
+    (config / "sarathi.toml").write_text('[model]\nprovider = "ollama"\n')
+    code, out = run(capsys, "status")
+    bin_dir = world / "bin"
+    assert f"for {bin_dir / 'setu'}|{bin_dir / 'samay'}; finds no samay" in out
+
+
+def test_a_clock_turned_off_is_off_for_yantra_too(world, capsys):
+    everything(world)
+    echo = world / "bin" / "yantra"
+    echo.write_text('#!/bin/sh\nprintf \'{"format": "yantra.status.v1", "version": "0.1.0", '
+                    '"provider": "ollama", "model": "%s", "problems": []}\' "$YANTRA_SAMAY"\n')
+    config = Path(os.environ["SARATHI_CONFIG"])
+    config.mkdir(parents=True, exist_ok=True)
+    (config / "sarathi.toml").write_text('[model]\nprovider = "ollama"\n[clock]\non = false\n')
+    code, out = run(capsys, "status")
+    assert "would ask ollama for off" in out
