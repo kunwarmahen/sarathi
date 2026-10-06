@@ -261,6 +261,15 @@ def test_every_container_gets_room_for_a_browser_and_a_wall_for_a_connector(host
     assert all("ShmSize=1g" in t and "Unmask=/proc/*" in t for t in containers)
 
 
+def test_home_is_writable_in_every_container(host, world):
+    """Root-owned, Chrome dies at start: 'did not answer Target.createTarget'."""
+    with_door_secrets(world)
+    home = world / "home"
+    containers = [t for n, t in podman.units(DOOR).items() if n.endswith(".container")]
+    assert all(f"Tmpfs={home}:rw,mode=0700,U" in t for t in containers)
+    assert all(f"Volume={home}/.samay:{home}/.samay:z" in t for t in containers)
+
+
 def test_no_window_asked_for_publishes_nothing_more(host, world):
     with_door_secrets(world)
     door = podman.units(DOOR)["sarathi-door.container"]

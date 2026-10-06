@@ -393,6 +393,52 @@ That number is you. Open `~/dvara/actors.toml`, find the lines under
 "Your Telegram id", remove the `#`s and put your number in. Message the
 bot again: it answers. (No restart needed; the door rereads the file.)
 
+**Your own accounts from your phone.** Under `[actor.owner]` in the same
+file, one of:
+
+```toml
+setu = "~/.local/state/setu"   # the accounts you already connected on this computer
+setu = true                    # a separate folder, starting empty: you connect from the chat
+```
+
+`setu = true` is the safe way to try things first: nothing you do from
+the phone touches the accounts on your computer.
+
+**Try each piece from your phone.** Both ways of running (plain programs
+or containers, Step 5) work for all of this. Say `minder` was the agent
+you gave the bot:
+
+1. **A schedule.** Send *"check whether example.com is up once an hour,
+   and only tell me if it's down"*. It says back when it will run and
+   asks if that's right. Say yes. A card arrives with two buttons:
+   *Save a schedule … when: every hour … without asking, it may also
+   use: web_fetch*. Press approve. If a card ever comes before you've
+   said yes, refuse it: the card is the real yes, and you can always
+   ask again.
+2. **A record.** Ask for the same with *"…and keep a record in
+   uptime-log.txt"*. The card now also lists `write_file`. Later, ask
+   *"what does my uptime log say?"*. Every run, and every chat you have
+   with that agent, uses the same folder, so it finds the lines the
+   schedule wrote. To see a run happen now instead of in an hour:
+   `~/agent/samay/.venv/bin/samay run-now <id>` (the id is in the bot's
+   answer, or in `samay list`; on containers,
+   `podman exec sarathi-clock samay run-now <id>`).
+3. **Gmail, connected from the chat.** Send `/connect gmail`. Open the
+   link on your phone, sign in to Google and allow it. Your phone then
+   tries to open a page at `http://127.0.0.1:…` and **fails to load it.
+   That's expected**: copy that page's whole address (it contains
+   `code=…`) and send it to the bot. It answers *connected*, and
+   `/accounts` lists Gmail. `/disconnect gmail` takes it away again.
+4. **Amazon, through a window** (set up below). Send `/connect amazon`.
+   The link shows Amazon's real sign-in page, live, at your phone's
+   size. Tap a box, type in the box at the bottom, press **Send**, then
+   **Enter**; the same for your password and any code Amazon texts you.
+   When you're in, the page says so and the bot says *connected*.
+
+If something doesn't answer, `sarathi status` says which piece stopped,
+and the end of its log: `~/.local/share/sarathi/logs/door.log` for plain
+programs, `journalctl --user -u sarathi-door -n 60` for containers.
+
 **Adding someone else** is the same: they message the bot, you read
 their number in `sarathi status`, and you add them to `actors.toml`
 (the file has a commented example). Give them `setu = true` and they can
@@ -407,18 +453,32 @@ that browser live on their phone, and they sign in by tapping and typing:
 
 ```bash
 sarathi door --window-host <your computer's address>
-sarathi down && sarathi up
+sarathi up
 ```
 
 Which address: if everyone is on your home Wi-Fi, your computer's
-address there works, but what they type travels as plain web traffic
-across your Wi-Fi. If you use **Tailscale**, its address is the safe
-choice, encrypted and reachable wherever they are. Your computer runs
+address there works (`hostname -I` shows it, often `192.168.…`), but
+what they type travels as plain web traffic across your Wi-Fi. If you
+use **Tailscale**, its address is the safe choice, encrypted and
+reachable wherever they are.
+
+The window uses port **8790** (`--window-port` changes it). If your
+computer has a firewall (`sudo ufw status` says *active*), let your home
+network reach that port, and close it again when you no longer need it:
+
+```bash
+sudo ufw allow from 192.168.1.0/24 to any port 8790 proto tcp     # your network's numbers
+sudo ufw delete allow from 192.168.1.0/24 to any port 8790 proto tcp
+``` Your computer runs
 that browser, so it handles what they type, their password included:
 offer it to people who already trust you with their agent.
 
 To turn the door off again: `sarathi door --off`, then
 `sarathi down && sarathi up`.
+
+If another program on your computer already uses the door's port
+(8770), `sarathi up` says so and names the setting:
+`sarathi door --port 8771` (any free number), then `sarathi up`.
 
 ---
 
@@ -443,6 +503,8 @@ you're most likely to meet:
 | the bot never answers you | you're not in the actors file yet | Step 6, "Let yourself in" |
 | `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi down && sarathi up` |
 | `door not started: something else is listening on port 8770 (change door.port in sarathi.toml)` | another program on your computer uses that port | `sarathi door --port 8771` (any free number), then `sarathi up` |
+| `I couldn't start that sign-in: the browser did not answer Target.createTarget` | containers from an older Sarathi: the browser had nowhere to write | update Sarathi, then `sarathi up` (it restarts what changed) |
+| `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |
 | `the door cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
 
 Each program also writes down what it printed:

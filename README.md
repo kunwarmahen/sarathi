@@ -269,6 +269,10 @@ What goes into the containers:
 * **Ollama stays on your machine.** The containers reach it at
   `host.containers.internal`, so Ollama has to listen on more than
   127.0.0.1 (`OLLAMA_HOST=0.0.0.0`).
+* **A home folder Chrome can write to.** Inside a container your home's
+  path would be a folder Podman made only to hold the mounts, owned by
+  root, and Chrome dies at start there. So it's a scratch folder of
+  yours, emptied at each start, with your data folders mounted inside it.
 * **Google's client file, alone and read-only.** Setu keeps only the
   path of the file a Gmail sign-in uses, and it usually sits on your
   Desktop or in Downloads. That one file is mounted at the same path;

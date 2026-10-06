@@ -62,7 +62,12 @@ with the browser that wrote them; Xvfb for a site that wants a real
 window; bubblewrap, so Setu's connectors run walled off here as on a
 desktop (Containerfile). Each container gets a 1 GB /dev/shm, since
 Chrome keeps its pages there and Podman's 64 MB is not enough for a
-heavy one. ``/proc`` is unmasked: Setu's wall gives each connector a
+heavy one. HOME IS WRITABLE: inside a container it would be a folder
+Podman made only to hold the mounts, owned by root, and Chrome dies at
+start when it cannot make its crash reporter's folder under it ("the
+browser did not answer Target.createTarget"). So HOME is a scratch
+filesystem of your own, emptied at each start, with the data folders
+mounted inside it as before. ``/proc`` is unmasked: Setu's wall gives each connector a
 fresh ``/proc`` of its own, and the kernel refuses to mount one while
 Podman hides parts of the container's. The container runs as you, so
 what that shows is what your own account can read here anyway. Chrome
@@ -307,6 +312,7 @@ PublishPort={publish}
 UserNS=keep-id
 ShmSize=1g
 Unmask=/proc/*
+Tmpfs={Path.home()}:rw,mode=0700,U
 WorkingDir={work_dir()}
 {env}{secrets}{volumes}{extra_container}
 [Service]

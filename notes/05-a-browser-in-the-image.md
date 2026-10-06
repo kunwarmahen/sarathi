@@ -106,6 +106,33 @@ own account can already read on this machine. Tried three ways:
 Chrome's own sandbox needed nothing: it starts inside the container as
 it is, with no `--no-sandbox`.
 
+## A home Chrome can write to
+
+The first `/connect amazon` from a real phone, through the door's unit,
+failed: `the browser did not answer Target.createTarget`. Chrome had
+died as it started. Every test above had run with `HOME=/tmp`. The units
+run with `HOME` at your real home's path, which Setu's records need, and
+inside a container that path is a folder Podman made only to hold the
+mounts: owned by root, not writable. Chrome couldn't make its crash
+reporter's folder under `~/.config`, and stopped:
+
+```
+mkdir: cannot create directory '/home/mahen/.local/share/applications': Permission denied
+chrome_crashpad_handler: --database is required
+Trace/breakpoint trap
+```
+
+**HOME IS A SCRATCH FILESYSTEM OF YOUR OWN** (`Tmpfs=<home>:rw,mode=0700,U`),
+emptied at each start, with the data folders still mounted inside it at
+their paths. Same paths, same files; Chrome gets somewhere to write. The
+page's browser tools had the same problem and get the same fix. After it,
+in the door's container:
+
+```
+drwx------ 7 mahen mahen 140 Oct  6 16:56 /home/mahen
+Target.createTarget answered: True
+```
+
 ## A network that didn't come back
 
 The first `up` of this work failed with all three units saying
