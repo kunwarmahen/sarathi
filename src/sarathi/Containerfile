@@ -76,10 +76,12 @@ RUN ln -s /opt/yantra/.venv/bin/yantra /opt/setu/.venv/bin/setu \
           /opt/samay/.venv/bin/samay /usr/local/bin/
 
 # dvara, the door, when its checkout was there to copy (an empty folder
-# otherwise). It runs against the Yantra above, as on a desktop.
+# otherwise). It runs against the Yantra above, as on a desktop -- with
+# the browse extra, or an agent behind the door is offered Amazon's tools
+# and every one fails for want of Playwright.
 COPY dvara/ /opt/dvara/
 RUN if [ -f /opt/dvara/pyproject.toml ]; then \
-      cd /opt/dvara && uv sync --frozen --no-dev --extra http && \
+      cd /opt/dvara && uv sync --frozen --no-dev --extra http --extra browse && \
       ln -s /opt/dvara/.venv/bin/dvara /usr/local/bin/; \
     fi
 
