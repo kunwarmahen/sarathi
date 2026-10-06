@@ -21,6 +21,8 @@ from sarathi.cli import main
 
 from conftest import program
 
+YANTRA = {"format": "yantra.status.v1", "version": "0.1.0", "provider": "ollama",
+          "model": "qwen3.8:latest", "problems": []}
 SETU = {"format": "setu.status.v1", "connections": [{"ref": "gmail:mine"},
                                                      {"ref": "homeassistant:house"}]}
 SAMAY = {"format": "samay.status.v1", "serving": True, "url": "http://127.0.0.1:8780/",
@@ -32,7 +34,7 @@ DVARA = {"format": "dvara.status.v1", "serving": True, "url": "http://127.0.0.1:
 
 def everything(world: Path) -> None:
     bin_dir = world / "bin"
-    program(bin_dir, "yantra")
+    program(bin_dir, "yantra", json.dumps(YANTRA))
     program(bin_dir, "setu", json.dumps(SETU))
     program(bin_dir, "samay", json.dumps(SAMAY))
     program(bin_dir, "dvara", json.dumps(DVARA))
@@ -131,7 +133,9 @@ def test_the_json_answer_carries_each_siblings_own_status(world, capsys):
     assert code == 0 and data["format"] == "sarathi.status.v1" and data["ok"] is True
     named = {s["name"]: s for s in data["siblings"]}
     assert named["setu"]["status"] == SETU
-    assert named["yantra"] == {**named["yantra"], "found": True, "how": "path", "status": None}
+    assert named["yantra"]["status"] == YANTRA
+    assert named["smritikosh"] == {**named["smritikosh"], "found": True, "how": "path",
+                                   "status": None}
 
 
 def test_the_door_says_whether_it_is_serving_not_just_that_it_was_found(world, capsys):
@@ -189,3 +193,28 @@ def test_a_door_that_is_off_is_not_asked_about(world, capsys):
     assert code == 0
     assert "door off in sarathi.toml (`sarathi door` turns it on)" in out
     assert "no actors file" not in out
+
+
+def test_yantra_says_its_release_and_the_model_it_would_ask(world, capsys):
+    everything(world)
+    program(world / "bin", "yantra", json.dumps(
+        {**YANTRA, "problems": ["qwen3.8:latest is not pulled (ollama pull qwen3.8:latest)"]}))
+    code, out = run(capsys, "status")
+    assert ("yantra 0.1.0; would ask ollama for qwen3.8:latest; "
+            "qwen3.8:latest is not pulled (ollama pull qwen3.8:latest)") in out
+
+
+def test_yantra_is_asked_with_the_model_settings_up_would_give_it(world, capsys):
+    """Asked with its own settings, Yantra would describe a model ``up``
+    never starts it with."""
+    everything(world)
+    echo = world / "bin" / "yantra"
+    echo.write_text('#!/bin/sh\nprintf \'{"format": "yantra.status.v1", "version": "0.1.0", '
+                    '"provider": "%s", "model": "%s", "problems": []}\' '
+                    '"$YANTRA_PROVIDER" "$OLLAMA_MODEL"\n')
+    config = Path(os.environ["SARATHI_CONFIG"])
+    config.mkdir(parents=True, exist_ok=True)
+    (config / "sarathi.toml").write_text(
+        '[model]\nprovider = "ollama"\nmodel = "gemma4:12b"\n')
+    code, out = run(capsys, "status")
+    assert "would ask ollama for gemma4:12b" in out

@@ -293,6 +293,7 @@ APIs, Amazon and X through your own Chrome or the one in the image
 $ sarathi status
 yantra      ~/agent/yantra/.venv/bin/yantra  (beside)
             the machine: the agent itself
+            yantra 0.1.0; would ask ollama for qwen3.8:latest
 setu        ~/.local/bin/setu  (path)
             the bridge: your accounts, signed in once
             2 accounts connected: gmail:mine, homeassistant:home
@@ -307,11 +308,14 @@ smritikosh  not found (optional) -- install it, or set SARATHI_SMRITIKOSH=/path/
 ```
 
 Each line says **where** a piece was found and **which rule** found it.
-The line under it is that piece's own account of itself: Setu's
-connections, Samay's clock, and whether the door is serving (asked about
-the folders `[door]` names; with the door off, dvara isn't asked).
-Sarathi repeats it and adds nothing. Yantra and Smritikosh have no
-status command, so for them "found, here" is the whole answer.
+The line under it is that piece's own account of itself: Yantra's
+release and the model it would ask (asked with the model settings `up`
+gives it, so a model Ollama hasn't pulled shows here, with the
+`ollama pull` that fixes it), Setu's connections, Samay's clock, and
+whether the door is serving (asked about the folders `[door]` names;
+with the door off, dvara isn't asked). Sarathi repeats it and adds
+nothing. Smritikosh has no status command, so for it "found, here" is
+the whole answer.
 
 After `sarathi up`, `status` also lists what it started, and whether
 each one is still running. If one has exited, it shows the end of its

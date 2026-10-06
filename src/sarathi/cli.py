@@ -192,6 +192,16 @@ def _settings_or_none():
         return None
 
 
+def _yantra_env(config) -> dict[str, str] | None:
+    """The model settings ``up`` gives Yantra, so its status is about that
+    Yantra; None (its own settings) when there is no key to give it yet --
+    the missing key is ``up``'s to report."""
+    try:
+        return services.model_env(config)
+    except ConfigError:
+        return None
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "init":
@@ -210,7 +220,8 @@ def main(argv: list[str] | None = None) -> int:
             print("\n".join(podman.down(args.remove) if on_podman else services.down()))
             return 0
         config = _settings_or_none()
-        found = find_all(before={"dvara": door_folders(config)} if config else None)
+        found = find_all(before={"dvara": door_folders(config)} if config else None,
+                         asked_with={"yantra": _yantra_env(config)} if config else None)
         if args.command == "up":
             config = load()
             if config.road == "podman":

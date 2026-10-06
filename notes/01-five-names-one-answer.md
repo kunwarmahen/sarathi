@@ -87,11 +87,22 @@ setu        9 accounts connected: amazon:personal, gmail:mine, ...
 samay       clock not running (start it: samay serve); schedules: 0 active, 0 paused
 ```
 
-Yantra and Smritikosh have no status command. Sarathi could probe a
-port and guess that a listener there is one of them, but a guess
-printed in the same font as a fact is worse than no line. For those
-two, "found, here" is the whole answer until they can say more for
-themselves.
+Smritikosh has no status command. Sarathi could probe a port and guess
+that a listener there is it, but a guess printed in the same font as a
+fact is worse than no line. For it, "found, here" is the whole answer
+until it can say more for itself.
+
+Yantra can now. `yantra status --json` gives its release and the model
+a turn would ask (Yantra's note 117). Sarathi asks it with the model
+settings `up` gives Yantra, so the answer is about the Yantra Sarathi
+starts, and a model Ollama hasn't pulled shows up here rather than as
+the first message that fails:
+
+```
+yantra      ~/Documents/ai/agent/yantra/.venv/bin/yantra  (beside)
+            the machine: the agent itself
+            yantra 0.1.0; would ask ollama for qwen3.8-64k:latest
+```
 
 Dvara can now. `dvara status --json` answers from the lock a serving
 dvara holds on its state folder (dvara's note 23), so it's right after
@@ -161,3 +172,6 @@ $ echo $?
   [notes/04](04-a-door-for-the-household.md).
 * ~~Whether the door is serving, not just that dvara was found.~~ Built:
   above, from `dvara status --json`.
+* ~~Yantra's version.~~ Built: above, from `yantra status --json`. A
+  Yantra older than that reads `status` as a prompt for its model, and
+  Sarathi refuses the answer for having no `format`.
