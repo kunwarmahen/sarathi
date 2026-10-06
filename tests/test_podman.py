@@ -460,3 +460,20 @@ def test_a_running_unit_whose_file_changed_is_restarted_not_left_on_old_settings
     assert "page   restarting with the new settings  (unit sarathi-page)" in lines
     assert host.said("systemctl", "--user", "stop", "sarathi-page.service") == 1
     assert host.said("systemctl", "--user", "stop", "sarathi-clock.service") == 0
+
+
+def test_a_unit_running_an_older_image_is_restarted_after_a_build(host, world):
+    """`sarathi image` changed nothing in a container already running."""
+    host.answers[("systemctl", "--user", "is-active")] = subprocess.CompletedProcess(
+        [], 0, "", "")
+    podman.install(podman.units(LOCAL))
+    host.answers[("podman", "image", "inspect")] = subprocess.CompletedProcess(
+        [], 0, "sha-new\n", "")
+    host.answers[("podman", "container", "inspect", "--format", "{{.Image}}",
+                  "sarathi-page")] = subprocess.CompletedProcess([], 0, "sha-old\n", "")
+    host.answers[("podman", "container", "inspect")] = subprocess.CompletedProcess(
+        [], 0, "sha-new\n", "")
+    lines, _ = podman.up(LOCAL)
+    assert "page   restarting with the new image  (unit sarathi-page)" in lines
+    assert host.said("systemctl", "--user", "stop", "sarathi-page.service") == 1
+    assert host.said("systemctl", "--user", "stop", "sarathi-clock.service") == 0

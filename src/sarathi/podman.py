@@ -198,6 +198,14 @@ def build(engine: str = "podman") -> int:
     return code
 
 
+def image_id(of: str) -> str:
+    """The image a container runs, or the image a tag names now; "" when
+    there is no such thing."""
+    kind = ["image", "inspect"] if of == IMAGE else ["container", "inspect"]
+    return run(["podman", *kind, "--format", "{{.Id}}" if of == IMAGE else "{{.Image}}",
+                of]).stdout.strip()
+
+
 def image_exists() -> bool:
     return run(["podman", "image", "exists", IMAGE]).returncode == 0
 
@@ -513,6 +521,7 @@ def up(config: Config) -> tuple[list[str], bool]:
     write_env_files(config)
     changed = install(units(config))
     lines = ["units rewritten from sarathi.toml"] if changed else []
+    newest = image_id(IMAGE)
     note = browser_note()
     if note:
         lines.append(note)
@@ -535,6 +544,11 @@ def up(config: Config) -> tuple[list[str], bool]:
             # rewritten unit means nothing until it starts again
             run(["systemctl", "--user", "stop", f"{unit}.service"])
             lines.append(f"{name:<6} restarting with the new settings  (unit {unit})")
+        elif active(unit) and newest and image_id(unit) not in ("", newest):
+            # and the image it started from: `sarathi image` changes nothing
+            # in a container already running
+            run(["systemctl", "--user", "stop", f"{unit}.service"])
+            lines.append(f"{name:<6} restarting with the new image  (unit {unit})")
         if active(unit):
             address = (clock_address(config) if name == "clock" else None) or url
             lines.append(f"{name:<6} already running at {address}  (unit {unit})")

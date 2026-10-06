@@ -314,7 +314,8 @@ Three things to know on this road:
 that too: `sarathi down --remove`.
 
 When the projects get an update (`git pull` in their folders), run
-`sarathi image` again and then `sarathi down && sarathi up`.
+`sarathi image` again and then `sarathi up`: it restarts whatever runs an
+older image or older settings, and leaves the rest alone.
 
 **Back to plain programs** any time:
 
@@ -431,8 +432,10 @@ you gave the bot:
    `/accounts` lists Gmail. `/disconnect gmail` takes it away again.
 4. **Amazon, through a window** (set up below). Send `/connect amazon`.
    The link shows Amazon's real sign-in page, live, at your phone's
-   size. Tap a box, type in the box at the bottom, press **Send**, then
-   **Enter**; the same for your password and any code Amazon texts you.
+   size. Type your email in the box at the bottom and press **Send**: it
+   goes into the page's empty box by itself (tap a box on the picture
+   first to type somewhere else). Then **Enter**. The same for your
+   password and any code Amazon texts you.
    When you're in, the page says so and the bot says *connected*.
 
 If something doesn't answer, `sarathi status` says which piece stopped,
@@ -501,7 +504,7 @@ you're most likely to meet:
 | `door not started: door.telegram is set but there is no TELEGRAM_TOKEN` | the bot's token wasn't saved | `sarathi door` again, and paste it |
 | `door not started: no actors file at ~/dvara/actors.toml` | dvara's list of people is missing | `sarathi door` writes a starter one |
 | the bot never answers you | you're not in the actors file yet | Step 6, "Let yourself in" |
-| `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi down && sarathi up` |
+| `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi up` |
 | `door not started: something else is listening on port 8770 (change door.port in sarathi.toml)` | another program on your computer uses that port | `sarathi door --port 8771` (any free number), then `sarathi up` |
 | `I couldn't start that sign-in: the browser did not answer Target.createTarget` | containers from an older Sarathi: the browser had nowhere to write | update Sarathi, then `sarathi up` (it restarts what changed) |
 | `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |

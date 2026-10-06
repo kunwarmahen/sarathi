@@ -222,7 +222,7 @@ would otherwise start again at your next login. It starts nothing new;
 | how it starts | `sarathi up`, from your session | systemd units, also at every login |
 | after a crash, a reboot, logging out | gone until the next `sarathi up` | started again on its own |
 | what it needs | the checkouts (or installs) of each piece | Podman, and `sarathi image` (~1.3 GB) |
-| after `git pull` in a checkout | nothing: it runs the checkout | `sarathi image` again |
+| after `git pull` in a checkout | nothing: it runs the checkout | `sarathi image` again, then `sarathi up` |
 | Amazon and X | your own Chrome | Chrome in the image |
 | connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
 | the door's streamed window | listens on `window_host` itself | published from the door's container |
@@ -244,7 +244,8 @@ sarathi up
 On this road `up` writes Quadlet units (`sarathi-clock`, `sarathi-page`,
 and `sarathi-door` when the door is on) into
 `~/.config/containers/systemd/`, and systemd starts them. When
-`sarathi.toml` changes a unit, `up` restarts it with the new settings. They come back on their own after a crash, and they start again
+`sarathi.toml` changes a unit, or `sarathi image` built a newer image,
+`up` restarts what's affected and leaves the rest running. They come back on their own after a crash, and they start again
 when you log in. `sarathi down` stops them; `sarathi down --remove` also
 takes the units out, so nothing starts at login.
 

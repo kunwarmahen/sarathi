@@ -83,7 +83,9 @@ stays out.
 **A REWRITTEN UNIT IS RESTARTED.** A running container keeps the
 settings it started with, so "units rewritten" used to change nothing
 until the next restart. `up` now restarts a running unit whose file
-changed, and says so.
+changed, and says so. The same for a newer image: `sarathi image`
+changed nothing in a container already running, so `up` compares the
+image each container runs with the one the tag names now.
 
 ## What the first crash found
 
