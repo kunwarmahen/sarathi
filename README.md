@@ -243,7 +243,8 @@ sarathi up
 
 On this road `up` writes Quadlet units (`sarathi-clock`, `sarathi-page`,
 and `sarathi-door` when the door is on) into
-`~/.config/containers/systemd/`, and systemd starts them. They come back on their own after a crash, and they start again
+`~/.config/containers/systemd/`, and systemd starts them. When
+`sarathi.toml` changes a unit, `up` restarts it with the new settings. They come back on their own after a crash, and they start again
 when you log in. `sarathi down` stops them; `sarathi down --remove` also
 takes the units out, so nothing starts at login.
 
@@ -268,6 +269,10 @@ What goes into the containers:
 * **Ollama stays on your machine.** The containers reach it at
   `host.containers.internal`, so Ollama has to listen on more than
   127.0.0.1 (`OLLAMA_HOST=0.0.0.0`).
+* **Google's client file, alone and read-only.** Setu keeps only the
+  path of the file a Gmail sign-in uses, and it usually sits on your
+  Desktop or in Downloads. That one file is mounted at the same path;
+  the folder around it isn't.
 * **A cloud key only from `secrets.env`.** A systemd unit can't see the
   shell you ran `sarathi up` from, so on this road a key there wouldn't
   arrive. `up` refuses to start rather than start without it. The unit

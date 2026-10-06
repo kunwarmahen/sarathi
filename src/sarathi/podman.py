@@ -80,6 +80,7 @@ container's own address, which no phone can reach.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -208,6 +209,27 @@ def data_dirs() -> list[Path]:
             xdg_state / "setu", xdg_state / "yantra", home / ".yantra", work_dir()]
 
 
+def setu_files() -> list[Path]:
+    """Files Setu's settings name outside its own folder, mounted read-only
+    at the same path: today, the Google client file a Gmail sign-in uses.
+    Setu keeps only its path, and a person usually leaves the file where
+    Google's download put it -- ~/Downloads, the Desktop -- which no
+    container sees. ONE FILE, NOT ITS FOLDER: the rest of a Desktop is
+    none of a container's business."""
+    named = os.environ.get("SETU_GOOGLE_CLIENT_FILE", "").strip()
+    if not named:
+        try:
+            settings = json.loads((data_dirs()[1] / "config.json").read_text())
+        except (OSError, ValueError):
+            settings = {}
+        named = str(settings.get("google_client_file") or "") if isinstance(
+            settings, dict) else ""
+    if not named:
+        return []
+    path = Path(named).expanduser()
+    return [path] if path.is_file() else []
+
+
 def from_container(url: str) -> str:
     """An address on this machine, as a container must say it."""
     parts = urlsplit(url)
@@ -270,6 +292,7 @@ def _unit(description: str, name: str, exec_: str, publish: str, config: Config,
           more_volumes: list[Path] | None = None) -> str:
     env = "".join(f"Environment={k}={v}\n" for k, v in container_env(config).items())
     volumes = "".join(f"Volume={d}:{d}:z\n" for d in data_dirs() + (more_volumes or []))
+    volumes += "".join(f"Volume={f}:{f}:ro,z\n" for f in setu_files())
     secrets = f"EnvironmentFile={env_file(name)}\n" if unit_secrets(config).get(name) else ""
     return f"""{HEADER}
 [Unit]
@@ -362,22 +385,22 @@ def unit_dir() -> Path:
     return config_home / "containers" / "systemd"
 
 
-def install(wanted: dict[str, str]) -> bool:
+def install(wanted: dict[str, str]) -> set[str]:
     """Write the units that differ, remove ours that are no longer wanted;
-    reload systemd if anything changed. Returns whether it did."""
+    reload systemd if anything changed. Returns the files that changed."""
     folder = unit_dir()
     folder.mkdir(parents=True, exist_ok=True)
-    changed = False
+    changed: set[str] = set()
     for path in [folder / f"{name}.container" for name in UNITS.values()] + \
             [folder / f"{NETWORK}.network"]:
         text = wanted.get(path.name)
         if text is None:
             if path.exists():
                 path.unlink()
-                changed = True
+                changed.add(path.name)
         elif not path.exists() or path.read_text() != text:
             path.write_text(text)
-            changed = True
+            changed.add(path.name)
     if changed:
         run(["systemctl", "--user", "daemon-reload"])
     return changed
@@ -482,7 +505,8 @@ def up(config: Config) -> tuple[list[str], bool]:
     for folder in data_dirs() + door_dirs(config):
         folder.mkdir(parents=True, exist_ok=True)
     write_env_files(config)
-    lines = ["units rewritten from sarathi.toml"] if install(units(config)) else []
+    changed = install(units(config))
+    lines = ["units rewritten from sarathi.toml"] if changed else []
     note = browser_note()
     if note:
         lines.append(note)
@@ -500,6 +524,11 @@ def up(config: Config) -> tuple[list[str], bool]:
     for name, port in wanted:
         unit = UNITS[name]
         url = f"http://127.0.0.1:{port}/"
+        if active(unit) and f"{unit}.container" in changed:
+            # a running container keeps the settings it started with: a
+            # rewritten unit means nothing until it starts again
+            run(["systemctl", "--user", "stop", f"{unit}.service"])
+            lines.append(f"{name:<6} restarting with the new settings  (unit {unit})")
         if active(unit):
             address = (clock_address(config) if name == "clock" else None) or url
             lines.append(f"{name:<6} already running at {address}  (unit {unit})")

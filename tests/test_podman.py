@@ -122,8 +122,8 @@ def test_processes_from_the_other_road_must_be_stopped_first(host):
 
 
 def test_units_are_rewritten_and_systemd_reloaded_only_on_a_change(host):
-    assert podman.install(podman.units(LOCAL)) is True
-    assert podman.install(podman.units(LOCAL)) is False
+    assert podman.install(podman.units(LOCAL))
+    assert not podman.install(podman.units(LOCAL))
     assert host.said("systemctl", "--user", "daemon-reload") == 1
     assert podman.install(podman.units(Config("ollama", clock_on=False, road="podman")))
     assert sorted(p.name for p in podman.unit_dir().iterdir()) == [
@@ -405,3 +405,49 @@ def test_taking_the_podman_road_without_an_image_says_to_build_one(host, world, 
     assert main(["road", "podman"]) == 0
     assert load().road == "podman"
     assert "next: `sarathi image` (once), then `sarathi up`" in capsys.readouterr().out
+
+
+# ---- a file Setu names outside its folder ------------------------------------------
+
+
+def _client(world, where="Desktop"):
+    path = world / "home" / where / "client_secret_x.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{}")
+    return path
+
+
+def test_the_google_client_file_setu_names_is_mounted_alone_and_read_only(host, world):
+    """Setu keeps only its path; the file sits wherever Google's download
+    put it, which no container sees -- and the rest of that folder stays out."""
+    client = _client(world)
+    setu = podman.data_dirs()[1]
+    setu.mkdir(parents=True)
+    (setu / "config.json").write_text(json.dumps({"google_client_file": str(client)}))
+    with_door_secrets(world)
+    for name, text in podman.units(DOOR).items():
+        if name.endswith(".container"):
+            assert f"Volume={client}:{client}:ro,z" in text
+            assert f"Volume={client.parent}:" not in text
+
+
+def test_the_environment_names_it_first_and_a_missing_file_mounts_nothing(host, world,
+                                                                         monkeypatch):
+    client = _client(world, "Downloads")
+    monkeypatch.setenv("SETU_GOOGLE_CLIENT_FILE", str(client))
+    assert podman.setu_files() == [client]
+    monkeypatch.setenv("SETU_GOOGLE_CLIENT_FILE", str(world / "gone.json"))
+    assert podman.setu_files() == []
+
+
+def test_a_running_unit_whose_file_changed_is_restarted_not_left_on_old_settings(
+        host, world):
+    """'units rewritten' meant nothing to a container already running."""
+    host.answers[("systemctl", "--user", "is-active")] = subprocess.CompletedProcess(
+        [], 0, "", "")
+    podman.install(podman.units(LOCAL))
+    lines, _ = podman.up(Config("ollama", "gemma4:12b", web_port=8411, clock_port=8790,
+                                road="podman"))
+    assert "page   restarting with the new settings  (unit sarathi-page)" in lines
+    assert host.said("systemctl", "--user", "stop", "sarathi-page.service") == 1
+    assert host.said("systemctl", "--user", "stop", "sarathi-clock.service") == 0

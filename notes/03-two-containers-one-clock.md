@@ -71,6 +71,20 @@ this road `up` refuses up front if the key isn't in `secrets.env`, and
 hands that file to the units with `EnvironmentFile=`. The unit files
 hold no key, and can be read and pasted like `sarathi.toml`.
 
+**A FILE SETU NAMES, MOUNTED ALONE.** A Gmail sign-in needs the Google
+client file, and Setu keeps only its path. People leave it where
+Google's download put it: on this machine, the Desktop, which no
+container mounts. So the door's `/connect gmail` failed with `no client
+file at /home/mahen/Desktop/client_secret_….json`. The units now mount
+the file Setu's settings name (or `SETU_GOOGLE_CLIENT_FILE`), **that
+file alone, read-only**, at the same path. The rest of the Desktop
+stays out.
+
+**A REWRITTEN UNIT IS RESTARTED.** A running container keeps the
+settings it started with, so "units rewritten" used to change nothing
+until the next restart. `up` now restarts a running unit whose file
+changed, and says so.
+
 ## What the first crash found
 
 The units were written, the containers came up, a turn was answered.
