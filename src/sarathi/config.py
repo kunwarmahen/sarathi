@@ -16,6 +16,10 @@ it, written readable by its owner only, so ``sarathi.toml`` can be shown
 to someone or pasted into a question without leaking anything. A key
 already in the environment is used as it is and never copied.
 
+With ``[door] on = true``, ``up`` also starts dvara, the door your
+agents live behind for other people and for you on your phone. Its two
+tokens (dvara's own, and the Telegram bot's) are in secrets.env too.
+
 Where things live:
 
     $SARATHI_CONFIG, else ~/.config/sarathi/   sarathi.toml, secrets.env
@@ -39,12 +43,19 @@ KEY_NAMES = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 
 DEFAULT_WEB_PORT = 8321
 DEFAULT_CLOCK_PORT = 8780
+DEFAULT_DOOR_PORT = 8765
+#: Dvara's own defaults, used when [door] names no folder.
+DOOR_ROOT, DOOR_ACTORS, DOOR_STATE = "~/dvara/agents", "~/dvara/actors.toml", "~/dvara/state"
+#: The two secrets the door needs: dvara's own bearer token (Sarathi
+#: makes one), and the bot's, from BotFather (the person pastes it).
+DOOR_TOKEN, BOT_TOKEN = "DVARA_TOKEN", "TELEGRAM_TOKEN"
 
 KNOWN: dict[str, set[str]] = {
     "model": {"provider", "model", "base_url"},
     "web": {"port"},
     "clock": {"on", "port"},
     "run": {"road"},
+    "door": {"on", "port", "telegram", "root", "actors", "state"},
 }
 
 #: How `up` starts things: plain processes, or Podman containers under
@@ -65,6 +76,22 @@ class Config:
     clock_on: bool = True
     clock_port: int = DEFAULT_CLOCK_PORT
     road: str = "process"
+    door: Door | None = None
+
+
+@dataclass(frozen=True)
+class Door:
+    """Dvara, for other people and for your phone: ``[door]``."""
+
+    port: int = DEFAULT_DOOR_PORT
+    #: The agent a Telegram bot answers as; None: no bot, HTTP only.
+    telegram: str | None = None
+    root: str = DOOR_ROOT
+    actors: str = DOOR_ACTORS
+    state: str = DOOR_STATE
+
+    def path(self, which: str) -> Path:
+        return Path(getattr(self, which)).expanduser()
 
 
 def config_dir() -> Path:
@@ -116,7 +143,19 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     road = data.get("run", {}).get("road", "process")
     if road not in ROADS:
         raise ConfigError(f"{where}: run.road must be one of {', '.join(ROADS)}, not {road!r}")
-    return Config(provider=provider, road=road, model=model.get("model") or None,
+    door_table = data.get("door", {})
+    if not isinstance(door_table.get("on", False), bool):
+        raise ConfigError(f"{where}: door.on must be true or false")
+    for key in ("telegram", "root", "actors", "state"):
+        if not isinstance(door_table.get(key, ""), str):
+            raise ConfigError(f"{where}: door.{key} must be text")
+    door = Door(port=_port(door_table, "port", DEFAULT_DOOR_PORT, "door"),
+                telegram=door_table.get("telegram") or None,
+                root=door_table.get("root") or DOOR_ROOT,
+                actors=door_table.get("actors") or DOOR_ACTORS,
+                state=door_table.get("state") or DOOR_STATE) \
+        if door_table.get("on", False) else None
+    return Config(provider=provider, road=road, door=door, model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   web_port=_port(data.get("web", {}), "port", DEFAULT_WEB_PORT, "web"),
                   clock_on=clock.get("on", True),
@@ -163,7 +202,31 @@ port = {config.clock_port}
 # | podman (containers kept running by systemd; build with `sarathi image`).
 [run]
 road = "{config.road}"
+
+{_render_door(config.door)}"""
+
+
+def _render_door(door: Door | None) -> str:
+    if door is None:
+        return """# dvara: your agents for other people, and for you on your phone.
+# Off; `sarathi door` turns it on.
+[door]
+on = false
 """
+    bot = (f'telegram = "{door.telegram}"' if door.telegram
+           else '# telegram = "AGENT"   # the agent a Telegram bot answers as')
+    folders = "".join(
+        f'{key} = "{getattr(door, key)}"\n' if getattr(door, key) != default
+        else f'# {key} = "{default}"\n'
+        for key, default in (("root", DOOR_ROOT), ("actors", DOOR_ACTORS),
+                             ("state", DOOR_STATE)))
+    return f"""# dvara: your agents for other people, and for you on your phone.
+# Its tokens are in secrets.env; who it serves is in the actors file.
+[door]
+on = true
+port = {door.port}
+{bot}
+{folders}"""
 
 
 def write_private(path: Path, text: str) -> None:

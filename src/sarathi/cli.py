@@ -1,8 +1,10 @@
 """`sarathi`: set it up once, start it, see what is here, stop it.
 
     sarathi init              which model answers; writes sarathi.toml
+    sarathi door              turn on dvara, the door for other people and your
+                              phone: its tokens, a Telegram bot, starter files
     sarathi image             build the image the podman road runs
-    sarathi up                start Yantra's page and Samay's clock
+    sarathi up                start Yantra's page and Samay's clock (and the door)
     sarathi down              stop what `up` started, and nothing else
     sarathi status            each piece: found where, what it says, and
                               what `up` started
@@ -28,7 +30,7 @@ import os
 import sys
 from pathlib import Path
 
-from sarathi import __version__, first_run, podman, services
+from sarathi import __version__, door, first_run, podman, services
 from sarathi.config import PROVIDERS, ConfigError, load
 from sarathi.siblings import Found, env_name, find_all
 
@@ -56,9 +58,19 @@ def build_parser() -> argparse.ArgumentParser:
                       help="start things as Podman containers (see `sarathi image`)")
     init.add_argument("--force", action="store_true", help="replace sarathi.toml")
 
+    door_cmd = subs.add_parser("door", help="dvara, for other people and your phone: "
+                               "turn it on, a Telegram bot, starter files")
+    door_cmd.add_argument("--telegram", metavar="AGENT",
+                          help="the agent a Telegram bot answers as ('' for no bot)")
+    door_cmd.add_argument("--telegram-id", dest="telegram_id", metavar="ID",
+                          help="your own Telegram user id, for a new actors file")
+    door_cmd.add_argument("--port", type=int, help="the door's HTTP port (default 8765)")
+    door_cmd.add_argument("--off", action="store_true", help="stop starting the door")
+
     subs.add_parser("image", help="build the image for the podman road, from the "
                                   "checkouts' committed code")
-    subs.add_parser("up", help="start Yantra's page and Samay's clock")
+    subs.add_parser("up", help="start Yantra's page and Samay's clock, and the door "
+                               "when it is on")
     down = subs.add_parser("down", help="stop what `sarathi up` started")
     down.add_argument("--remove", action="store_true",
                       help="podman road: also remove the units, so nothing starts at login")
@@ -108,6 +120,9 @@ def _running_lines(started: list[dict]) -> list[str]:
                 _home(str(services.log_path(r["name"])))
             out.append(f"  {r['name']:<6} STOPPED -- it exited; the end of {log}:")
             out += [f"         | {line}" for line in r["log"]]
+        if r["name"] == "door" and r.get("strangers"):
+            out.append("         messaged the bot but not in the actors file (telegram "
+                       f"id): {', '.join(r['strangers'])}")
     return out
 
 
@@ -127,6 +142,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "init":
         return first_run.run(args)
+    if args.command == "door":
+        dvara = next(f for f in find_all() if f.sibling.name == "dvara")
+        return door.run(args, dvara)
     try:
         if args.command == "image":
             return podman.build()

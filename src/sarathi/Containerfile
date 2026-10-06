@@ -3,7 +3,7 @@
 # Not built by hand: `sarathi image` puts a clean copy of each project's
 # committed code beside this file and builds from there. The context is
 #
-#   yantra/  setu/  samay/  Containerfile
+#   yantra/  setu/  samay/  dvara/ (maybe empty)  Containerfile
 #
 # ONE IMAGE, SEVERAL CONTAINERS. The projects call each other as programs
 # -- the page runs `setu run gmail:mine` and `samay mcp`, the clock runs
@@ -35,6 +35,14 @@ RUN cd /opt/samay && uv sync --frozen --no-dev
 
 RUN ln -s /opt/yantra/.venv/bin/yantra /opt/setu/.venv/bin/setu \
           /opt/samay/.venv/bin/samay /usr/local/bin/
+
+# dvara, the door, when its checkout was there to copy (an empty folder
+# otherwise). It runs against the Yantra above, as on a desktop.
+COPY dvara/ /opt/dvara/
+RUN if [ -f /opt/dvara/pyproject.toml ]; then \
+      cd /opt/dvara && uv sync --frozen --no-dev --extra http && \
+      ln -s /opt/dvara/.venv/bin/dvara /usr/local/bin/; \
+    fi
 
 # A pipe, not a terminal: without this, `podman logs` stays empty until
 # the process exits.

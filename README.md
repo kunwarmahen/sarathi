@@ -130,6 +130,54 @@ with the last lines of its log, not as "started".
 
 `sarathi down` stops what `up` started and nothing else.
 
+### For other people, and your phone: `sarathi door`
+
+```bash
+sarathi door                  # which agent a Telegram bot answers as; the bot's token
+sarathi door --telegram greeter --telegram-id 8675309
+sarathi door --off
+```
+
+turns on **dvara** as a third piece. `up` then starts clock, door, page,
+in that order:
+
+```
+door   dvara --root ~/dvara/agents --actors ~/dvara/actors.toml --state ~/dvara/state
+             --ask --provider <model.provider> --model <model.model> --samay <samay>
+             serve --port <door.port> [--telegram <door.telegram>]
+```
+
+What a person would otherwise wire by hand in two places:
+
+* **The clock and the door know each other.** Both get the same
+  `SAMAY_DVARA_URL` (the door's address) and `SAMAY_DVARA_TOKEN` (the
+  door's own token), so a schedule made in a chat is checked by the clock
+  against the door that made it.
+* **Tokens.** `DVARA_TOKEN` is made for you; `TELEGRAM_TOKEN` (from
+  @BotFather) is typed at a hidden prompt. Both go to `secrets.env`, and
+  from there **to the door alone**: the page never holds the bot's token,
+  and the clock gets only the door's.
+* **dvara's files, only when missing.** A starter `actors.toml` (you, as
+  the owner) and dvara's own example agents. dvara's formats; Sarathi
+  never touches them again, and ships no agent of its own.
+* **The same model** as the page and the clock (`--provider`, `--model`).
+* **Who may talk to it** is the actors file. Someone not in it gets
+  silence, and `sarathi status` names their Telegram id, which is how
+  you find your own:
+
+  ```
+    door   running at http://127.0.0.1:8765/  (pid 3426486)
+           messaged the bot but not in the actors file (telegram id): 8675309
+  ```
+
+A door that can't start (no actors file, a bot with no token) says why,
+and the clock and page start anyway. On the Podman road it's a third
+unit, `sarathi-door`, on a network shared with the others
+(`sarathi.network`), where the clock reaches it as `sarathi-door`.
+Each unit reads its own secrets from `~/.config/sarathi/units/<unit>.env`,
+copied from `secrets.env` by `up`. The image includes dvara when its
+checkout sits beside the others.
+
 ### Or as containers: the Podman road
 
 ```bash
@@ -216,8 +264,10 @@ In this order; the first hit wins:
 | | |
 |---|---|
 | `~/.config/sarathi/sarathi.toml` | the settings (`$SARATHI_CONFIG` for another folder) |
-| `~/.config/sarathi/secrets.env` | a cloud key, if you typed one; readable only by you |
-| `~/.config/containers/systemd/sarathi-*.container` | the Podman road's units, written by `up` (edit `sarathi.toml`, not these) |
+| `~/.config/sarathi/secrets.env` | a cloud key, if you typed one, and the door's two tokens; readable only by you |
+| `~/.config/sarathi/units/` | the Podman road: each unit's own share of secrets.env, copied by `up`; yours alone |
+| `~/.config/containers/systemd/sarathi-*` | the Podman road's units and network, written by `up` (edit `sarathi.toml`, not these) |
+| `~/dvara/` | the door's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[door]` can name others) |
 | `~/.local/share/sarathi/` | `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
@@ -235,19 +285,21 @@ src/sarathi/
   services.py   sarathi up / down: start the clock and the page, know
                 which are ours  (notes/02)
   podman.py     the same on the podman road: the image, the Quadlet
-                units, systemd  (notes/03)
+                units, systemd  (notes/03); the door's unit  (notes/04)
+  door.py       sarathi door: dvara turned on, its tokens, starter files,
+                and who messaged unlisted  (notes/04)
   Containerfile one image, every program
-  cli.py        sarathi init | up | down | status [--json]
+  cli.py        sarathi init | door | image | up | down | status [--json]
 tests/
-  test_status.py  test_config.py  test_up.py  test_podman.py
+  test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py
 ```
 
 ## Status
 
-Finding the pieces, the settings, and starting them as plain processes
-or as Podman containers are all built. Next comes deciding which parts
-of what Yantra carries today move here, and then the road for a
-household on Telegram through Dvara.
+Finding the pieces, the settings, starting them as plain processes or
+as Podman containers, and the household road (dvara on Telegram, wired
+to the clock) are all built. Not yet: a browser inside the containers,
+for the accounts that need one.
 
 ## Tests
 

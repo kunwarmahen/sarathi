@@ -42,9 +42,9 @@ Five small programs, each with one job. You'll use three of them today:
 | **Samay** | a clock: "every morning at 8, check my mail" keeps happening while you're away |
 | **Sarathi** | the one you install and run: it starts the others for you |
 
-(Dvara, for sharing your helper with family over Telegram, and
-Smritikosh, a bigger memory store, are optional. Sarathi will mention
-them; you can ignore both today.)
+(Dvara, for your helper on your phone and for your family over
+Telegram, is Step 6, when you want it. Smritikosh, a bigger memory
+store, is optional; Sarathi will mention it, and you can ignore it.)
 
 ---
 
@@ -308,6 +308,79 @@ When the projects get an update (`git pull` in their folders), run
 
 ---
 
+## Step 6 (optional) · On your phone, and for your family
+
+So far the helper lives on one page on your computer. **Dvara** (the
+door) puts it on Telegram: you can ask it from your phone, and so can
+the people you choose, each as themselves. Each person gets their own
+conversations, their own spending limit, and, if you give them one,
+their own accounts that they connect themselves. Nobody you didn't list
+gets an answer at all.
+
+**First, a bot.** In Telegram, talk to **@BotFather**, send `/newbot`,
+and pick a name. It gives you a token (a long line like
+`123456:AAE…`). Keep it like a password.
+
+**Then:**
+
+```bash
+sarathi door
+```
+
+```
+Which agent should a Telegram bot answer as? greeter
+Your bot's token from BotFather (TELEGRAM_TOKEN; hidden as you type): ••••
+the door is on in ~/.config/sarathi/sarathi.toml: port 8765, a Telegram bot answering as greeter
+  made the door's own token (DVARA_TOKEN, in secrets.env)
+  TELEGRAM_TOKEN saved to secrets.env (readable only by you)
+  wrote ~/dvara/actors.toml: you, as the owner (your Telegram id still to add)
+  copied dvara's example agents to ~/dvara/agents (greeter, scribe): replace them with your own
+```
+
+`greeter` is a small example helper that only talks. It's there to
+prove everything works; your own helpers go in `~/dvara/agents` later
+(dvara's tutorial shows how).
+
+**Start it:**
+
+```bash
+sarathi down && sarathi up
+```
+
+```
+clock  up at http://127.0.0.1:8780/#token=…
+door   up at http://127.0.0.1:8765/
+page   up at http://127.0.0.1:8321/
+```
+
+**Let yourself in.** Message your bot. It won't answer yet: it doesn't
+know who you are. Then:
+
+```bash
+sarathi status
+```
+
+```
+  door   running at http://127.0.0.1:8765/
+         messaged the bot but not in the actors file (telegram id): 8675309
+```
+
+That number is you. Open `~/dvara/actors.toml`, find the lines under
+"Your Telegram id", remove the `#`s and put your number in. Message the
+bot again: it answers. (No restart needed; the door rereads the file.)
+
+**Adding someone else** is the same: they message the bot, you read
+their number in `sarathi status`, and you add them to `actors.toml`
+(the file has a commented example). Give them `setu = true` and they can
+connect their own Gmail from their phone by sending `/connect gmail` to
+the bot. Their sign-ins are kept on your computer, in a folder of their
+own, so you could read them. Tell them that.
+
+To turn the door off again: `sarathi door --off`, then
+`sarathi down && sarathi up`.
+
+---
+
 ## When something goes wrong
 
 Sarathi tries to say what happened and what fixes it. The messages
@@ -324,10 +397,15 @@ you're most likely to meet:
 | `unknown key clock.onn` | a typo in sarathi.toml | fix the spelling; Sarathi never guesses |
 | `no image yet (localhost/sarathi:latest): run sarathi image first` | Podman road, image not built | `sarathi image` |
 | a schedule never runs | the clock isn't running | `sarathi status`; on the process road, the clock stops with your session (Step 5 fixes that) |
+| `door not started: door.telegram is set but there is no TELEGRAM_TOKEN` | the bot's token wasn't saved | `sarathi door` again, and paste it |
+| `door not started: no actors file at ~/dvara/actors.toml` | dvara's list of people is missing | `sarathi door` writes a starter one |
+| the bot never answers you | you're not in the actors file yet | Step 6, "Let yourself in" |
+| `the door cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
 
 Each program also writes down what it printed:
-`~/.local/share/sarathi/logs/page.log` and `clock.log` on the process
-road; `journalctl --user -u sarathi-page` on the Podman road.
+`~/.local/share/sarathi/logs/page.log`, `clock.log` and `door.log` on
+the process road; `journalctl --user -u sarathi-page` (or `-door`,
+`-clock`) on the Podman road.
 
 ---
 
@@ -336,7 +414,9 @@ road; `journalctl --user -u sarathi-page` on the Podman road.
 | What | Where |
 |---|---|
 | Sarathi's settings | `~/.config/sarathi/sarathi.toml` |
-| A cloud key | `~/.config/sarathi/secrets.env` (only you can read it) |
+| A cloud key, and the door's and bot's tokens | `~/.config/sarathi/secrets.env` (only you can read it) |
+| Who may use the bot, and the helpers it offers | `~/dvara/actors.toml`, `~/dvara/agents/` |
+| Their conversations, and their own sign-ins | `~/dvara/state/` |
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
 | Your schedules and their history | Samay's folder, `~/.samay/` |
 | What the helper remembers about you | `~/.local/state/yantra/` |
@@ -361,3 +441,7 @@ accounts, schedules and memories stay.
   computer to talk to (8321 for the page, 8780 for the clock).
 * **Container** — a program running in its own sealed box, which your
   computer can restart on its own. Podman is the program that runs them.
+* **Bot** — a Telegram account that a program answers instead of a
+  person. @BotFather makes one and gives you its token.
+* **Actors file** — dvara's list of the people it answers, and what
+  each may use.

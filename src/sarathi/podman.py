@@ -1,4 +1,4 @@
-"""The same two pieces, as containers that systemd keeps running.
+"""The same pieces, as containers that systemd keeps running.
 
 ``run.road = "podman"`` in sarathi.toml changes how ``sarathi up`` starts
 the clock and the page. Instead of plain processes, it writes two Quadlet
@@ -34,9 +34,21 @@ page asks about the clock once, at start-up (note 02).
 
 KEYS ONLY FROM SECRETS.ENV. A systemd unit does not see the shell that
 ran ``sarathi up``, so a key exported there would silently not arrive.
-The cloud road on Podman therefore reads keys from secrets.env only
-(``EnvironmentFile=``). The unit files hold no key; they can be read and
-pasted like sarathi.toml.
+The cloud road on Podman therefore reads keys from secrets.env only. The
+unit files hold no key; they can be read and pasted like sarathi.toml.
+
+EACH CONTAINER GETS ONLY ITS OWN SECRETS. ``up`` copies from secrets.env
+into one file per unit (``units/<unit>.env`` beside it, readable by you
+only, ``EnvironmentFile=``): the model's key to each, the door's own
+token and the Telegram bot's token to the door, and the door's token to
+the clock, which checks schedules against it. The page never holds the
+bot's token.
+
+THE DOOR, WHEN IT IS ON, is a third container (``sarathi-door``), after
+the clock. All of them share one network (``sarathi.network``), where
+each finds another by its name: the clock reaches the door at
+``http://sarathi-door:8765``. Nothing else is shared; dvara's folders
+(agents, actors, state) are mounted into the door alone.
 
 OLLAMA IS ON THE HOST. ``localhost`` inside a container is the
 container, so the local road's address becomes
@@ -62,16 +74,29 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
-from sarathi.config import KEY_NAMES, Config, ConfigError, read_secrets, secrets_path
-from sarathi.services import alive, records, work_dir
+from sarathi.config import (
+    BOT_TOKEN,
+    DOOR_TOKEN,
+    KEY_NAMES,
+    Config,
+    ConfigError,
+    config_dir,
+    read_secrets,
+    secrets_path,
+    write_private,
+)
+from sarathi.services import alive, door_problems, records, work_dir
 from sarathi.siblings import beside_dir
 
 IMAGE = "localhost/sarathi:latest"
 IN_IMAGE = "/usr/local/bin"
 CHECKOUTS = ("yantra", "setu", "samay")
+#: Built into the image when its checkout is there; the door needs it.
+OPTIONAL_CHECKOUTS = ("dvara",)
 #: Ports inside the containers; the host ports come from sarathi.toml.
-PAGE_PORT, CLOCK_PORT = 8321, 8780
-UNITS = {"clock": "sarathi-clock", "page": "sarathi-page"}
+PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
+UNITS = {"clock": "sarathi-clock", "door": "sarathi-door", "page": "sarathi-page"}
+NETWORK = "sarathi"
 READY_TIMEOUT = 90.0
 HEADER = ("# Written by `sarathi up` from sarathi.toml, and rewritten whenever it\n"
           "# changes: edit sarathi.toml, not this file.\n")
@@ -87,6 +112,10 @@ def run(argv: list[str], **kw) -> subprocess.CompletedProcess:
 def checkouts(env: dict[str, str] | None = None) -> dict[str, Path]:
     root = beside_dir(env)
     found, missing = {}, []
+    for name in OPTIONAL_CHECKOUTS:
+        repo = root / name if root is not None else None
+        if repo is not None and (repo / ".git").exists():
+            found[name] = repo
     for name in CHECKOUTS:
         repo = root / name if root is not None else None
         if repo is None or not (repo / ".git").exists():
@@ -117,6 +146,10 @@ def stage(into: Path, env: dict[str, str] | None = None) -> list[str]:
         if dirty:
             note += f"  ({len(dirty)} uncommitted change(s) left out: commit to include them)"
         lines.append(note)
+    for name in OPTIONAL_CHECKOUTS:
+        if not (into / name).exists():
+            (into / name).mkdir(parents=True)    # empty: the image is built without it
+            lines.append(f"{name:<7} not found beside the others: built without it")
     shutil.copy(Path(__file__).with_name("Containerfile"), into / "Containerfile")
     return lines
 
@@ -168,11 +201,47 @@ def container_env(config: Config) -> dict[str, str]:
     return env
 
 
+def door_dirs(config: Config) -> list[Path]:
+    """dvara's folders, for the door's container alone."""
+    door = config.door
+    if door is None:
+        return []
+    return [door.path("root"), door.path("actors").parent, door.path("state")]
+
+
+def env_file(unit: str) -> Path:
+    return config_dir() / "units" / f"{unit}.env"
+
+
+def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
+    """Unit -> the secrets it, and only it, gets."""
+    held = read_secrets()
+    key = KEY_NAMES.get(config.provider)
+    model = {key: held[key]} if key and key in held else {}
+    door = {} if config.door is None or DOOR_TOKEN not in held else \
+        {"SAMAY_DVARA_TOKEN": held[DOOR_TOKEN]}
+    out = {UNITS["page"]: dict(model), UNITS["clock"]: {**model, **door}}
+    if config.door is not None:
+        out[UNITS["door"]] = {**model, **door,
+                              **{k: held[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in held}}
+    return out
+
+
+def write_env_files(config: Config) -> None:
+    folder = env_file("x").parent
+    folder.mkdir(parents=True, exist_ok=True)
+    folder.chmod(0o700)
+    for unit, values in unit_secrets(config).items():
+        body = "".join(f"{k}={v}\n" for k, v in values.items())
+        write_private(env_file(unit), "# Written by `sarathi up` from secrets.env.\n" + body)
+
+
 def _unit(description: str, name: str, exec_: str, publish: str, config: Config,
-          extra_unit: str = "", extra_container: str = "") -> str:
+          extra_unit: str = "", extra_container: str = "",
+          more_volumes: list[Path] | None = None) -> str:
     env = "".join(f"Environment={k}={v}\n" for k, v in container_env(config).items())
-    volumes = "".join(f"Volume={d}:{d}:z\n" for d in data_dirs())
-    secrets = f"EnvironmentFile={secrets_path()}\n" if secrets_path().exists() else ""
+    volumes = "".join(f"Volume={d}:{d}:z\n" for d in data_dirs() + (more_volumes or []))
+    secrets = f"EnvironmentFile={env_file(name)}\n" if unit_secrets(config).get(name) else ""
     return f"""{HEADER}
 [Unit]
 Description={description}
@@ -180,6 +249,7 @@ Description={description}
 [Container]
 Image={IMAGE}
 ContainerName={name}
+Network={NETWORK}.network
 Exec={exec_}
 PublishPort={publish}
 UserNS=keep-id
@@ -207,14 +277,34 @@ def units(config: Config) -> dict[str, str]:
             # where a browser here reaches it, so Samay prints and reports
             # that, not the container's own bind (an older image ignores it)
             extra_container=f"Environment=SAMAY_PUBLIC_URL=http://127.0.0.1:"
-                            f"{config.clock_port}/\n")
+                            f"{config.clock_port}/\n"
+                            + (f"Environment=SAMAY_DVARA_URL=http://{UNITS['door']}:"
+                               f"{DOOR_PORT}\n" if config.door else ""))
         page_exec += f"--samay {IN_IMAGE}/samay"
         page_unit = f"Wants={UNITS['clock']}.service\nAfter={UNITS['clock']}.service\n"
     else:
         page_exec += "--no-samay"
+    if config.door is not None:
+        door, after = config.door, ""
+        door_exec = (f"{IN_IMAGE}/dvara --root {door.path('root')} --actors "
+                     f"{door.path('actors')} --state {door.path('state')} --ask "
+                     f"--provider {config.provider} "
+                     + (f"--model {config.model} " if config.model else "")
+                     + (f"--samay {IN_IMAGE}/samay " if config.clock_on else "--samay off ")
+                     + f"serve --host 0.0.0.0 --port {DOOR_PORT}"
+                     + (f" --telegram {door.telegram}" if door.telegram else ""))
+        if config.clock_on:
+            after = f"Wants={UNITS['clock']}.service\nAfter={UNITS['clock']}.service\n"
+        out[f"{UNITS['door']}.container"] = _unit(
+            "Sarathi: dvara, the door", UNITS["door"], door_exec,
+            f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
+            extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n",
+            more_volumes=door_dirs(config))
+        page_unit += f"After={UNITS['door']}.service\n"
     out[f"{UNITS['page']}.container"] = _unit(
         "Sarathi: Yantra's page", UNITS["page"], page_exec,
         f"127.0.0.1:{config.web_port}:{PAGE_PORT}", config, page_unit)
+    out[f"{NETWORK}.network"] = (f"{HEADER}\n[Network]\nNetworkName={NETWORK}\n")
     return out
 
 
@@ -229,8 +319,8 @@ def install(wanted: dict[str, str]) -> bool:
     folder = unit_dir()
     folder.mkdir(parents=True, exist_ok=True)
     changed = False
-    for name in UNITS.values():
-        path = folder / f"{name}.container"
+    for path in [folder / f"{name}.container" for name in UNITS.values()] + \
+            [folder / f"{NETWORK}.network"]:
         text = wanted.get(path.name)
         if text is None:
             if path.exists():
@@ -290,6 +380,14 @@ def preflight(config: Config) -> None:
         raise ConfigError(f"no {key} in {secrets_path()}: on the podman road keys come "
                           "only from there (a unit does not see your shell); "
                           "`sarathi init --force --podman` saves it")
+    if config.door is not None:
+        problems = door_problems(config, None)
+        if run(["podman", "run", "--rm", "--entrypoint", "test", IMAGE, "-x",
+                f"{IN_IMAGE}/dvara"]).returncode != 0:
+            problems.insert(0, "the image has no dvara: put its checkout beside the "
+                               "others and run `sarathi image` again")
+        if problems:
+            raise ConfigError("the door cannot start: " + "; ".join(problems))
     ours = [name for name, r in records().items() if alive(r["pid"])]
     if ours:
         raise ConfigError(f"{', '.join(ours)} still running as plain processes: "
@@ -298,13 +396,16 @@ def preflight(config: Config) -> None:
 
 def up(config: Config) -> tuple[list[str], bool]:
     preflight(config)
-    for folder in data_dirs():
+    for folder in data_dirs() + door_dirs(config):
         folder.mkdir(parents=True, exist_ok=True)
+    write_env_files(config)
     lines = ["units rewritten from sarathi.toml"] if install(units(config)) else []
     if not config.clock_on:
         lines.append("clock  off in sarathi.toml")
     ok = True
     wanted = [("clock", config.clock_port)] if config.clock_on else []
+    if config.door is not None:
+        wanted.append(("door", config.door.port))
     wanted.append(("page", config.web_port))
     for name, port in wanted:
         unit = UNITS[name]
@@ -335,7 +436,7 @@ def down(remove: bool = False) -> list[str]:
     """Stop the units. They stay installed -- and so start again at the
     next login, which is what they are for -- unless ``remove``."""
     lines = []
-    for name in ("page", "clock"):
+    for name in ("page", "door", "clock"):
         unit = UNITS[name]
         if not (unit_dir() / f"{unit}.container").exists():
             continue
@@ -348,6 +449,7 @@ def down(remove: bool = False) -> list[str]:
         return ["no Sarathi units are installed"]
     if remove:
         install({})
+        run(["podman", "network", "rm", NETWORK])    # quadlet made it; nothing uses it now
         lines.append("units removed: nothing starts at login until the next `sarathi up`")
     else:
         lines.append("they start again at your next login "
@@ -356,14 +458,21 @@ def down(remove: bool = False) -> list[str]:
 
 
 def running(config: Config) -> list[dict]:
+    from sarathi.door import strangers
+
     out = []
-    for name, port in (("clock", config.clock_port), ("page", config.web_port)):
+    door_port = config.door.port if config.door else None
+    for name, port in (("clock", config.clock_port), ("door", door_port),
+                       ("page", config.web_port)):
         unit = UNITS[name]
-        if not (unit_dir() / f"{unit}.container").exists():
+        if port is None or not (unit_dir() / f"{unit}.container").exists():
             continue
         live = active(unit)
         address = (clock_address(config) if live and name == "clock" else None) or \
             f"http://127.0.0.1:{port}/"
-        out.append({"name": name, "unit": unit, "alive": live, "address": address,
-                    "log": [] if live else journal_tail(unit)})
+        row = {"name": name, "unit": unit, "alive": live, "address": address,
+               "log": [] if live else journal_tail(unit)}
+        if name == "door":
+            row["strangers"] = strangers(journal_tail(unit, 400))
+        out.append(row)
     return out

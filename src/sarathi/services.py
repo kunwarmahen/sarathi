@@ -1,7 +1,8 @@
 """Start the pieces, stop them, and know which ones are ours.
 
 ``sarathi up`` starts two long-running things: Yantra's page and Samay's
-clock. Setu is not one of them: it runs only when an agent asks it to.
+clock, and a third with ``[door] on``: dvara. Setu is not one of
+them: it runs only when an agent asks it to.
 Each piece is started with the flags and environment that
 ``sarathi.toml`` implies, and nothing is written into any sibling's own
 files:
@@ -10,6 +11,17 @@ files:
                    --setu <the setu Sarathi found> --samay <the samay it found>
     clock   samay serve --port <clock.port>
                    with SAMAY_YANTRA=<the yantra Sarathi found>
+    door    dvara --root/--actors/--state <door.*> --ask --samay <samay>
+                  serve --port <door.port> [--telegram <door.telegram>]
+
+THE DOOR AND THE CLOCK ARE TOLD ABOUT EACH OTHER. A schedule made in a
+chat runs through the door as its person, and Samay checks every such
+schedule against the door that made it. So both get the same
+``SAMAY_DVARA_URL`` (the door's address) and ``SAMAY_DVARA_TOKEN`` (the
+door's own token, from secrets.env): the wiring a person would
+otherwise copy by hand into two places and get wrong in one. The order
+is clock, door, page -- the door, like the page, asks once at start-up
+whether the clock is running.
 
 Both get the same model settings (``YANTRA_PROVIDER``, ``<PROVIDER>_MODEL``
 and so on, plus secrets.env), so a scheduled run is answered by the same
@@ -49,7 +61,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sarathi.config import KEY_NAMES, Config, ConfigError, read_secrets, state_dir
+from sarathi.config import (
+    BOT_TOKEN,
+    DOOR_TOKEN,
+    KEY_NAMES,
+    Config,
+    ConfigError,
+    read_secrets,
+    state_dir,
+)
 from sarathi.siblings import Found, read_status
 
 HOST = "127.0.0.1"
@@ -67,7 +87,7 @@ _started: list[subprocess.Popen] = []
 
 @dataclass
 class Service:
-    name: str                       # "page" | "clock"
+    name: str                       # "page" | "clock" | "door"
     sibling: str
     argv: list[str]
     port: int
@@ -91,7 +111,10 @@ def model_env(config: Config, environ: dict[str, str] | None = None) -> dict[str
         env[f"{prefix}_MODEL"] = config.model
     if config.base_url:
         env[f"{prefix}_BASE_URL"] = config.base_url
-    secrets = {k: v for k, v in read_secrets().items() if k not in environ}
+    # the door's two tokens go to the door alone (and the clock its token,
+    # as SAMAY_DVARA_TOKEN): never to every piece that reads secrets.env
+    secrets = {k: v for k, v in read_secrets().items()
+               if k not in environ and k not in (DOOR_TOKEN, BOT_TOKEN)}
     env.update(secrets)
     key = KEY_NAMES.get(config.provider)
     if key and key not in environ and key not in env:
@@ -118,18 +141,85 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
     # once, at start-up, and tells the model what it heard for the whole
     # session -- so a page started first would say "not running" forever.
     services = []
+    door = door_service(config, found, env, clock_on, notes)
+    meet = door_env(config) if door is not None else {}
     if clock_on:
         services.append(Service(
             "clock", "samay", [samay.program, "serve", "--port", str(config.clock_port)],
             config.clock_port,
-            {**env, "SAMAY_YANTRA": yantra.program, "SAMAY_YANTRA_HOME": str(work_dir())},
+            {**env, "SAMAY_YANTRA": yantra.program, "SAMAY_YANTRA_HOME": str(work_dir()),
+             **meet},
             says_address="page: "))
+    if door is not None:
+        services.append(door)
     page_argv = [yantra.program, "--web", "--host", HOST, "--port", str(config.web_port)]
     if setu.program is not None:
         page_argv += ["--setu", setu.program]
     page_argv += ["--samay", samay.program] if clock_on else ["--no-samay"]
     services.append(Service("page", "yantra", page_argv, config.web_port, env))
     return services, notes
+
+
+def door_env(config: Config, at: str | None = None) -> dict[str, str]:
+    """How the clock and the door find each other: the door's address and
+    its token, the same in both."""
+    token = read_secrets().get(DOOR_TOKEN) or os.environ.get(DOOR_TOKEN, "")
+    if not token:
+        raise ConfigError(f"the door is on but has no {DOOR_TOKEN}: run `sarathi door`")
+    assert config.door is not None
+    return {"SAMAY_DVARA_URL": at or f"http://{HOST}:{config.door.port}",
+            "SAMAY_DVARA_TOKEN": token}
+
+
+def door_problems(config: Config, found: dict[str, Found] | None) -> list[str]:
+    """Why the door cannot start, in words -- before anything is started.
+    ``found`` None: dvara is not looked for on this machine (it is in the
+    image, on the podman road)."""
+    door = config.door
+    assert door is not None
+    secrets = {**read_secrets(), **{k: v for k, v in os.environ.items()
+                                    if k in (DOOR_TOKEN, BOT_TOKEN)}}
+    problems = []
+    if found is not None and found["dvara"].program is None:
+        problems.append("dvara was not found (see `sarathi status`)")
+    if not door.path("actors").is_file():
+        problems.append(f"no actors file at {door.actors}: `sarathi door` writes a "
+                        "starter one")
+    if not door.path("root").is_dir():
+        problems.append(f"no agents folder at {door.root}: `sarathi door` copies "
+                        "dvara's examples there")
+    if DOOR_TOKEN not in secrets:
+        problems.append(f"no {DOOR_TOKEN} in secrets.env: run `sarathi door`")
+    if door.telegram and BOT_TOKEN not in secrets:
+        problems.append(f"door.telegram is set but there is no {BOT_TOKEN}: "
+                        "run `sarathi door` to paste the bot's token")
+    return problems
+
+
+def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
+                 clock_on: bool, notes: list[str]) -> Service | None:
+    door = config.door
+    if door is None:
+        return None
+    problems = door_problems(config, found)
+    if problems:
+        notes.append("door   not started: " + "; ".join(problems))
+        return None
+    dvara, samay = found["dvara"].program, found["samay"].program
+    assert dvara is not None
+    argv = [dvara, "--root", str(door.path("root")), "--actors", str(door.path("actors")),
+            "--state", str(door.path("state")), "--ask"]
+    # the same model as the page, overruling a package that names another
+    argv += ["--provider", config.provider] + (["--model", config.model] if config.model
+                                               else [])
+    argv += ["--samay", samay] if clock_on and samay else ["--samay", "off"]
+    argv += ["serve", "--host", HOST, "--port", str(door.port)]
+    if door.telegram:
+        argv += ["--telegram", door.telegram]
+    secrets = read_secrets()
+    tokens = {k: secrets[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in secrets}
+    return Service("door", "dvara", argv, door.port,
+                   {**env, **tokens, **door_env(config)})
 
 
 def work_dir() -> Path:
@@ -275,7 +365,8 @@ def up(config: Config, found: dict[str, Found]) -> tuple[list[str], bool]:
                 continue
         if answers(service.port):
             ok = False
-            setting = "web.port" if service.name == "page" else "clock.port"
+            setting = {"page": "web.port", "clock": "clock.port",
+                       "door": "door.port"}[service.name]
             lines.append(f"{service.name:<6} not started: something else is listening on "
                          f"port {service.port} (change {setting} in sarathi.toml)")
             continue
@@ -317,9 +408,13 @@ def down() -> list[str]:
 
 def running() -> list[dict[str, Any]]:
     """Each record, with whether its process is alive and what it last said."""
+    from sarathi.door import strangers
+
     out = []
     for name, record in records().items():
         live = alive(record["pid"])
-        out.append({"name": name, **record, "alive": live,
-                    "log": [] if live else log_tail(name)})
+        row = {"name": name, **record, "alive": live, "log": [] if live else log_tail(name)}
+        if name == "door":
+            row["strangers"] = strangers(log_tail(name, 400))
+        out.append(row)
     return out

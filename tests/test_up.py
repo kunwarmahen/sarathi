@@ -19,77 +19,13 @@ import os
 import signal
 import socket
 import stat
-import sys
 import time
-from pathlib import Path
 
-import pytest
 
 from sarathi import services
 from sarathi.cli import main
 
-from conftest import program
-
-FAKE = """#!{python}
-import http.server, json, os, sys, time
-name, args = {name!r}, sys.argv[1:]
-if args[:2] == ["status", "--json"]:
-    print(json.dumps({status}))
-    sys.exit(0)
-seen = os.environ["FAKE_SEEN"]
-keep = {{k: v for k, v in os.environ.items()
-        if k.startswith(("YANTRA_", "SAMAY_", "OLLAMA_", "ANTHROPIC_", "OPENAI_"))}}
-with open(os.path.join(seen, name + ".json"), "w") as out:
-    json.dump({{"argv": args, "env": keep, "cwd": os.getcwd(), "at": time.monotonic()}}, out)
-if os.environ.get("FAKE_CRASH") == name:
-    print("Traceback: the web extra is not installed")
-    sys.exit(3)
-port = int(args[args.index("--port") + 1])
-if name == "samay":
-    print(f"page: http://127.0.0.1:{{port}}/#token=t0k3n", flush=True)
-http.server.HTTPServer(("127.0.0.1", port), http.server.SimpleHTTPRequestHandler).serve_forever()
-"""
-
-SAMAY_IDLE = {"format": "samay.status.v1", "serving": False, "url": None,
-              "schedules": {"active": 0, "paused": 0}}
-
-
-def fake(where: Path, name: str, status: dict | None = None) -> Path:
-    path = where / name
-    path.write_text(FAKE.format(python=sys.executable, name=name, status=status or {}))
-    path.chmod(path.stat().st_mode | stat.S_IXUSR)
-    return path
-
-
-def free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-@pytest.fixture
-def stage(world, monkeypatch):
-    """Siblings that really start, settings on free ports; everything stopped after."""
-    bin_dir = world / "bin"
-    fake(bin_dir, "yantra")
-    fake(bin_dir, "samay", SAMAY_IDLE)
-    program(bin_dir, "setu", json.dumps({"format": "setu.status.v1", "connections": []}))
-    seen = world / "seen"
-    seen.mkdir()
-    monkeypatch.setenv("FAKE_SEEN", str(seen))
-    monkeypatch.setattr(services, "READY_TIMEOUT", 10.0)
-    ports = {"web": free_port(), "clock": free_port()}
-    settings(world, ports)
-    yield {"world": world, "seen": seen, "ports": ports}
-    services.down()
-
-
-def settings(world: Path, ports: dict, extra: str = "", provider: str = "ollama") -> None:
-    (world / "config").mkdir(exist_ok=True)
-    (world / "config" / "sarathi.toml").write_text(
-        f'[model]\nprovider = "{provider}"\nmodel = "gemma4:12b"\n'
-        f'[web]\nport = {ports["web"]}\n[clock]\nport = {ports["clock"]}\n{extra}')
-
+from conftest import SAMAY_IDLE, fake, free_port, program, settings  # noqa: F401
 
 def seen(stage, name: str) -> dict:
     return json.loads((stage["seen"] / f"{name}.json").read_text())

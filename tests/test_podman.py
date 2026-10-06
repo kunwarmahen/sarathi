@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from sarathi import podman, services
-from sarathi.config import Config, ConfigError
+from sarathi.config import Config, ConfigError, Door
 
 LOCAL = Config("ollama", "gemma4:12b", web_port=8410, clock_port=8790, road="podman")
 
@@ -66,7 +66,7 @@ def test_the_page_starts_after_the_clock_and_shares_nothing_else_with_it(host):
 
 def test_with_the_clock_off_there_is_no_clock_and_nothing_bound_to_one(host):
     made = podman.units(Config("ollama", clock_on=False, road="podman"))
-    assert list(made) == ["sarathi-page.container"]
+    assert list(made) == ["sarathi-page.container", "sarathi.network"]
     text = made["sarathi-page.container"]
     assert "--no-samay" in text and "sarathi-clock" not in text
 
@@ -86,14 +86,18 @@ def test_a_local_model_is_reached_on_the_host_and_a_remote_one_where_it_is(host)
     assert "OLLAMA_BASE_URL=http://gpu-box:11434/v1" in page(remote)
 
 
-def test_a_key_reaches_the_containers_only_through_secrets_env(host, world):
+def test_a_key_reaches_the_containers_only_through_their_own_env_file(host, world):
     cloud = Config("anthropic", road="podman")
     assert "EnvironmentFile" not in page(cloud)
     secrets = world / "config" / "secrets.env"
     secrets.parent.mkdir(parents=True)
     secrets.write_text("ANTHROPIC_API_KEY=sk-secret\n")
     text = page(cloud)
-    assert f"EnvironmentFile={secrets}" in text and "sk-secret" not in text
+    own = podman.env_file("sarathi-page")
+    assert f"EnvironmentFile={own}" in text and "sk-secret" not in text
+    podman.write_env_files(cloud)
+    assert "ANTHROPIC_API_KEY=sk-secret" in own.read_text()
+    assert oct(own.stat().st_mode & 0o777) == "0o600"
 
 
 def test_a_key_in_the_shell_does_not_count_on_the_podman_road(host, monkeypatch):
@@ -120,7 +124,8 @@ def test_units_are_rewritten_and_systemd_reloaded_only_on_a_change(host):
     assert podman.install(podman.units(LOCAL)) is False
     assert host.said("systemctl", "--user", "daemon-reload") == 1
     assert podman.install(podman.units(Config("ollama", clock_on=False, road="podman")))
-    assert sorted(p.name for p in podman.unit_dir().iterdir()) == ["sarathi-page.container"]
+    assert sorted(p.name for p in podman.unit_dir().iterdir()) == [
+        "sarathi-page.container", "sarathi.network"]
     assert host.said("systemctl", "--user", "daemon-reload") == 2
 
 
@@ -176,3 +181,62 @@ def test_down_says_the_units_come_back_at_login_unless_removed(host):
     assert said[-1].startswith("units removed")
     assert list(podman.unit_dir().iterdir()) == []
     assert podman.down() == ["no Sarathi units are installed"]
+
+
+# ---- the door, on the podman road ---------------------------------------------------
+
+DOOR = Config("ollama", "gemma4:12b", web_port=8410, clock_port=8790, road="podman",
+              door=Door(port=8766, telegram="greeter"))
+
+
+def with_door_secrets(world):
+    secrets = world / "config" / "secrets.env"
+    secrets.parent.mkdir(parents=True, exist_ok=True)
+    secrets.write_text("DVARA_TOKEN=dvara-token\nTELEGRAM_TOKEN=123:bot\n")
+
+
+def test_the_door_is_a_third_container_wired_to_the_clock_by_name(host, world):
+    with_door_secrets(world)
+    made = podman.units(DOOR)
+    door = made["sarathi-door.container"]
+    home = world / "home"
+    assert "--ask --provider ollama --model gemma4:12b --samay /usr/local/bin/samay" in door
+    assert "serve --host 0.0.0.0 --port 8765 --telegram greeter" in door
+    assert "PublishPort=127.0.0.1:8766:8765" in door
+    assert "After=sarathi-clock.service" in door
+    for folder in (home / "dvara/agents", home / "dvara", home / "dvara/state"):
+        assert f"Volume={folder}:{folder}:z" in door
+    assert "Environment=SAMAY_DVARA_URL=http://sarathi-door:8765" in made[
+        "sarathi-clock.container"]
+    assert "After=sarathi-door.service" in made["sarathi-page.container"]
+    assert all("Network=sarathi.network" in made[f"sarathi-{n}.container"]
+               for n in ("clock", "door", "page"))
+    assert "123:bot" not in "".join(made.values())
+
+
+def test_the_bots_token_reaches_the_door_and_no_other_container(host, world):
+    with_door_secrets(world)
+    podman.write_env_files(DOOR)
+    door = podman.env_file("sarathi-door").read_text()
+    clock = podman.env_file("sarathi-clock").read_text()
+    page_env = podman.env_file("sarathi-page").read_text()
+    assert "TELEGRAM_TOKEN=123:bot" in door and "DVARA_TOKEN=dvara-token" in door
+    assert "SAMAY_DVARA_TOKEN=dvara-token" in clock and "TELEGRAM" not in clock
+    assert "TOKEN" not in page_env
+    assert oct(podman.env_file("x").parent.stat().st_mode & 0o777) == "0o700"
+
+
+def test_an_image_without_dvara_says_how_to_put_it_in(host, world):
+    with_door_secrets(world)
+    (world / "home" / "dvara" / "agents").mkdir(parents=True)
+    (world / "home" / "dvara" / "actors.toml").write_text("[actor.owner]\n")
+    host.answers[("podman", "run", "--rm", "--entrypoint", "test")] = \
+        subprocess.CompletedProcess([], 1, "", "")
+    with pytest.raises(ConfigError, match="the image has no dvara"):
+        podman.preflight(DOOR)
+
+
+def test_a_door_with_no_actors_file_does_not_start(host, world):
+    with_door_secrets(world)
+    with pytest.raises(ConfigError, match="no actors file"):
+        podman.preflight(DOOR)
