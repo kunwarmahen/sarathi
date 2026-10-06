@@ -174,4 +174,5 @@ end-to-end receipt is in dvara's note 18.
 **Found on the way:** the image has no bubblewrap, so Setu's
 connectors there run without their sandbox. They still hold no key,
 since Setu makes their requests, and Setu's card says they aren't
-walled off. Putting bubblewrap into the image is its own small change.
+walled off. ~~Putting bubblewrap into the image is its own small
+change.~~ Done: [notes/05](05-a-browser-in-the-image.md).

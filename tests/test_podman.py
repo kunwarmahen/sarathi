@@ -240,3 +240,95 @@ def test_a_door_with_no_actors_file_does_not_start(host, world):
     with_door_secrets(world)
     with pytest.raises(ConfigError, match="no actors file"):
         podman.preflight(DOOR)
+
+
+# ---- a browser in the image, and the door's window -------------------------------
+
+
+def test_the_image_carries_a_browser_bubblewrap_and_a_screen():
+    text = Path(podman.__file__).with_name("Containerfile").read_text()
+    for wanted in ("bubblewrap", "xvfb", "google-chrome-stable", "--extra browse",
+                   "YANTRA_BROWSER_EXECUTABLE"):
+        assert wanted in text
+
+
+def test_every_container_gets_room_for_a_browser_and_a_wall_for_a_connector(host, world):
+    """bubblewrap mounts a fresh /proc; masked, the kernel refuses it."""
+    with_door_secrets(world)
+    containers = [t for n, t in podman.units(DOOR).items() if n.endswith(".container")]
+    assert all("ShmSize=1g" in t and "Unmask=/proc/*" in t for t in containers)
+
+
+def test_no_window_asked_for_publishes_nothing_more(host, world):
+    with_door_secrets(world)
+    door = podman.units(DOOR)["sarathi-door.container"]
+    assert "SETU_WINDOW" not in door
+    assert door.count("PublishPort=") == 1
+
+
+def test_the_window_is_published_where_asked_and_linked_from_there(host, world):
+    """Listening everywhere INSIDE, published on window_host alone, and a
+    link a phone can open -- never the container's own address."""
+    with_door_secrets(world)
+    config = Config("ollama", road="podman",
+                    door=Door(window_host="100.101.102.103"))
+    door = podman.units(config)["sarathi-door.container"]
+    assert "PublishPort=100.101.102.103:8790:8790" in door
+    assert "Environment=SETU_WINDOW_HOST=0.0.0.0" in door
+    assert "Environment=SETU_WINDOW_PORT=8790" in door
+    assert "Environment=SETU_WINDOW_URL=http://100.101.102.103:8790" in door
+
+
+def test_a_window_behind_your_own_https_keeps_its_address(host, world):
+    with_door_secrets(world)
+    config = Config("ollama", road="podman", door=Door(
+        window_host="127.0.0.1", window_port=8767, window_url="https://door.example.net"))
+    door = podman.units(config)["sarathi-door.container"]
+    assert "PublishPort=127.0.0.1:8767:8767" in door
+    assert "Environment=SETU_WINDOW_URL=https://door.example.net" in door
+
+
+def test_a_window_listening_everywhere_must_say_its_address(host, world):
+    with_door_secrets(world)
+    (world / "home" / "dvara" / "agents").mkdir(parents=True)
+    (world / "home" / "dvara" / "actors.toml").write_text("[actor.owner]\n")
+    config = Config("ollama", road="podman", door=Door(window_host="0.0.0.0"))
+    with pytest.raises(ConfigError, match="window_url must say the address"):
+        podman.preflight(config)
+
+
+@pytest.mark.parametrize("here, inside, warned", [
+    ("Google Chrome 155.0.1.2", "Google Chrome 154.0.8037.97", True),
+    ("Google Chrome 154.0.8037.97", "Google Chrome 154.0.8037.97", False),
+    ("Google Chrome 153.0.1.1", "Google Chrome 154.0.8037.97", False),
+    ("Google Chrome 155.0.1.2", "", False),
+])
+def test_a_newer_chrome_here_than_in_the_image_is_said(host, monkeypatch, here, inside,
+                                                       warned):
+    """Chrome refuses a profile a newer Chrome wrote."""
+    monkeypatch.setattr(podman.shutil, "which", lambda name, **kw: name)
+    host.answers[(podman.BROWSER, "--version")] = subprocess.CompletedProcess([], 0, here, "")
+    host.answers[("podman", "run")] = subprocess.CompletedProcess([], 0, inside, "")
+    note = podman.browser_note()
+    assert (note is not None) is warned
+    if warned:
+        assert "Chrome 155.0.1.2, the image 154.0.8037.97" in note
+        assert "`sarathi image`" in note
+
+
+def test_a_network_gone_missing_is_made_again_before_anything_joins_it(host, world):
+    """Its one-shot service stays 'active' after the network is removed,
+    so systemd alone would never make it again."""
+    host.answers[("podman", "network", "exists")] = subprocess.CompletedProcess([], 1, "", "")
+    host.answers[("systemctl", "--user", "is-active")] = subprocess.CompletedProcess(
+        [], 0, "", "")
+    podman.up(LOCAL)
+    assert host.said("systemctl", "--user", "restart", "sarathi-network.service") == 1
+
+
+def test_removing_stops_the_networks_service_before_the_network_goes(host):
+    podman.install(podman.units(LOCAL))
+    podman.down(remove=True)
+    stop = host.calls.index(["systemctl", "--user", "stop", "sarathi-network.service"])
+    gone = host.calls.index(["podman", "network", "rm", "sarathi"])
+    assert stop < gone

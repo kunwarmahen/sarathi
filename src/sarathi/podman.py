@@ -56,9 +56,26 @@ container, so the local road's address becomes
 has to listen on more than 127.0.0.1 for that to reach it
 (``OLLAMA_HOST=0.0.0.0``).
 
-Not here: a browser. Setu's sign-ins that drive a browser (Amazon, X)
-and Yantra's browser tools need one on the host. The accounts Setu
-reaches over an API (Gmail, Home Assistant) work.
+A BROWSER, AND THE WALL AROUND A CONNECTOR, ARE IN THE IMAGE. Google
+Chrome at the path a desktop has it, so the profiles Setu recorded open
+with the browser that wrote them; Xvfb for a site that wants a real
+window; bubblewrap, so Setu's connectors run walled off here as on a
+desktop (Containerfile). Each container gets a 1 GB /dev/shm, since
+Chrome keeps its pages there and Podman's 64 MB is not enough for a
+heavy one. ``/proc`` is unmasked: Setu's wall gives each connector a
+fresh ``/proc`` of its own, and the kernel refuses to mount one while
+Podman hides parts of the container's. The container runs as you, so
+what that shows is what your own account can read here anyway. Chrome
+refuses a profile written by a newer version of
+itself, so ``up`` says when this machine's Chrome is newer than the
+image's: a rebuild picks up the newer one.
+
+THE DOOR'S WINDOW IS PUBLISHED. With ``[door] window_host`` set, Setu
+streams a sign-in window from the door's container: it listens on
+every address inside (``SETU_WINDOW_HOST=0.0.0.0``), on a fixed port
+(``window_port``, else 8790), published on ``window_host`` alone, and
+the link says ``window_url`` or ``http://window_host:port`` -- never the
+container's own address, which no phone can reach.
 """
 
 from __future__ import annotations
@@ -95,6 +112,11 @@ CHECKOUTS = ("yantra", "setu", "samay")
 OPTIONAL_CHECKOUTS = ("dvara",)
 #: Ports inside the containers; the host ports come from sarathi.toml.
 PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
+#: The streamed sign-in window's port when sarathi.toml names none: a
+#: container's port has to be known to be published.
+WINDOW_PORT = 8790
+#: The browser in the image, and the one a desktop's Setu records.
+BROWSER = "/usr/bin/google-chrome"
 UNITS = {"clock": "sarathi-clock", "door": "sarathi-door", "page": "sarathi-page"}
 NETWORK = "sarathi"
 READY_TIMEOUT = 90.0
@@ -160,7 +182,12 @@ def build(engine: str = "podman") -> int:
         for line in stage(Path(tmp)):
             print(f"  {line}")
         print(flush=True)
-        return subprocess.run([engine, "build", "-t", IMAGE, tmp], check=False).returncode
+        code = subprocess.run([engine, "build", "-t", IMAGE, tmp], check=False).returncode
+    if code == 0:
+        inside = run([engine, "run", "--rm", "--entrypoint", "/usr/local/bin/sarathi-browser",
+                      IMAGE, "--version"]).stdout.strip()
+        print(f"\nbrowser in the image: {inside or 'none found'}")
+    return code
 
 
 def image_exists() -> bool:
@@ -253,6 +280,8 @@ Network={NETWORK}.network
 Exec={exec_}
 PublishPort={publish}
 UserNS=keep-id
+ShmSize=1g
+Unmask=/proc/*
 WorkingDir={work_dir()}
 {env}{secrets}{volumes}{extra_container}
 [Service]
@@ -261,6 +290,17 @@ Restart=on-failure
 [Install]
 WantedBy=default.target
 """
+
+
+def window(config: Config) -> tuple[str, str, str] | None:
+    """(host it is published on, port, the link's base) for the door's
+    streamed window, or None when sarathi.toml asks for none."""
+    door = config.door
+    if door is None or not door.window_env():
+        return None
+    host = door.window_host or "127.0.0.1"
+    port = door.window_port or WINDOW_PORT
+    return host, str(port), door.window_url or f"http://{host}:{port}"
 
 
 def units(config: Config) -> dict[str, str]:
@@ -295,10 +335,17 @@ def units(config: Config) -> dict[str, str]:
                      + (f" --telegram {door.telegram}" if door.telegram else ""))
         if config.clock_on:
             after = f"Wants={UNITS['clock']}.service\nAfter={UNITS['clock']}.service\n"
+        shown = window(config)
+        streamed = "" if shown is None else (
+            f"PublishPort={shown[0]}:{shown[1]}:{shown[1]}\n"
+            f"Environment=SETU_WINDOW_HOST=0.0.0.0\n"
+            f"Environment=SETU_WINDOW_PORT={shown[1]}\n"
+            f"Environment=SETU_WINDOW_URL={shown[2]}\n")
         out[f"{UNITS['door']}.container"] = _unit(
             "Sarathi: dvara, the door", UNITS["door"], door_exec,
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
-            extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n",
+            extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
+                            + streamed,
             more_volumes=door_dirs(config))
         page_unit += f"After={UNITS['door']}.service\n"
     out[f"{UNITS['page']}.container"] = _unit(
@@ -372,6 +419,36 @@ def journal_tail(unit: str, lines: int = 5) -> list[str]:
     return [line for line in out.splitlines() if line.strip()]
 
 
+def browser_version(argv: list[str]) -> tuple[int, ...] | None:
+    """``Google Chrome 154.0.8037.97`` -> (154, 0, 8037, 97); None when
+    there is no such browser or it says something else."""
+    try:
+        said = run(argv, timeout=60).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    for word in said.split():
+        parts = word.split(".")
+        if len(parts) >= 2 and all(p.isdigit() for p in parts):
+            return tuple(int(p) for p in parts)
+    return None
+
+
+def browser_note() -> str | None:
+    """A line when this machine's Chrome is newer than the image's: a
+    profile signed in to here would be refused in there."""
+    if shutil.which(BROWSER) is None:
+        return None
+    here = browser_version([BROWSER, "--version"])
+    inside = browser_version(["podman", "run", "--rm", "--entrypoint", BROWSER, IMAGE,
+                              "--version"])
+    if here is None or inside is None or here <= inside:
+        return None
+    show = ".".join
+    return (f"browser: this machine has Chrome {show(map(str, here))}, the image "
+            f"{show(map(str, inside))}; a profile signed in to here won't open in "
+            "there until `sarathi image` builds it again")
+
+
 def preflight(config: Config) -> None:
     if not image_exists():
         raise ConfigError(f"no image yet ({IMAGE}): run `sarathi image` first")
@@ -386,6 +463,10 @@ def preflight(config: Config) -> None:
                 f"{IN_IMAGE}/dvara"]).returncode != 0:
             problems.insert(0, "the image has no dvara: put its checkout beside the "
                                "others and run `sarathi image` again")
+        door = config.door
+        if door.window_host in ("0.0.0.0", "::") and not door.window_url:
+            problems.append(f"window_host = \"{door.window_host}\" listens everywhere, so "
+                            "window_url must say the address a phone opens")
         if problems:
             raise ConfigError("the door cannot start: " + "; ".join(problems))
     ours = [name for name, r in records().items() if alive(r["pid"])]
@@ -400,9 +481,13 @@ def up(config: Config) -> tuple[list[str], bool]:
         folder.mkdir(parents=True, exist_ok=True)
     write_env_files(config)
     lines = ["units rewritten from sarathi.toml"] if install(units(config)) else []
-    if config.door is not None and config.door.window_env():
-        lines.append("door   the streamed sign-in window needs a browser in the image, which "
-                     "it does not have yet: Amazon and X are signed in to at this computer")
+    note = browser_note()
+    if note:
+        lines.append(note)
+    if run(["podman", "network", "exists", NETWORK]).returncode != 0:
+        # removed by hand, or by an older `down --remove` that left its
+        # one-shot service "active": made again before anything joins it
+        run(["systemctl", "--user", "restart", f"{NETWORK}-network.service"])
     if not config.clock_on:
         lines.append("clock  off in sarathi.toml")
     ok = True
@@ -451,6 +536,10 @@ def down(remove: bool = False) -> list[str]:
     if not lines:
         return ["no Sarathi units are installed"]
     if remove:
+        # its service is a one-shot that stays "active (exited)": stopped
+        # first, or the next `up` would find it active and never make the
+        # network again
+        run(["systemctl", "--user", "stop", f"{NETWORK}-network.service"])
         install({})
         run(["podman", "network", "rm", NETWORK])    # quadlet made it; nothing uses it now
         lines.append("units removed: nothing starts at login until the next `sarathi up`")

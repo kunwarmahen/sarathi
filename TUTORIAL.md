@@ -297,8 +297,10 @@ Three things to know on this road:
   there). A key you typed into your terminal another way won't reach
   the containers, so Sarathi refuses to start without it rather than
   start a helper that can't answer.
-* **Accounts that need a browser** (Amazon, X) don't work in containers
-  yet. Gmail and Home Assistant do.
+* **Accounts that need a browser** (Amazon, X) work here too: the image
+  has its own Chrome. If `up` says your computer's Chrome is newer than
+  the image's, run `sarathi image` again; Chrome won't open a sign-in a
+  newer Chrome saved.
 
 `sarathi down` stops them, and they come back at your next login. To stop
 that too: `sarathi down --remove`.
@@ -422,6 +424,7 @@ you're most likely to meet:
 | `door not started: door.telegram is set but there is no TELEGRAM_TOKEN` | the bot's token wasn't saved | `sarathi door` again, and paste it |
 | `door not started: no actors file at ~/dvara/actors.toml` | dvara's list of people is missing | `sarathi door` writes a starter one |
 | the bot never answers you | you're not in the actors file yet | Step 6, "Let yourself in" |
+| `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi down && sarathi up` |
 | `the door cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
 
 Each program also writes down what it printed:

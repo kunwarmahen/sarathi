@@ -12,9 +12,47 @@
 # dependencies never have to agree; /usr/local/bin holds one link to each.
 #
 # The image carries code only. Keys, sign-ins, schedules and memories are
-# mounted at run time by the units `sarathi units` writes.
+# mounted at run time by the units `sarathi up` writes.
 
 FROM python:3.12-slim
+
+# What the programs need from the system, beyond Python:
+#
+#   bubblewrap  Setu's wall around a connector: no network, nothing of
+#               yours to read. Without it a connector still holds no key,
+#               but it is not walled off, and Setu's card says so.
+#   a browser   Amazon and X are signed in to in a browser, and their
+#               tools drive one. GOOGLE CHROME, at /usr/bin/google-chrome,
+#               where a desktop has it: Setu records which browser wrote a
+#               profile and opens it with that one, and Chrome refuses a
+#               profile written by a newer version of itself, so the same
+#               browser at the same path opens the profiles you already
+#               have. Google ships it for amd64 only; elsewhere Debian's
+#               Chromium is installed instead (profiles from a desktop's
+#               Chrome may then need signing in to again).
+#   xvfb        a screen nobody looks at, for a site whose rules say a
+#               real window (X): headless is what those sites detect.
+#   fonts       so a page has its letters, and a screenshot is readable.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends bubblewrap xvfb xauth \
+      ca-certificates curl gnupg fonts-liberation fonts-noto-color-emoji \
+ && if [ "$(dpkg --print-architecture)" = amd64 ]; then \
+      curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
+        | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg && \
+      echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" \
+        > /etc/apt/sources.list.d/google-chrome.list && \
+      apt-get update && apt-get install -y --no-install-recommends google-chrome-stable && \
+      ln -s /usr/bin/google-chrome /usr/local/bin/sarathi-browser; \
+    else \
+      apt-get install -y --no-install-recommends chromium && \
+      ln -s /usr/bin/chromium /usr/local/bin/sarathi-browser; \
+    fi \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p -m 1777 /tmp/.X11-unix
+# Yantra's browser tools use the browser above, not one Playwright would
+# download: there is none in the image, and a real browser is a normal
+# client to a site, where Playwright's own build announces itself.
+ENV YANTRA_BROWSER_EXECUTABLE=/usr/local/bin/sarathi-browser
 
 RUN pip install --no-cache-dir uv
 # Copies, not hard links into uv's cache (which is not in the image), and
@@ -22,10 +60,11 @@ RUN pip install --no-cache-dir uv
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never UV_NO_CACHE=1
 
 # Least-changing first, so a change to Samay does not reinstall Yantra.
+# The browse extra is Playwright's Python side: what drives the browser.
 COPY yantra/pyproject.toml yantra/uv.lock /opt/yantra/
-RUN cd /opt/yantra && uv sync --frozen --no-dev --extra web --no-install-project
+RUN cd /opt/yantra && uv sync --frozen --no-dev --extra web --extra browse --no-install-project
 COPY yantra/ /opt/yantra/
-RUN cd /opt/yantra && uv sync --frozen --no-dev --extra web
+RUN cd /opt/yantra && uv sync --frozen --no-dev --extra web --extra browse
 
 COPY setu/ /opt/setu/
 RUN cd /opt/setu && uv sync --frozen --no-dev --all-packages

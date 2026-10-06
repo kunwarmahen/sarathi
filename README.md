@@ -183,8 +183,10 @@ sarathi door --window-host 127.0.0.1 --window-url https://door.example.net   # b
 They become `[door] window_host / window_port / window_url`, passed to dvara
 as Setu's `SETU_WINDOW_*`. A home network address works for people at home
 but is plain HTTP; Tailscale or your own HTTPS is the safe choice beyond it.
-On the Podman road the image has no browser yet, so `up` says those sites
-are signed in to at this computer.
+On the Podman road the window runs in the door's container: it listens
+on a fixed port there (`window_port`, else 8790), published on
+`window_host` alone, and the link says `window_url` or
+`http://window_host:port`.
 
 A door that can't start (no actors file, a bot with no token) says why,
 and the clock and page start anyway. On the Podman road it's a third
@@ -198,7 +200,7 @@ checkout sits beside the others.
 
 ```bash
 sarathi init --podman          # or set  [run] road = "podman"  in sarathi.toml
-sarathi image                  # build the image (a few minutes, once per update)
+sarathi image                  # build the image (a few minutes, once per update; ~1.3 GB)
 sarathi up
 ```
 
@@ -214,6 +216,14 @@ What goes into the containers:
   programs, so each container needs all of them. `sarathi image` builds
   it from the **committed** code of the checkouts beside Sarathi, and
   names any uncommitted changes it left out.
+* **A browser, and the wall around a connector.** Google Chrome at
+  `/usr/bin/google-chrome`, where a desktop has it, so the Amazon and X
+  profiles Setu already recorded open with the browser that wrote them;
+  Xvfb for a site that wants a real window; and bubblewrap, so Setu's
+  connectors are walled off here as on your desktop. Chrome refuses a
+  profile a newer Chrome wrote, so `up` says when your computer's Chrome
+  has got ahead of the image's (`sarathi image` catches up). Google ships
+  Chrome for amd64 only; elsewhere the image gets Debian's Chromium.
 * **Your data, at the same paths.** Samay's schedules, Setu's sign-ins
   and Yantra's memory are mounted from where they are on your machine,
   at the same paths, and the containers run as you. Nothing is copied,
@@ -226,10 +236,9 @@ What goes into the containers:
   arrive. `up` refuses to start rather than start without it. The unit
   files themselves hold no key.
 
-Not in the containers: a browser. Setu accounts that work through a
-browser (Amazon, X) and Yantra's browser tools need the process road.
-Gmail and Home Assistant, which Setu reaches through their APIs, work on
-both roads.
+Everything works on both roads: Gmail and Home Assistant through their
+APIs, Amazon and X through the browser in the image
+([notes/05](notes/05-a-browser-in-the-image.md)).
 
 ### Any time: `sarathi status`
 
@@ -303,10 +312,11 @@ src/sarathi/
   services.py   sarathi up / down: start the clock and the page, know
                 which are ours  (notes/02)
   podman.py     the same on the podman road: the image, the Quadlet
-                units, systemd  (notes/03); the door's unit  (notes/04)
+                units, systemd  (notes/03); the door's unit  (notes/04);
+                its streamed window, and the image's browser  (notes/05)
   door.py       sarathi door: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
-  Containerfile one image, every program
+  Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | door | image | up | down | status [--json]
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py
@@ -316,8 +326,8 @@ tests/
 
 Finding the pieces, the settings, starting them as plain processes or
 as Podman containers, and the household road (dvara on Telegram, wired
-to the clock) are all built. Not yet: a browser inside the containers,
-for the accounts that need one.
+to the clock) are all built, with a browser and bubblewrap inside the
+containers.
 
 ## Tests
 

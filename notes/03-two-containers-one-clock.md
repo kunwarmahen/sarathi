@@ -174,10 +174,9 @@ Tue 6 Oct 00:53  ok            the clock works
 
 ## What is not here yet
 
-* **A browser.** Setu's accounts that work through a browser (Amazon, X,
+* ~~**A browser.** Setu's accounts that work through a browser (Amazon, X,
   LinkedIn) and Yantra's browser tools need one, and signing in needs a
-  window. The page still lists those accounts' tools, but they fail when
-  used. Gmail and Home Assistant, reached through APIs, work.
+  window.~~ Built: [notes/05](05-a-browser-in-the-image.md).
 * ~~**The Schedules panel's link** said `http://0.0.0.0:8780/`.~~ Samay
   now takes the address a browser uses (`SAMAY_PUBLIC_URL`), and the
   clock's unit sets it to the published port, so the panel and `samay
