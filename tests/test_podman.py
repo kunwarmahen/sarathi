@@ -130,6 +130,11 @@ def test_the_clocks_address_is_its_own_line_said_from_this_machine(host):
     assert podman.clock_address(LOCAL) == "http://127.0.0.1:8790/#token=abc"
 
 
+def test_the_clock_is_told_the_address_a_browser_here_uses():
+    unit = podman.units(LOCAL)["sarathi-clock.container"]
+    assert "Environment=SAMAY_PUBLIC_URL=http://127.0.0.1:8790/" in unit
+
+
 def git(repo: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
 

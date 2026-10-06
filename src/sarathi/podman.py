@@ -203,7 +203,11 @@ def units(config: Config) -> dict[str, str]:
         out[f"{UNITS['clock']}.container"] = _unit(
             "Sarathi: Samay's clock", UNITS["clock"],
             f"{IN_IMAGE}/samay serve --host 0.0.0.0 --port {CLOCK_PORT}",
-            f"127.0.0.1:{config.clock_port}:{CLOCK_PORT}", config)
+            f"127.0.0.1:{config.clock_port}:{CLOCK_PORT}", config,
+            # where a browser here reaches it, so Samay prints and reports
+            # that, not the container's own bind (an older image ignores it)
+            extra_container=f"Environment=SAMAY_PUBLIC_URL=http://127.0.0.1:"
+                            f"{config.clock_port}/\n")
         page_exec += f"--samay {IN_IMAGE}/samay"
         page_unit = f"Wants={UNITS['clock']}.service\nAfter={UNITS['clock']}.service\n"
     else:
@@ -261,7 +265,9 @@ def speaks_http(url: str, timeout: float = 1.0) -> bool:
 
 
 def clock_address(config: Config) -> str | None:
-    """Samay's own 'page:' line, with this machine's address for the container's."""
+    """Samay's own 'page:' line, with this machine's address for the container's.
+    Samay says it right itself once told (SAMAY_PUBLIC_URL, set on the
+    unit); the rewrite stays for an image built before it could be told."""
     logs = run(["podman", "logs", UNITS["clock"]])
     for line in reversed((logs.stdout + logs.stderr).splitlines()):
         if line.startswith("page: "):

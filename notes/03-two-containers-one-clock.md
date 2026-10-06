@@ -178,10 +178,11 @@ Tue 6 Oct 00:53  ok            the clock works
   LinkedIn) and Yantra's browser tools need one, and signing in needs a
   window. The page still lists those accounts' tools, but they fail when
   used. Gmail and Home Assistant, reached through APIs, work.
-* **The Schedules panel's link** says `http://0.0.0.0:8780/`: the
-  address Samay bound to inside its container, not the one published on
-  the host. It needs a way to tell Samay its outside address, which is a
-  Samay change.
+* ~~**The Schedules panel's link** said `http://0.0.0.0:8780/`.~~ Samay
+  now takes the address a browser uses (`SAMAY_PUBLIC_URL`), and the
+  clock's unit sets it to the published port, so the panel and `samay
+  status` say `http://127.0.0.1:<clock.port>/`. The log rewrite stays
+  for an image built before Samay could be told.
 * **Agent folders outside the mounted ones.** A schedule that runs an
   agent package from, say, `~/agents/reader` needs that folder mounted
   too. The page's own schedules run plain Yantra and don't.
