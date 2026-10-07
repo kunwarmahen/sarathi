@@ -75,6 +75,18 @@ refuses a profile written by a newer version of
 itself, so ``up`` says when this machine's Chrome is newer than the
 image's: a rebuild picks up the newer one.
 
+THE PHONE OVER WI-FI, with ``[phone] on``. A container can't reach a
+phone on a USB cable without being handed the host's whole USB bus, so
+it reaches it the way another computer would: over the network, at
+``[phone] address`` (wireless debugging), with adb in the image. The
+page and the door mount ``~/.android``, so the key this computer paired
+with is theirs too (nothing is paired twice), and ``~/.sparsh``, so the
+person's rules hold inside. ``SPARSH_CONNECT`` tells Sparsh the address,
+and it reconnects whenever it looks for phones. The page gets ``--sparsh
+auto:…`` (no phone answering at the start means no tools until the
+person says to use one); the door gets ``--sparsh`` for the one person
+its actors file marks ``phone = true``.
+
 THE PAGES PEOPLE LOOK AT, with ``[pages] on`` (the default). Setu's page
 (``sarathi-setu``) and, with the door on, Dvara's owner page
 (``sarathi-owner``) are two more containers from the same image, each
@@ -128,8 +140,9 @@ from sarathi.siblings import beside_dir
 IMAGE = "localhost/sarathi:latest"
 IN_IMAGE = "/usr/local/bin"
 CHECKOUTS = ("yantra", "setu", "samay")
-#: Built into the image when its checkout is there; the door needs it.
-OPTIONAL_CHECKOUTS = ("dvara",)
+#: Built into the image when its checkout is there: the door needs dvara,
+#: and the phone needs sparsh.
+OPTIONAL_CHECKOUTS = ("dvara", "sparsh")
 #: Ports inside the containers; the host ports come from sarathi.toml.
 PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
 SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
@@ -283,6 +296,27 @@ def container_env(config: Config) -> dict[str, str]:
     return env
 
 
+def phone_dirs(config: Config) -> list[Path]:
+    """With [phone] on: adb's key folder, so a phone that trusts this
+    computer trusts its containers (paired once, here), and Sparsh's, so
+    your rules (``never``, ``ask``) hold inside too. Made if missing."""
+    if config.phone is None:
+        return []
+    home = Path.home()
+    sparsh = os.environ.get("SPARSH_STATE", "").strip()
+    dirs = [home / ".android", Path(sparsh).expanduser() if sparsh else home / ".sparsh"]
+    for d in dirs:
+        d.mkdir(mode=0o700, parents=True, exist_ok=True)
+    return dirs
+
+
+def phone_env(config: Config) -> str:
+    """The phone's Wi-Fi address, as Sparsh's ``SPARSH_CONNECT``."""
+    phone = config.phone
+    return (f"Environment=SPARSH_CONNECT={phone.address}\n"
+            if phone is not None and phone.address else "")
+
+
 def door_dirs(config: Config) -> list[Path]:
     """dvara's folders, for the door's container alone."""
     door = config.door
@@ -391,6 +425,7 @@ def units(config: Config) -> dict[str, str]:
                      f"--provider {config.provider} "
                      + (f"--model {config.model} " if config.model else "")
                      + (f"--samay {IN_IMAGE}/samay " if config.clock_on else "--samay off ")
+                     + (f"--sparsh {IN_IMAGE}/sparsh " if config.phone else "")
                      + f"serve --host 0.0.0.0 --port {DOOR_PORT}"
                      + (f" --telegram {door.telegram}" if door.telegram else ""))
         if config.clock_on:
@@ -405,12 +440,17 @@ def units(config: Config) -> dict[str, str]:
             "Sarathi: dvara, the door", UNITS["door"], door_exec,
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
             extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
-                            + streamed,
-            more_volumes=door_dirs(config))
+                            + streamed + phone_env(config),
+            more_volumes=door_dirs(config) + phone_dirs(config))
         page_unit += f"After={UNITS['door']}.service\n"
+    if config.phone is not None:
+        # auto: no phone answering at the start means no phone tools until
+        # you press "use this phone" -- as on the process road
+        page_exec += f" --sparsh auto:{IN_IMAGE}/sparsh"
     out[f"{UNITS['page']}.container"] = _unit(
         "Sarathi: Yantra's page", UNITS["page"], page_exec,
-        f"127.0.0.1:{config.web_port}:{PAGE_PORT}", config, page_unit)
+        f"127.0.0.1:{config.web_port}:{PAGE_PORT}", config, page_unit,
+        extra_container=phone_env(config), more_volumes=phone_dirs(config))
     if config.pages.on:
         pages = config.pages
         out[f"{UNITS['setu']}.container"] = _unit(

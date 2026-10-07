@@ -58,9 +58,7 @@ On the Podman road there's no phone card, and the containers aren't
 told about Sparsh. A container can't reach a phone on a USB cable
 without passing the host's USB bus through, which hands the container
 every device on it. The way in is wireless debugging: `adb pair` over
-the network, with no cable and no USB passthrough. Until that's built,
-the phone works on the process road, or from a `yantra --web` you start
-on the machine itself.
+the network, with no cable and no USB passthrough. That is [note 08](08-the-phone-over-wifi.md).
 
 ## What the tests hold
 

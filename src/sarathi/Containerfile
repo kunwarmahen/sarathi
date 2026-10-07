@@ -3,7 +3,7 @@
 # Not built by hand: `sarathi image` puts a clean copy of each project's
 # committed code beside this file and builds from there. The context is
 #
-#   yantra/  setu/  samay/  dvara/ (maybe empty)  Containerfile
+#   yantra/  setu/  samay/  dvara/  sparsh/ (each maybe empty)  Containerfile
 #
 # ONE IMAGE, SEVERAL CONTAINERS. The projects call each other as programs
 # -- the page runs `setu run gmail:mine` and `samay mcp`, the clock runs
@@ -49,6 +49,21 @@ RUN apt-get update \
     fi \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p -m 1777 /tmp/.X11-unix
+# adb, for a phone reached over Wi-Fi (Sparsh, below). Google's
+# platform-tools where Google ships them (amd64): wireless debugging needs
+# adb 30 or newer, and Debian's is older. Elsewhere Debian's adb, which
+# still reaches a phone put on the network with `adb tcpip`.
+RUN apt-get update && apt-get install -y --no-install-recommends unzip \
+ && if [ "$(dpkg --print-architecture)" = amd64 ]; then \
+      curl -fsSL -o /tmp/pt.zip \
+        https://dl.google.com/android/repository/platform-tools-latest-linux.zip && \
+      unzip -q /tmp/pt.zip -d /opt && rm /tmp/pt.zip && \
+      ln -s /opt/platform-tools/adb /usr/local/bin/adb; \
+    else \
+      apt-get install -y --no-install-recommends adb; \
+    fi \
+ && rm -rf /var/lib/apt/lists/*
+
 # Yantra's browser tools use the browser above, not one Playwright would
 # download: there is none in the image, and a real browser is a normal
 # client to a site, where Playwright's own build announces itself.
@@ -83,6 +98,14 @@ COPY dvara/ /opt/dvara/
 RUN if [ -f /opt/dvara/pyproject.toml ]; then \
       cd /opt/dvara && uv sync --frozen --no-dev --extra http --extra browse && \
       ln -s /opt/dvara/.venv/bin/dvara /usr/local/bin/; \
+    fi
+
+# Sparsh, the phone, when its checkout was there to copy. No dependencies
+# of its own: it talks to the phone through the adb above.
+COPY sparsh/ /opt/sparsh/
+RUN if [ -f /opt/sparsh/pyproject.toml ]; then \
+      cd /opt/sparsh && uv sync --frozen --no-dev && \
+      ln -s /opt/sparsh/.venv/bin/sparsh /usr/local/bin/; \
     fi
 
 # A pipe, not a terminal: without this, `podman logs` stays empty until

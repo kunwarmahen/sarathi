@@ -13,10 +13,12 @@ files:
     page    yantra --web --host 127.0.0.1 --port <web.port>
                    --setu <the setu Sarathi found> --samay <the samay it found>
                    --sparsh auto:<the sparsh it found>  (no phone tools until
-                   a phone is attached and you say to use it)
+                   a phone is attached and you say to use it); with
+                   [phone] address, SPARSH_CONNECT=<address> to both
     clock   samay serve --port <clock.port>
                    with SAMAY_YANTRA=<the yantra Sarathi found>
     door    dvara --root/--actors/--state <door.*> --ask --samay <samay>
+                  [--sparsh <sparsh>, with [phone] on]
                   serve --port <door.port> [--telegram <door.telegram>]
     setu    setu serve --port <pages.setu_port>
     owner   dvara --root/--actors/--state <door.*> page --as <door.owner>
@@ -172,7 +174,8 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         # auto, not on: no phone at the start still means no phone tools
         # until the person says to use one (Yantra's phone panel).
         page_argv += ["--sparsh", f"auto:{found['sparsh'].program}"]
-    services.append(Service("page", "yantra", page_argv, config.web_port, env))
+    services.append(Service("page", "yantra", page_argv, config.web_port,
+                            {**env, **phone_env(config)}))
     if config.pages.on:
         services += page_services(config, found, door is not None, notes)
     return services, notes
@@ -272,13 +275,28 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     argv += ["--provider", config.provider] + (["--model", config.model] if config.model
                                                else [])
     argv += ["--samay", samay] if clock_on and samay else ["--samay", "off"]
+    sparsh = found["sparsh"].program if "sparsh" in found else None
+    if config.phone is not None:
+        if sparsh is not None:
+            # for the one person marked `phone = true` in the actors file
+            argv += ["--sparsh", sparsh]
+        else:
+            notes.append("door   no phone: sparsh was not found (see `sarathi status`)")
     argv += ["serve", "--host", HOST, "--port", str(door.port)]
     if door.telegram:
         argv += ["--telegram", door.telegram]
     secrets = read_secrets()
     tokens = {k: secrets[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in secrets}
     return Service("door", "dvara", argv, door.port,
-                   {**env, **tokens, **door_env(config), **door.window_env()})
+                   {**env, **tokens, **door_env(config), **door.window_env(),
+                    **phone_env(config)})
+
+
+def phone_env(config: Config) -> dict[str, str]:
+    """Sparsh's name for the phone's Wi-Fi address: it reconnects to it
+    whenever it looks for phones, so a restart finds the phone again."""
+    phone = config.phone
+    return {"SPARSH_CONNECT": phone.address} if phone is not None and phone.address else {}
 
 
 def work_dir() -> Path:

@@ -3,6 +3,8 @@
     sarathi init              which model answers; writes sarathi.toml
     sarathi door              turn on dvara, the door for other people and your
                               phone: its tokens, a Telegram bot, starter files
+    sarathi phone [ADDRESS]   your phone for the door's agents, and over Wi-Fi
+                              for the containers (`phone pair ADDRESS CODE` once)
     sarathi road [ROAD]       how `up` starts things: process (plain programs) or
                               podman (containers); switching stops the other road
     sarathi image             build the image the podman road runs
@@ -36,7 +38,7 @@ from pathlib import Path
 
 from sarathi import __version__, door, first_run, podman, services
 from sarathi.config import PROVIDERS, ConfigError, load, render, settings_path
-from sarathi.siblings import SIBLINGS, Found, env_name, find_all, locate
+from sarathi.siblings import SIBLINGS, Found, env_name, find, find_all, locate
 
 FORMAT = "sarathi.status.v1"
 
@@ -76,6 +78,13 @@ def build_parser() -> argparse.ArgumentParser:
     door_cmd.add_argument("--window-url", dest="window_url", metavar="URL",
                           help="the address in the link, when it differs from the host")
     door_cmd.add_argument("--off", action="store_true", help="stop starting the door")
+
+    phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for the door's "
+                                "agents and the containers: on, pair, its Wi-Fi address")
+    phone_cmd.add_argument("words", nargs="*", metavar="ADDRESS | pair ADDRESS CODE",
+                           help="nothing: a phone on a cable; ADDRESS: over Wi-Fi; "
+                                "pair ADDRESS CODE: trust this computer, once")
+    phone_cmd.add_argument("--off", action="store_true", help="stop giving the phone out")
 
     road = subs.add_parser("road", help="how `up` starts things: plain programs or "
                            "containers; with no road, say which")
@@ -259,6 +268,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "door":
         dvara = next(f for f in find_all() if f.sibling.name == "dvara")
         return door.run(args, dvara)
+    if args.command == "phone":
+        from sarathi import phone
+
+        sparsh = next(s for s in SIBLINGS if s.name == "sparsh")
+        return phone.run(args, find(sparsh, ask=False))
     try:
         if args.command == "road":
             return switch_road(args.road)

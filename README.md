@@ -131,9 +131,34 @@ With **Sparsh** found, the page is started with `--sparsh
 auto:<that sparsh>`: Yantra uses that program, but only once a phone is
 attached and you say to use it (the phone panel's **use this phone**).
 No phone at the start means no phone tools, the same as a Yantra you
-start by hand. On the Podman road the phone stays outside the
-containers for now: a container can't reach a phone on a USB cable.
-([notes/07](notes/07-the-phone-stays-on-the-cable.md))
+start by hand ([notes/07](notes/07-the-phone-stays-on-the-cable.md)).
+
+### Your phone: `sarathi phone`
+
+```bash
+sarathi phone                                  # a phone on a USB cable (process road)
+sarathi phone pair 192.168.1.23:37000 123456   # once: trust this computer over Wi-Fi
+sarathi phone 192.168.1.23:41234               # then: reach it over Wi-Fi
+sarathi phone --off
+```
+
+turns on `[phone]`. The door's agents may then work the phone for the
+one person marked `phone = true` in its actors file (dvara's
+`--sparsh`), and Yantra's page reconnects to a Wi-Fi phone by itself.
+On your phone: *Developer options → Wireless debugging*, then *Pair
+device with pairing code* for the first two numbers, and the address on
+the Wireless debugging page itself for the third. A wrong address is
+said, not saved.
+
+**In the containers**, the phone is reached over Wi-Fi only: a container
+can't reach a USB cable without being handed every device on the bus.
+The image has `adb` and Sparsh; the page and the door mount `~/.android`
+(so the key this computer paired with is theirs, and nothing is paired
+twice) and `~/.sparsh` (so your rules hold inside), and Sparsh
+reconnects to `[phone] address` whenever it looks for phones. The home
+page's **Your phone** card appears there once an address is set.
+Rebuild the image (`sarathi image`) to get adb and Sparsh into it
+([notes/08](notes/08-the-phone-over-wifi.md)).
 
 A second `sarathi up` starts nothing new. A clock you already run some
 other way (`samay unit`, a terminal) is left alone, because a second
@@ -360,7 +385,7 @@ your home page:
 
 One page that links to each program's own page: Yantra's, Samay's,
 Setu's (`setu serve`) and, with the door on, Dvara's (`dvara page`).
-With Sparsh found (and not on the Podman road), a **Your phone** card
+With Sparsh found (on the Podman road, once `[phone] address` is set), a **Your phone** card
 opens Yantra's page, where the phone panel shows the phone and what the
 agent did on it; Sparsh has no page of its own. Each
 card says whether that page is running, shows the program's own status
@@ -424,6 +449,8 @@ src/sarathi/
                 its streamed window, and the image's browser  (notes/05)
   door.py       sarathi door: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
+  phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
+                through the Sparsh found  (notes/08)
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07)
@@ -441,8 +468,9 @@ as Podman containers, and the household road (dvara on Telegram, wired
 to the clock) are all built, with a browser and bubblewrap inside the
 containers. `sarathi up` also starts Setu's page, Dvara's owner page and
 the home page that links every program's page. Sparsh is found, its
-phones are said, and Yantra's page is handed it; inside the containers
-there is no phone yet (that waits for pairing over Wi-Fi).
+phones are said, and Yantra's page and the door are handed it; inside
+the containers the phone is reached over Wi-Fi (`sarathi phone`), tried
+against the emulator, not yet a real phone.
 
 ## Tests
 

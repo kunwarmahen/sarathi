@@ -46,7 +46,8 @@ Six small programs, each with one job. You'll use three of them today:
 Telegram, is Step 6, when you want it. Sparsh, which lets the helper
 work an Android phone plugged into this computer, is optional: install
 it (its SETUP.md) and Sarathi finds it, and Yantra's page gets a phone
-panel. Smritikosh, a bigger memory store, is optional too; Sarathi will
+panel. `sarathi phone` turns it on for the door too, and on the
+containers' road it reaches the phone over Wi-Fi. Smritikosh, a bigger memory store, is optional too; Sarathi will
 mention it, and you can ignore it.)
 
 ---

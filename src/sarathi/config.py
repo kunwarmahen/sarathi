@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -61,6 +62,7 @@ KNOWN: dict[str, set[str]] = {
     "door": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner"},
     "pages": {"on", "home_port", "setu_port", "door_port"},
+    "phone": {"on", "address"},
 }
 
 #: How `up` starts things: plain processes, or Podman containers under
@@ -84,6 +86,18 @@ class Pages:
 
 
 @dataclass(frozen=True)
+class Phone:
+    """Your phone, through Sparsh: ``[phone]``. On, the door's agents may
+    work it for the person marked ``phone = true`` in its actors file,
+    and on the podman road the containers reach it -- over Wi-Fi, at
+    ``address``, since a container can't reach a cable."""
+
+    #: ``192.168.1.23:41234``: the phone's wireless debugging address.
+    #: None: a phone on a USB cable (the process road only).
+    address: str | None = None
+
+
+@dataclass(frozen=True)
 class Config:
     provider: str
     model: str | None = None
@@ -94,6 +108,7 @@ class Config:
     road: str = "process"
     door: Door | None = None
     pages: Pages = Pages()
+    phone: Phone | None = None
 
 
 @dataclass(frozen=True)
@@ -199,7 +214,17 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   home_port=_port(pages_table, "home_port", DEFAULT_HOME_PORT, "pages"),
                   setu_port=_port(pages_table, "setu_port", DEFAULT_SETU_PAGE_PORT, "pages"),
                   door_port=_port(pages_table, "door_port", DEFAULT_DOOR_PAGE_PORT, "pages"))
-    return Config(provider=provider, road=road, door=door, pages=pages,
+    phone_table = data.get("phone", {})
+    if not isinstance(phone_table.get("on", False), bool):
+        raise ConfigError(f"{where}: phone.on must be true or false")
+    address = phone_table.get("address") or None
+    if address is not None and (not isinstance(address, str)
+                                or not re.fullmatch(r"[A-Za-z0-9.\-\[\]:]{1,80}:\d{1,5}",
+                                                    address)):
+        raise ConfigError(f"{where}: phone.address must be an address and port, like "
+                          f"\"192.168.1.23:41234\", not {address!r}")
+    phone = Phone(address=address) if phone_table.get("on", False) else None
+    return Config(provider=provider, road=road, door=door, pages=pages, phone=phone,
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   web_port=_port(data.get("web", {}), "port", DEFAULT_WEB_PORT, "web"),
@@ -257,7 +282,22 @@ home_port = {config.pages.home_port}
 setu_port = {config.pages.setu_port}
 door_port = {config.pages.door_port}
 
-{_render_door(config.door)}"""
+{_render_door(config.door)}
+{_render_phone(config.phone)}"""
+
+
+def _render_phone(phone: Phone | None) -> str:
+    head = """# Your phone, through Sparsh: the door's agents may work it for the one
+# person marked `phone = true` in its actors file. On the podman road the
+# containers reach it over Wi-Fi at `address` (a container can't reach a
+# cable): `sarathi phone pair ADDRESS CODE` once, then `sarathi phone ADDRESS`.
+[phone]
+"""
+    if phone is None:
+        return head + "on = false\n"
+    address = f'address = "{phone.address}"' if phone.address else \
+        '# address = "192.168.1.23:41234"   # its Wireless debugging address'
+    return head + f"on = true\n{address}\n"
 
 
 def _render_door(door: Door | None) -> str:
