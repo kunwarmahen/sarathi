@@ -260,6 +260,23 @@ page   stopped  (pid 3324163)
 `sarathi status` shows, at the end, what `up` started and whether each
 one is still running.
 
+**One bookmark for all of it.** Each program has its own page, and
+`sarathi home` puts them on one:
+
+```bash
+sarathi home
+```
+
+```
+your home page:
+  http://127.0.0.1:8760/#token=…
+```
+
+Open that address and bookmark it. It shows whether each page is running
+and opens any of them already signed in. Setu's page (your accounts) and
+Dvara's (your door, if you turn it on in Step 6) start with `setu serve`
+and `dvara page`; their cards show the command.
+
 ---
 
 ## Step 5 (optional) · Plain programs, or containers

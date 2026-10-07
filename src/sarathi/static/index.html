@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Sarathi</title>
+<link rel="stylesheet" href="page.css">
+<script src="page.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">सारथि</span>
+    <h1>Sarathi</h1>
+  </div>
+  <div class="facts" id="facts" aria-live="polite"></div>
+</header>
+
+<main>
+  <div id="gate" class="gate" hidden>
+    <h2>This page needs its key</h2>
+    <p>Open the address <code>sarathi home</code> printed, the one ending in
+      <code>#token=…</code>. The page keeps the key after that.</p>
+  </div>
+
+  <section aria-labelledby="h-pages">
+    <div class="section-head">
+      <h2 id="h-pages">Your pages</h2>
+    </div>
+    <p class="lede">Each program has a page of its own. Open one here and it opens
+      already signed in.</p>
+    <div id="pieces" class="cards"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span id="updated"></span>
+  <span>This page only links. Nothing here starts or changes anything.</span>
+</footer>
+</body>
+</html>

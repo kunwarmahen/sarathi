@@ -248,5 +248,7 @@ network's service `inactive`.
 * **Yantra's site tools reading Amazon's orders** in the containers,
   with the sign-in from the phone. Not tried yet: ask the page *"what
   were my last three Amazon orders?"*.
+* **One place to find every page**: [note 06](06-one-bookmark.md),
+  `sarathi home`.
 * **Later:** a phone over Tailscale, and the Chromium road on arm64 (a
   Raspberry Pi), written but with no machine to try it on.

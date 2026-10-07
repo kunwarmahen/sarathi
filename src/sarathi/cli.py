@@ -11,6 +11,7 @@
     sarathi status            each piece: found where, what it says, and
                               what `up` started
     sarathi status --json     the same, as sarathi.status.v1
+    sarathi home              one page linking every program's page, with status
 
 ``init`` takes flags for everything it asks (``--provider``, ``--model``,
 ``--base-url``, ``--web-port``, ``--clock-port``, ``--no-clock``), so it
@@ -89,6 +90,11 @@ def build_parser() -> argparse.ArgumentParser:
     down = subs.add_parser("down", help="stop what `sarathi up` started")
     down.add_argument("--remove", action="store_true",
                       help="podman road: also remove the units, so nothing starts at login")
+    home_cmd = subs.add_parser("home", help="one page that links to every program's own "
+                               "page, each with its status")
+    home_cmd.add_argument("--host", default="127.0.0.1",
+                          help="this computer only, unless you say otherwise")
+    home_cmd.add_argument("--port", type=int, default=8760)
     status = subs.add_parser("status", help="what is here, and what each piece says")
     status.add_argument("--json", dest="json_out", action="store_true",
                         help=f"print {FORMAT} instead of lines")
@@ -211,8 +217,40 @@ def _yantra_env(config) -> dict[str, str]:
     return env
 
 
+def _said() -> dict[str, str]:
+    """Each sibling's one line, asked as `sarathi status` asks it."""
+    config = _settings_or_none()
+    found = find_all(before={"dvara": door_folders(config)} if config else None,
+                     asked_with={"yantra": _yantra_env(config)} if config else None)
+    return {f.sibling.name: f.said or f.error or ("not found" if f.program is None else "")
+            for f in found}
+
+
+def _serve_home(args) -> int:
+    from sarathi.home import Home, HomeServer, home_token
+
+    try:
+        server = HomeServer(Home(load(), _said), home_token(), host=args.host,
+                            port=args.port)
+    except (ConfigError, ValueError, OSError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"your home page:\n  {server.page_url}\n"
+          "(the part after # is its key: open it once, the page keeps it. Ctrl-C stops.)",
+          flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.httpd.server_close()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "home":
+        return _serve_home(args)
     if args.command == "init":
         return first_run.run(args)
     if args.command == "door":

@@ -333,6 +333,27 @@ Setu and Samay are all found and readable, and 1 otherwise. Dvara and
 Smritikosh are optional: a missing one is reported and never fails the
 check.
 
+### Every page in one place: `sarathi home`
+
+```
+$ sarathi home
+your home page:
+  http://127.0.0.1:8760/#token=…
+```
+
+One page that links to each program's own page: Yantra's, Samay's,
+Setu's (`setu serve`) and, with the door on, Dvara's (`dvara page`). Each
+card says whether that page is running, shows the program's own status
+line (the one `sarathi status` prints), and has an **Open** link that
+opens the page already signed in. A page that isn't running shows the
+command that starts it.
+
+It only links. Nothing on it starts, stops or changes anything. Because
+its links carry the other pages' keys, it has a key of its own (after the
+`#`, kept in `~/.local/share/sarathi/home.token`, or
+`$SARATHI_HOME_TOKEN`), and it listens on this computer only.
+([notes/06](notes/06-one-bookmark.md))
+
 ### Where it looks
 
 In this order; the first hit wins:
@@ -352,7 +373,7 @@ In this order; the first hit wins:
 | `~/.config/sarathi/units/` | the Podman road: each unit's own share of secrets.env, copied by `up`; yours alone |
 | `~/.config/containers/systemd/sarathi-*` | the Podman road's units and network, written by `up` (edit `sarathi.toml`, not these) |
 | `~/dvara/` | the door's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[door]` can name others) |
-| `~/.local/share/sarathi/` | `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
+| `~/.local/share/sarathi/` | `home.token` the home page's key (yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
 are still in `~/.samay`, and Setu's sign-ins are still where Setu put
@@ -373,10 +394,12 @@ src/sarathi/
                 its streamed window, and the image's browser  (notes/05)
   door.py       sarathi door: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
+  home.py       sarathi home: one page linking every program's page, each
+                with its status and its key; static/ is that page  (notes/06)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
-  cli.py        sarathi init | door | road | image | up | down | status [--json]
+  cli.py        sarathi init | door | road | image | up | down | status [--json] | home
 tests/
-  test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py
+  test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
 ```
 
 ## Status
@@ -384,7 +407,8 @@ tests/
 Finding the pieces, the settings, starting them as plain processes or
 as Podman containers, and the household road (dvara on Telegram, wired
 to the clock) are all built, with a browser and bubblewrap inside the
-containers.
+containers. `sarathi home` links every program's page; Setu's and
+Dvara's pages are started by hand for now.
 
 ## Tests
 
