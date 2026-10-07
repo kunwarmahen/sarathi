@@ -12,6 +12,8 @@ files:
 
     page    yantra --web --host 127.0.0.1 --port <web.port>
                    --setu <the setu Sarathi found> --samay <the samay it found>
+                   --sparsh auto:<the sparsh it found>  (no phone tools until
+                   a phone is attached and you say to use it)
     clock   samay serve --port <clock.port>
                    with SAMAY_YANTRA=<the yantra Sarathi found>
     door    dvara --root/--actors/--state <door.*> --ask --samay <samay>
@@ -166,6 +168,10 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
     if setu.program is not None:
         page_argv += ["--setu", setu.program]
     page_argv += ["--samay", samay.program] if clock_on else ["--no-samay"]
+    if found.get("sparsh") is not None and found["sparsh"].program is not None:
+        # auto, not on: no phone at the start still means no phone tools
+        # until the person says to use one (Yantra's phone panel).
+        page_argv += ["--sparsh", f"auto:{found['sparsh'].program}"]
     services.append(Service("page", "yantra", page_argv, config.web_port, env))
     if config.pages.on:
         services += page_services(config, found, door is not None, notes)

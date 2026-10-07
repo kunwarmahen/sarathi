@@ -2,7 +2,9 @@
 
 Each program Sarathi starts has a page of its own: Yantra's, where you
 talk to the agent; Samay's, for what runs later; Setu's, for your
-accounts; Dvara's, for the door and the people behind it. Each sits on
+accounts; Dvara's, for the door and the people behind it. Sparsh, when
+it's here, gets a card too: your phone, watched from the phone panel on
+Yantra's page. Each sits on
 its own port, and the token-protected ones (Samay, Setu, Dvara) want the
 address their program printed, token and all. Four addresses and three
 keys is a lot to keep. ``sarathi home`` is one bookmark:
@@ -54,6 +56,7 @@ from urllib.parse import urlparse
 
 from sarathi.config import Config, state_dir
 from sarathi.services import HOST, answers
+from sarathi.siblings import SIBLINGS, locate
 
 DEFAULT_PORT = 8760
 ENV_TOKEN = "SARATHI_HOME_TOKEN"
@@ -114,6 +117,14 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
                       start="sarathi up" if by_up else
                       f"setu serve --port {config.pages.setu_port}"))
     door = config.door
+    sparsh = next(s for s in SIBLINGS if s.name == "sparsh")
+    if config.road != "podman" and locate(sparsh, dict(env)) is not None:
+        # Sparsh has no page of its own: the phone is watched from the
+        # panel on Yantra's page, so the card opens that page. Not on the
+        # podman road: a container can't reach a phone on a USB cable.
+        found.append(Page(
+            "sparsh", "Your phone", "Your phone and what the agent did on it: the phone "
+            "panel on Yantra's page.", config.web_port))
     if door is not None:
         found.append(Page(
             "dvara", "Dvara", "Your door: the people on it, what they've spent, and what "

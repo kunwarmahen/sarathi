@@ -23,6 +23,7 @@ import urllib.request
 import pytest
 
 from sarathi.config import Config, Door, Pages
+from conftest import program
 from sarathi.home import ENV_TOKEN, TOKEN_FILE, Home, HomeServer, home_token, pages
 
 GOOD = "the-home-token-long-enough"
@@ -170,3 +171,19 @@ def test_the_pages_script_parses():
     script = files("sarathi").joinpath("static", "page.js")
     done = subprocess.run([node, "--check", str(script)], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
+
+
+def test_a_phone_card_opens_yantras_page_when_sparsh_is_here(world, keys):
+    names = lambda c: [p.name for p in pages(c)]  # noqa: E731
+    assert "sparsh" not in names(config(keys))
+    program(world / "bin", "sparsh")
+    card = next(p for p in pages(config(keys)) if p.name == "sparsh")
+    assert card.title == "Your phone" and card.port == 8321 and card.token() is None
+    assert "phone panel on Yantra's page" in card.purpose
+
+
+def test_no_phone_card_on_the_podman_road(world, keys):
+    # a container can't reach a phone on a USB cable yet
+    program(world / "bin", "sparsh")
+    podman = Config(provider="ollama", web_port=8321, road="podman", pages=Pages(on=False))
+    assert "sparsh" not in [p.name for p in pages(podman)]

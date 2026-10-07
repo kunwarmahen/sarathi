@@ -246,3 +246,42 @@ def test_a_clock_turned_off_is_off_for_yantra_too(world, capsys):
     (config / "sarathi.toml").write_text('[model]\nprovider = "ollama"\n[clock]\non = false\n')
     code, out = run(capsys, "status")
     assert "would ask ollama for off" in out
+
+
+SPARSH = {"format": "sparsh.status.v1", "adb": "ok",
+          "phones": [{"serial": "emulator-5554", "state": "device", "model": "sdk_gphone64"}],
+          "rules": {"never": ["*bank*"]}, "wda": None}
+
+
+@pytest.mark.parametrize("status,says", [
+    (SPARSH, "phone emulator-5554 (sdk_gphone64) ready; kept out of *bank*"),
+    ({**SPARSH, "phones": [], "rules": {}},
+     "no phone attached (plug one in with USB debugging on, or start the emulator)"),
+    ({**SPARSH, "phones": [{"serial": "R58M", "state": "unauthorized"}], "rules": {}},
+     "phone attached but not ready: R58M unauthorized"),
+])
+def test_the_phone_is_said_in_sparshs_own_terms(world, capsys, status, says):
+    everything(world)
+    program(world / "bin", "sparsh", json.dumps(status))
+    code, out = run(capsys, "status")
+    assert code == 0 and says in out
+
+
+def test_sparsh_missing_is_optional(world, capsys):
+    everything(world)
+    code, out = run(capsys, "status")
+    assert code == 0 and "sparsh" in out and "not found (optional)" in out
+
+
+def test_yantra_is_told_the_sparsh_up_names_without_turning_it_on(world, capsys):
+    """auto:PATH -- the sparsh Sarathi found, still dormant with no phone."""
+    everything(world)
+    program(world / "bin", "sparsh", json.dumps(SPARSH))
+    echo = world / "bin" / "yantra"
+    echo.write_text('#!/bin/sh\nprintf \'{"format": "yantra.status.v1", "version": "0.1.0", '
+                    '"provider": "ollama", "model": "%s", "problems": []}\' "$YANTRA_SPARSH"\n')
+    config = Path(os.environ["SARATHI_CONFIG"])
+    config.mkdir(parents=True, exist_ok=True)
+    (config / "sarathi.toml").write_text('[model]\nprovider = "ollama"\n')
+    code, out = run(capsys, "status")
+    assert f"would ask ollama for auto:{world / 'bin' / 'sparsh'}" in out

@@ -18,8 +18,8 @@
 can run with nobody there.
 
 ``status`` exits 0 when every piece Sarathi needs is found and readable,
-and 1 when one is missing or its status could not be read. Dvara and
-Smritikosh are optional: missing, they are reported, never failed on.
+and 1 when one is missing or its status could not be read. Dvara,
+Sparsh and Smritikosh are optional: missing, they are reported, never failed on.
 ``up`` exits 1 when anything it should have started is not answering.
 ``up`` and ``down`` start and stop plain processes, or -- with
 ``run.road = "podman"`` -- the systemd units podman.py writes.
@@ -202,8 +202,8 @@ def _yantra_env(config) -> dict[str, str]:
     """What ``up`` gives Yantra, so its status is about that Yantra: the
     model settings (left out when there is no key to give it yet -- the
     missing key is ``up``'s to report), and the Setu and Samay programs
-    ``up`` names with --setu and --samay, as the variables that say the
-    same (``off`` for a clock turned off)."""
+    ``up`` names with --setu, --samay and --sparsh, as the variables that
+    say the same (``off`` for a clock turned off)."""
     try:
         env = services.model_env(config)
     except ConfigError:
@@ -214,6 +214,9 @@ def _yantra_env(config) -> dict[str, str]:
             env[var] = hit[0]
     if not config.clock_on:
         env["YANTRA_SAMAY"] = "off"
+    hit = locate(next(s for s in SIBLINGS if s.name == "sparsh"))
+    if hit is not None:
+        env["YANTRA_SPARSH"] = f"auto:{hit[0]}"
     return env
 
 

@@ -1,8 +1,9 @@
-"""Five programs, found -- and each one asked what it is doing.
+"""Six programs, found -- and each one asked what it is doing.
 
 Sarathi puts together projects that were each built to stand alone:
 Yantra (the agent), Setu (your accounts), Dvara (many people behind one
-door), Samay (the clock) and Smritikosh (a memory store). Before it can
+door), Samay (the clock), Sparsh (your phone) and Smritikosh (a memory
+store). Before it can
 start any of them it has to answer a plainer question: which of them are
 on this machine, where, and what does each say about itself?
 
@@ -29,7 +30,8 @@ it running THAT one?" always has an answer on screen.
 ONLY WHAT THE SIBLING SAYS. Setu knows its connections, Samay knows
 whether its clock is running, Dvara knows whether the door is serving
 (asked of its folders as sarathi.toml names them, so the answer is about
-the door Sarathi starts), and Yantra knows its release and which model
+the door Sarathi starts), Sparsh knows which phones it can reach, and
+Yantra knows its release and which model
 it would ask (asked with the model settings ``up`` gives it, so the
 answer is about the Yantra Sarathi starts). Sarathi repeats them and
 adds nothing. Smritikosh has no status command, so for it the answer is
@@ -69,6 +71,8 @@ SIBLINGS: tuple[Sibling, ...] = (
             status_format="samay.status.v1"),
     Sibling("dvara", "dvara", "the door: many people and agents behind one service",
             status_format="dvara.status.v1", optional=True),
+    Sibling("sparsh", "sparsh", "the hands: your phone, worked by number, with a yes "
+            "before Send", status_format="sparsh.status.v1", optional=True),
     Sibling("smritikosh", "smritikosh-mcp",
             "a memory store (Yantra keeps its own without it)", optional=True),
 )
@@ -183,6 +187,26 @@ def _say_dvara(data: dict[str, Any]) -> str:
     return said + "".join(f"; {p}" for p in problems)
 
 
+def _say_sparsh(data: dict[str, Any]) -> str:
+    phones = data.get("phones") or []
+    ready = [p for p in phones if p.get("state") == "device"]
+    if ready:
+        said = "phone " + ", ".join(
+            f"{p.get('serial')} ({p.get('model') or '?'})" for p in ready) + " ready"
+    elif phones:
+        said = "phone attached but not ready: " + ", ".join(
+            f"{p.get('serial')} {p.get('state')}" for p in phones)
+    else:
+        said = "no phone attached (plug one in with USB debugging on, or start the emulator)"
+    if data.get("adb") not in (None, "ok"):
+        said += f"; {data['adb']}"
+    never = (data.get("rules") or {}).get("never") or []
+    if never:
+        said += f"; kept out of {', '.join(never)}"
+    note = ((data.get("wda") or {}).get("note") or "").strip()
+    return said + (f"; {note}" if note else "")
+
+
 def _say_yantra(data: dict[str, Any]) -> str:
     said = f"yantra {data.get('version', '?')}"
     if data.get("provider"):
@@ -196,7 +220,8 @@ def _say_yantra(data: dict[str, Any]) -> str:
     return said + "".join(f"; {p}" for p in problems)
 
 
-SAY = {"yantra": _say_yantra, "setu": _say_setu, "samay": _say_samay, "dvara": _say_dvara}
+SAY = {"yantra": _say_yantra, "setu": _say_setu, "samay": _say_samay, "dvara": _say_dvara,
+       "sparsh": _say_sparsh}
 
 
 #: A ``before`` that means "do not ask": the door is off in sarathi.toml,

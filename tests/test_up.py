@@ -54,6 +54,16 @@ def test_up_starts_both_with_what_was_found_and_the_same_model(stage, capsys):
     assert page["cwd"] == clock_seen["env"]["SAMAY_YANTRA_HOME"] == str(services.work_dir())
 
 
+def test_the_page_is_handed_the_sparsh_found_as_auto_not_on(stage, capsys):
+    # auto: with no phone at the start, the page has no phone tools until
+    # the person says to use one -- the same as a Yantra started by hand.
+    sparsh = program(stage["world"] / "bin", "sparsh",
+                     json.dumps({"format": "sparsh.status.v1", "phones": []}))
+    code, out = run(capsys, "up")
+    assert code == 0, out
+    assert seen(stage, "yantra")["argv"][-2:] == ["--sparsh", f"auto:{sparsh}"]
+
+
 def test_the_clock_starts_before_the_page_that_asks_about_it(stage, capsys):
     run(capsys, "up")
     assert seen(stage, "samay")["at"] < seen(stage, "yantra")["at"]

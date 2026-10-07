@@ -13,7 +13,7 @@ you.
 
 ## What you're setting up
 
-Five small programs, each with one job. You'll use three of them today:
+Six small programs, each with one job. You'll use three of them today:
 
 ```
    you, in a browser
@@ -43,8 +43,11 @@ Five small programs, each with one job. You'll use three of them today:
 | **Sarathi** | the one you install and run: it starts the others for you |
 
 (Dvara, for your helper on your phone and for your family over
-Telegram, is Step 6, when you want it. Smritikosh, a bigger memory
-store, is optional; Sarathi will mention it, and you can ignore it.)
+Telegram, is Step 6, when you want it. Sparsh, which lets the helper
+work an Android phone plugged into this computer, is optional: install
+it (its SETUP.md) and Sarathi finds it, and Yantra's page gets a phone
+panel. Smritikosh, a bigger memory store, is optional too; Sarathi will
+mention it, and you can ignore it.)
 
 ---
 

@@ -10,11 +10,12 @@ job and stand on their own:
 | **Setu** (सेतु, "bridge") | your accounts — Gmail, Home Assistant, X — signed in once, the key never shown to the model |
 | **Samay** (समय, "time") | work done later, on a schedule, with a record of every run |
 | **Dvara** (द्वार, "door") | many people and many agents behind one always-on service, e.g. on Telegram |
+| **Sparsh** (स्पर्श, "touch") | your phone, worked by the agent from a numbered list of what's on its screen, with a yes before Send |
 | **Smritikosh** (स्मृतिकोश, "store of memories") | a memory store an agent can use instead of Yantra's own |
 
 Each is useful alone. Together they are a helper that knows your
-accounts, remembers you and keeps time — but only if you know five
-names, five installs, and how they find each other. **Sarathi is the
+accounts, remembers you, keeps time and works your phone — but only if
+you know six names, six installs, and how they find each other. **Sarathi is the
 part you install.** It finds the others, asks you once which model
 should answer, and starts them together.
 
@@ -125,6 +126,14 @@ the clock has to be there first. Setu isn't started: it runs only when
 the agent uses an account. Both get the same model, so a scheduled run
 is answered by the same model as the page. Each piece's output goes to
 `~/.local/share/sarathi/logs/`.
+
+With **Sparsh** found, the page is started with `--sparsh
+auto:<that sparsh>`: Yantra uses that program, but only once a phone is
+attached and you say to use it (the phone panel's **use this phone**).
+No phone at the start means no phone tools, the same as a Yantra you
+start by hand. On the Podman road the phone stays outside the
+containers for now: a container can't reach a phone on a USB cable.
+([notes/07](notes/07-the-phone-stays-on-the-cable.md))
 
 A second `sarathi up` starts nothing new. A clock you already run some
 other way (`samay unit`, a terminal) is left alone, because a second
@@ -314,6 +323,9 @@ samay       ~/agent/samay/.venv/bin/samay  (beside)
 dvara       ~/agent/dvara/.venv/bin/dvara  (beside)
             the door: many people and agents behind one service
             door serving at http://127.0.0.1:8770 (dvara serve); 3 agents, 2 people
+sparsh      ~/agent/sparsh/.venv/bin/sparsh  (beside)
+            the hands: your phone, worked by number, with a yes before Send
+            phone emulator-5554 (sdk_gphone64_x86_64) ready
 smritikosh  not found (optional) -- install it, or set SARATHI_SMRITIKOSH=/path/to/smritikosh-mcp
             a memory store (Yantra keeps its own without it)
 ```
@@ -322,7 +334,7 @@ Each line says **where** a piece was found and **which rule** found it.
 The line under it is that piece's own account of itself: Yantra's
 release and the model it would ask (asked with the model, Setu and
 Samay `up` gives it, so a model Ollama hasn't pulled shows here with
-the `ollama pull` that fixes it, and so does a sibling it can't find), Setu's connections, Samay's clock, and
+the `ollama pull` that fixes it, and so does a sibling it can't find), Setu's connections, Samay's clock, the phones Sparsh can reach, and
 whether the door is serving (asked about the folders `[door]` names;
 with the door off, dvara isn't asked). Sarathi repeats it and adds
 nothing. Smritikosh has no status command, so for it "found, here" is
@@ -334,8 +346,8 @@ log.
 
 `sarathi status --json` prints the same as `sarathi.status.v1`, with each
 sibling's own status object inside. The exit status is 0 when Yantra,
-Setu and Samay are all found and readable, and 1 otherwise. Dvara and
-Smritikosh are optional: a missing one is reported and never fails the
+Setu and Samay are all found and readable, and 1 otherwise. Dvara,
+Sparsh and Smritikosh are optional: a missing one is reported and never fails the
 check.
 
 ### Every page in one place: `sarathi home`
@@ -347,7 +359,10 @@ your home page:
 ```
 
 One page that links to each program's own page: Yantra's, Samay's,
-Setu's (`setu serve`) and, with the door on, Dvara's (`dvara page`). Each
+Setu's (`setu serve`) and, with the door on, Dvara's (`dvara page`).
+With Sparsh found (and not on the Podman road), a **Your phone** card
+opens Yantra's page, where the phone panel shows the phone and what the
+agent did on it; Sparsh has no page of its own. Each
 card says whether that page is running, shows the program's own status
 line (the one `sarathi status` prints), and has an **Open** link that
 opens the page already signed in. A page that isn't running shows the
@@ -373,7 +388,7 @@ In this order; the first hit wins:
 
 | Rule | Where |
 |---|---|
-| `env` | a path you set: `SARATHI_YANTRA`, `SARATHI_SETU`, `SARATHI_SAMAY`, `SARATHI_DVARA`, `SARATHI_SMRITIKOSH` |
+| `env` | a path you set: `SARATHI_YANTRA`, `SARATHI_SETU`, `SARATHI_SAMAY`, `SARATHI_DVARA`, `SARATHI_SPARSH`, `SARATHI_SMRITIKOSH` |
 | `path` | what your shell would run |
 | `beside` | `<dir>/<name>/.venv/bin/<program>`, for checkouts kept side by side. `<dir>` is `SARATHI_SIBLINGS`, or the folder this checkout of Sarathi sits in |
 
@@ -398,7 +413,8 @@ them. Sarathi starts the pieces; it doesn't move their files.
 ```
 src/sarathi/
   siblings.py   which pieces exist, where each is found, and what its
-                status --json says, read by format  (notes/01)
+                status --json says, read by format  (notes/01); Sparsh,
+                the phone  (notes/07)
   config.py     sarathi.toml and secrets.env: read, checked, written  (notes/02)
   first_run.py  sarathi init: which model answers, asked once  (notes/02)
   services.py   sarathi up / down: start the clock and the page, know
@@ -409,7 +425,8 @@ src/sarathi/
   door.py       sarathi door: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   home.py       sarathi home: one page linking every program's page, each
-                with its status and its key; static/ is that page  (notes/06)
+                with its status and its key; static/ is that page  (notes/06);
+                the phone's card, which opens Yantra's page  (notes/07)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | door | road | image | up | down | status [--json] | home
 tests/
@@ -423,7 +440,9 @@ Finding the pieces, the settings, starting them as plain processes or
 as Podman containers, and the household road (dvara on Telegram, wired
 to the clock) are all built, with a browser and bubblewrap inside the
 containers. `sarathi up` also starts Setu's page, Dvara's owner page and
-the home page that links every program's page.
+the home page that links every program's page. Sparsh is found, its
+phones are said, and Yantra's page is handed it; inside the containers
+there is no phone yet (that waits for pairing over Wi-Fi).
 
 ## Tests
 
