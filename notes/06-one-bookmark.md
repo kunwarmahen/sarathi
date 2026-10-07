@@ -86,8 +86,44 @@ empty.
   127.0.0.1. Its links point to 127.0.0.1 too, so opening it from another
   device needs each page reachable there first (Tailscale, later).
 
+## Started with the rest
+
+`sarathi up` now starts the pages too, unless `[pages] on = false`:
+
+```
+$ sarathi up
+clock  off in sarathi.toml
+page   up at http://127.0.0.1:8331/  (pid 571501)
+setu   up at http://127.0.0.1:8876/#token=…  (pid 571627)
+home   up at http://127.0.0.1:8861/#token=…  (pid 571637)
+```
+
+(A scratch config: the clock and the door off, the pages on two free
+ports.) The home page it started answered with Yantra's page and Setu's,
+both running, and **sarathi up** as the way to start them. `sarathi down`
+stopped all three.
+
+**DVARA'S PAGE GETS THE DOOR'S TOKEN, AND NOTHING ELSE DOES.** Dvara's
+page passes your answers to the running door, so `up` hands it
+`DVARA_TOKEN` and the door's address (`DVARA_URL`). On the Podman road
+the token is in its own env file, and the address is the door's name on
+the network. Yantra's page, Setu's page, the clock and the home page
+never hold it. `[door] owner` names whose page it is; an id the actors
+file doesn't have stops it at start, with the reason in its log.
+
+**ON THE PODMAN ROAD, THE HOME PAGE IS NOT A CONTAINER.** Setu's and
+Dvara's pages are two more containers from the image, published on
+127.0.0.1. The home page isn't: Sarathi is not in the image, and inside
+a container 127.0.0.1 is the container, so it couldn't tell whether the
+other pages' ports answer. It is a plain user service running this
+machine's `sarathi home`, enabled so it starts at login with the units.
+
+Each page's port is a `[pages]` setting (`home_port`, `setu_port`,
+`door_port`), and a taken one says which to change, like the others.
+
 ## What is not here yet
 
-* **`setu serve` and `dvara page` as units**, started by `sarathi up`,
-  and the home page with them, its address printed by `up` and `status`.
-  Until then each is started by hand, and its card says how.
+* ~~**`setu serve` and `dvara page` as units**~~ Above.
+* **The Podman road, tried for real.** The units are written and tested
+  against a stand-in systemd. The first real run is a `sarathi image`
+  (the image needs dvara's page) and `sarathi up`.

@@ -233,6 +233,8 @@ sarathi up
 ```
 clock  up at http://127.0.0.1:8780/#token=…  (pid 3324159)
 page   up at http://127.0.0.1:8321/  (pid 3324163)
+setu   up at http://127.0.0.1:8775/#token=…  (pid 3324170)
+home   up at http://127.0.0.1:8760/#token=…  (pid 3324178)
 ```
 
 Open **http://127.0.0.1:8321/** in your browser. That's the helper. Try:
@@ -260,22 +262,12 @@ page   stopped  (pid 3324163)
 `sarathi status` shows, at the end, what `up` started and whether each
 one is still running.
 
-**One bookmark for all of it.** Each program has its own page, and
-`sarathi home` puts them on one:
-
-```bash
-sarathi home
-```
-
-```
-your home page:
-  http://127.0.0.1:8760/#token=…
-```
-
-Open that address and bookmark it. It shows whether each page is running
-and opens any of them already signed in. Setu's page (your accounts) and
-Dvara's (your door, if you turn it on in Step 6) start with `setu serve`
-and `dvara page`; their cards show the command.
+**One bookmark for all of it.** The `home` line above is a page that
+links every other page: Yantra's, Samay's, Setu's (your accounts) and,
+once you turn the door on in Step 6, Dvara's (your door, and the
+questions your agents are asking you). Open that address and bookmark
+it. It shows whether each page is running and opens any of them already
+signed in.
 
 ---
 

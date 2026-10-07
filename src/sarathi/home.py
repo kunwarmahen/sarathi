@@ -58,9 +58,6 @@ from sarathi.services import HOST, answers
 DEFAULT_PORT = 8760
 ENV_TOKEN = "SARATHI_HOME_TOKEN"
 TOKEN_FILE = "home.token"
-#: Where Setu's and Dvara's pages listen by default (`setu serve`, `dvara page`).
-SETU_PAGE_PORT = 8775
-DVARA_PAGE_PORT = 8785
 STATUS_EVERY = 30.0
 
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
@@ -109,17 +106,22 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     if config.clock_on:
         found.append(Page("samay", "Samay", "What runs later, and what each run said.",
                           config.clock_port, "SAMAY_TOKEN", samay_state / "serve.token"))
+    # started by `sarathi up` when [pages] is on; by hand otherwise
+    by_up = config.pages.on
     found.append(Page("setu", "Setu", "Your accounts: what's connected, at what level, "
-                      "and what each one was used for.", SETU_PAGE_PORT, "SETU_PAGE_TOKEN",
-                      setu_home / "page.token", start="setu serve"))
+                      "and what each one was used for.", config.pages.setu_port,
+                      "SETU_PAGE_TOKEN", setu_home / "page.token",
+                      start="sarathi up" if by_up else
+                      f"setu serve --port {config.pages.setu_port}"))
     door = config.door
     if door is not None:
         found.append(Page(
             "dvara", "Dvara", "Your door: the people on it, what they've spent, and what "
-            "their agents have been doing.", DVARA_PAGE_PORT, "DVARA_PAGE_TOKEN",
+            "their agents have been doing.", config.pages.door_port, "DVARA_PAGE_TOKEN",
             door.path("state") / "page.token",
-            start=(f"dvara --root {door.root} --actors {door.actors} --state {door.state} "
-                   "page --as owner")))
+            start="sarathi up" if by_up else
+            (f"DVARA_TOKEN=... dvara --root {door.root} --actors {door.actors} "
+             f"--state {door.state} page --as {door.owner} --port {config.pages.door_port}")))
     return found
 
 

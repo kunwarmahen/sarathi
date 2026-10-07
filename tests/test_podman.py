@@ -20,9 +20,12 @@ from pathlib import Path
 import pytest
 
 from sarathi import podman, services
-from sarathi.config import Config, ConfigError, Door
+from sarathi.config import Config, ConfigError, Door, Pages
 
-LOCAL = Config("ollama", "gemma4:12b", web_port=8410, clock_port=8790, road="podman")
+# the pages are their own tests (at the end); here, the three pieces
+LOCAL = Config("ollama", "gemma4:12b", web_port=8410, clock_port=8790, road="podman",
+               pages=Pages(on=False))
+NO_CLOCK = Config("ollama", clock_on=False, road="podman", pages=Pages(on=False))
 
 
 class Recorder:
@@ -67,7 +70,7 @@ def test_the_page_starts_after_the_clock_and_shares_nothing_else_with_it(host):
 
 
 def test_with_the_clock_off_there_is_no_clock_and_nothing_bound_to_one(host):
-    made = podman.units(Config("ollama", clock_on=False, road="podman"))
+    made = podman.units(NO_CLOCK)
     assert list(made) == ["sarathi-page.container", "sarathi.network"]
     text = made["sarathi-page.container"]
     assert "--no-samay" in text and "sarathi-clock" not in text
@@ -125,7 +128,7 @@ def test_units_are_rewritten_and_systemd_reloaded_only_on_a_change(host):
     assert podman.install(podman.units(LOCAL))
     assert not podman.install(podman.units(LOCAL))
     assert host.said("systemctl", "--user", "daemon-reload") == 1
-    assert podman.install(podman.units(Config("ollama", clock_on=False, road="podman")))
+    assert podman.install(podman.units(NO_CLOCK))
     assert sorted(p.name for p in podman.unit_dir().iterdir()) == [
         "sarathi-page.container", "sarathi.network"]
     assert host.said("systemctl", "--user", "daemon-reload") == 2
@@ -477,3 +480,61 @@ def test_a_unit_running_an_older_image_is_restarted_after_a_build(host, world):
     assert "page   restarting with the new image  (unit sarathi-page)" in lines
     assert host.said("systemctl", "--user", "stop", "sarathi-page.service") == 1
     assert host.said("systemctl", "--user", "stop", "sarathi-clock.service") == 0
+
+
+# ---- the pages, on the podman road ----------------------------------------------------
+
+PAGES = Config("ollama", "gemma4:12b", web_port=8410, clock_port=8790, road="podman",
+               door=Door(port=8766, owner="mahen"),
+               pages=Pages(on=True, setu_port=8875, door_port=8885, home_port=8860))
+
+
+def test_setus_page_is_a_container_published_here_only(host, world):
+    setu = podman.units(PAGES)["sarathi-setu.container"]
+    assert "setu serve --host 0.0.0.0 --port 8775 --public-url http://127.0.0.1:8875/" in setu
+    assert "PublishPort=127.0.0.1:8875:8775" in setu
+
+
+def test_the_owner_page_reaches_the_door_by_name_with_its_token_from_its_own_file(
+        host, world):
+    with_door_secrets(world)
+    made = podman.units(PAGES)
+    owner = made["sarathi-owner.container"]
+    assert "page --as mahen --host 0.0.0.0 --port 8785" in owner
+    assert "PublishPort=127.0.0.1:8885:8785" in owner
+    assert "Environment=DVARA_URL=http://sarathi-door:8765" in owner
+    assert "After=sarathi-door.service" in owner
+    assert "dvara-token" not in owner                       # never in the unit itself
+    podman.write_env_files(PAGES)
+    assert podman.env_file("sarathi-owner").read_text().splitlines()[1:] == [
+        "DVARA_TOKEN=dvara-token"]
+    for other in ("sarathi-page", "sarathi-setu"):
+        path = podman.env_file(other)
+        assert not path.exists() or "DVARA_TOKEN" not in path.read_text()
+
+
+def test_the_home_page_is_a_user_service_started_at_login_and_gone_when_off(host, world):
+    text = podman.home_unit(PAGES)
+    assert " home --port 8860" in text and "WantedBy=default.target" in text
+    assert podman.install_home(text) is True
+    assert podman.unit_file("home") == world / "home/.config/systemd/user/sarathi-home.service"
+    assert host.said("systemctl", "--user", "enable", "sarathi-home.service") == 1
+    assert podman.install_home(text) is False               # unchanged: nothing reloaded
+    assert podman.home_unit(LOCAL) is None
+    assert podman.install_home(None) is True
+    assert not podman.unit_file("home").exists()
+    assert host.said("systemctl", "--user", "disable", "sarathi-home.service") == 1
+
+
+def test_up_shows_each_pages_address_with_its_key(host, world, monkeypatch):
+    with_door_secrets(world)
+    host.answers[("systemctl", "--user", "is-active")] = subprocess.CompletedProcess(
+        [], 0, "", "")
+    monkeypatch.setattr(podman, "preflight", lambda config: None)
+    setu_home = world / "home/.local/state/setu"
+    setu_home.mkdir(parents=True)
+    (setu_home / "page.token").write_text("setu-key\n")
+    lines, _ = podman.up(PAGES)
+    assert any(line.startswith("setu   ") and "http://127.0.0.1:8875/#token=setu-key" in line
+               for line in lines), lines
+    assert any(line.startswith("home   ") for line in lines)

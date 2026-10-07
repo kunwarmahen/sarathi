@@ -53,7 +53,8 @@ seen = os.environ["FAKE_SEEN"]
 keep = {{k: v for k, v in os.environ.items()
         if k.startswith(("YANTRA_", "SAMAY_", "OLLAMA_", "ANTHROPIC_", "OPENAI_",
                           "DVARA_", "TELEGRAM_", "SETU_WINDOW_"))}}
-with open(os.path.join(seen, name + ".json"), "w") as out:
+tag = name + ("-page" if "page" in args else "")
+with open(os.path.join(seen, tag + ".json"), "w") as out:
     json.dump({{"argv": args, "env": keep, "cwd": os.getcwd(), "at": time.monotonic()}}, out)
 if os.environ.get("FAKE_CRASH") == name:
     print("Traceback: the web extra is not installed")
@@ -61,6 +62,8 @@ if os.environ.get("FAKE_CRASH") == name:
 port = int(args[args.index("--port") + 1])
 if name == "samay":
     print(f"page: http://127.0.0.1:{{port}}/#token=t0k3n", flush=True)
+if tag in ("setu", "dvara-page"):          # as `setu serve` and `dvara page` print it
+    print(f"{{tag}}'s page:\\n  http://127.0.0.1:{{port}}/#token=k-{{tag}}", flush=True)
 http.server.HTTPServer(("127.0.0.1", port), http.server.SimpleHTTPRequestHandler).serve_forever()
 """
 
@@ -102,6 +105,9 @@ def settings(world: Path, ports: dict, extra: str = "", provider: str = "ollama"
     (world / "config").mkdir(exist_ok=True)
     (world / "config" / "sarathi.toml").write_text(
         f'[model]\nprovider = "{provider}"\nmodel = "gemma4:12b"\n'
-        f'[web]\nport = {ports["web"]}\n[clock]\nport = {ports["clock"]}\n{extra}')
+        f'[web]\nport = {ports["web"]}\n[clock]\nport = {ports["clock"]}\n'
+        # the pages stay off unless a test turns them on: their programs
+        # here are stand-ins that only print a status
+        + extra + ("" if "[pages]" in extra else "\n[pages]\non = false\n"))
 
 

@@ -22,7 +22,7 @@ import urllib.request
 
 import pytest
 
-from sarathi.config import Config, Door
+from sarathi.config import Config, Door, Pages
 from sarathi.home import ENV_TOKEN, TOKEN_FILE, Home, HomeServer, home_token, pages
 
 GOOD = "the-home-token-long-enough"
@@ -45,9 +45,10 @@ def keys(world, tmp_path, monkeypatch):
     return tmp_path
 
 
-def config(tmp_path: Path, *, door: bool = True) -> Config:
+def config(tmp_path: Path, *, door: bool = True, by_up: bool = False) -> Config:
     return Config(provider="ollama", web_port=8321, clock_port=8780,
-                  door=Door(state=str(tmp_path / "door" / "state")) if door else None)
+                  door=Door(state=str(tmp_path / "door" / "state")) if door else None,
+                  pages=Pages(on=by_up))
 
 
 @pytest.fixture
@@ -107,6 +108,14 @@ def test_a_page_that_is_down_says_how_to_start_it_and_nothing_starts_it(served):
     assert ask(served, "/api/pieces", method="POST").status_code == 405
 
 
+def test_pages_up_starts_say_so_and_their_ports_follow_the_settings(keys):
+    on = Config(provider="ollama", door=Door(state=str(keys / "door" / "state")),
+                pages=Pages(on=True, setu_port=9775, door_port=9785))
+    by = {p.name: p for p in pages(on)}
+    assert by["setu"].port == 9775 and by["dvara"].port == 9785
+    assert by["setu"].start == by["dvara"].start == "sarathi up"
+
+
 def test_the_line_under_a_page_is_its_programs_own_status(served):
     setu = next(p for p in get(served, "/api/pieces").json()["pieces"]
                 if p["name"] == "setu")
@@ -147,3 +156,17 @@ def test_the_home_token_is_made_once_and_kept_for_you_alone(world, monkeypatch, 
     assert home_token() == first and len(first) >= 16
     path = tmp_path / "state" / TOKEN_FILE
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_the_pages_script_parses():
+    # The Python tests never run page.js; dvara's page once broke on a name
+    # declared twice while every Python test passed.
+    import shutil
+    import subprocess
+    from importlib.resources import files
+    node = shutil.which("node", path="/usr/bin:/usr/local/bin:/bin")
+    if node is None:
+        pytest.skip("node is not installed")
+    script = files("sarathi").joinpath("static", "page.js")
+    done = subprocess.run([node, "--check", str(script)], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr

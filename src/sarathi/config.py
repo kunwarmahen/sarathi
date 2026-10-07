@@ -45,6 +45,8 @@ KEY_NAMES = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 DEFAULT_WEB_PORT = 8321
 DEFAULT_CLOCK_PORT = 8780
 DEFAULT_DOOR_PORT = 8770
+#: Each program's own page, and the home page linking them (`[pages]`).
+DEFAULT_HOME_PORT, DEFAULT_SETU_PAGE_PORT, DEFAULT_DOOR_PAGE_PORT = 8760, 8775, 8785
 #: Dvara's own defaults, used when [door] names no folder.
 DOOR_ROOT, DOOR_ACTORS, DOOR_STATE = "~/dvara/agents", "~/dvara/actors.toml", "~/dvara/state"
 #: The two secrets the door needs: dvara's own bearer token (Sarathi
@@ -57,7 +59,8 @@ KNOWN: dict[str, set[str]] = {
     "clock": {"on", "port"},
     "run": {"road"},
     "door": {"on", "port", "telegram", "root", "actors", "state", "window_host",
-             "window_port", "window_url"},
+             "window_port", "window_url", "owner"},
+    "pages": {"on", "home_port", "setu_port", "door_port"},
 }
 
 #: How `up` starts things: plain processes, or Podman containers under
@@ -70,6 +73,17 @@ class ConfigError(ValueError):
 
 
 @dataclass(frozen=True)
+class Pages:
+    """The pages `up` starts besides Yantra's and Samay's: Setu's, Dvara's
+    owner page (with the door on), and the home page linking them all."""
+
+    on: bool = True
+    home_port: int = DEFAULT_HOME_PORT
+    setu_port: int = DEFAULT_SETU_PAGE_PORT
+    door_port: int = DEFAULT_DOOR_PAGE_PORT
+
+
+@dataclass(frozen=True)
 class Config:
     provider: str
     model: str | None = None
@@ -79,6 +93,7 @@ class Config:
     clock_port: int = DEFAULT_CLOCK_PORT
     road: str = "process"
     door: Door | None = None
+    pages: Pages = Pages()
 
 
 @dataclass(frozen=True)
@@ -96,6 +111,9 @@ class Door:
     window_host: str | None = None
     window_port: int | None = None
     window_url: str | None = None
+    #: Your id in the actors file: Dvara's page shows your words and your
+    #: questions, and nobody else's.
+    owner: str = "owner"
 
     def window_env(self) -> dict[str, str]:
         """Setu's own names for the window settings."""
@@ -160,7 +178,7 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     door_table = data.get("door", {})
     if not isinstance(door_table.get("on", False), bool):
         raise ConfigError(f"{where}: door.on must be true or false")
-    for key in ("telegram", "root", "actors", "state", "window_host", "window_url"):
+    for key in ("telegram", "root", "actors", "state", "window_host", "window_url", "owner"):
         if not isinstance(door_table.get(key, ""), str):
             raise ConfigError(f"{where}: door.{key} must be text")
     door = Door(port=_port(door_table, "port", DEFAULT_DOOR_PORT, "door"),
@@ -171,9 +189,18 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                 window_host=door_table.get("window_host") or None,
                 window_port=_port(door_table, "window_port", 0, "door") or None
                 if "window_port" in door_table else None,
-                window_url=door_table.get("window_url") or None) \
+                window_url=door_table.get("window_url") or None,
+                owner=door_table.get("owner") or "owner") \
         if door_table.get("on", False) else None
-    return Config(provider=provider, road=road, door=door, model=model.get("model") or None,
+    pages_table = data.get("pages", {})
+    if not isinstance(pages_table.get("on", True), bool):
+        raise ConfigError(f"{where}: pages.on must be true or false")
+    pages = Pages(on=pages_table.get("on", True),
+                  home_port=_port(pages_table, "home_port", DEFAULT_HOME_PORT, "pages"),
+                  setu_port=_port(pages_table, "setu_port", DEFAULT_SETU_PAGE_PORT, "pages"),
+                  door_port=_port(pages_table, "door_port", DEFAULT_DOOR_PAGE_PORT, "pages"))
+    return Config(provider=provider, road=road, door=door, pages=pages,
+                  model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   web_port=_port(data.get("web", {}), "port", DEFAULT_WEB_PORT, "web"),
                   clock_on=clock.get("on", True),
@@ -221,6 +248,15 @@ port = {config.clock_port}
 [run]
 road = "{config.road}"
 
+# Each program's own page, started by `sarathi up`: Setu's (your accounts),
+# Dvara's (your door, when it is on), and the home page that links them
+# all with Yantra's and Samay's -- bookmark that one.
+[pages]
+on = {"true" if config.pages.on else "false"}
+home_port = {config.pages.home_port}
+setu_port = {config.pages.setu_port}
+door_port = {config.pages.door_port}
+
 {_render_door(config.door)}"""
 
 
@@ -238,6 +274,7 @@ on = false
         else f'# {key} = "{default}"\n'
         for key, default in (("root", DOOR_ROOT), ("actors", DOOR_ACTORS),
                              ("state", DOOR_STATE)))
+    owner = f'owner = "{door.owner}"' if door.owner != "owner" else '# owner = "owner"'
     window = "".join(
         f"{key} = {json.dumps(value)}\n" if value else f"# {key} = ...\n"
         for key, value in (("window_host", door.window_host), ("window_port", door.window_port),
@@ -248,7 +285,8 @@ on = false
 on = true
 port = {door.port}
 {bot}
-{folders}
+{folders}{owner}   # your id in the actors file, for Dvara's page
+
 # Signing in to Amazon or X from someone's phone: a browser window here,
 # streamed to them. Where it listens (your home network's address, a
 # Tailscale address, or 127.0.0.1 behind your own HTTPS with window_url).

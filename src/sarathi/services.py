@@ -1,8 +1,11 @@
 """Start the pieces, stop them, and know which ones are ours.
 
 ``sarathi up`` starts two long-running things: Yantra's page and Samay's
-clock, and a third with ``[door] on``: dvara. Setu is not one of
-them: it runs only when an agent asks it to.
+clock, and a third with ``[door] on``: dvara. Setu itself is not one of
+them: it runs only when an agent asks it to. With ``[pages] on`` (the
+default) it also starts the pages people look at: Setu's own page,
+Dvara's owner page when the door is on, and the home page that links
+them all.
 Each piece is started with the flags and environment that
 ``sarathi.toml`` implies, and nothing is written into any sibling's own
 files:
@@ -13,6 +16,11 @@ files:
                    with SAMAY_YANTRA=<the yantra Sarathi found>
     door    dvara --root/--actors/--state <door.*> --ask --samay <samay>
                   serve --port <door.port> [--telegram <door.telegram>]
+    setu    setu serve --port <pages.setu_port>
+    owner   dvara --root/--actors/--state <door.*> page --as <door.owner>
+                  --port <pages.door_port>, with DVARA_TOKEN and DVARA_URL:
+                  the door's own token and address, so your answers reach it
+    home    sarathi home --port <pages.home_port>
 
 THE DOOR AND THE CLOCK ARE TOLD ABOUT EACH OTHER. A schedule made in a
 chat runs through the door as its person, and Samay checks every such
@@ -52,9 +60,11 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import socket
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -157,7 +167,50 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         page_argv += ["--setu", setu.program]
     page_argv += ["--samay", samay.program] if clock_on else ["--no-samay"]
     services.append(Service("page", "yantra", page_argv, config.web_port, env))
+    if config.pages.on:
+        services += page_services(config, found, door is not None, notes)
     return services, notes
+
+
+#: The sarathi.toml key that moves each piece's port, for "change it" lines.
+PORT_SETTINGS = {"page": "web.port", "clock": "clock.port", "door": "door.port",
+                 "setu": "pages.setu_port", "owner": "pages.door_port",
+                 "home": "pages.home_port"}
+
+
+def sarathi_program() -> str:
+    """This Sarathi, as a program the home page can be started with."""
+    beside = Path(sys.executable).parent / "sarathi"
+    return str(beside) if beside.exists() else (shutil.which("sarathi") or "sarathi")
+
+
+def page_services(config: Config, found: dict[str, Found], door_on: bool,
+                  notes: list[str]) -> list[Service]:
+    """Setu's page, Dvara's owner page and the home page. Each prints its
+    address with its token on the line after the first, two spaces in."""
+    pages, out = config.pages, []
+    setu = found["setu"].program
+    if setu is not None:
+        out.append(Service("setu", "setu", [setu, "serve", "--port", str(pages.setu_port)],
+                           pages.setu_port, says_address="  "))
+    else:
+        notes.append("setu   page not started: setu was not found (see `sarathi status`)")
+    door = config.door
+    if door is not None and door_on:
+        token = read_secrets().get(DOOR_TOKEN) or os.environ.get(DOOR_TOKEN, "")
+        out.append(Service(
+            "owner", "dvara",
+            [str(found["dvara"].program), "--root", str(door.path("root")), "--actors",
+             str(door.path("actors")), "--state", str(door.path("state")),
+             "page", "--as", door.owner, "--port", str(pages.door_port)],
+            pages.door_port,
+            # the door's token stays server-side in the page, never in a browser
+            {DOOR_TOKEN: token, "DVARA_URL": f"http://{HOST}:{door.port}"},
+            says_address="  "))
+    out.append(Service("home", "sarathi", [sarathi_program(), "home", "--port",
+                                           str(pages.home_port)],
+                       pages.home_port, says_address="  "))
+    return out
 
 
 def door_env(config: Config, at: str | None = None) -> dict[str, str]:
@@ -365,8 +418,7 @@ def up(config: Config, found: dict[str, Found]) -> tuple[list[str], bool]:
                 continue
         if answers(service.port):
             ok = False
-            setting = {"page": "web.port", "clock": "clock.port",
-                       "door": "door.port"}[service.name]
+            setting = PORT_SETTINGS[service.name]
             lines.append(f"{service.name:<6} not started: something else is listening on "
                          f"port {service.port} (change {setting} in sarathi.toml)")
             continue

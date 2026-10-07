@@ -113,10 +113,14 @@ name. Nothing is ignored quietly.
 $ sarathi up
 clock  up at http://127.0.0.1:8780/#token=…  (pid 3324159)
 page   up at http://127.0.0.1:8321/  (pid 3324163)
+setu   up at http://127.0.0.1:8775/#token=…  (pid 3324170)
+home   up at http://127.0.0.1:8760/#token=…  (pid 3324178)
 ```
 
-That starts two things: **Samay's clock** and **Yantra's page**, in
-that order. The page asks once, at start-up, whether the clock runs, so
+That starts **Samay's clock** and **Yantra's page**, in
+that order, and then the pages you look at: **Setu's page** (your
+accounts), **Dvara's owner page** when the door is on, and **the home
+page** that links them all. Bookmark the `home` address. The page asks once, at start-up, whether the clock runs, so
 the clock has to be there first. Setu isn't started: it runs only when
 the agent uses an account. Both get the same model, so a scheduled run
 is answered by the same model as the page. Each piece's output goes to
@@ -232,6 +236,7 @@ would otherwise start again at your next login. It starts nothing new;
 | Amazon and X | your own Chrome | Chrome in the image |
 | connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
 | the door's streamed window | listens on `window_host` itself | published from the door's container |
+| the pages | plain programs | Setu's and Dvara's as containers; the home page as a user service (`~/.config/systemd/user/sarathi-home.service`) |
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
 | Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
 
@@ -348,6 +353,14 @@ line (the one `sarathi status` prints), and has an **Open** link that
 opens the page already signed in. A page that isn't running shows the
 command that starts it.
 
+`sarathi up` starts it, with Setu's page and (with the door on) Dvara's,
+unless `[pages] on = false` in sarathi.toml; `sarathi home` runs it by
+hand. `[pages]` also holds their ports (`home_port`, `setu_port`,
+`door_port`), and `[door] owner` names your id in the actors file, which
+Dvara's page shows and answers for. Dvara's page gets the door's token and
+address from `up`, so your answers on it reach the door. No other page
+gets that token.
+
 It only links. Nothing on it starts, stops or changes anything. Because
 its links carry the other pages' keys, it has a key of its own (after the
 `#`, kept in `~/.local/share/sarathi/home.token`, or
@@ -372,6 +385,7 @@ In this order; the first hit wins:
 | `~/.config/sarathi/secrets.env` | a cloud key, if you typed one, and the door's two tokens; readable only by you |
 | `~/.config/sarathi/units/` | the Podman road: each unit's own share of secrets.env, copied by `up`; yours alone |
 | `~/.config/containers/systemd/sarathi-*` | the Podman road's units and network, written by `up` (edit `sarathi.toml`, not these) |
+| `~/.config/systemd/user/sarathi-home.service` | the Podman road's home page, a plain user service (written by `up` too) |
 | `~/dvara/` | the door's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[door]` can name others) |
 | `~/.local/share/sarathi/` | `home.token` the home page's key (yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
@@ -388,7 +402,7 @@ src/sarathi/
   config.py     sarathi.toml and secrets.env: read, checked, written  (notes/02)
   first_run.py  sarathi init: which model answers, asked once  (notes/02)
   services.py   sarathi up / down: start the clock and the page, know
-                which are ours  (notes/02)
+                which are ours  (notes/02); and the pages  (notes/06)
   podman.py     the same on the podman road: the image, the Quadlet
                 units, systemd  (notes/03); the door's unit  (notes/04);
                 its streamed window, and the image's browser  (notes/05)
@@ -400,6 +414,7 @@ src/sarathi/
   cli.py        sarathi init | door | road | image | up | down | status [--json] | home
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
+  test_pages_up.py
 ```
 
 ## Status
@@ -407,8 +422,8 @@ tests/
 Finding the pieces, the settings, starting them as plain processes or
 as Podman containers, and the household road (dvara on Telegram, wired
 to the clock) are all built, with a browser and bubblewrap inside the
-containers. `sarathi home` links every program's page; Setu's and
-Dvara's pages are started by hand for now.
+containers. `sarathi up` also starts Setu's page, Dvara's owner page and
+the home page that links every program's page.
 
 ## Tests
 
