@@ -21,9 +21,12 @@ files:
                   [--sparsh <sparsh>, with [phone] on]
                   serve --port <door.port> [--telegram <door.telegram>]
     setu    setu serve --port <pages.setu_port>
-    owner   dvara --root/--actors/--state <door.*> page --as <door.owner>
-                  --port <pages.door_port>, with DVARA_TOKEN and DVARA_URL:
-                  the door's own token and address, so your answers reach it
+                  [--people <door.state>/setu, with a door: each person's
+                  own folder, for the link /accounts page sends them]
+    owner   dvara --root/--actors/--state <door.*> [--samay <samay>] page
+                  --as <door.owner> --port <pages.door_port>, with
+                  DVARA_TOKEN and DVARA_URL: the door's own token and
+                  address, so your answers reach it; Samay, for schedules
     home    sarathi home --port <pages.home_port>
 
 THE DOOR AND THE CLOCK ARE TOLD ABOUT EACH OTHER. A schedule made in a
@@ -199,18 +202,22 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
     address with its token on the line after the first, two spaces in."""
     pages, out = config.pages, []
     setu = found["setu"].program
+    door = config.door
     if setu is not None:
-        out.append(Service("setu", "setu", [setu, "serve", "--port", str(pages.setu_port)],
-                           pages.setu_port, says_address="  "))
+        argv = [setu, "serve", "--port", str(pages.setu_port)]
+        if door is not None and door_on:
+            argv += ["--people", str(door.path("state") / "setu")]
+        out.append(Service("setu", "setu", argv, pages.setu_port, says_address="  "))
     else:
         notes.append("setu   page not started: setu was not found (see `sarathi status`)")
-    door = config.door
     if door is not None and door_on:
         token = read_secrets().get(DOOR_TOKEN) or os.environ.get(DOOR_TOKEN, "")
+        samay = found["samay"].program if "samay" in found else None
         out.append(Service(
             "owner", "dvara",
             [str(found["dvara"].program), "--root", str(door.path("root")), "--actors",
              str(door.path("actors")), "--state", str(door.path("state")),
+             *(["--samay", str(samay)] if samay else []),
              "page", "--as", door.owner, "--port", str(pages.door_port)],
             pages.door_port,
             # the door's token stays server-side in the page, never in a browser

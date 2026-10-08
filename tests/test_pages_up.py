@@ -50,7 +50,11 @@ def test_the_owner_page_gets_the_doors_token_and_address_and_asks_as_the_owner(
     assert page["argv"] == [
         "--root", str(home / "dvara" / "agents"), "--actors",
         str(home / "dvara" / "actors.toml"), "--state", str(home / "dvara" / "state"),
+        "--samay", str(stage["world"] / "bin" / "samay"),     # for each person's schedules
         "page", "--as", "mahen", "--port", str(ports["door"])]
+    # Setu's page serves each person their own folder, for /accounts page
+    assert seen(stage, "setu")["argv"][-2:] == ["--people",
+                                                str(home / "dvara" / "state" / "setu")]
     assert page["env"]["DVARA_TOKEN"] == "d" * 48
     assert page["env"]["DVARA_URL"] == f"http://127.0.0.1:{door_port}"
     assert seen(stage, "dvara")["at"] < page["at"]

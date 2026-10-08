@@ -396,7 +396,12 @@ opens the page already signed in. A page that isn't running shows the
 command that starts it.
 
 `sarathi up` starts it, with Setu's page and (with the door on) Dvara's,
-unless `[pages] on = false` in sarathi.toml; `sarathi home` runs it by
+unless `[pages] on = false` in sarathi.toml. With the door on, Setu's page
+also knows where each person's own folder is (`--people`), for the
+one-time link `/accounts page` sends them, and Dvara's page reads each
+person's schedules from the Samay Sarathi found. A person's link opens
+only on an address their phone can reach, and Sarathi keeps Setu's page
+on this computer, so for now those links work only here; `sarathi home` runs it by
 hand. `[pages]` also holds their ports (`home_port`, `setu_port`,
 `door_port`), and `[door] owner` names your id in the actors file, which
 Dvara's page shows and answers for. Dvara's page gets the door's token and
