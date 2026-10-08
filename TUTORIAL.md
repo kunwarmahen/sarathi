@@ -267,8 +267,9 @@ page   stopped  (pid 3324163)
 one is still running.
 
 **One bookmark for all of it.** The `home` line above is a page that
-links every other page: Yantra's, Samay's, Setu's (your accounts) and,
-once you turn the door on in Step 6, Dvara's (your door, and the
+links every other page: Yantra's, Samay's, Setu's (your accounts, the
+catalog and Setu's settings) and, once you turn the door on in Step 6,
+Dvara's (your door: who's on it, their files and schedules, and the
 questions your agents are asking you). Open that address and bookmark
 it. It shows whether each page is running and opens any of them already
 signed in.

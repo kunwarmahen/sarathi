@@ -112,7 +112,8 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     # started by `sarathi up` when [pages] is on; by hand otherwise
     by_up = config.pages.on
     found.append(Page("setu", "Setu", "Your accounts: what's connected, at what level, "
-                      "and what each one was used for.", config.pages.setu_port,
+                      "and what each one was used for; the catalog and Setu's "
+                      "settings.", config.pages.setu_port,
                       "SETU_PAGE_TOKEN", setu_home / "page.token",
                       start="sarathi up" if by_up else
                       f"setu serve --port {config.pages.setu_port}"))
@@ -131,8 +132,9 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
             "panel on Yantra's page.", config.web_port))
     if door is not None:
         found.append(Page(
-            "dvara", "Dvara", "Your door: the people on it, what they've spent, and what "
-            "their agents have been doing.", config.pages.door_port, "DVARA_PAGE_TOKEN",
+            "dvara", "Dvara", "Your door: the people on it, what they've spent, what "
+            "their agents have been doing, their files and schedules, and your "
+            "questions.", config.pages.door_port, "DVARA_PAGE_TOKEN",
             door.path("state") / "page.token",
             start="sarathi up" if by_up else
             (f"DVARA_TOKEN=... dvara --root {door.root} --actors {door.actors} "
