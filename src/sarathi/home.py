@@ -112,8 +112,8 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     # started by `sarathi up` when [pages] is on; by hand otherwise
     by_up = config.pages.on
     found.append(Page("setu", "Setu", "Your accounts: what's connected, at what level, "
-                      "and what each one was used for; the catalog and Setu's "
-                      "settings.", config.pages.setu_port,
+                      "and what each one was used for; who has their own page "
+                      "open; the catalog and Setu's settings.", config.pages.setu_port,
                       "SETU_PAGE_TOKEN", setu_home / "page.token",
                       start="sarathi up" if by_up else
                       f"setu serve --port {config.pages.setu_port}"))
