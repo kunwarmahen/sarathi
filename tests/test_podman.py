@@ -257,11 +257,39 @@ def test_the_image_carries_a_browser_bubblewrap_and_a_screen():
         assert wanted in text
 
 
+def test_a_newer_chrome_here_rebuilds_the_image_s_browser(host, monkeypatch):
+    """The Chrome step was cached: `sarathi image` kept 154 while this
+    machine had 155, and the note said to run `sarathi image` again."""
+    text = Path(podman.__file__).with_name("Containerfile").read_text()
+    arg, step = text.index("ARG HOST_BROWSER"), text.index("google-chrome-stable")
+    assert arg < step and "${HOST_BROWSER" in text[arg:step]
+    built = []
+    monkeypatch.setattr(podman, "stage", lambda into, env=None: [])
+    monkeypatch.setattr(podman.shutil, "which", lambda name: name)
+    monkeypatch.setattr(podman, "browser_version", lambda argv: (155, 0, 8059, 39))
+    monkeypatch.setattr(podman.subprocess, "run",
+                        lambda argv, **kw: built.append(argv) or
+                        subprocess.CompletedProcess(argv, 0))
+    assert podman.build() == 0
+    assert "HOST_BROWSER=155.0.8059.39" in built[0]
+
+
 def test_every_container_gets_room_for_a_browser_and_a_wall_for_a_connector(host, world):
     """bubblewrap mounts a fresh /proc; masked, the kernel refuses it."""
     with_door_secrets(world)
     containers = [t for n, t in podman.units(DOOR).items() if n.endswith(".container")]
     assert all("ShmSize=1g" in t and "Unmask=/proc/*" in t for t in containers)
+
+
+def test_every_container_stops_when_asked(host, world):
+    """A program as PID 1 never sees SIGTERM unless it catches it: `setu
+    serve` and `dvara page` sat out the 10 seconds, were killed, and their
+    units read 'failed' after every `sarathi down`."""
+    with_door_secrets(world)
+    containers = [t for n, t in podman.units(DOOR).items() if n.endswith(".container")]
+    assert containers and all("RunInit=true" in t for t in containers)
+    # and a program the init's SIGTERM ends (143) was stopped, not failed
+    assert all("SuccessExitStatus=143" in t for t in containers)
 
 
 def test_home_is_writable_in_every_container(host, world):

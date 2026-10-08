@@ -121,9 +121,46 @@ machine's `sarathi home`, enabled so it starts at login with the units.
 Each page's port is a `[pages]` setting (`home_port`, `setu_port`,
 `door_port`), and a taken one says which to change, like the others.
 
+## The Podman road, run
+
+On the owner's own machine and `sarathi.toml` (the door on, its window on
+the home network's address), after `sarathi image`:
+
+```
+$ sarathi up
+clock  up at http://127.0.0.1:8780/#token=…  (unit sarathi-clock)
+door   up at http://127.0.0.1:8770/  (unit sarathi-door)
+page   up at http://127.0.0.1:8321/  (unit sarathi-page)
+setu   up at http://127.0.0.1:8775/#token=…  (unit sarathi-setu)
+owner  up at http://127.0.0.1:8785/#token=…  (unit sarathi-owner)
+home   up at http://127.0.0.1:8760/#token=…  (unit sarathi-home)
+```
+
+Each page was then asked through its own API, with its key, the way the
+browser asks:
+
+* **Home**: four cards, each up, each saying something real (*"would ask
+  ollama for qwen3.8-64k:latest"*, *"schedules: 0 active, 0 paused"*,
+  the accounts connected, *"door serving; 3 agents, 1 people"*).
+* **Dvara's page**, from its container, reached the door's by name:
+  `{"door": {"reachable": true}}`, with the people, recent runs, files,
+  and Samay found for the schedules. Its unit names no `--samay` (the
+  process road's does); it finds the image's `samay` on its path.
+* **Setu's page** answered on 127.0.0.1 and on the home network's
+  address, and refused its API there without a key. A link made in the
+  door's container for a person (`setu page-link`, `SETU_HOME` at that
+  person's folder) opened from the network address once; the second
+  try got *"that link has been used, or replaced by a newer one"*. The
+  session it gave saw that person's folder and no other, and adding a
+  site got *"that part of the page is your owner's"*.
+
+Two things only the real run found, both fixed: the pages' units read
+**failed** after every `sarathi down` ([note 03](03-two-containers-one-clock.md),
+a stop is a stop), and a fresh `sarathi image` kept an older Chrome
+than this machine's ([note 05](05-a-browser-in-the-image.md), the build
+is told which Chrome is here).
+
 ## What is not here yet
 
 * ~~**`setu serve` and `dvara page` as units**~~ Above.
-* **The Podman road, tried for real.** The units are written and tested
-  against a stand-in systemd. The first real run is a `sarathi image`
-  (the image needs dvara's page) and `sarathi up`.
+* ~~**The Podman road, tried for real.**~~ Run, above.

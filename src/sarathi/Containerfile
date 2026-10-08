@@ -33,7 +33,13 @@ FROM python:3.12-slim
 #   xvfb        a screen nobody looks at, for a site whose rules say a
 #               real window (X): headless is what those sites detect.
 #   fonts       so a page has its letters, and a screenshot is readable.
-RUN apt-get update \
+#
+# HOST_BROWSER is this machine's Chrome version (`sarathi image` passes it).
+# A new one re-runs this step: a cached layer would otherwise keep the
+# Chrome of the first build, older than the one that signed the profiles.
+ARG HOST_BROWSER=
+RUN echo "this machine's browser: ${HOST_BROWSER:-none}" \
+ && apt-get update \
  && apt-get install -y --no-install-recommends bubblewrap xvfb xauth \
       ca-certificates curl gnupg fonts-liberation fonts-noto-color-emoji \
  && if [ "$(dpkg --print-architecture)" = amd64 ]; then \

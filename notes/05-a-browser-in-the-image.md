@@ -48,6 +48,14 @@ signed in to here won't open in there until `sarathi image` builds it again
 
 `sarathi image` ends by saying which browser it put in.
 
+**THE BUILD IS TOLD WHICH CHROME IS HERE.** The first time that note
+appeared, `sarathi image` didn't make it go away: the Chrome step's text
+hadn't changed, so the build took it from the cache and put 154 back in.
+The step now starts from `ARG HOST_BROWSER`, which `sarathi image` sets
+to this machine's Chrome version. A new version here re-runs the step
+and fetches the current Chrome. Otherwise the cached step is kept, so
+a rebuild with nothing new still takes seconds.
+
 The rest of what a browser needs:
 
 * **Xvfb.** X's site rules ask for a real window, because headless is

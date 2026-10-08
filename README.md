@@ -302,7 +302,10 @@ and `sarathi-door` when the door is on) into
 `~/.config/containers/systemd/`, and systemd starts them. When
 `sarathi.toml` changes a unit, or `sarathi image` built a newer image,
 `up` restarts what's affected and leaves the rest running. They come back on their own after a crash, and they start again
-when you log in. `sarathi down` stops them; `sarathi down --remove` also
+when you log in. `sarathi down` stops them (each under podman's small init,
+so a page that doesn't catch SIGTERM still stops at once and its unit
+reads stopped, not failed; [notes/03](notes/03-two-containers-one-clock.md));
+`sarathi down --remove` also
 takes the units out, so nothing starts at login.
 
 What goes into the containers:
@@ -317,7 +320,9 @@ What goes into the containers:
   Xvfb for a site that wants a real window; and bubblewrap, so Setu's
   connectors are walled off here as on your desktop. Chrome refuses a
   profile a newer Chrome wrote, so `up` says when your computer's Chrome
-  has got ahead of the image's (`sarathi image` catches up). Google ships
+  has got ahead of the image's (`sarathi image` catches up: it tells the
+  build which Chrome is here, so that step isn't taken from the cache;
+  [notes/05](notes/05-a-browser-in-the-image.md)). Google ships
   Chrome for amd64 only; elsewhere the image gets Debian's Chromium.
 * **Your data, at the same paths.** Samay's schedules, Setu's sign-ins
   and Yantra's memory are mounted from where they are on your machine,

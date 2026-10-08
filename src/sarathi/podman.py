@@ -223,7 +223,10 @@ def build(engine: str = "podman") -> int:
         for line in stage(Path(tmp)):
             print(f"  {line}")
         print(flush=True)
-        code = subprocess.run([engine, "build", "-t", IMAGE, tmp], check=False).returncode
+        here = browser_version([BROWSER, "--version"]) if shutil.which(BROWSER) else None
+        code = subprocess.run([engine, "build", "-t", IMAGE, "--build-arg",
+                               f"HOST_BROWSER={'.'.join(map(str, here or ()))}", tmp],
+                              check=False).returncode
     if code == 0:
         inside = run([engine, "run", "--rm", "--entrypoint", "/usr/local/bin/sarathi-browser",
                       IMAGE, "--version"]).stdout.strip()
@@ -382,6 +385,7 @@ Network={NETWORK}.network
 Exec={exec_}
 PublishPort={publish}
 UserNS=keep-id
+RunInit=true
 ShmSize=1g
 Unmask=/proc/*
 Tmpfs={Path.home()}:rw,mode=0700,U
@@ -389,6 +393,7 @@ WorkingDir={work_dir()}
 {env}{secrets}{volumes}{extra_container}
 [Service]
 Restart=on-failure
+SuccessExitStatus=143
 
 [Install]
 WantedBy=default.target

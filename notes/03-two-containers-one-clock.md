@@ -160,6 +160,18 @@ clock  stopped  (unit sarathi-clock)
 they start again at your next login (`sarathi down --remove` to stop that too)
 ```
 
+**A STOP IS A STOP, NOT A FAILURE.** A program that is PID 1 in its
+container never sees SIGTERM unless it catches it, and two of them
+don't: `setu serve` and `dvara page` sat out podman's ten seconds, were
+killed (`StopSignal SIGTERM failed to stop container sarathi-setu in 10
+seconds, resorting to SIGKILL`), and their units read **failed** after
+every `sarathi down`. So every unit runs under podman's small init
+(`RunInit=true`), which passes the signal on to a program that is no
+longer PID 1, and `down` takes three seconds, not ten. A program that
+signal ends exits 143, which systemd would also call a failure, so the
+units say `SuccessExitStatus=143`: a stop that ends that way is clean,
+while a kill after the ten seconds (137) still shows as the failure it is.
+
 **A PORT SOMETHING ELSE HOLDS IS SAID BEFORE ANYTHING STARTS.** A
 published port that another program already holds fails inside systemd:
 `rootlessport listen tcp 127.0.0.1:8765: bind: address already in use`,
