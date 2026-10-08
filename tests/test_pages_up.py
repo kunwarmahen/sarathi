@@ -90,3 +90,16 @@ def test_down_stops_the_pages_too(stage, capsys):
     run(capsys, "up")
     _, out = run(capsys, "down")
     assert "setu   stopped" in out and "home   stopped" in out
+
+
+def test_on_one_window_address_setus_page_listens_there_too_and_the_door_links_to_it(
+        stage, home, capsys):  # noqa: F811
+    door_on(stage, home)
+    extra = (stage["world"] / "config" / "sarathi.toml").read_text().split("[door]", 1)[1]
+    ports = pages_on(stage, "[door]" + extra.replace("[pages]\non = false\n", "")
+                     + 'window_host = "100.101.102.103"\n')
+    code, out = run(capsys, "up")
+    assert code == 0, out
+    assert seen(stage, "setu")["argv"][-2:] == ["--also-host", "100.101.102.103"]
+    assert seen(stage, "dvara")["env"]["SETU_PAGE_URL"] == \
+        f"http://100.101.102.103:{ports['setu']}/"

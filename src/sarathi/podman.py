@@ -104,7 +104,9 @@ streams a sign-in window from the door's container: it listens on
 every address inside (``SETU_WINDOW_HOST=0.0.0.0``), on a fixed port
 (``window_port``, else 8790), published on ``window_host`` alone, and
 the link says ``window_url`` or ``http://window_host:port`` -- never the
-container's own address, which no phone can reach.
+container's own address, which no phone can reach. SETU'S PAGE IS
+PUBLISHED THERE TOO, when ``window_host`` is one address (not 0.0.0.0):
+a person's link from ``/accounts page`` then opens on their phone.
 """
 
 from __future__ import annotations
@@ -317,6 +319,13 @@ def phone_env(config: Config) -> str:
             if phone is not None and phone.address else "")
 
 
+def people_dir(config: Config) -> Path | None:
+    """People's own Setu folders (the door's state/setu), for Setu's page:
+    that folder alone is mounted into its container, not the door's
+    whole state."""
+    return config.door.path("state") / "setu" if config.door is not None else None
+
+
 def door_dirs(config: Config) -> list[Path]:
     """dvara's folders, for the door's container alone."""
     door = config.door
@@ -386,6 +395,11 @@ WantedBy=default.target
 """
 
 
+def people_url(config: Config) -> str:
+    """The door's SETU_PAGE_URL, for people's links (config.people_env)."""
+    return "".join(f"Environment={k}={v}\n" for k, v in config.people_env().items())
+
+
 def window(config: Config) -> tuple[str, str, str] | None:
     """(host it is published on, port, the link's base) for the door's
     streamed window, or None when sarathi.toml asks for none."""
@@ -440,7 +454,7 @@ def units(config: Config) -> dict[str, str]:
             "Sarathi: dvara, the door", UNITS["door"], door_exec,
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
             extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
-                            + streamed + phone_env(config),
+                            + streamed + people_url(config) + phone_env(config),
             more_volumes=door_dirs(config) + phone_dirs(config))
         page_unit += f"After={UNITS['door']}.service\n"
     if config.phone is not None:
@@ -453,11 +467,18 @@ def units(config: Config) -> dict[str, str]:
         extra_container=phone_env(config), more_volumes=phone_dirs(config))
     if config.pages.on:
         pages = config.pages
+        folders = people_dir(config)
+        people = f" --people {folders}" if folders else ""
+        phones = config.people_host()
         out[f"{UNITS['setu']}.container"] = _unit(
             "Sarathi: Setu's page", UNITS["setu"],
             f"{IN_IMAGE}/setu serve --host 0.0.0.0 --port {SETU_PAGE_PORT} "
-            f"--public-url http://127.0.0.1:{pages.setu_port}/",
-            f"127.0.0.1:{pages.setu_port}:{SETU_PAGE_PORT}", config)
+            f"--public-url http://127.0.0.1:{pages.setu_port}/{people}",
+            f"127.0.0.1:{pages.setu_port}:{SETU_PAGE_PORT}", config,
+            # people's links open on their phones (config.people_host)
+            extra_container=(f"PublishPort={phones}:{pages.setu_port}:{SETU_PAGE_PORT}\n"
+                             if phones else ""),
+            more_volumes=[folders] if folders else None)
         if config.door is not None:
             door = config.door
             out[f"{UNITS['owner']}.container"] = _unit(
@@ -663,7 +684,7 @@ def preflight(config: Config) -> None:
 
 def up(config: Config) -> tuple[list[str], bool]:
     preflight(config)
-    for folder in data_dirs() + door_dirs(config):
+    for folder in data_dirs() + door_dirs(config) + [p for p in [people_dir(config)] if p]:
         folder.mkdir(parents=True, exist_ok=True)
     write_env_files(config)
     changed = install(units(config))

@@ -22,7 +22,10 @@ files:
                   serve --port <door.port> [--telegram <door.telegram>]
     setu    setu serve --port <pages.setu_port>
                   [--people <door.state>/setu, with a door: each person's
-                  own folder, for the link /accounts page sends them]
+                  own folder, for the link /accounts page sends them;
+                  --also-host <door.window_host>, when that is one
+                  address, so the link opens on their phone -- and the
+                  door gets SETU_PAGE_URL to build it]
     owner   dvara --root/--actors/--state <door.*> [--samay <samay>] page
                   --as <door.owner> --port <pages.door_port>, with
                   DVARA_TOKEN and DVARA_URL: the door's own token and
@@ -207,6 +210,9 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
         argv = [setu, "serve", "--port", str(pages.setu_port)]
         if door is not None and door_on:
             argv += ["--people", str(door.path("state") / "setu")]
+            if config.people_host():
+                # people's links open on their phones (config.people_host)
+                argv += ["--also-host", config.people_host()]
         out.append(Service("setu", "setu", argv, pages.setu_port, says_address="  "))
     else:
         notes.append("setu   page not started: setu was not found (see `sarathi status`)")
@@ -296,7 +302,7 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     tokens = {k: secrets[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in secrets}
     return Service("door", "dvara", argv, door.port,
                    {**env, **tokens, **door_env(config), **door.window_env(),
-                    **phone_env(config)})
+                    **config.people_env(), **phone_env(config)})
 
 
 def phone_env(config: Config) -> dict[str, str]:

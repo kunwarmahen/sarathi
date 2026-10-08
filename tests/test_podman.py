@@ -495,6 +495,37 @@ def test_setus_page_is_a_container_published_here_only(host, world):
     assert "PublishPort=127.0.0.1:8875:8775" in setu
 
 
+def test_setus_page_on_the_window_address_opens_peoples_links_on_their_phones(host, world):
+    """One address (Tailscale, the home network): Setu's page is published
+    there as well as here, sees people's folders (that folder alone), and
+    the door builds their links with that address."""
+    with_door_secrets(world)
+    config = Config("ollama", road="podman", door=Door(window_host="100.101.102.103"),
+                    pages=Pages(on=True, setu_port=8875))
+    made = podman.units(config)
+    setu = made["sarathi-setu.container"]
+    folders = world / "home/dvara/state/setu"
+    assert f"--people {folders}" in setu
+    assert "PublishPort=127.0.0.1:8875:8775" in setu
+    assert "PublishPort=100.101.102.103:8875:8775" in setu
+    assert f"Volume={folders}:{folders}:z" in setu
+    assert "Volume=" + str(world / "home/dvara/state") + ":" not in setu  # not the whole state
+    door = made["sarathi-door.container"]
+    assert "Environment=SETU_PAGE_URL=http://100.101.102.103:8875/" in door
+
+
+def test_every_address_or_none_keeps_setus_page_here(host, world):
+    with_door_secrets(world)
+    for where in (None, "0.0.0.0", "127.0.0.1"):
+        config = Config("ollama", road="podman",
+                        door=Door(window_host=where, window_url="https://door.example.net"),
+                        pages=Pages(on=True, setu_port=8875))
+        made = podman.units(config)
+        assert made["sarathi-setu.container"].count("PublishPort=") == 1
+        assert "SETU_PAGE_URL" not in made["sarathi-door.container"]
+        assert config.people_env() == {}
+
+
 def test_the_owner_page_reaches_the_door_by_name_with_its_token_from_its_own_file(
         host, world):
     with_door_secrets(world)

@@ -48,6 +48,8 @@ DEFAULT_CLOCK_PORT = 8780
 DEFAULT_DOOR_PORT = 8770
 #: Each program's own page, and the home page linking them (`[pages]`).
 DEFAULT_HOME_PORT, DEFAULT_SETU_PAGE_PORT, DEFAULT_DOOR_PAGE_PORT = 8760, 8775, 8785
+#: Window addresses that are not one address a phone can be sent to.
+NOT_ONE_ADDRESS = ("0.0.0.0", "::", "127.0.0.1", "localhost", "::1")
 #: Dvara's own defaults, used when [door] names no folder.
 DOOR_ROOT, DOOR_ACTORS, DOOR_STATE = "~/dvara/agents", "~/dvara/actors.toml", "~/dvara/state"
 #: The two secrets the door needs: dvara's own bearer token (Sarathi
@@ -109,6 +111,26 @@ class Config:
     door: Door | None = None
     pages: Pages = Pages()
     phone: Phone | None = None
+
+    def people_host(self) -> str | None:
+        """Where people's phones reach Setu's page, for the link ``/accounts
+        page`` sends them: the door's window address, when it is ONE
+        address (Tailscale, the home network) -- never every address
+        (0.0.0.0) and never this computer alone. None: the page stays on
+        127.0.0.1, and a person's link opens only here."""
+        door = self.door
+        if door is None or not self.pages.on:
+            return None
+        host = (door.window_host or "").strip()
+        return host if host and host not in NOT_ONE_ADDRESS else None
+
+    def people_env(self) -> dict[str, str]:
+        """The door's word for that page (``setu page-link`` reads it)."""
+        host = self.people_host()
+        if host is None:
+            return {}
+        shown = f"[{host}]" if ":" in host else host
+        return {"SETU_PAGE_URL": f"http://{shown}:{self.pages.setu_port}/"}
 
 
 @dataclass(frozen=True)

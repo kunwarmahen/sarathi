@@ -231,6 +231,14 @@ on a fixed port there (`window_port`, else 8790), published on
 `window_host` alone, and the link says `window_url` or
 `http://window_host:port`.
 
+**Their own accounts page, from their phone.** When `window_host` is one
+address (your Tailscale or home-network address, not `0.0.0.0`), Setu's
+page listens there too, on its usual port, and the door builds people's
+links with it: someone sends `/accounts page` and the link opens on
+their phone. This computer still reaches the page at `127.0.0.1`. With
+no `window_host`, or `0.0.0.0`, the page stays on this computer and the
+link opens only here.
+
 Your own phone can use the same sign-ins as this computer's page: under
 `[actor.owner]`, `setu = "~/.local/state/setu"` with `setu_manage = true`,
 so `/connect amazon` from the chat signs in there (dvara's note 27). The
@@ -272,6 +280,7 @@ would otherwise start again at your next login. It starts nothing new;
 | Amazon and X | your own Chrome | Chrome in the image |
 | connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
 | the door's streamed window | listens on `window_host` itself | published from the door's container |
+| Setu's page for people's phones | `setu serve --also-host <window_host>` | published on `window_host` too; only the people's folders mounted |
 | the pages | plain programs | Setu's and Dvara's as containers; the home page as a user service (`~/.config/systemd/user/sarathi-home.service`) |
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
 | Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
