@@ -127,8 +127,10 @@ the agent uses an account. Both get the same model, so a scheduled run
 is answered by the same model as the page. Each piece's output goes to
 `~/.local/share/sarathi/logs/`.
 
-With **Sparsh** found, the page is started with `--sparsh
-auto:<that sparsh>`: Yantra uses that program, but only once a phone is
+Sarathi finds **Sparsh** the way it finds the others, a checkout beside
+its own included, so it needs no link on your `PATH`; Yantra started on
+its own does (Sparsh's README, "Letting an agent use it"). With Sparsh
+found, the page is started with `--sparsh auto:<that sparsh>`: Yantra uses that program, but only once a phone is
 attached and you say to use it (the phone panel's **use this phone**).
 No phone at the start means no phone tools, the same as a Yantra you
 start by hand ([notes/07](notes/07-the-phone-stays-on-the-cable.md)).
