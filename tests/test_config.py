@@ -27,6 +27,7 @@ def init_args(**given) -> argparse.Namespace:
 def test_what_init_writes_reads_back_as_the_same_settings(world):
     for chosen in (Config("ollama", "gemma4:12b", "http://box:11434/v1", 8400, False, 8781,
                           "podman"),
+                   Config("ollama", context_window=64000),
                    Config("anthropic")):
         assert parse(render(chosen)) == chosen
 
@@ -38,6 +39,8 @@ def test_what_init_writes_reads_back_as_the_same_settings(world):
     ('[model]\nprovider = "ollama"\n[web]\nport = "8321"\n', "web.port must be a port"),
     ('[model]\nprovider = "ollama"\n[clock]\non = "yes"\n', "clock.on must be true or false"),
     ('[model]\nprovider = "ollama"\n[run]\nroad = "docker"\n', "run.road must be one of"),
+    ('[model]\nprovider = "ollama"\ncontext_window = "64k"\n', "model.context_window must be"),
+    ('[model]\nprovider = "ollama"\ncontext_window = 64\n', "model.context_window must be"),
     ('[model\n', "not valid TOML"),
 ])
 def test_a_setting_it_does_not_know_stops_everything_by_name(text, says):
@@ -111,3 +114,15 @@ def test_init_will_not_replace_settings_unless_told(world):
     assert first_run.run(init_args(provider="ollama", model="b", force=True),
                          interactive=False) == 0
     assert config.load().model == "b"
+
+
+def test_the_context_window_reaches_yantra_on_both_roads(world):
+    # Yantra's .env is not in the image: without this, a 64k model in a
+    # container is shortened at Yantra's 8192 default.
+    from sarathi import podman, services
+    chosen = parse('[model]\nprovider = "ollama"\ncontext_window = 64000\n')
+    assert services.model_env(chosen, {})["OLLAMA_CONTEXT_WINDOW"] == "64000"
+    assert podman.container_env(chosen)["OLLAMA_CONTEXT_WINDOW"] == "64000"
+    unset = parse('[model]\nprovider = "ollama"\n')
+    assert "OLLAMA_CONTEXT_WINDOW" not in services.model_env(unset, {})
+    assert "OLLAMA_CONTEXT_WINDOW" not in podman.container_env(unset)

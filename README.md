@@ -108,6 +108,17 @@ port = 8780
 A table or key Sarathi doesn't know (`[clok]`) stops `up` with its
 name. Nothing is ignored quietly.
 
+A model that holds more than Yantra's default 8192 tokens (a 64k Ollama
+model, say) gets one more line under `[model]`:
+
+```toml
+context_window = 64000
+```
+
+Sarathi hands it to every piece as `OLLAMA_CONTEXT_WINDOW` (or the
+cloud provider's own name). Without it, the model still answers, but
+Yantra shortens a long chat much earlier than it needs to.
+
 ### Every day: `sarathi up` and `sarathi down`
 
 ```
@@ -291,6 +302,7 @@ would otherwise start again at your next login. It starts nothing new;
 | the pages | plain programs | Setu's and Dvara's as containers; the home page as a user service (`~/.config/systemd/user/sarathi-home.service`) |
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
 | Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
+| Yantra's own `.env` | read, as in a terminal | not in the image: model settings come from `[model]` in sarathi.toml only |
 
 Your accounts, schedules and memories are the same files either way, so
 switching loses nothing. A port something else already uses stops that

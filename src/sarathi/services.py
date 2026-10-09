@@ -41,9 +41,9 @@ otherwise copy by hand into two places and get wrong in one. The order
 is clock, door, page -- the door, like the page, asks once at start-up
 whether the clock is running.
 
-Both get the same model settings (``YANTRA_PROVIDER``, ``<PROVIDER>_MODEL``
-and so on, plus secrets.env), so a scheduled run is answered by the same
-model as the page. A real environment variable outranks secrets.env, the
+Both get the same model settings (``YANTRA_PROVIDER``, ``<PROVIDER>_MODEL``,
+``<PROVIDER>_CONTEXT_WINDOW`` and so on, plus secrets.env), so a scheduled
+run is answered by the same model as the page. A real environment variable outranks secrets.env, the
 same rule Yantra applies to its own ``.env``.
 
 ONE OF EACH, AND NEVER SOMEONE ELSE'S. Before starting anything, ``up``
@@ -131,6 +131,8 @@ def model_env(config: Config, environ: dict[str, str] | None = None) -> dict[str
         env[f"{prefix}_MODEL"] = config.model
     if config.base_url:
         env[f"{prefix}_BASE_URL"] = config.base_url
+    if config.context_window:
+        env[f"{prefix}_CONTEXT_WINDOW"] = str(config.context_window)
     # the door's two tokens go to the door alone (and the clock its token,
     # as SAMAY_DVARA_TOKEN): never to every piece that reads secrets.env
     secrets = {k: v for k, v in read_secrets().items()

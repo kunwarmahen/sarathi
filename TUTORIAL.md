@@ -311,11 +311,15 @@ page   up at http://127.0.0.1:8321/  (unit sarathi-page)
 Same page, same accounts, same schedules, same memories: the containers
 use your files where they already are.
 
-Three things to know on this road:
+Four things to know on this road:
 
 * **On your own computer's model:** Ollama has to accept connections
   from the containers. Start it with `OLLAMA_HOST=0.0.0.0 ollama serve`
   (or set that in its service settings).
+* **Your Yantra `.env` stays behind.** The containers are built from
+  what's committed, and `.env` never is. A setting you put there, like
+  `OLLAMA_CONTEXT_WINDOW=64000` for a 64k model, goes in `sarathi.toml`
+  instead, as `context_window = 64000` under `[model]`.
 * **In the cloud:** the key has to be in `secrets.env` (Step 3 puts it
   there). A key you typed into your terminal another way won't reach
   the containers, so Sarathi refuses to start without it rather than

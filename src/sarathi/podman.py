@@ -56,6 +56,14 @@ container, so the local road's address becomes
 has to listen on more than 127.0.0.1 for that to reach it
 (``OLLAMA_HOST=0.0.0.0``).
 
+YANTRA'S .env IS NOT IN THE IMAGE. The image is built from each
+checkout's last commit, and ``.env`` is never committed, so a setting
+that works in a terminal on this machine is absent in a container. What
+the model needs comes from ``[model]`` in sarathi.toml instead:
+provider, model, base_url and context_window, each as Yantra's own
+variable. A 64k model with no ``context_window`` would still answer, but
+Yantra would shorten every long chat at its 8192 default.
+
 A BROWSER, AND THE WALL AROUND A CONNECTOR, ARE IN THE IMAGE. Google
 Chrome at the path a desktop has it, so the profiles Setu recorded open
 with the browser that wrote them; Xvfb for a site that wants a real
@@ -309,6 +317,8 @@ def container_env(config: Config) -> dict[str, str]:
                                else None)
     if base:
         env[f"{prefix}_BASE_URL"] = from_container(base)
+    if config.context_window:
+        env[f"{prefix}_CONTEXT_WINDOW"] = str(config.context_window)
     return env
 
 

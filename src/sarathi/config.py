@@ -57,7 +57,7 @@ DOOR_ROOT, DOOR_ACTORS, DOOR_STATE = "~/dvara/agents", "~/dvara/actors.toml", "~
 DOOR_TOKEN, BOT_TOKEN = "DVARA_TOKEN", "TELEGRAM_TOKEN"
 
 KNOWN: dict[str, set[str]] = {
-    "model": {"provider", "model", "base_url"},
+    "model": {"provider", "model", "base_url", "context_window"},
     "web": {"port"},
     "clock": {"on", "port"},
     "run": {"road"},
@@ -111,6 +111,9 @@ class Config:
     door: Door | None = None
     pages: Pages = Pages()
     phone: Phone | None = None
+    #: How many tokens the model holds, as Yantra's <PROVIDER>_CONTEXT_WINDOW:
+    #: when to shorten a long conversation. None: Yantra's default.
+    context_window: int | None = None
 
     def people_host(self) -> str | None:
         """Where people's phones reach Setu's page, for the link ``/accounts
@@ -218,6 +221,11 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     if provider not in PROVIDERS:
         raise ConfigError(f"{where}: model.provider must be one of "
                           f"{', '.join(PROVIDERS)}, not {provider!r}")
+    window = model.get("context_window")
+    if window is not None and (not isinstance(window, int) or isinstance(window, bool)
+                               or window < 1024):
+        raise ConfigError(f"{where}: model.context_window must be a number of tokens "
+                          f"(1024 or more), not {window!r}")
     clock = data.get("clock", {})
     if not isinstance(clock.get("on", True), bool):
         raise ConfigError(f"{where}: clock.on must be true or false")
@@ -261,6 +269,7 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     return Config(provider=provider, road=road, door=door, pages=pages, phone=phone,
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
+                  context_window=window,
                   web_port=_port(data.get("web", {}), "port", DEFAULT_WEB_PORT, "web"),
                   clock_on=clock.get("on", True),
                   clock_port=_port(clock, "port", DEFAULT_CLOCK_PORT, "clock"))
@@ -279,6 +288,8 @@ def render(config: Config) -> str:
     """The file `init` writes: every setting shown, with what it does."""
     model = f'model = "{config.model}"' if config.model else '# model = "..."'
     base = f'base_url = "{config.base_url}"' if config.base_url else '# base_url = "..."'
+    window = (f"context_window = {config.context_window}" if config.context_window
+              else "# context_window = 8192")
     return f"""\
 # Sarathi's settings. `sarathi up` reads this every time it starts things;
 # edit it and run `sarathi down && sarathi up`. Keys never go here: a cloud
@@ -288,10 +299,13 @@ def render(config: Config) -> str:
 # provider: ollama (a model on this machine) | anthropic | openai
 # model: unset means Yantra's default for that provider
 # base_url: unset means the provider's usual address
+# context_window: the tokens your model holds (a 64k Ollama model: 64000);
+#   unset means Yantra's default, which shortens a long chat early
 [model]
 provider = "{config.provider}"
 {model}
 {base}
+{window}
 
 # Yantra's page.
 [web]
