@@ -14,6 +14,7 @@ podman and systemctl are replaced by a recorder; git is real.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -272,6 +273,22 @@ def test_a_newer_chrome_here_rebuilds_the_image_s_browser(host, monkeypatch):
                         subprocess.CompletedProcess(argv, 0))
     assert podman.build() == 0
     assert "HOST_BROWSER=155.0.8059.39" in built[0]
+
+
+def test_the_image_is_built_for_this_machine_whatever_the_base_tags_hold(host, monkeypatch):
+    """An arm64 build left arm64 debian and python under their usual names;
+    the next plain `sarathi image` built arm64 and the door took three
+    minutes to start under qemu."""
+    built = []
+    monkeypatch.setattr(podman, "stage", lambda into, env=None: [])
+    monkeypatch.setattr(podman.shutil, "which", lambda name: None)
+    monkeypatch.setattr(podman.os, "uname", lambda: os.uname_result(
+        ("Linux", "box", "7.0", "#1", "x86_64")))
+    monkeypatch.setattr(podman.subprocess, "run",
+                        lambda argv, **kw: built.append(argv) or
+                        subprocess.CompletedProcess(argv, 0))
+    assert podman.build() == 0
+    assert built[0][built[0].index("--platform") + 1] == "linux/amd64"
 
 
 def test_every_container_gets_room_for_a_browser_and_a_wall_for_a_connector(host, world):

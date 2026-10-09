@@ -217,6 +217,16 @@ def stage(into: Path, env: dict[str, str] | None = None) -> list[str]:
     return lines
 
 
+def platform() -> str:
+    """This machine's own platform, named the way podman names one. Asked
+    for on every build: an arm64 build on this machine had left arm64
+    images under the base images' names, and a plain build then made an
+    arm64 Sarathi that ran every service through qemu."""
+    arch = {"x86_64": "amd64", "aarch64": "arm64", "armv7l": "arm/v7"}
+    machine = os.uname().machine
+    return f"linux/{arch.get(machine, machine)}"
+
+
 def build(engine: str = "podman") -> int:
     with tempfile.TemporaryDirectory(prefix="sarathi-build-") as tmp:
         print("building from:")
@@ -224,7 +234,8 @@ def build(engine: str = "podman") -> int:
             print(f"  {line}")
         print(flush=True)
         here = browser_version([BROWSER, "--version"]) if shutil.which(BROWSER) else None
-        code = subprocess.run([engine, "build", "-t", IMAGE, "--build-arg",
+        code = subprocess.run([engine, "build", "--platform", platform(), "-t", IMAGE,
+                               "--build-arg",
                                f"HOST_BROWSER={'.'.join(map(str, here or ()))}", tmp],
                               check=False).returncode
     if code == 0:

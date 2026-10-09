@@ -50,6 +50,24 @@ make namespaces, and the same call walls a connector off in the amd64
 image) and Chromium itself (qemu stops it with "uncaught target signal
 5" before it draws a page).
 
+That build left something behind. Pulling arm64 bases put them under
+the usual names, `python:3.12-slim` and `debian:trixie-slim`, in place
+of the amd64 ones, and the next plain `sarathi image` built on them: an
+arm64 Sarathi on an amd64 machine, every service run through qemu.
+`sarathi up` said the door and the page "did not come up"; they had,
+three minutes later, and the page fell over once when `setu status
+--json` took longer than its 15 seconds. So **`sarathi image` names
+this machine's platform on every build** (`--platform linux/amd64`
+here), and podman pulls the matching base when the tag holds the wrong
+one:
+
+```
+Trying to pull docker.io/library/python:3.12-slim...
+...
+$ podman image inspect localhost/sarathi:latest --format '{{.Architecture}}'
+amd64
+```
+
 **NEWER HERE, REFUSED THERE.** Your desktop's Chrome updates itself; the
 image's is whatever was current when it was built. When the desktop's
 gets ahead, a profile signed in to here won't open in there, so `up`
