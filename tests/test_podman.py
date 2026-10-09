@@ -59,22 +59,22 @@ def host(world, monkeypatch):
 
 
 def page(config=LOCAL) -> str:
-    return podman.units(config)["sarathi-page.container"]
+    return podman.units(config)["sarathi-yantra.container"]
 
 
 def test_the_page_starts_after_the_clock_and_shares_nothing_else_with_it(host):
     text = page()
-    assert "Wants=sarathi-clock.service\nAfter=sarathi-clock.service" in text
+    assert "Wants=sarathi-samay.service\nAfter=sarathi-samay.service" in text
     assert "BindsTo" not in text and "--pid" not in text
     assert "--samay /usr/local/bin/samay" in text and "PublishPort=127.0.0.1:8410:8321" in text
-    assert "Upholds" not in podman.units(LOCAL)["sarathi-clock.container"]
+    assert "Upholds" not in podman.units(LOCAL)["sarathi-samay.container"]
 
 
 def test_with_the_clock_off_there_is_no_clock_and_nothing_bound_to_one(host):
     made = podman.units(NO_CLOCK)
-    assert list(made) == ["sarathi-page.container", "sarathi.network"]
-    text = made["sarathi-page.container"]
-    assert "--no-samay" in text and "sarathi-clock" not in text
+    assert list(made) == ["sarathi-yantra.container", "sarathi.network"]
+    text = made["sarathi-yantra.container"]
+    assert "--no-samay" in text and "sarathi-samay" not in text
 
 
 def test_every_data_folder_is_mounted_where_it_is_on_the_host(host, world):
@@ -99,7 +99,7 @@ def test_a_key_reaches_the_containers_only_through_their_own_env_file(host, worl
     secrets.parent.mkdir(parents=True)
     secrets.write_text("ANTHROPIC_API_KEY=sk-secret\n")
     text = page(cloud)
-    own = podman.env_file("sarathi-page")
+    own = podman.env_file("sarathi-yantra")
     assert f"EnvironmentFile={own}" in text and "sk-secret" not in text
     podman.write_env_files(cloud)
     assert "ANTHROPIC_API_KEY=sk-secret" in own.read_text()
@@ -131,7 +131,7 @@ def test_units_are_rewritten_and_systemd_reloaded_only_on_a_change(host):
     assert host.said("systemctl", "--user", "daemon-reload") == 1
     assert podman.install(podman.units(NO_CLOCK))
     assert sorted(p.name for p in podman.unit_dir().iterdir()) == [
-        "sarathi-page.container", "sarathi.network"]
+        "sarathi-yantra.container", "sarathi.network"]
     assert host.said("systemctl", "--user", "daemon-reload") == 2
 
 
@@ -142,7 +142,7 @@ def test_the_clocks_address_is_its_own_line_said_from_this_machine(host):
 
 
 def test_the_clock_is_told_the_address_a_browser_here_uses():
-    unit = podman.units(LOCAL)["sarathi-clock.container"]
+    unit = podman.units(LOCAL)["sarathi-samay.container"]
     assert "Environment=SAMAY_PUBLIC_URL=http://127.0.0.1:8790/" in unit
 
 
@@ -182,7 +182,7 @@ def test_down_says_the_units_come_back_at_login_unless_removed(host):
     podman.install(podman.units(LOCAL))
     said = podman.down()
     assert said[-1].startswith("they start again at your next login")
-    assert (podman.unit_dir() / "sarathi-page.container").exists()
+    assert (podman.unit_dir() / "sarathi-yantra.container").exists()
     said = podman.down(remove=True)
     assert said[-1].startswith("units removed")
     assert list(podman.unit_dir().iterdir()) == []
@@ -204,28 +204,28 @@ def with_door_secrets(world):
 def test_the_door_is_a_third_container_wired_to_the_clock_by_name(host, world):
     with_door_secrets(world)
     made = podman.units(DOOR)
-    door = made["sarathi-door.container"]
+    door = made["sarathi-dvara.container"]
     home = world / "home"
     assert "--ask --provider ollama --model gemma4:12b --samay /usr/local/bin/samay" in door
     assert "serve --host 0.0.0.0 --port 8765 --telegram greeter" in door
     assert "PublishPort=127.0.0.1:8766:8765" in door
-    assert "After=sarathi-clock.service" in door
+    assert "After=sarathi-samay.service" in door
     for folder in (home / "dvara/agents", home / "dvara", home / "dvara/state"):
         assert f"Volume={folder}:{folder}:z" in door
-    assert "Environment=SAMAY_DVARA_URL=http://sarathi-door:8765" in made[
-        "sarathi-clock.container"]
-    assert "After=sarathi-door.service" in made["sarathi-page.container"]
+    assert "Environment=SAMAY_DVARA_URL=http://sarathi-dvara:8765" in made[
+        "sarathi-samay.container"]
+    assert "After=sarathi-dvara.service" in made["sarathi-yantra.container"]
     assert all("Network=sarathi.network" in made[f"sarathi-{n}.container"]
-               for n in ("clock", "door", "page"))
+               for n in ("samay", "dvara", "yantra"))
     assert "123:bot" not in "".join(made.values())
 
 
 def test_the_bots_token_reaches_the_door_and_no_other_container(host, world):
     with_door_secrets(world)
     podman.write_env_files(DOOR)
-    door = podman.env_file("sarathi-door").read_text()
-    clock = podman.env_file("sarathi-clock").read_text()
-    page_env = podman.env_file("sarathi-page").read_text()
+    door = podman.env_file("sarathi-dvara").read_text()
+    clock = podman.env_file("sarathi-samay").read_text()
+    page_env = podman.env_file("sarathi-yantra").read_text()
     assert "TELEGRAM_TOKEN=123:bot" in door and "DVARA_TOKEN=dvara-token" in door
     assert "SAMAY_DVARA_TOKEN=dvara-token" in clock and "TELEGRAM" not in clock
     assert "TOKEN" not in page_env
@@ -320,7 +320,7 @@ def test_home_is_writable_in_every_container(host, world):
 
 def test_no_window_asked_for_publishes_nothing_more(host, world):
     with_door_secrets(world)
-    door = podman.units(DOOR)["sarathi-door.container"]
+    door = podman.units(DOOR)["sarathi-dvara.container"]
     assert "SETU_WINDOW" not in door
     assert door.count("PublishPort=") == 1
 
@@ -331,7 +331,7 @@ def test_the_window_is_published_where_asked_and_linked_from_there(host, world):
     with_door_secrets(world)
     config = Config("ollama", road="podman",
                     door=Door(window_host="100.101.102.103"))
-    door = podman.units(config)["sarathi-door.container"]
+    door = podman.units(config)["sarathi-dvara.container"]
     assert "PublishPort=100.101.102.103:8790:8790" in door
     assert "Environment=SETU_WINDOW_HOST=0.0.0.0" in door
     assert "Environment=SETU_WINDOW_PORT=8790" in door
@@ -342,7 +342,7 @@ def test_a_window_behind_your_own_https_keeps_its_address(host, world):
     with_door_secrets(world)
     config = Config("ollama", road="podman", door=Door(
         window_host="127.0.0.1", window_port=8767, window_url="https://door.example.net"))
-    door = podman.units(config)["sarathi-door.container"]
+    door = podman.units(config)["sarathi-dvara.container"]
     assert "PublishPort=127.0.0.1:8767:8767" in door
     assert "Environment=SETU_WINDOW_URL=https://door.example.net" in door
 
@@ -404,10 +404,10 @@ def test_a_port_something_else_holds_is_said_and_the_unit_not_left_looping(host,
     host.taken = {8766}
     lines, ok = podman.up(DOOR)
     assert not ok
-    assert ("door   not started: something else is listening on port 8766 "
-            "(change door.port in sarathi.toml)") in lines
-    assert host.said("systemctl", "--user", "start", "sarathi-door.service") == 0
-    assert host.said("systemctl", "--user", "stop", "sarathi-door.service") == 1
+    assert ("dvara      not started: something else is listening on port 8766 "
+            "(change dvara.port in sarathi.toml)") in lines
+    assert host.said("systemctl", "--user", "start", "sarathi-dvara.service") == 0
+    assert host.said("systemctl", "--user", "stop", "sarathi-dvara.service") == 1
 
 
 def test_the_windows_port_is_checked_too(host, world):
@@ -420,7 +420,7 @@ def test_the_windows_port_is_checked_too(host, world):
     config = Config("ollama", road="podman", clock_port=8781,
                     door=Door(window_host="127.0.0.1"))
     lines, _ = podman.up(config)
-    assert any("port 8790 (change door.window_port" in line for line in lines)
+    assert any("port 8790 (change dvara.window_port" in line for line in lines)
 
 
 # ---- switching roads ---------------------------------------------------------------
@@ -505,9 +505,9 @@ def test_a_running_unit_whose_file_changed_is_restarted_not_left_on_old_settings
     podman.install(podman.units(LOCAL))
     lines, _ = podman.up(Config("ollama", "gemma4:12b", web_port=8411, clock_port=8790,
                                 road="podman"))
-    assert "page   restarting with the new settings  (unit sarathi-page)" in lines
-    assert host.said("systemctl", "--user", "stop", "sarathi-page.service") == 1
-    assert host.said("systemctl", "--user", "stop", "sarathi-clock.service") == 0
+    assert "yantra     restarting with the new settings  (unit sarathi-yantra)" in lines
+    assert host.said("systemctl", "--user", "stop", "sarathi-yantra.service") == 1
+    assert host.said("systemctl", "--user", "stop", "sarathi-samay.service") == 0
 
 
 def test_a_unit_running_an_older_image_is_restarted_after_a_build(host, world):
@@ -518,13 +518,13 @@ def test_a_unit_running_an_older_image_is_restarted_after_a_build(host, world):
     host.answers[("podman", "image", "inspect")] = subprocess.CompletedProcess(
         [], 0, "sha-new\n", "")
     host.answers[("podman", "container", "inspect", "--format", "{{.Image}}",
-                  "sarathi-page")] = subprocess.CompletedProcess([], 0, "sha-old\n", "")
+                  "sarathi-yantra")] = subprocess.CompletedProcess([], 0, "sha-old\n", "")
     host.answers[("podman", "container", "inspect")] = subprocess.CompletedProcess(
         [], 0, "sha-new\n", "")
     lines, _ = podman.up(LOCAL)
-    assert "page   restarting with the new image  (unit sarathi-page)" in lines
-    assert host.said("systemctl", "--user", "stop", "sarathi-page.service") == 1
-    assert host.said("systemctl", "--user", "stop", "sarathi-clock.service") == 0
+    assert "yantra     restarting with the new image  (unit sarathi-yantra)" in lines
+    assert host.said("systemctl", "--user", "stop", "sarathi-yantra.service") == 1
+    assert host.said("systemctl", "--user", "stop", "sarathi-samay.service") == 0
 
 
 # ---- the pages, on the podman road ----------------------------------------------------
@@ -555,7 +555,7 @@ def test_setus_page_on_the_window_address_opens_peoples_links_on_their_phones(ho
     assert "PublishPort=100.101.102.103:8875:8775" in setu
     assert f"Volume={folders}:{folders}:z" in setu
     assert "Volume=" + str(world / "home/dvara/state") + ":" not in setu  # not the whole state
-    door = made["sarathi-door.container"]
+    door = made["sarathi-dvara.container"]
     assert "Environment=SETU_PAGE_URL=http://100.101.102.103:8875/" in door
 
 
@@ -567,7 +567,7 @@ def test_every_address_or_none_keeps_setus_page_here(host, world):
                         pages=Pages(on=True, setu_port=8875))
         made = podman.units(config)
         assert made["sarathi-setu.container"].count("PublishPort=") == 1
-        assert "SETU_PAGE_URL" not in made["sarathi-door.container"]
+        assert "SETU_PAGE_URL" not in made["sarathi-dvara.container"]
         assert config.people_env() == {}
 
 
@@ -582,7 +582,7 @@ def test_setus_page_has_its_own_window_beside_the_doors(host, world):
     assert "PublishPort=100.101.102.103:8791:8791" in setu
     assert "Environment=SETU_WINDOW_HOST=0.0.0.0" in setu
     assert "Environment=SETU_WINDOW_URL=http://100.101.102.103:8791" in setu
-    door = podman.units(config)["sarathi-door.container"]
+    door = podman.units(config)["sarathi-dvara.container"]
     assert "PublishPort=100.101.102.103:8790:8790" in door        # the door keeps its own
 
 
@@ -616,8 +616,8 @@ def test_a_taken_window_port_for_setus_page_is_said_before_it_starts(host, world
     host.taken = {8791}
     lines, ok = podman.up(config)
     assert not ok
-    assert ("setu   not started: something else is listening on port 8791 "
-            "(change door.window_port in sarathi.toml)") in lines
+    assert ("setu       not started: something else is listening on port 8791 "
+            "(change dvara.window_port in sarathi.toml)") in lines
     assert host.said("systemctl", "--user", "start", "sarathi-setu.service") == 0
 
 
@@ -625,16 +625,16 @@ def test_the_owner_page_reaches_the_door_by_name_with_its_token_from_its_own_fil
         host, world):
     with_door_secrets(world)
     made = podman.units(PAGES)
-    owner = made["sarathi-owner.container"]
+    owner = made["sarathi-dvara-page.container"]
     assert "page --as mahen --host 0.0.0.0 --port 8785" in owner
     assert "PublishPort=127.0.0.1:8885:8785" in owner
-    assert "Environment=DVARA_URL=http://sarathi-door:8765" in owner
-    assert "After=sarathi-door.service" in owner
+    assert "Environment=DVARA_URL=http://sarathi-dvara:8765" in owner
+    assert "After=sarathi-dvara.service" in owner
     assert "dvara-token" not in owner                       # never in the unit itself
     podman.write_env_files(PAGES)
-    assert podman.env_file("sarathi-owner").read_text().splitlines()[1:] == [
+    assert podman.env_file("sarathi-dvara-page").read_text().splitlines()[1:] == [
         "DVARA_TOKEN=dvara-token"]
-    for other in ("sarathi-page", "sarathi-setu"):
+    for other in ("sarathi-yantra", "sarathi-setu"):
         path = podman.env_file(other)
         assert not path.exists() or "DVARA_TOKEN" not in path.read_text()
 
@@ -643,12 +643,12 @@ def test_the_home_page_is_a_user_service_started_at_login_and_gone_when_off(host
     text = podman.home_unit(PAGES)
     assert " home --port 8860" in text and "WantedBy=default.target" in text
     assert podman.install_home(text) is True
-    assert podman.unit_file("home") == world / "home/.config/systemd/user/sarathi-home.service"
+    assert podman.unit_file("sarathi") == world / "home/.config/systemd/user/sarathi-home.service"
     assert host.said("systemctl", "--user", "enable", "sarathi-home.service") == 1
     assert podman.install_home(text) is False               # unchanged: nothing reloaded
     assert podman.home_unit(LOCAL) is None
     assert podman.install_home(None) is True
-    assert not podman.unit_file("home").exists()
+    assert not podman.unit_file("sarathi").exists()
     assert host.said("systemctl", "--user", "disable", "sarathi-home.service") == 1
 
 
@@ -661,6 +661,19 @@ def test_up_shows_each_pages_address_with_its_key(host, world, monkeypatch):
     setu_home.mkdir(parents=True)
     (setu_home / "page.token").write_text("setu-key\n")
     lines, _ = podman.up(PAGES)
-    assert any(line.startswith("setu   ") and "http://127.0.0.1:8875/#token=setu-key" in line
+    assert any(line.startswith("setu       ") and "http://127.0.0.1:8875/#token=setu-key" in line
                for line in lines), lines
-    assert any(line.startswith("home   ") for line in lines)
+    assert any(line.startswith("sarathi    ") for line in lines)
+
+
+def test_a_unit_under_its_old_name_is_stopped_before_it_is_removed(host, world):
+    # removed while running, its container would keep holding the port
+    # the new unit needs
+    old = podman.unit_dir() / "sarathi-clock.container"
+    old.parent.mkdir(parents=True)
+    old.write_text("[Container]\n")
+    lines, _ = podman.up(LOCAL)
+    assert "sarathi-clock stopped and removed: it is sarathi-samay now" in lines
+    stop = host.calls.index(["systemctl", "--user", "stop", "sarathi-clock.service"])
+    assert not old.exists() and stop >= 0
+    assert (podman.unit_dir() / "sarathi-samay.container").exists()

@@ -50,7 +50,7 @@ def run(args, found: Found) -> int:
     if args.off:
         settings_path().write_text(render(replace(config, phone=None)))
         print("the phone is off in sarathi.toml; `sarathi down && sarathi up` to stop "
-              "giving it to the door")
+              "giving it to Dvara")
         return 0
     if found.program is None:
         print("error: sparsh was not found -- install it (its SETUP.md), or set "
@@ -88,7 +88,7 @@ def run(args, found: Found) -> int:
     print(f"the phone is on in {settings_path()}, {where}")
     if config.door is not None and not _anyone_marked(config.door.path("actors")):
         print(f"  nobody in {config.door.actors} is marked `phone = true` yet: add it "
-              "under your own [actor.…] so the door's agents may work the phone for you")
+              "under your own [actor.…] so Dvara's agents may work the phone for you")
     print("next: `sarathi down && sarathi up` (or just `sarathi up`)")
     return 0
 

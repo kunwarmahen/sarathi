@@ -41,8 +41,8 @@ def test_up_starts_both_with_what_was_found_and_the_same_model(stage, capsys):
     code, out = run(capsys, "up")
     assert code == 0, out
     web, clock = stage["ports"]["web"], stage["ports"]["clock"]
-    assert f"page   up at http://127.0.0.1:{web}/" in out
-    assert f"clock  up at http://127.0.0.1:{clock}/#token=t0k3n" in out
+    assert f"yantra     up at http://127.0.0.1:{web}/" in out
+    assert f"samay      up at http://127.0.0.1:{clock}/#token=t0k3n" in out
     bin_dir = stage["world"] / "bin"
     page = seen(stage, "yantra")
     assert page["argv"] == ["--web", "--host", "127.0.0.1", "--port", str(web),
@@ -71,18 +71,18 @@ def test_the_clock_starts_before_the_page_that_asks_about_it(stage, capsys):
 
 def test_logs_and_records_that_hold_a_token_are_the_owners_alone(stage, capsys):
     run(capsys, "up")
-    for folder in (services.log_path("clock").parent, services.state_dir() / "run"):
+    for folder in (services.log_path("samay").parent, services.state_dir() / "run"):
         assert stat.S_IMODE(folder.stat().st_mode) == 0o700
     _, out = run(capsys, "status")
-    assert "clock  running at http://127.0.0.1:" in out and "#token=t0k3n" in out
+    assert "samay      running at http://127.0.0.1:" in out and "#token=t0k3n" in out
 
 
 def test_a_second_up_starts_nothing_new(stage, capsys):
     run(capsys, "up")
-    pid = services.records()["page"]["pid"]
+    pid = services.records()["yantra"]["pid"]
     code, out = run(capsys, "up")
     assert code == 0
-    assert f"page   already running at http://127.0.0.1:{stage['ports']['web']}/  (pid {pid})" \
+    assert f"yantra     already running at http://127.0.0.1:{stage['ports']['web']}/  (pid {pid})" \
         in out
 
 
@@ -90,9 +90,9 @@ def test_down_stops_what_up_started_and_status_says_so(stage, capsys):
     run(capsys, "up")
     pids = [r["pid"] for r in services.records().values()]
     _, out = run(capsys, "status")
-    assert "started by `sarathi up`:" in out and "page   running at" in out
+    assert "started by `sarathi up`:" in out and "yantra     running at" in out
     _, out = run(capsys, "down")
-    assert "page   stopped" in out and "clock  stopped" in out
+    assert "yantra     stopped" in out and "samay      stopped" in out
     assert not any(services.alive(pid) for pid in pids)
     assert not services.answers(stage["ports"]["web"])
     _, out = run(capsys, "status")
@@ -106,7 +106,7 @@ def test_a_clock_started_some_other_way_is_left_alone(stage, capsys):
          {**SAMAY_IDLE, "serving": True, "url": "http://127.0.0.1:8780/#token"})
     code, out = run(capsys, "up")
     assert code == 0
-    assert "clock  already running at http://127.0.0.1:8780/#token, not started by Sarathi" \
+    assert "samay      already running at http://127.0.0.1:8780/#token, not started by Sarathi" \
         in out
     assert not (stage["seen"] / "samay.json").exists()
     assert "--samay" in seen(stage, "yantra")["argv"]
@@ -118,9 +118,9 @@ def test_a_port_someone_else_holds_is_reported_not_fought_over(stage, capsys):
         other.listen()
         code, out = run(capsys, "up")
     assert code == 1
-    assert (f"page   not started: something else is listening on port "
-            f"{stage['ports']['web']} (change web.port in sarathi.toml)") in out
-    assert "page" not in services.records()
+    assert (f"yantra     not started: something else is listening on port "
+            f"{stage['ports']['web']} (change yantra.port in sarathi.toml)") in out
+    assert "yantra" not in services.records()
 
 
 def test_a_piece_that_dies_at_once_is_reported_with_its_last_words(stage, capsys,
@@ -128,28 +128,28 @@ def test_a_piece_that_dies_at_once_is_reported_with_its_last_words(stage, capsys
     monkeypatch.setenv("FAKE_CRASH", "yantra")
     code, out = run(capsys, "up")
     assert code == 1
-    assert "page   exited at once (code 3)" in out
+    assert "yantra     exited at once (code 3)" in out
     assert "| Traceback: the web extra is not installed" in out
-    assert "page" not in services.records()
+    assert "yantra" not in services.records()
 
 
 def test_a_piece_that_died_later_shows_as_stopped_with_its_log(stage, capsys):
     run(capsys, "up")
-    pid = services.records()["clock"]["pid"]
+    pid = services.records()["samay"]["pid"]
     os.killpg(pid, signal.SIGKILL)
     deadline = time.monotonic() + 5
     while services.alive(pid) and time.monotonic() < deadline:
         time.sleep(0.05)
     _, out = run(capsys, "status")
-    assert "clock  STOPPED -- it exited" in out
+    assert "samay      STOPPED -- it exited" in out
 
 
 def test_with_the_clock_off_the_page_is_told_there_is_none(stage, capsys):
     settings(stage["world"], stage["ports"], extra="on = false\n")
     _, out = run(capsys, "up")
-    assert "clock  off in sarathi.toml" in out
+    assert "samay      off in sarathi.toml" in out
     assert seen(stage, "yantra")["argv"][-1] == "--no-samay"
-    assert "clock" not in services.records()
+    assert "samay" not in services.records()
 
 
 def test_a_cloud_road_with_no_key_starts_nothing(stage, capsys):

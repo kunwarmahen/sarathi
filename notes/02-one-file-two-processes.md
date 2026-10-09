@@ -80,8 +80,8 @@ already understands. Nothing new is invented for them:
 | `model.provider` | `YANTRA_PROVIDER`, which Yantra reads before guessing from keys. It's the only way to choose a local model, since "no key" can't be seen by a ladder of keys |
 | `model.model` | `OLLAMA_MODEL` / `ANTHROPIC_MODEL` / `OPENAI_MODEL` |
 | `model.context_window` | `OLLAMA_CONTEXT_WINDOW` (and so on): when Yantra shortens a long chat. On the Podman road it is the only way in, since Yantra's `.env` is never in the image |
-| `web.port` | `yantra --web --port` |
-| `clock.port` | `samay serve --port` |
+| `yantra.port` | `yantra --web --port` |
+| `samay.port` | `samay serve --port` |
 | the yantra Sarathi found | `SAMAY_YANTRA`, so the clock runs the same Yantra as the page |
 | the setu and samay it found | `yantra --setu PATH --samay PATH`, so the page talks to the same ones `status` showed |
 
@@ -214,3 +214,5 @@ nothing started by `sarathi up` is running
   installing Sarathi on a machine that already uses them changes
   nothing. The containers mount those same folders at the same paths
   ([notes/03](03-two-containers-one-clock.md)).
+
+*The tables were `[web]` and `[clock]` when this note was written; they are `[yantra]` and `[samay]` now, and the old names still read ([note 09](09-each-by-its-own-name.md)).*

@@ -1,20 +1,20 @@
-"""`sarathi door`: your agents for other people, and for you on your phone.
+"""`sarathi dvara`: your agents for other people, and for you on your phone.
 
 The door is dvara: one always-on service that many people (and you, from
 Telegram) talk to, each as themselves, each with their own allowance,
-their own accounts and their own schedules. ``sarathi door`` turns it on
+their own accounts and their own schedules. ``sarathi dvara`` turns it on
 the way ``sarathi init`` chose the model: a few questions, and files
 that say what was chosen.
 
-    sarathi door                         ask: which agent a Telegram bot answers as
-    sarathi door --telegram greeter      the same, without asking
-    sarathi door --telegram-id 8675309   you, in a new actors file, on Telegram
-    sarathi door --window-host 100.101.102.103   Amazon/X sign-ins streamed to phones
-    sarathi door --off                   stop starting it
+    sarathi dvara                        ask: which agent a Telegram bot answers as
+    sarathi dvara --telegram greeter      the same, without asking
+    sarathi dvara --telegram-id 8675309   you, in a new actors file, on Telegram
+    sarathi dvara --window-host 100.101.102.103   Amazon/X sign-ins streamed to phones
+    sarathi dvara --off                   stop starting it
 
 WHAT IT WRITES, AND WHERE.
 
-* ``[door]`` in sarathi.toml: on, its port, the bot's agent.
+* ``[dvara]`` in sarathi.toml: on, its port, the bot's agent.
 * secrets.env: ``DVARA_TOKEN``, made here (dvara refuses to serve
   without one, and nobody should have to invent 48 hex digits), and
   ``TELEGRAM_TOKEN``, typed at a hidden prompt -- BotFather's token for
@@ -69,7 +69,7 @@ def starter_actors(telegram_id: str | None) -> str:
                '# shows it. Put it here and remove the #s:\n'
                '# [[actor.owner.channel]]\n# kind = "telegram"\n# id   = 8675309\n')
     return f"""\
-# Who the door serves. Written once by `sarathi door`; it is yours now
+# Who the door serves. Written once by `sarathi dvara`; it is yours now
 # (dvara's format: its tutorial explains every key). Anyone not in this
 # file gets no answer at all. Edits are picked up without a restart.
 
@@ -116,7 +116,7 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
         return 2
     if args.off:
         settings_path().write_text(render(replace(config, door=None)))
-        print("the door is off in sarathi.toml; `sarathi down && sarathi up` to stop it")
+        print("Dvara is off in sarathi.toml; `sarathi down && sarathi up` to stop it")
         return 0
     if found.program is None:
         print("error: dvara was not found -- install it, or set SARATHI_DVARA=/path/to/dvara "
@@ -128,7 +128,7 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
     telegram = args.telegram if args.telegram is not None else door.telegram
     if args.telegram is None and interactive and not door.telegram:
         telegram = ask("Which agent should a Telegram bot answer as? "
-                       "(Enter: no bot, only the door's HTTP address) ").strip() or None
+                       "(Enter: no bot, only Dvara's HTTP address) ").strip() or None
     door = replace(door, telegram=telegram or None,
                    port=args.port or door.port or DEFAULT_DOOR_PORT,
                    window_host=getattr(args, "window_host", None) or door.window_host,
@@ -138,7 +138,7 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
     have = read_secrets()
     if DOOR_TOKEN not in have:
         save_secret(DOOR_TOKEN, random.token_hex(24))
-        said.append(f"made the door's own token ({DOOR_TOKEN}, in secrets.env)")
+        said.append(f"made Dvara's own token ({DOOR_TOKEN}, in secrets.env)")
     if door.telegram and BOT_TOKEN not in have:
         if os.environ.get(BOT_TOKEN):
             save_secret(BOT_TOKEN, os.environ[BOT_TOKEN])
@@ -151,8 +151,8 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
                 save_secret(BOT_TOKEN, value)
                 said.append(f"{BOT_TOKEN} saved to secrets.env (readable only by you)")
         if BOT_TOKEN not in read_secrets():
-            said.append(f"no {BOT_TOKEN} yet: run `sarathi door` in a terminal to paste "
-                        "it; until then the door will not start")
+            said.append(f"no {BOT_TOKEN} yet: run `sarathi dvara` in a terminal to paste "
+                        "it; until then Dvara will not start")
 
     actors = door.path("actors")
     if not actors.exists():
@@ -180,7 +180,7 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
 
     settings_path().write_text(render(replace(config, door=door)))
     bot = f", a Telegram bot answering as {door.telegram}" if door.telegram else ""
-    print(f"the door is on in {settings_path()}: port {door.port}{bot}")
+    print(f"Dvara is on in {settings_path()}: port {door.port}{bot}")
     for line in said:
         print(f"  {line}")
     print("next: `sarathi down && sarathi up` (or just `sarathi up`)")

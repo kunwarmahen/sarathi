@@ -24,7 +24,7 @@ def pages_on(stage, extra: str = "") -> dict:
     fake(stage["world"] / "bin", "setu", {"format": "setu.status.v1", "connections": []})
     settings(stage["world"], stage["ports"],
              extra + f'\n[pages]\non = true\nsetu_port = {ports["setu"]}\n'
-                     f'door_port = {ports["door"]}\nhome_port = {ports["home"]}\n')
+                     f'dvara_port = {ports["door"]}\nsarathi_port = {ports["home"]}\n')
     return ports
 
 
@@ -32,17 +32,17 @@ def test_setus_page_and_the_home_page_start_with_their_keys_shown(stage, capsys)
     ports = pages_on(stage)
     code, out = run(capsys, "up")
     assert code == 0, out
-    assert f"setu   up at http://127.0.0.1:{ports['setu']}/#token=k-setu" in out
-    assert f"home   up at http://127.0.0.1:{ports['home']}/#token=" in out
+    assert f"setu       up at http://127.0.0.1:{ports['setu']}/#token=k-setu" in out
+    assert f"sarathi    up at http://127.0.0.1:{ports['home']}/#token=" in out
     assert seen(stage, "setu")["argv"] == ["serve", "--port", str(ports["setu"])]
-    assert "owner" not in services.records()          # no door, no owner page
+    assert "dvara-page" not in services.records()          # no door, no owner page
 
 
 def test_the_owner_page_gets_the_doors_token_and_address_and_asks_as_the_owner(
         stage, home, capsys):  # noqa: F811
     door_port = door_on(stage, home)
-    extra = (stage["world"] / "config" / "sarathi.toml").read_text().split("[door]", 1)[1]
-    ports = pages_on(stage, "[door]" + extra.replace("[pages]\non = false\n", "")
+    extra = (stage["world"] / "config" / "sarathi.toml").read_text().split("[dvara]", 1)[1]
+    ports = pages_on(stage, "[dvara]" + extra.replace("[pages]\non = false\n", "")
                      + 'owner = "mahen"\n')
     code, out = run(capsys, "up")
     assert code == 0, out
@@ -89,14 +89,14 @@ def test_down_stops_the_pages_too(stage, capsys):
     pages_on(stage)
     run(capsys, "up")
     _, out = run(capsys, "down")
-    assert "setu   stopped" in out and "home   stopped" in out
+    assert "setu       stopped" in out and "sarathi    stopped" in out
 
 
 def test_on_one_window_address_setus_page_listens_there_too_and_the_door_links_to_it(
         stage, home, capsys):  # noqa: F811
     door_on(stage, home)
-    extra = (stage["world"] / "config" / "sarathi.toml").read_text().split("[door]", 1)[1]
-    ports = pages_on(stage, "[door]" + extra.replace("[pages]\non = false\n", "")
+    extra = (stage["world"] / "config" / "sarathi.toml").read_text().split("[dvara]", 1)[1]
+    ports = pages_on(stage, "[dvara]" + extra.replace("[pages]\non = false\n", "")
                      + 'window_host = "100.101.102.103"\n')
     code, out = run(capsys, "up")
     assert code == 0, out

@@ -46,7 +46,7 @@ Six small programs, each with one job. You'll use three of them today:
 Telegram, is Step 6, when you want it. Sparsh, which lets the helper
 work an Android phone plugged into this computer, is optional: install
 it (its SETUP.md) and Sarathi finds it, and Yantra's page gets a phone
-panel. `sarathi phone` turns it on for the door too, and on the
+panel. `sarathi phone` turns it on for Dvara too, and on the
 containers' road it reaches the phone over Wi-Fi. Smritikosh, a bigger memory store, is optional too; Sarathi will
 mention it, and you can ignore it.)
 
@@ -116,10 +116,10 @@ setu        ~/agent/setu/.venv/bin/setu  (beside)
             the bridge: your accounts, signed in once
             no accounts connected (connect one: setu connect gmail)
 samay       ~/agent/samay/.venv/bin/samay  (beside)
-            the clock: work done later, with receipts
-            clock not running (start it: samay serve); schedules: 0 active, 0 paused
+            work done later, with receipts
+            not running (start it: samay serve); schedules: 0 active, 0 paused
 dvara       not found (optional) -- install it, or set SARATHI_DVARA=/path/to/dvara
-            the door: many people and agents behind one service
+            many people and agents behind one service
 smritikosh  not found (optional) -- install it, or set SARATHI_SMRITIKOSH=/path/to/smritikosh-mcp
             a memory store (Yantra keeps its own without it)
 ```
@@ -212,10 +212,10 @@ What it wrote is a short file you can read and change at any time:
 provider = "ollama"
 model = "qwen3.8:latest"
 
-[web]
+[yantra]
 port = 8321
 
-[clock]
+[samay]
 on = true
 port = 8780
 
@@ -235,10 +235,10 @@ sarathi up
 ```
 
 ```
-clock  up at http://127.0.0.1:8780/#token=…  (pid 3324159)
-page   up at http://127.0.0.1:8321/  (pid 3324163)
-setu   up at http://127.0.0.1:8775/#token=…  (pid 3324170)
-home   up at http://127.0.0.1:8760/#token=…  (pid 3324178)
+samay      up at http://127.0.0.1:8780/#token=…  (pid 3324159)
+yantra     up at http://127.0.0.1:8321/  (pid 3324163)
+setu       up at http://127.0.0.1:8775/#token=…  (pid 3324170)
+sarathi    up at http://127.0.0.1:8760/#token=…  (pid 3324178)
 ```
 
 Open **http://127.0.0.1:8321/** in your browser. That's the helper. Try:
@@ -259,8 +259,8 @@ sarathi down
 ```
 
 ```
-clock  stopped  (pid 3324159)
-page   stopped  (pid 3324163)
+samay      stopped  (pid 3324159)
+yantra     stopped  (pid 3324163)
 ```
 
 `sarathi status` shows, at the end, what `up` started and whether each
@@ -269,7 +269,7 @@ one is still running.
 **One bookmark for all of it.** The `home` line above is a page that
 links every other page: Yantra's, Samay's, Setu's (your accounts, who in
 your household has their own page open, the catalog and Setu's
-settings) and, once you turn the door on in Step 6,
+settings) and, once you turn Dvara on in Step 6,
 Dvara's (your door: who's on it, their files and schedules, and the
 questions your agents are asking you). Open that address and bookmark
 it. It shows whether each page is running and opens any of them already
@@ -289,7 +289,7 @@ own bubblewrap (`sudo apt install bubblewrap` if `setu status` says
 connectors aren't walled off). Nothing to build, and a `git pull` in a
 project folder is picked up at the next `sarathi up`. But when the
 computer restarts they're gone until you run it again, and that
-includes the clock, so a schedule set for 8:00 won't run if the machine
+includes Samay, so a schedule set for 8:00 won't run if the machine
 rebooted at 7:00.
 
 **Containers.** If you have **Podman** (a program for containers),
@@ -304,8 +304,8 @@ sarathi up
 
 ```
 units rewritten from sarathi.toml
-clock  up at http://127.0.0.1:8780/#token=…  (unit sarathi-clock)
-page   up at http://127.0.0.1:8321/  (unit sarathi-page)
+samay      up at http://127.0.0.1:8780/#token=…  (unit sarathi-samay)
+yantra     up at http://127.0.0.1:8321/  (unit sarathi-yantra)
 ```
 
 Same page, same accounts, same schedules, same memories: the containers
@@ -363,14 +363,14 @@ and pick a name. It gives you a token (a long line like
 **Then:**
 
 ```bash
-sarathi door
+sarathi dvara
 ```
 
 ```
 Which agent should a Telegram bot answer as? greeter
 Your bot's token from BotFather (TELEGRAM_TOKEN; hidden as you type): ••••
-the door is on in ~/.config/sarathi/sarathi.toml: port 8770, a Telegram bot answering as greeter
-  made the door's own token (DVARA_TOKEN, in secrets.env)
+Dvara is on in ~/.config/sarathi/sarathi.toml: port 8770, a Telegram bot answering as greeter
+  made Dvara's own token (DVARA_TOKEN, in secrets.env)
   TELEGRAM_TOKEN saved to secrets.env (readable only by you)
   wrote ~/dvara/actors.toml: you, as the owner (your Telegram id still to add)
   copied dvara's example agents to ~/dvara/agents (greeter, minder, scribe): replace them with your own
@@ -388,12 +388,12 @@ sarathi down && sarathi up
 ```
 
 ```
-clock  up at http://127.0.0.1:8780/#token=…
-door   up at http://127.0.0.1:8770/
-page   up at http://127.0.0.1:8321/
+samay      up at http://127.0.0.1:8780/#token=…
+dvara      up on 8770 (no page here; yours is dvara-page, below)
+yantra     up at http://127.0.0.1:8321/
 ```
 
-`sarathi status` asks the door itself whether it's serving, so the
+`sarathi status` asks Dvara itself whether it's serving, so the
 dvara line says `door serving …` once it's open, and `door not serving`
 if it stopped.
 
@@ -405,13 +405,13 @@ sarathi status
 ```
 
 ```
-  door   running at http://127.0.0.1:8770/
+  dvara      running on 8770 (no page here; yours is dvara-page, below)
          messaged the bot but not in the actors file (telegram id): 8675309
 ```
 
 That number is you. Open `~/dvara/actors.toml`, find the lines under
 "Your Telegram id", remove the `#`s and put your number in. Message the
-bot again: it answers. (No restart needed; the door rereads the file.)
+bot again: it answers. (No restart needed; Dvara rereads the file.)
 
 **Your own accounts from your phone.** Under `[actor.owner]` in the same
 file, one of:
@@ -471,7 +471,7 @@ you gave the bot:
    schedule wrote. To see a run happen now instead of in an hour:
    `~/agent/samay/.venv/bin/samay run-now <id>` (the id is in the bot's
    answer, or in `samay list`; on containers,
-   `podman exec sarathi-clock samay run-now <id>`).
+   `podman exec sarathi-samay samay run-now <id>`).
 3. **Gmail, connected from the chat.** Send `/connect gmail`. Open the
    link on your phone, sign in to Google and allow it. Your phone then
    tries to open a page at `http://127.0.0.1:…` and **fails to load it.
@@ -490,7 +490,7 @@ you gave the bot:
 
 If something doesn't answer, `sarathi status` says which piece stopped,
 and the end of its log: `~/.local/share/sarathi/logs/door.log` for plain
-programs, `journalctl --user -u sarathi-door -n 60` for containers.
+programs, `journalctl --user -u sarathi-dvara -n 60` for containers.
 
 **Adding someone else** is the same: they message the bot, you read
 their number in `sarathi status`, and you add them to `actors.toml`
@@ -500,12 +500,12 @@ the bot. Their sign-ins are kept on your computer, in a folder of their
 own, so you could read them. Tell them that.
 
 **Amazon or X for them, too.** Those sites can't send a sign-in link;
-they're signed in to in a browser on your computer. If you tell the door
+they're signed in to in a browser on your computer. If you tell Dvara
 where its pages can be reached, it sends the person a link that shows
 that browser live on their phone, and they sign in by tapping and typing:
 
 ```bash
-sarathi door --window-host <your computer's address>
+sarathi dvara --window-host <your computer's address>
 sarathi up
 ```
 
@@ -526,12 +526,12 @@ sudo ufw delete allow from 192.168.1.0/24 to any port 8790 proto tcp
 that browser, so it handles what they type, their password included:
 offer it to people who already trust you with their agent.
 
-To turn the door off again: `sarathi door --off`, then
+To turn Dvara off again: `sarathi dvara --off`, then
 `sarathi down && sarathi up`.
 
-If another program on your computer already uses the door's port
+If another program on your computer already uses Dvara's port
 (8770), `sarathi up` says so and names the setting:
-`sarathi door --port 8771` (any free number), then `sarathi up`.
+`sarathi dvara --port 8771` (any free number), then `sarathi up`.
 
 ---
 
@@ -545,25 +545,25 @@ you're most likely to meet:
 | `Ollama is not answering at http://localhost:11434` | Ollama isn't running | `ollama serve`, or start the Ollama app |
 | `qwen3.8:latest is not pulled yet` | the model isn't downloaded | `ollama pull qwen3.8:latest` |
 | `no key for anthropic: run sarathi init or set ANTHROPIC_API_KEY` | no key saved | `sarathi init --force` and paste it |
-| `page not started: something else is listening on port 8321` | another program uses that port | change `port` under `[web]` in sarathi.toml |
+| `yantra not started: something else is listening on port 8321` | another program uses that port | change `port` under `[yantra]` in sarathi.toml |
 | `page exited at once (code 2)`, then a few lines | the page stopped as it started | read the lines; `--web needs the web extra` means Step 1's `uv sync --extra web` was missed |
 | `clock already running at …, not started by Sarathi: left alone` | you already run Samay's clock another way | nothing: a second clock would run every schedule twice |
 | `unknown key clock.onn` | a typo in sarathi.toml | fix the spelling; Sarathi never guesses |
 | `no image yet (localhost/sarathi:latest): run sarathi image first` | Podman road, image not built | `sarathi image` |
-| a schedule never runs | the clock isn't running | `sarathi status`; on the process road, the clock stops with your session (Step 5 fixes that) |
-| `door not started: door.telegram is set but there is no TELEGRAM_TOKEN` | the bot's token wasn't saved | `sarathi door` again, and paste it |
-| `door not started: no actors file at ~/dvara/actors.toml` | dvara's list of people is missing | `sarathi door` writes a starter one |
+| a schedule never runs | Samay isn't running | `sarathi status`; on the process road, Samay stops with your session (Step 5 fixes that) |
+| `dvara not started: dvara.telegram is set but there is no TELEGRAM_TOKEN` | the bot's token wasn't saved | `sarathi dvara` again, and paste it |
+| `dvara not started: no actors file at ~/dvara/actors.toml` | dvara's list of people is missing | `sarathi dvara` writes a starter one |
 | the bot never answers you | you're not in the actors file yet | Step 6, "Let yourself in" |
 | `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi up` |
-| `door not started: something else is listening on port 8770 (change door.port in sarathi.toml)` | another program on your computer uses that port | `sarathi door --port 8771` (any free number), then `sarathi up` |
+| `dvara not started: something else is listening on port 8770 (change dvara.port in sarathi.toml)` | another program on your computer uses that port | `sarathi dvara --port 8771` (any free number), then `sarathi up` |
 | `I couldn't start that sign-in: the browser did not answer Target.createTarget` | containers from an older Sarathi: the browser had nowhere to write | update Sarathi, then `sarathi up` (it restarts what changed) |
 | `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |
-| `the door cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
+| `dvara cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
 | `door did not come up` or `page did not come up`, and its journal says `image platform (linux/arm64/v8) does not match` | the image was built for another machine (an older `sarathi image` after an arm64 build) | `sarathi image`, then `sarathi up` |
 
 Each program also writes down what it printed:
 `~/.local/share/sarathi/logs/page.log`, `clock.log` and `door.log` on
-the process road; `journalctl --user -u sarathi-page` (or `-door`,
+the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 `-clock`) on the Podman road.
 
 ---
@@ -573,7 +573,7 @@ the process road; `journalctl --user -u sarathi-page` (or `-door`,
 | What | Where |
 |---|---|
 | Sarathi's settings | `~/.config/sarathi/sarathi.toml` |
-| A cloud key, and the door's and bot's tokens | `~/.config/sarathi/secrets.env` (only you can read it) |
+| A cloud key, and Dvara's and bot's tokens | `~/.config/sarathi/secrets.env` (only you can read it) |
 | Who may use the bot, and the helpers it offers | `~/dvara/actors.toml`, `~/dvara/agents/` |
 | Their conversations, and their own sign-ins | `~/dvara/state/` |
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
@@ -597,7 +597,7 @@ accounts, schedules and memories stay.
 * **Schedule** — something Samay asks the helper to do later, or on a
   repeat.
 * **Port** — a number that tells your browser which program on your
-  computer to talk to (8321 for the page, 8780 for the clock).
+  computer to talk to (8321 for the page, 8780 for Samay).
 * **Container** — a program running in its own sealed box, which your
   computer can restart on its own. Podman is the program that runs them.
 * **Bot** — a Telegram account that a program answers instead of a

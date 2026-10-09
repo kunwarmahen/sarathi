@@ -1,8 +1,8 @@
 """The same pieces, as containers that systemd keeps running.
 
 ``run.road = "podman"`` in sarathi.toml changes how ``sarathi up`` starts
-the clock and the page. Instead of plain processes, it writes two Quadlet
-units (``sarathi-clock.container``, ``sarathi-page.container``), and
+Samay and Yantra. Instead of plain processes, it writes two Quadlet
+units (``sarathi-samay.container``, ``sarathi-yantra.container``), and
 systemd starts them, restarts them when they crash, and starts them
 again after a reboot. ``sarathi image`` builds the image they run.
 
@@ -44,10 +44,10 @@ token and the Telegram bot's token to the door, and the door's token to
 the clock, which checks schedules against it. The page never holds the
 bot's token.
 
-THE DOOR, WHEN IT IS ON, is a third container (``sarathi-door``), after
+THE DOOR, WHEN IT IS ON, is a third container (``sarathi-dvara``), after
 the clock. All of them share one network (``sarathi.network``), where
 each finds another by its name: the clock reaches the door at
-``http://sarathi-door:8765``. Nothing else is shared; dvara's folders
+``http://sarathi-dvara:8765``. Nothing else is shared; dvara's folders
 (agents, actors, state) are mounted into the door alone.
 
 OLLAMA IS ON THE HOST. ``localhost`` inside a container is the
@@ -97,7 +97,7 @@ its actors file marks ``phone = true``.
 
 THE PAGES PEOPLE LOOK AT, with ``[pages] on`` (the default). Setu's page
 (``sarathi-setu``) and, with the door on, Dvara's owner page
-(``sarathi-owner``) are two more containers from the same image, each
+(``sarathi-dvara-page``) are two more containers from the same image, each
 published on 127.0.0.1 only. The owner page reaches the door by name on
 the network and holds the door's token from its own env file, so your
 answers from the browser get to the door; no other page holds it. The
@@ -107,7 +107,7 @@ pages' ports. It is an ordinary user service (``sarathi-home.service``
 in ``~/.config/systemd/user``) running this machine's ``sarathi home``,
 started at login with the rest.
 
-THE DOOR'S WINDOW IS PUBLISHED. With ``[door] window_host`` set, Setu
+THE DOOR'S WINDOW IS PUBLISHED. With ``[dvara] window_host`` set, Setu
 streams a sign-in window from the door's container: it listens on
 every address inside (``SETU_WINDOW_HOST=0.0.0.0``), on a fixed port
 (``window_port``, else 8790), published on ``window_host`` alone, and
@@ -144,7 +144,8 @@ from sarathi.config import (
     state_dir,
     write_private,
 )
-from sarathi.services import alive, answers, door_problems, records, sarathi_program, work_dir
+from sarathi.services import (OLD_NAMES, WIDTH, alive, answers, door_problems, place,
+                              records, sarathi_program, work_dir)
 from sarathi.siblings import beside_dir
 
 IMAGE = "localhost/sarathi:latest"
@@ -161,10 +162,14 @@ SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
 WINDOW_PORT = 8790
 #: The browser in the image, and the one a desktop's Setu records.
 BROWSER = "/usr/bin/google-chrome"
-UNITS = {"clock": "sarathi-clock", "door": "sarathi-door", "page": "sarathi-page",
-         "setu": "sarathi-setu", "owner": "sarathi-owner", "home": "sarathi-home"}
+UNITS = {"samay": "sarathi-samay", "dvara": "sarathi-dvara", "yantra": "sarathi-yantra",
+         "setu": "sarathi-setu", "dvara-page": "sarathi-dvara-page",
+         "sarathi": "sarathi-home"}
 #: Not a container: an ordinary user service (see the module docstring).
-SERVICE_UNITS = ("home",)
+SERVICE_UNITS = ("sarathi",)
+#: The containers' names before each went by its project's name: stopped
+#: and removed by `up` and `down`, so an old one never holds a port.
+OLD_UNITS = ("sarathi-clock", "sarathi-door", "sarathi-page", "sarathi-owner")
 #: The sarathi.toml key that moves each one's host port.
 SETTINGS = services.PORT_SETTINGS
 NETWORK = "sarathi"
@@ -369,13 +374,13 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
     model = {key: held[key]} if key and key in held else {}
     door = {} if config.door is None or DOOR_TOKEN not in held else \
         {"SAMAY_DVARA_TOKEN": held[DOOR_TOKEN]}
-    out = {UNITS["page"]: dict(model), UNITS["clock"]: {**model, **door}}
+    out = {UNITS["yantra"]: dict(model), UNITS["samay"]: {**model, **door}}
     if config.door is not None:
-        out[UNITS["door"]] = {**model, **door,
+        out[UNITS["dvara"]] = {**model, **door,
                               **{k: held[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in held}}
         if config.pages.on and DOOR_TOKEN in held:
             # the owner page passes your answers to the door: its token, nothing else
-            out[UNITS["owner"]] = {DOOR_TOKEN: held[DOOR_TOKEN]}
+            out[UNITS["dvara-page"]] = {DOOR_TOKEN: held[DOOR_TOKEN]}
     return out
 
 
@@ -461,18 +466,18 @@ def units(config: Config) -> dict[str, str]:
                  f"--setu {IN_IMAGE}/setu ")
     page_unit = ""
     if config.clock_on:
-        out[f"{UNITS['clock']}.container"] = _unit(
-            "Sarathi: Samay's clock", UNITS["clock"],
+        out[f"{UNITS['samay']}.container"] = _unit(
+            "Sarathi: Samay", UNITS["samay"],
             f"{IN_IMAGE}/samay serve --host 0.0.0.0 --port {CLOCK_PORT}",
             f"127.0.0.1:{config.clock_port}:{CLOCK_PORT}", config,
             # where a browser here reaches it, so Samay prints and reports
             # that, not the container's own bind (an older image ignores it)
             extra_container=f"Environment=SAMAY_PUBLIC_URL=http://127.0.0.1:"
                             f"{config.clock_port}/\n"
-                            + (f"Environment=SAMAY_DVARA_URL=http://{UNITS['door']}:"
+                            + (f"Environment=SAMAY_DVARA_URL=http://{UNITS['dvara']}:"
                                f"{DOOR_PORT}\n" if config.door else ""))
         page_exec += f"--samay {IN_IMAGE}/samay"
-        page_unit = f"Wants={UNITS['clock']}.service\nAfter={UNITS['clock']}.service\n"
+        page_unit = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"
     else:
         page_exec += "--no-samay"
     if config.door is not None:
@@ -486,26 +491,26 @@ def units(config: Config) -> dict[str, str]:
                      + f"serve --host 0.0.0.0 --port {DOOR_PORT}"
                      + (f" --telegram {door.telegram}" if door.telegram else ""))
         if config.clock_on:
-            after = f"Wants={UNITS['clock']}.service\nAfter={UNITS['clock']}.service\n"
+            after = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"
         shown = window(config)
         streamed = "" if shown is None else (
             f"PublishPort={shown[0]}:{shown[1]}:{shown[1]}\n"
             f"Environment=SETU_WINDOW_HOST=0.0.0.0\n"
             f"Environment=SETU_WINDOW_PORT={shown[1]}\n"
             f"Environment=SETU_WINDOW_URL={shown[2]}\n")
-        out[f"{UNITS['door']}.container"] = _unit(
-            "Sarathi: dvara, the door", UNITS["door"], door_exec,
+        out[f"{UNITS['dvara']}.container"] = _unit(
+            "Sarathi: Dvara", UNITS["dvara"], door_exec,
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
             extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
                             + streamed + people_url(config) + phone_env(config),
             more_volumes=door_dirs(config) + phone_dirs(config))
-        page_unit += f"After={UNITS['door']}.service\n"
+        page_unit += f"After={UNITS['dvara']}.service\n"
     if config.phone is not None:
         # auto: no phone answering at the start means no phone tools until
         # you press "use this phone" -- as on the process road
         page_exec += f" --sparsh auto:{IN_IMAGE}/sparsh"
-    out[f"{UNITS['page']}.container"] = _unit(
-        "Sarathi: Yantra's page", UNITS["page"], page_exec,
+    out[f"{UNITS['yantra']}.container"] = _unit(
+        "Sarathi: Yantra's page", UNITS["yantra"], page_exec,
         f"127.0.0.1:{config.web_port}:{PAGE_PORT}", config, page_unit,
         extra_container=phone_env(config), more_volumes=phone_dirs(config))
     if config.pages.on:
@@ -524,14 +529,14 @@ def units(config: Config) -> dict[str, str]:
             more_volumes=[folders] if folders else None)
         if config.door is not None:
             door = config.door
-            out[f"{UNITS['owner']}.container"] = _unit(
-                "Sarathi: dvara's owner page", UNITS["owner"],
+            out[f"{UNITS['dvara-page']}.container"] = _unit(
+                "Sarathi: dvara's owner page", UNITS["dvara-page"],
                 f"{IN_IMAGE}/dvara --root {door.path('root')} --actors "
                 f"{door.path('actors')} --state {door.path('state')} page --as {door.owner} "
                 f"--host 0.0.0.0 --port {OWNER_PAGE_PORT}",
                 f"127.0.0.1:{pages.door_port}:{OWNER_PAGE_PORT}", config,
-                f"Wants={UNITS['door']}.service\nAfter={UNITS['door']}.service\n",
-                extra_container=f"Environment=DVARA_URL=http://{UNITS['door']}:{DOOR_PORT}\n",
+                f"Wants={UNITS['dvara']}.service\nAfter={UNITS['dvara']}.service\n",
+                extra_container=f"Environment=DVARA_URL=http://{UNITS['dvara']}:{DOOR_PORT}\n",
                 more_volumes=door_dirs(config))
     out[f"{NETWORK}.network"] = (f"{HEADER}\n[Network]\nNetworkName={NETWORK}\n")
     return out
@@ -557,7 +562,7 @@ def home_unit(config: Config) -> str | None:
     return f"""{HEADER}
 [Unit]
 Description=Sarathi: the home page, linking every program's page
-After={UNITS['page']}.service
+After={UNITS['yantra']}.service
 
 [Service]
 ExecStart={sarathi_program()} home --port {config.pages.home_port}
@@ -582,7 +587,7 @@ def unit_file(name: str) -> Path:
 def install_home(text: str | None) -> bool:
     """Write, or remove, the home page's service; True when it changed. It
     is enabled, so it starts at login as the Quadlet units do."""
-    path = unit_file("home")
+    path = unit_file("sarathi")
     if text is None:
         if not path.exists():
             return False
@@ -604,13 +609,13 @@ def keyed_address(config: Config, name: str, url: str) -> str:
     from sarathi.home import TOKEN_FILE, pages
 
     token = None
-    if name == "home":
+    if name == "sarathi":
         try:
             token = (state_dir() / TOKEN_FILE).read_text().strip() or None
         except OSError:
             token = None
     else:
-        wanted = {"setu": "setu", "owner": "dvara"}.get(name)
+        wanted = {"setu": "setu", "dvara-page": "dvara"}.get(name)
         page = next((p for p in pages(config) if p.name == wanted), None)
         token = page.token() if page else None
     return f"{url}#token={token}" if token else url
@@ -642,6 +647,24 @@ def install(wanted: dict[str, str]) -> set[str]:
     return changed
 
 
+def retire_old() -> list[str]:
+    """Stop and remove units under their old names (OLD_UNITS). A unit
+    file removed while its container still ran would leave the container
+    holding its port, so each is stopped first."""
+    lines = []
+    for unit in OLD_UNITS:
+        path = unit_dir() / f"{unit}.container"
+        if not path.exists():
+            continue
+        run(["systemctl", "--user", "stop", f"{unit}.service"])
+        path.unlink()
+        env_file(unit).unlink(missing_ok=True)
+        lines.append(f"{unit} stopped and removed: it is {UNITS[OLD_NAMES[unit[8:]]]} now")
+    if lines:
+        run(["systemctl", "--user", "daemon-reload"])
+    return lines
+
+
 # ---- up, down, status -----------------------------------------------------------
 
 
@@ -666,7 +689,7 @@ def clock_address(config: Config) -> str | None:
     """Samay's own 'page:' line, with this machine's address for the container's.
     Samay says it right itself once told (SAMAY_PUBLIC_URL, set on the
     unit); the rewrite stays for an image built before it could be told."""
-    logs = run(["podman", "logs", UNITS["clock"]])
+    logs = run(["podman", "logs", UNITS["samay"]])
     for line in reversed((logs.stdout + logs.stderr).splitlines()):
         if line.startswith("page: "):
             parts = urlsplit(line[len("page: "):].strip())
@@ -729,7 +752,7 @@ def preflight(config: Config) -> None:
             problems.append(f"window_host = \"{door.window_host}\" listens everywhere, so "
                             "window_url must say the address a phone opens")
         if problems:
-            raise ConfigError("the door cannot start: " + "; ".join(problems))
+            raise ConfigError("dvara cannot start: " + "; ".join(problems))
     ours = [name for name, r in records().items() if alive(r["pid"])]
     if ours:
         raise ConfigError(f"{', '.join(ours)} still running as plain processes: "
@@ -741,10 +764,11 @@ def up(config: Config) -> tuple[list[str], bool]:
     for folder in data_dirs() + door_dirs(config) + [p for p in [people_dir(config)] if p]:
         folder.mkdir(parents=True, exist_ok=True)
     write_env_files(config)
+    retired = retire_old()
     changed = install(units(config))
     if install_home(home_unit(config)):
-        changed.add(unit_file("home").name)
-    lines = ["units rewritten from sarathi.toml"] if changed else []
+        changed.add(unit_file("sarathi").name)
+    lines = retired + (["units rewritten from sarathi.toml"] if changed else [])
     newest = image_id(IMAGE)
     note = browser_note()
     if note:
@@ -754,17 +778,18 @@ def up(config: Config) -> tuple[list[str], bool]:
         # one-shot service "active": made again before anything joins it
         run(["systemctl", "--user", "restart", f"{NETWORK}-network.service"])
     if not config.clock_on:
-        lines.append("clock  off in sarathi.toml")
+        lines.append(f"{'samay':<{WIDTH}} off in sarathi.toml")
     ok = True
-    wanted = [("clock", config.clock_port)] if config.clock_on else []
+    wanted = [("samay", config.clock_port)] if config.clock_on else []
     if config.door is not None:
-        wanted.append(("door", config.door.port))
-    wanted.append(("page", config.web_port))
+        wanted.append(("dvara", config.door.port))
+    wanted.append(("yantra", config.web_port))
     if config.pages.on:
         wanted.append(("setu", config.pages.setu_port))
         if config.door is not None:
-            wanted.append(("owner", config.pages.door_port))
-        wanted.append(("home", config.pages.home_port))
+            wanted.append(("dvara-page", config.pages.door_port))
+        wanted.append(("sarathi", config.pages.home_port))
+    owner = any(name == "dvara-page" for name, _ in wanted)
     for name, port in wanted:
         unit = UNITS[name]
         url = f"http://127.0.0.1:{port}/"
@@ -772,30 +797,31 @@ def up(config: Config) -> tuple[list[str], bool]:
             # a running container keeps the settings it started with: a
             # rewritten unit means nothing until it starts again
             run(["systemctl", "--user", "stop", f"{unit}.service"])
-            lines.append(f"{name:<6} restarting with the new settings  (unit {unit})")
+            lines.append(f"{name:<{WIDTH}} restarting with the new settings  (unit {unit})")
         elif (active(unit) and name not in SERVICE_UNITS and newest
               and image_id(unit) not in ("", newest)):
             # and the image it started from: `sarathi image` changes nothing
             # in a container already running
             run(["systemctl", "--user", "stop", f"{unit}.service"])
-            lines.append(f"{name:<6} restarting with the new image  (unit {unit})")
+            lines.append(f"{name:<{WIDTH}} restarting with the new image  (unit {unit})")
         if active(unit):
             address = _address(config, name, url)
-            lines.append(f"{name:<6} already running at {address}  (unit {unit})")
+            lines.append(f"{name:<{WIDTH}} already running {place(name, address, owner)}  "
+                         f"(unit {unit})")
             continue
         taken = [(port, SETTINGS[name])] if answers(port) else []
-        shown = window(config) if name == "door" else None
+        shown = window(config) if name == "dvara" else None
         if shown and answers(int(shown[1])):
-            taken.append((int(shown[1]), "door.window_port"))
+            taken.append((int(shown[1]), "dvara.window_port"))
         shown = setu_window(config) if name == "setu" else None
         if shown and answers(int(shown[1])):
-            taken.append((int(shown[1]), "door.window_port"))
+            taken.append((int(shown[1]), "dvara.window_port"))
         if taken:
             # a published port something else holds fails inside systemd,
             # restarted every few seconds, with the reason deep in a journal
             ok = False
             run(["systemctl", "--user", "stop", f"{unit}.service"])   # if it was looping
-            lines += [f"{name:<6} not started: something else is listening on port "
+            lines += [f"{name:<{WIDTH}} not started: something else is listening on port "
                       f"{busy} (change {setting} in sarathi.toml)" for busy, setting in taken]
             continue
         started = run(["systemctl", "--user", "start", f"{unit}.service"])
@@ -808,18 +834,18 @@ def up(config: Config) -> tuple[list[str], bool]:
             time.sleep(0.5)
         if started.returncode == 0 and speaks_http(url):
             address = _address(config, name, url)
-            lines.append(f"{name:<6} up at {address}  (unit {unit})")
+            lines.append(f"{name:<{WIDTH}} up {place(name, address, owner)}  (unit {unit})")
             continue
         ok = False
-        lines.append(f"{name:<6} did not come up (unit {unit}); the end of its journal:")
+        lines.append(f"{name:<{WIDTH}} did not come up (unit {unit}); the end of its journal:")
         lines += [f"         | {line}" for line in journal_tail(unit)]
     return lines, ok
 
 
 def _address(config: Config, name: str, url: str) -> str:
-    if name == "clock":
+    if name == "samay":
         return clock_address(config) or url
-    if name in ("setu", "owner", "home"):
+    if name in ("setu", "dvara-page", "sarathi"):
         return keyed_address(config, name, url)
     return url
 
@@ -827,16 +853,16 @@ def _address(config: Config, name: str, url: str) -> str:
 def down(remove: bool = False) -> list[str]:
     """Stop the units. They stay installed -- and so start again at the
     next login, which is what they are for -- unless ``remove``."""
-    lines = []
-    for name in ("home", "owner", "setu", "page", "door", "clock"):
+    lines = retire_old()
+    for name in ("sarathi", "dvara-page", "setu", "yantra", "dvara", "samay"):
         unit = UNITS[name]
         if not unit_file(name).exists():
             continue
         if active(unit):
             run(["systemctl", "--user", "stop", f"{unit}.service"])
-            lines.append(f"{name:<6} stopped  (unit {unit})")
+            lines.append(f"{name:<{WIDTH}} stopped  (unit {unit})")
         else:
-            lines.append(f"{name:<6} was not running  (unit {unit})")
+            lines.append(f"{name:<{WIDTH}} was not running  (unit {unit})")
     if not lines:
         return ["no Sarathi units are installed"]
     if remove:
@@ -860,9 +886,9 @@ def running(config: Config) -> list[dict]:
     out = []
     door_port = config.door.port if config.door else None
     pages = config.pages
-    for name, port in (("clock", config.clock_port), ("door", door_port),
-                       ("page", config.web_port), ("setu", pages.setu_port),
-                       ("owner", pages.door_port), ("home", pages.home_port)):
+    for name, port in (("samay", config.clock_port), ("dvara", door_port),
+                       ("yantra", config.web_port), ("setu", pages.setu_port),
+                       ("dvara-page", pages.door_port), ("sarathi", pages.home_port)):
         unit = UNITS[name]
         if port is None or not unit_file(name).exists():
             continue
@@ -871,7 +897,7 @@ def running(config: Config) -> list[dict]:
         address = _address(config, name, url) if live else url
         row = {"name": name, "unit": unit, "alive": live, "address": address,
                "log": [] if live else journal_tail(unit)}
-        if name == "door":
+        if name == "dvara":
             row["strangers"] = strangers(journal_tail(unit, 400))
         out.append(row)
     return out

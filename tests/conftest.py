@@ -105,7 +105,7 @@ def settings(world: Path, ports: dict, extra: str = "", provider: str = "ollama"
     (world / "config").mkdir(exist_ok=True)
     (world / "config" / "sarathi.toml").write_text(
         f'[model]\nprovider = "{provider}"\nmodel = "gemma4:12b"\n'
-        f'[web]\nport = {ports["web"]}\n[clock]\nport = {ports["clock"]}\n'
+        f'[yantra]\nport = {ports["web"]}\n[samay]\nport = {ports["clock"]}\n'
         # the pages stay off unless a test turns them on: their programs
         # here are stand-ins that only print a status
         + extra + ("" if "[pages]" in extra else "\n[pages]\non = false\n"))

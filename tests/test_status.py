@@ -55,7 +55,7 @@ def test_each_sibling_is_reported_with_its_own_words(world, capsys):
     code, out = run(capsys, "status")
     assert code == 0
     assert "2 accounts connected: gmail:mine, homeassistant:house" in out
-    assert "clock running at http://127.0.0.1:8780/; schedules: 2 active, 1 paused" in out
+    assert "running at http://127.0.0.1:8780/; schedules: 2 active, 1 paused" in out
 
 
 def test_a_path_you_set_wins_over_what_the_shell_would_run(world, monkeypatch):
@@ -64,7 +64,7 @@ def test_a_path_you_set_wins_over_what_the_shell_would_run(world, monkeypatch):
     monkeypatch.setenv("SARATHI_SAMAY", str(mine))
     samay = by_name(siblings.find_all())["samay"]
     assert (samay.program, samay.how) == (str(mine), "env")
-    assert samay.said.startswith("clock not running (start it: samay serve)")
+    assert samay.said.startswith("not running (start it: samay serve)")
 
 
 def test_a_checkout_beside_is_found_when_the_shell_has_none(world):
@@ -141,14 +141,14 @@ def test_the_json_answer_carries_each_siblings_own_status(world, capsys):
 def test_the_door_says_whether_it_is_serving_not_just_that_it_was_found(world, capsys):
     everything(world)
     code, out = run(capsys, "status")
-    assert "door serving at http://127.0.0.1:8765 (dvara serve); 2 agents, 3 people" in out
+    assert "serving at http://127.0.0.1:8765 (dvara serve); 2 agents, 3 people" in out
 
 
 @pytest.mark.parametrize("status, says", [
-    ({**DVARA, "serving": False, "url": None, "running": None}, "door not serving; 2 agents"),
+    ({**DVARA, "serving": False, "url": None, "running": None}, "not serving; 2 agents"),
     ({**DVARA, "serving": False, "url": None, "running": {"command": "dvara say"}},
-     "door not serving: dvara say is using its folder"),
-    ({**DVARA, "url": "http://0.0.0.0:8765"}, "door serving (dvara serve)"),
+     "not serving: dvara say is using its folder"),
+    ({**DVARA, "url": "http://0.0.0.0:8765"}, "serving (dvara serve)"),
     ({**DVARA, "problems": ["no actors file at /x"]}, "; no actors file at /x"),
 ])
 def test_what_the_door_says_is_repeated_in_its_own_terms(world, status, says):
@@ -191,7 +191,7 @@ def test_a_door_that_is_off_is_not_asked_about(world, capsys):
     (world / "config" / "sarathi.toml").write_text('[model]\nprovider = "ollama"\n')
     code, out = run(capsys, "status")
     assert code == 0
-    assert "door off in sarathi.toml (`sarathi door` turns it on)" in out
+    assert "off in sarathi.toml (`sarathi dvara` turns it on)" in out
     assert "no actors file" not in out
 
 

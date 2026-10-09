@@ -183,3 +183,5 @@ connectors there run without their sandbox. They still hold no key,
 since Setu makes their requests, and Setu's card says they aren't
 walled off. ~~Putting bubblewrap into the image is its own small
 change.~~ Done: [notes/05](05-a-browser-in-the-image.md).
+
+*The pieces here are called by their old names (clock, door, page, owner, home); they go by their projects' names now ([note 09](09-each-by-its-own-name.md)).*

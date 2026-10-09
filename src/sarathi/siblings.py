@@ -67,9 +67,9 @@ SIBLINGS: tuple[Sibling, ...] = (
             status_format="yantra.status.v1"),
     Sibling("setu", "setu", "the bridge: your accounts, signed in once",
             status_format="setu.status.v1"),
-    Sibling("samay", "samay", "the clock: work done later, with receipts",
+    Sibling("samay", "samay", "work done later, with receipts",
             status_format="samay.status.v1"),
-    Sibling("dvara", "dvara", "the door: many people and agents behind one service",
+    Sibling("dvara", "dvara", "many people and agents behind one service",
             status_format="dvara.status.v1", optional=True),
     Sibling("sparsh", "sparsh", "the hands: your phone, worked by number, with a yes "
             "before Send", status_format="sparsh.status.v1", optional=True),
@@ -166,8 +166,8 @@ def _say_samay(data: dict[str, Any]) -> str:
     counts = data.get("schedules") or {}
     tally = f"{counts.get('active', 0)} active, {counts.get('paused', 0)} paused"
     if data.get("serving"):
-        return f"clock running at {data.get('url') or '(no page)'}; schedules: {tally}"
-    return f"clock not running (start it: samay serve); schedules: {tally}"
+        return f"running at {data.get('url') or '(no page)'}; schedules: {tally}"
+    return f"not running (start it: samay serve); schedules: {tally}"
 
 
 def _say_dvara(data: dict[str, Any]) -> str:
@@ -178,11 +178,11 @@ def _say_dvara(data: dict[str, Any]) -> str:
     if data.get("serving"):
         # a container's own bind says nothing about where to reach it
         where = f" at {url}" if url and "//0.0.0.0" not in url else ""
-        said = f"door serving{where} ({running.get('command')}); {tally}"
+        said = f"serving{where} ({running.get('command')}); {tally}"
     elif running:
-        said = f"door not serving: {running.get('command')} is using its folder; {tally}"
+        said = f"not serving: {running.get('command')} is using its folder; {tally}"
     else:
-        said = f"door not serving; {tally}"
+        said = f"not serving; {tally}"
     problems = data.get("problems") or []
     return said + "".join(f"; {p}" for p in problems)
 
@@ -226,7 +226,7 @@ SAY = {"yantra": _say_yantra, "setu": _say_setu, "samay": _say_samay, "dvara": _
 
 #: A ``before`` that means "do not ask": the door is off in sarathi.toml,
 #: and dvara's answer about its default folders would be about nothing.
-NOT_ASKED = "door off in sarathi.toml (`sarathi door` turns it on)"
+NOT_ASKED = "off in sarathi.toml (`sarathi dvara` turns it on)"
 
 
 def find(sibling: Sibling, env: dict[str, str] | None = None,

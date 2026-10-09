@@ -1,14 +1,14 @@
 """`sarathi`: set it up once, start it, see what is here, stop it.
 
     sarathi init              which model answers; writes sarathi.toml
-    sarathi door              turn on dvara, the door for other people and your
+    sarathi dvara             turn on Dvara, the door for other people and your
                               phone: its tokens, a Telegram bot, starter files
     sarathi phone [ADDRESS]   your phone for the door's agents, and over Wi-Fi
                               for the containers (`phone pair ADDRESS CODE` once)
     sarathi road [ROAD]       how `up` starts things: process (plain programs) or
                               podman (containers); switching stops the other road
     sarathi image             build the image the podman road runs
-    sarathi up                start Yantra's page and Samay's clock (and the door)
+    sarathi up                start Yantra, Samay (and Dvara), and their pages
     sarathi down              stop what `up` started, and nothing else
     sarathi status            each piece: found where, what it says, and
                               what `up` started
@@ -16,7 +16,7 @@
     sarathi home              one page linking every program's page, with status
 
 ``init`` takes flags for everything it asks (``--provider``, ``--model``,
-``--base-url``, ``--web-port``, ``--clock-port``, ``--no-clock``), so it
+``--base-url``, ``--yantra-port``, ``--samay-port``, ``--no-samay``), so it
 can run with nobody there.
 
 ``status`` exits 0 when every piece Sarathi needs is found and readable,
@@ -37,6 +37,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from sarathi import __version__, door, first_run, podman, services
+from sarathi.services import WIDTH
 from sarathi.config import PROVIDERS, ConfigError, load, render, settings_path
 from sarathi.siblings import SIBLINGS, Found, env_name, find, find_all, locate
 
@@ -56,30 +57,33 @@ def build_parser() -> argparse.ArgumentParser:
                                       "or the provider's usual)")
     init.add_argument("--base-url", dest="base_url", help="the provider's address, "
                       "when it is not the usual one")
-    init.add_argument("--web-port", dest="web_port", type=int, help="Yantra's page")
-    init.add_argument("--clock-port", dest="clock_port", type=int, help="Samay's page")
-    init.add_argument("--no-clock", dest="no_clock", action="store_true",
+    init.add_argument("--yantra-port", "--web-port", dest="web_port", type=int,
+                      help="Yantra's page")
+    init.add_argument("--samay-port", "--clock-port", dest="clock_port", type=int,
+                      help="Samay's page")
+    init.add_argument("--no-samay", "--no-clock", dest="no_clock", action="store_true",
                       help="do not start Samay")
     init.add_argument("--podman", action="store_true",
                       help="start things as Podman containers (see `sarathi image`)")
     init.add_argument("--force", action="store_true", help="replace sarathi.toml")
 
-    door_cmd = subs.add_parser("door", help="dvara, for other people and your phone: "
-                               "turn it on, a Telegram bot, starter files")
+    door_cmd = subs.add_parser("dvara", aliases=["door"],
+                               help="Dvara, for other people and your phone: "
+                                    "turn it on, a Telegram bot, starter files")
     door_cmd.add_argument("--telegram", metavar="AGENT",
                           help="the agent a Telegram bot answers as ('' for no bot)")
     door_cmd.add_argument("--telegram-id", dest="telegram_id", metavar="ID",
                           help="your own Telegram user id, for a new actors file")
-    door_cmd.add_argument("--port", type=int, help="the door's HTTP port (default 8770)")
+    door_cmd.add_argument("--port", type=int, help="Dvara's HTTP port (default 8770)")
     door_cmd.add_argument("--window-host", dest="window_host", metavar="ADDRESS",
                           help="where a streamed sign-in window listens (home network, "
                                "Tailscale, or 127.0.0.1 behind your own HTTPS)")
     door_cmd.add_argument("--window-port", dest="window_port", type=int, metavar="PORT")
     door_cmd.add_argument("--window-url", dest="window_url", metavar="URL",
                           help="the address in the link, when it differs from the host")
-    door_cmd.add_argument("--off", action="store_true", help="stop starting the door")
+    door_cmd.add_argument("--off", action="store_true", help="stop starting Dvara")
 
-    phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for the door's "
+    phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for Dvara's "
                                 "agents and the containers: on, pair, its Wi-Fi address")
     phone_cmd.add_argument("words", nargs="*", metavar="ADDRESS | pair ADDRESS CODE",
                            help="nothing: a phone on a cable; ADDRESS: over Wi-Fi; "
@@ -94,8 +98,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     subs.add_parser("image", help="build the image for the podman road, from the "
                                   "checkouts' committed code")
-    subs.add_parser("up", help="start Yantra's page and Samay's clock, and the door "
-                               "when it is on")
+    subs.add_parser("up", help="start Yantra, Samay and Dvara (when on), "
+                               "and their pages")
     down = subs.add_parser("down", help="stop what `sarathi up` started")
     down.add_argument("--remove", action="store_true",
                       help="podman road: also remove the units, so nothing starts at login")
@@ -140,17 +144,19 @@ def _running_lines(started: list[dict]) -> list[str]:
     if not started:
         return []
     out = ["", "started by `sarathi up`:"]
+    owner = any(r["name"] == "dvara-page" and r["alive"] for r in started)
     for r in started:
         address = r.get("address") or r["url"]
         where = f"unit {r['unit']}" if "unit" in r else f"pid {r['pid']}, since {r['started']}"
         if r["alive"]:
-            out.append(f"  {r['name']:<6} running at {address}  ({where})")
+            out.append(f"  {r['name']:<{WIDTH}} running "
+                       f"{services.place(r['name'], address, owner)}  ({where})")
         else:
             log = f"its journal ({r['unit']})" if "unit" in r else \
                 _home(str(services.log_path(r["name"])))
-            out.append(f"  {r['name']:<6} STOPPED -- it exited; the end of {log}:")
+            out.append(f"  {r['name']:<{WIDTH}} STOPPED -- it exited; the end of {log}:")
             out += [f"         | {line}" for line in r["log"]]
-        if r["name"] == "door" and r.get("strangers"):
+        if r["name"] == "dvara" and r.get("strangers"):
             out.append("         messaged the bot but not in the actors file (telegram "
                        f"id): {', '.join(r['strangers'])}")
     return out
@@ -265,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
         return _serve_home(args)
     if args.command == "init":
         return first_run.run(args)
-    if args.command == "door":
+    if args.command in ("dvara", "door"):
         dvara = next(f for f in find_all() if f.sibling.name == "dvara")
         return door.run(args, dvara)
     if args.command == "phone":

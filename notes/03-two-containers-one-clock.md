@@ -242,3 +242,5 @@ Tue 6 Oct 00:53  ok            the clock works
 * **Agent folders outside the mounted ones.** A schedule that runs an
   agent package from, say, `~/agents/reader` needs that folder mounted
   too. The page's own schedules run plain Yantra and don't.
+
+*The pieces here are called by their old names (clock, door, page, owner, home); they go by their projects' names now ([note 09](09-each-by-its-own-name.md)).*

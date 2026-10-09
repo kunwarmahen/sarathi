@@ -16,7 +16,7 @@ it, written readable by its owner only, so ``sarathi.toml`` can be shown
 to someone or pasted into a question without leaking anything. A key
 already in the environment is used as it is and never copied.
 
-With ``[door] on = true``, ``up`` also starts dvara, the door your
+With ``[dvara] on = true``, ``up`` also starts Dvara, the door your
 agents live behind for other people and for you on your phone. Its two
 tokens (dvara's own, and the Telegram bot's) are in secrets.env too.
 
@@ -50,7 +50,7 @@ DEFAULT_DOOR_PORT = 8770
 DEFAULT_HOME_PORT, DEFAULT_SETU_PAGE_PORT, DEFAULT_DOOR_PAGE_PORT = 8760, 8775, 8785
 #: Window addresses that are not one address a phone can be sent to.
 NOT_ONE_ADDRESS = ("0.0.0.0", "::", "127.0.0.1", "localhost", "::1")
-#: Dvara's own defaults, used when [door] names no folder.
+#: Dvara's own defaults, used when [dvara] names no folder.
 DOOR_ROOT, DOOR_ACTORS, DOOR_STATE = "~/dvara/agents", "~/dvara/actors.toml", "~/dvara/state"
 #: The two secrets the door needs: dvara's own bearer token (Sarathi
 #: makes one), and the bot's, from BotFather (the person pastes it).
@@ -58,14 +58,19 @@ DOOR_TOKEN, BOT_TOKEN = "DVARA_TOKEN", "TELEGRAM_TOKEN"
 
 KNOWN: dict[str, set[str]] = {
     "model": {"provider", "model", "base_url", "context_window"},
-    "web": {"port"},
-    "clock": {"on", "port"},
+    "yantra": {"port"},
+    "samay": {"on", "port"},
     "run": {"road"},
-    "door": {"on", "port", "telegram", "root", "actors", "state", "window_host",
+    "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner"},
-    "pages": {"on", "home_port", "setu_port", "door_port"},
+    "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
     "phone": {"on", "address"},
 }
+
+#: The names these had before each piece went by its project's name. A
+#: file written then still reads; the next one Sarathi writes uses the new.
+OLD_TABLES = {"web": "yantra", "clock": "samay", "door": "dvara"}
+OLD_PAGE_KEYS = {"home_port": "sarathi_port", "door_port": "dvara_port"}
 
 #: How `up` starts things: plain processes, or Podman containers under
 #: systemd (podman.py).
@@ -150,7 +155,7 @@ class Config:
 
 @dataclass(frozen=True)
 class Door:
-    """Dvara, for other people and for your phone: ``[door]``."""
+    """Dvara, for other people and for your phone: ``[dvara]``."""
 
     port: int = DEFAULT_DOOR_PORT
     #: The agent a Telegram bot answers as; None: no bot, HTTP only.
@@ -203,11 +208,31 @@ def _port(table: dict, key: str, default: int, where: str) -> int:
     return value
 
 
+def _rename_old(data: dict, where: str) -> None:
+    """[clock] read as [samay], and so on (OLD_TABLES): both at once is
+    refused, since one would be ignored."""
+    for old, new in OLD_TABLES.items():
+        if old in data:
+            if new in data:
+                raise ConfigError(f"{where}: both [{old}] and [{new}]; [{old}] is the old "
+                                  f"name, so keep [{new}] alone")
+            data[new] = data.pop(old)
+    pages = data.get("pages")
+    if isinstance(pages, dict):
+        for old, new in OLD_PAGE_KEYS.items():
+            if old in pages:
+                if new in pages:
+                    raise ConfigError(f"{where}: both pages.{old} and pages.{new}; keep "
+                                      f"pages.{new} alone")
+                pages[new] = pages.pop(old)
+
+
 def parse(text: str, where: str = "sarathi.toml") -> Config:
     try:
         data = tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
         raise ConfigError(f"{where} is not valid TOML: {exc}") from None
+    _rename_old(data, where)
     for table, value in data.items():
         if table not in KNOWN or not isinstance(value, dict):
             raise ConfigError(f"{where}: unknown table [{table}] "
@@ -226,25 +251,25 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                                or window < 1024):
         raise ConfigError(f"{where}: model.context_window must be a number of tokens "
                           f"(1024 or more), not {window!r}")
-    clock = data.get("clock", {})
+    clock = data.get("samay", {})
     if not isinstance(clock.get("on", True), bool):
-        raise ConfigError(f"{where}: clock.on must be true or false")
+        raise ConfigError(f"{where}: samay.on must be true or false")
     road = data.get("run", {}).get("road", "process")
     if road not in ROADS:
         raise ConfigError(f"{where}: run.road must be one of {', '.join(ROADS)}, not {road!r}")
-    door_table = data.get("door", {})
+    door_table = data.get("dvara", {})
     if not isinstance(door_table.get("on", False), bool):
-        raise ConfigError(f"{where}: door.on must be true or false")
+        raise ConfigError(f"{where}: dvara.on must be true or false")
     for key in ("telegram", "root", "actors", "state", "window_host", "window_url", "owner"):
         if not isinstance(door_table.get(key, ""), str):
-            raise ConfigError(f"{where}: door.{key} must be text")
-    door = Door(port=_port(door_table, "port", DEFAULT_DOOR_PORT, "door"),
+            raise ConfigError(f"{where}: dvara.{key} must be text")
+    door = Door(port=_port(door_table, "port", DEFAULT_DOOR_PORT, "dvara"),
                 telegram=door_table.get("telegram") or None,
                 root=door_table.get("root") or DOOR_ROOT,
                 actors=door_table.get("actors") or DOOR_ACTORS,
                 state=door_table.get("state") or DOOR_STATE,
                 window_host=door_table.get("window_host") or None,
-                window_port=_port(door_table, "window_port", 0, "door") or None
+                window_port=_port(door_table, "window_port", 0, "dvara") or None
                 if "window_port" in door_table else None,
                 window_url=door_table.get("window_url") or None,
                 owner=door_table.get("owner") or "owner") \
@@ -253,9 +278,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     if not isinstance(pages_table.get("on", True), bool):
         raise ConfigError(f"{where}: pages.on must be true or false")
     pages = Pages(on=pages_table.get("on", True),
-                  home_port=_port(pages_table, "home_port", DEFAULT_HOME_PORT, "pages"),
+                  home_port=_port(pages_table, "sarathi_port", DEFAULT_HOME_PORT, "pages"),
                   setu_port=_port(pages_table, "setu_port", DEFAULT_SETU_PAGE_PORT, "pages"),
-                  door_port=_port(pages_table, "door_port", DEFAULT_DOOR_PAGE_PORT, "pages"))
+                  door_port=_port(pages_table, "dvara_port", DEFAULT_DOOR_PAGE_PORT, "pages"))
     phone_table = data.get("phone", {})
     if not isinstance(phone_table.get("on", False), bool):
         raise ConfigError(f"{where}: phone.on must be true or false")
@@ -270,9 +295,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   context_window=window,
-                  web_port=_port(data.get("web", {}), "port", DEFAULT_WEB_PORT, "web"),
+                  web_port=_port(data.get("yantra", {}), "port", DEFAULT_WEB_PORT, "yantra"),
                   clock_on=clock.get("on", True),
-                  clock_port=_port(clock, "port", DEFAULT_CLOCK_PORT, "clock"))
+                  clock_port=_port(clock, "port", DEFAULT_CLOCK_PORT, "samay"))
 
 
 def load() -> Config:
@@ -308,11 +333,11 @@ provider = "{config.provider}"
 {window}
 
 # Yantra's page.
-[web]
+[yantra]
 port = {config.web_port}
 
 # Samay: things done later, on a schedule.
-[clock]
+[samay]
 on = {"true" if config.clock_on else "false"}
 port = {config.clock_port}
 
@@ -322,20 +347,20 @@ port = {config.clock_port}
 road = "{config.road}"
 
 # Each program's own page, started by `sarathi up`: Setu's (your accounts),
-# Dvara's (your door, when it is on), and the home page that links them
-# all with Yantra's and Samay's -- bookmark that one.
+# Dvara's (when Dvara is on), and Sarathi's own, which links them all
+# with Yantra's and Samay's -- bookmark that one.
 [pages]
 on = {"true" if config.pages.on else "false"}
-home_port = {config.pages.home_port}
+sarathi_port = {config.pages.home_port}
 setu_port = {config.pages.setu_port}
-door_port = {config.pages.door_port}
+dvara_port = {config.pages.door_port}
 
 {_render_door(config.door)}
 {_render_phone(config.phone)}"""
 
 
 def _render_phone(phone: Phone | None) -> str:
-    head = """# Your phone, through Sparsh: the door's agents may work it for the one
+    head = """# Your phone, through Sparsh: Dvara's agents may work it for the one
 # person marked `phone = true` in its actors file. On the podman road the
 # containers reach it over Wi-Fi at `address` (a container can't reach a
 # cable): `sarathi phone pair ADDRESS CODE` once, then `sarathi phone ADDRESS`.
@@ -351,8 +376,8 @@ def _render_phone(phone: Phone | None) -> str:
 def _render_door(door: Door | None) -> str:
     if door is None:
         return """# dvara: your agents for other people, and for you on your phone.
-# Off; `sarathi door` turns it on.
-[door]
+# Off; `sarathi dvara` turns it on.
+[dvara]
 on = false
 """
     bot = (f'telegram = "{door.telegram}"' if door.telegram
@@ -369,7 +394,7 @@ on = false
                            ("window_url", door.window_url)))
     return f"""# dvara: your agents for other people, and for you on your phone.
 # Its tokens are in secrets.env; who it serves is in the actors file.
-[door]
+[dvara]
 on = true
 port = {door.port}
 {bot}

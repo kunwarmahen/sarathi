@@ -314,3 +314,5 @@ network's service `inactive`.
 * **Later:** a phone over Tailscale, and the Chromium road on arm64 run
   on a real Raspberry Pi. It builds and its programs start (above);
   Chromium and the wall are what's left to see.
+
+*The pieces here are called by their old names (clock, door, page, owner, home); they go by their projects' names now ([note 09](09-each-by-its-own-name.md)).*

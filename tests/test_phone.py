@@ -63,7 +63,7 @@ def test_without_the_phone_no_unit_mentions_it(host):
 
 
 def test_the_page_reaches_the_phone_over_wifi_with_this_computers_key(host):
-    page = podman.units(podman_config(phone=WIFI))["sarathi-page.container"]
+    page = podman.units(podman_config(phone=WIFI))["sarathi-yantra.container"]
     assert "--sparsh auto:/usr/local/bin/sparsh" in page
     assert f"Environment=SPARSH_CONNECT={ADDRESS}" in page
     for folder in (host / ".android", host / ".sparsh"):
@@ -72,7 +72,7 @@ def test_the_page_reaches_the_phone_over_wifi_with_this_computers_key(host):
 
 
 def test_the_door_is_given_the_phone_for_its_one_person(host):
-    door = podman.units(podman_config(phone=WIFI, door=Door()))["sarathi-door.container"]
+    door = podman.units(podman_config(phone=WIFI, door=Door()))["sarathi-dvara.container"]
     assert "--sparsh /usr/local/bin/sparsh serve" in door
     assert f"Environment=SPARSH_CONNECT={ADDRESS}" in door
     assert f"Volume={host / '.sparsh'}:{host / '.sparsh'}:z" in door

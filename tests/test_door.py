@@ -82,7 +82,7 @@ class TestTurningItOn:
                                                               dvara_checkout, capsys):
         settings(world, {"web": 8321, "clock": 8780})
         door.run(door_args(telegram="greeter"), dvara_checkout, interactive=False)
-        assert "until then the door will not start" in capsys.readouterr().out
+        assert "until then Dvara will not start" in capsys.readouterr().out
 
     def test_off_turns_it_off(self, world, home, dvara_checkout):
         settings(world, {"web": 8321, "clock": 8780})
@@ -99,7 +99,7 @@ def door_on(stage, home, telegram: bool = True) -> int:
     config.save_secret("DVARA_TOKEN", "d" * 48)
     if telegram:
         config.save_secret("TELEGRAM_TOKEN", "123:bot")
-    extra = (f'[door]\non = true\nport = {port}\n'
+    extra = (f'[dvara]\non = true\nport = {port}\n'
              + ('telegram = "greeter"\n' if telegram else ""))
     settings(stage["world"], stage["ports"], extra)
     fake(stage["world"] / "bin", "dvara")
@@ -112,7 +112,7 @@ class TestStartedTogether:
         port = door_on(stage, home)
         code, out = run(capsys, "up")
         assert code == 0, out
-        assert f"door   up at http://127.0.0.1:{port}/" in out
+        assert f"dvara      up on {port} (no page here; turn on [pages] for one)" in out
         clock, gate, page = seen(stage, "samay"), seen(stage, "dvara"), seen(stage, "yantra")
         assert clock["at"] < gate["at"] < page["at"]
         bin_dir = stage["world"] / "bin"
@@ -140,13 +140,13 @@ class TestStartedTogether:
         door_on(stage, home)
         (home / "dvara" / "actors.toml").unlink()
         code, out = run(capsys, "up")
-        assert "door   not started: no actors file" in out
-        assert "page   up at" in out and "clock  up at" in out
+        assert "dvara      not started: no actors file" in out
+        assert "yantra     up at" in out and "samay      up at" in out
         assert not (stage["seen"] / "dvara.json").exists()
 
     def test_without_the_clock_the_door_has_no_schedules(self, stage, home, capsys):
         door_on(stage, home, telegram=False)
-        text = config.settings_path().read_text().replace("[clock]\n", "[clock]\non = false\n")
+        text = config.settings_path().read_text().replace("[samay]\n", "[samay]\non = false\n")
         config.settings_path().write_text(text)
         run(capsys, "up")
         gate = seen(stage, "dvara")
@@ -157,11 +157,11 @@ class TestStartedTogether:
                                                                           capsys):
         door_on(stage, home)
         run(capsys, "up")
-        with open(services.log_path("door"), "a") as log:
+        with open(services.log_path("dvara"), "a") as log:
             log.write('telegram: 5551212 messaged and is not in the actors file (add '
                       '[[actor.NAME.channel]] kind="telegram" id=5551212)\n')
         _, out = run(capsys, "status")
-        assert "door   running at" in out
+        assert "dvara      running on" in out
         assert "not in the actors file (telegram id): 5551212" in out
 
 
@@ -176,7 +176,7 @@ def test_a_door_section_reads_back_as_written():
     chosen = config.Config("ollama", door=Door(port=9000, telegram="greeter",
                                                actors="~/elsewhere/actors.toml"))
     assert config.parse(config.render(chosen)) == chosen
-    with pytest.raises(config.ConfigError, match="door.on must be true or false"):
+    with pytest.raises(config.ConfigError, match="dvara.on must be true or false"):
         config.parse('[model]\nprovider = "ollama"\n[door]\non = "yes"\n')
 
 

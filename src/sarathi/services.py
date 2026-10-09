@@ -1,7 +1,7 @@
 """Start the pieces, stop them, and know which ones are ours.
 
 ``sarathi up`` starts two long-running things: Yantra's page and Samay's
-clock, and a third with ``[door] on``: dvara. Setu itself is not one of
+clock, and a third with ``[dvara] on``: Dvara. Setu itself is not one of
 them: it runs only when an agent asks it to. With ``[pages] on`` (the
 default) it also starts the pages people look at: Setu's own page,
 Dvara's owner page when the door is on, and the home page that links
@@ -10,24 +10,24 @@ Each piece is started with the flags and environment that
 ``sarathi.toml`` implies, and nothing is written into any sibling's own
 files:
 
-    page    yantra --web --host 127.0.0.1 --port <web.port>
+    yantra  yantra --web --host 127.0.0.1 --port <yantra.port>
                    --setu <the setu Sarathi found> --samay <the samay it found>
                    --sparsh auto:<the sparsh it found>  (no phone tools until
                    a phone is attached and you say to use it); with
                    [phone] address, SPARSH_CONNECT=<address> to both
-    clock   samay serve --port <clock.port>
+    samay   samay serve --port <samay.port>
                    with SAMAY_YANTRA=<the yantra Sarathi found>
-    door    dvara --root/--actors/--state <door.*> --ask --samay <samay>
+    dvara   dvara --root/--actors/--state <dvara.*> --ask --samay <samay>
                   [--sparsh <sparsh>, with [phone] on]
-                  serve --port <door.port> [--telegram <door.telegram>]
+                  serve --port <dvara.port> [--telegram <dvara.telegram>]
     setu    setu serve --port <pages.setu_port>
-                  [--people <door.state>/setu, with a door: each person's
+                  [--people <dvara.state>/setu, with Dvara on: each person's
                   own folder, for the link /accounts page sends them;
-                  --also-host <door.window_host>, when that is one
+                  --also-host <dvara.window_host>, when that is one
                   address, so the link opens on their phone -- and the
                   door gets SETU_PAGE_URL to build it]
-    owner   dvara --root/--actors/--state <door.*> [--samay <samay>] page
-                  --as <door.owner> --port <pages.door_port>, with
+    dvara-page  dvara --root/--actors/--state <dvara.*> [--samay <samay>] page
+                  --as <dvara.owner> --port <pages.dvara_port>, with
                   DVARA_TOKEN and DVARA_URL: the door's own token and
                   address, so your answers reach it; Samay, for schedules
     home    sarathi home --port <pages.home_port>
@@ -80,6 +80,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from sarathi.config import (
     BOT_TOKEN,
@@ -107,7 +108,7 @@ _started: list[subprocess.Popen] = []
 
 @dataclass
 class Service:
-    name: str                       # "page" | "clock" | "door"
+    name: str                       # "yantra" | "samay" | "dvara" | ...
     sibling: str
     argv: list[str]
     port: int
@@ -155,9 +156,10 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
     notes: list[str] = []
     clock_on = config.clock_on and samay.program is not None
     if config.clock_on and samay.program is None:
-        notes.append("clock  not started: samay was not found (see `sarathi status`)")
+        notes.append(f"{'samay':<{WIDTH}} not started: samay was not found "
+                     "(see `sarathi status`)")
     elif not config.clock_on:
-        notes.append("clock  off in sarathi.toml")
+        notes.append(f"{'samay':<{WIDTH}} off in sarathi.toml")
 
     # The clock starts first: the page asks Samay whether its clock runs
     # once, at start-up, and tells the model what it heard for the whole
@@ -167,7 +169,7 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
     meet = door_env(config) if door is not None else {}
     if clock_on:
         services.append(Service(
-            "clock", "samay", [samay.program, "serve", "--port", str(config.clock_port)],
+            "samay", "samay", [samay.program, "serve", "--port", str(config.clock_port)],
             config.clock_port,
             {**env, "SAMAY_YANTRA": yantra.program, "SAMAY_YANTRA_HOME": str(work_dir()),
              **meet},
@@ -182,17 +184,23 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         # auto, not on: no phone at the start still means no phone tools
         # until the person says to use one (Yantra's phone panel).
         page_argv += ["--sparsh", f"auto:{found['sparsh'].program}"]
-    services.append(Service("page", "yantra", page_argv, config.web_port,
+    services.append(Service("yantra", "yantra", page_argv, config.web_port,
                             {**env, **phone_env(config)}))
     if config.pages.on:
         services += page_services(config, found, door is not None, notes)
     return services, notes
 
 
+#: Width of a piece's name in the lines `up`, `down` and `status` print.
+WIDTH = 10
+#: What each piece was called before it went by its project's name.
+OLD_NAMES = {"clock": "samay", "door": "dvara", "page": "yantra", "owner": "dvara-page",
+             "home": "sarathi"}
+
 #: The sarathi.toml key that moves each piece's port, for "change it" lines.
-PORT_SETTINGS = {"page": "web.port", "clock": "clock.port", "door": "door.port",
-                 "setu": "pages.setu_port", "owner": "pages.door_port",
-                 "home": "pages.home_port"}
+PORT_SETTINGS = {"yantra": "yantra.port", "samay": "samay.port", "dvara": "dvara.port",
+                 "setu": "pages.setu_port", "dvara-page": "pages.dvara_port",
+                 "sarathi": "pages.sarathi_port"}
 
 
 def sarathi_program() -> str:
@@ -219,12 +227,13 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
                            config.setu_window_env() if door_on else {},
                            says_address="  "))
     else:
-        notes.append("setu   page not started: setu was not found (see `sarathi status`)")
+        notes.append(f"{'setu':<{WIDTH}} page not started: setu was not found "
+                     "(see `sarathi status`)")
     if door is not None and door_on:
         token = read_secrets().get(DOOR_TOKEN) or os.environ.get(DOOR_TOKEN, "")
         samay = found["samay"].program if "samay" in found else None
         out.append(Service(
-            "owner", "dvara",
+            "dvara-page", "dvara",
             [str(found["dvara"].program), "--root", str(door.path("root")), "--actors",
              str(door.path("actors")), "--state", str(door.path("state")),
              *(["--samay", str(samay)] if samay else []),
@@ -233,8 +242,8 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
             # the door's token stays server-side in the page, never in a browser
             {DOOR_TOKEN: token, "DVARA_URL": f"http://{HOST}:{door.port}"},
             says_address="  "))
-    out.append(Service("home", "sarathi", [sarathi_program(), "home", "--port",
-                                           str(pages.home_port)],
+    out.append(Service("sarathi", "sarathi", [sarathi_program(), "home", "--port",
+                                              str(pages.home_port)],
                        pages.home_port, says_address="  "))
     return out
 
@@ -244,7 +253,7 @@ def door_env(config: Config, at: str | None = None) -> dict[str, str]:
     its token, the same in both."""
     token = read_secrets().get(DOOR_TOKEN) or os.environ.get(DOOR_TOKEN, "")
     if not token:
-        raise ConfigError(f"the door is on but has no {DOOR_TOKEN}: run `sarathi door`")
+        raise ConfigError(f"dvara is on but has no {DOOR_TOKEN}: run `sarathi dvara`")
     assert config.door is not None
     return {"SAMAY_DVARA_URL": at or f"http://{HOST}:{config.door.port}",
             "SAMAY_DVARA_TOKEN": token}
@@ -262,16 +271,16 @@ def door_problems(config: Config, found: dict[str, Found] | None) -> list[str]:
     if found is not None and found["dvara"].program is None:
         problems.append("dvara was not found (see `sarathi status`)")
     if not door.path("actors").is_file():
-        problems.append(f"no actors file at {door.actors}: `sarathi door` writes a "
+        problems.append(f"no actors file at {door.actors}: `sarathi dvara` writes a "
                         "starter one")
     if not door.path("root").is_dir():
-        problems.append(f"no agents folder at {door.root}: `sarathi door` copies "
+        problems.append(f"no agents folder at {door.root}: `sarathi dvara` copies "
                         "dvara's examples there")
     if DOOR_TOKEN not in secrets:
-        problems.append(f"no {DOOR_TOKEN} in secrets.env: run `sarathi door`")
+        problems.append(f"no {DOOR_TOKEN} in secrets.env: run `sarathi dvara`")
     if door.telegram and BOT_TOKEN not in secrets:
-        problems.append(f"door.telegram is set but there is no {BOT_TOKEN}: "
-                        "run `sarathi door` to paste the bot's token")
+        problems.append(f"dvara.telegram is set but there is no {BOT_TOKEN}: "
+                        "run `sarathi dvara` to paste the bot's token")
     return problems
 
 
@@ -282,7 +291,7 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
         return None
     problems = door_problems(config, found)
     if problems:
-        notes.append("door   not started: " + "; ".join(problems))
+        notes.append(f"{'dvara':<{WIDTH}} not started: " + "; ".join(problems))
         return None
     dvara, samay = found["dvara"].program, found["samay"].program
     assert dvara is not None
@@ -298,13 +307,14 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
             # for the one person marked `phone = true` in the actors file
             argv += ["--sparsh", sparsh]
         else:
-            notes.append("door   no phone: sparsh was not found (see `sarathi status`)")
+            notes.append(f"{'dvara':<{WIDTH}} no phone: sparsh was not found "
+                         "(see `sarathi status`)")
     argv += ["serve", "--host", HOST, "--port", str(door.port)]
     if door.telegram:
         argv += ["--telegram", door.telegram]
     secrets = read_secrets()
     tokens = {k: secrets[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in secrets}
-    return Service("door", "dvara", argv, door.port,
+    return Service("dvara", "dvara", argv, door.port,
                    {**env, **tokens, **door_env(config), **door.window_env(),
                     **config.people_env(), **phone_env(config)})
 
@@ -330,6 +340,7 @@ def log_path(name: str) -> Path:
 
 def records() -> dict[str, dict[str, Any]]:
     folder = state_dir() / "run"
+    _rename_old(folder)
     found = {}
     for path in sorted(folder.glob("*.json")) if folder.is_dir() else []:
         try:
@@ -337,6 +348,16 @@ def records() -> dict[str, dict[str, Any]]:
         except (OSError, json.JSONDecodeError):
             continue
     return found
+
+
+def _rename_old(folder: Path) -> None:
+    """A record and log written under a piece's old name (OLD_NAMES) take
+    its new one, so `down` still stops what an older `up` started."""
+    for old, new in OLD_NAMES.items():
+        for path, renamed in ((folder / f"{old}.json", folder / f"{new}.json"),
+                              (log_path(old), log_path(new))):
+            if path.exists() and not renamed.exists():
+                path.rename(renamed)
 
 
 def alive(pid: int) -> bool:
@@ -382,7 +403,7 @@ def _clock_elsewhere(samay: Found) -> str | None:
     return (status.get("url") or "(no page)") if status.get("serving") else None
 
 
-def start(service: Service) -> str:
+def start(service: Service, owner: bool = False) -> str:
     """Start one piece and wait for it to answer; one line saying how it went."""
     work_dir().mkdir(parents=True, exist_ok=True)
     for private in (log_path(service.name).parent, _record_path("x").parent):
@@ -407,15 +428,28 @@ def start(service: Service) -> str:
         if proc.poll() is not None:
             _record_path(service.name).unlink(missing_ok=True)
             tail = "\n".join(f"         | {line}" for line in log_tail(service.name))
-            return (f"{service.name:<6} exited at once (code {proc.returncode}); "
+            return (f"{service.name:<{WIDTH}} exited at once (code {proc.returncode}); "
                     f"its log, {log_path(service.name)}:\n{tail}")
         if answers(service.port):
             address = said_address(service) or service.url
             _remember(service.name, address=address)
-            return f"{service.name:<6} up at {address}  (pid {proc.pid})"
+            return (f"{service.name:<{WIDTH}} up {place(service.name, address, owner)}  "
+                    f"(pid {proc.pid})")
         time.sleep(0.2)
-    return (f"{service.name:<6} started (pid {proc.pid}) but not answering on "
+    return (f"{service.name:<{WIDTH}} started (pid {proc.pid}) but not answering on "
             f"{service.url} after {READY_TIMEOUT:.0f}s; see {log_path(service.name)}")
+
+
+def place(name: str, address: str, owner: bool) -> str:
+    """Where a piece is, for `up` and `status`: ``at <address>`` -- except
+    Dvara. ITS ADDRESS IS NOT A PAGE: it answers Samay and Dvara's own
+    page, and a browser sent there gets ``{"detail":"Not Found"}``. So its
+    line gives the port alone and points at the page that is yours."""
+    if name != "dvara":
+        return f"at {address}"
+    port = urlsplit(address).port
+    mine = "yours is dvara-page, below" if owner else "turn on [pages] for one"
+    return f"on {port} (no page here; {mine})"
 
 
 def said_address(service: Service, wait: float = 3.0) -> str | None:
@@ -444,27 +478,29 @@ def up(config: Config, found: dict[str, Found]) -> tuple[list[str], bool]:
     services, lines = plan(config, found)
     ok = True
     ours = records()
+    owner = any(service.name == "dvara-page" for service in services)
     for service in services:
         record = ours.get(service.name)
         if record and alive(record["pid"]):
-            lines.append(f"{service.name:<6} already running at "
-                         f"{record.get('address') or record['url']}  "
-                         f"(pid {record['pid']})")
+            address = record.get("address") or record["url"]
+            lines.append(f"{service.name:<{WIDTH}} already running "
+                         f"{place(service.name, address, owner)}  (pid {record['pid']})")
             continue
-        if service.name == "clock":
+        if service.name == "samay":
             elsewhere = _clock_elsewhere(found["samay"])
             if elsewhere:
-                lines.append(f"clock  already running at {elsewhere}, not started by "
+                lines.append(f"{'samay':<{WIDTH}} already running at {elsewhere}, "
+                             "not started by "
                              "Sarathi: left alone")
                 continue
         if answers(service.port):
             ok = False
             setting = PORT_SETTINGS[service.name]
-            lines.append(f"{service.name:<6} not started: something else is listening on "
+            lines.append(f"{service.name:<{WIDTH}} not started: something else is listening on "
                          f"port {service.port} (change {setting} in sarathi.toml)")
             continue
-        said = start(service)
-        ok = ok and " up at " in said
+        said = start(service, owner)
+        ok = ok and said.startswith(f"{service.name:<{WIDTH}} up ")
         lines.append(said)
     return lines, ok
 
@@ -473,7 +509,7 @@ def stop(name: str, record: dict[str, Any]) -> str:
     pid = record["pid"]
     if not alive(pid):
         _record_path(name).unlink(missing_ok=True)
-        return f"{name:<6} had already stopped"
+        return f"{name:<{WIDTH}} had already stopped"
     try:
         os.killpg(pid, signal.SIGTERM)
     except ProcessLookupError:
@@ -489,7 +525,7 @@ def stop(name: str, record: dict[str, Any]) -> str:
             pass
         how = f"stopped (did not stop within {STOP_TIMEOUT:.0f}s, so it was killed)"
     _record_path(name).unlink(missing_ok=True)
-    return f"{name:<6} {how}  (pid {pid})"
+    return f"{name:<{WIDTH}} {how}  (pid {pid})"
 
 
 def down() -> list[str]:
@@ -507,7 +543,7 @@ def running() -> list[dict[str, Any]]:
     for name, record in records().items():
         live = alive(record["pid"])
         row = {"name": name, **record, "alive": live, "log": [] if live else log_tail(name)}
-        if name == "door":
+        if name == "dvara":
             row["strangers"] = strangers(log_tail(name, 400))
         out.append(row)
     return out

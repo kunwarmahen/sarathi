@@ -164,3 +164,5 @@ is told which Chrome is here).
 
 * ~~**`setu serve` and `dvara page` as units**~~ Above.
 * ~~**The Podman road, tried for real.**~~ Run, above.
+
+*The pieces here are called by their old names (clock, door, page, owner, home); they go by their projects' names now ([note 09](09-each-by-its-own-name.md)).*

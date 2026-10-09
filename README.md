@@ -87,8 +87,8 @@ to `secrets.env`, readable only by you. A key already in your
 environment is used where it is and never copied.
 
 Every question has a flag, so a script can answer them all:
-`sarathi init --provider ollama --model gemma4:12b --web-port 8400
---no-clock`.
+`sarathi init --provider ollama --model gemma4:12b --yantra-port 8400
+--no-samay`.
 
 The file it writes is short and meant to be edited:
 
@@ -97,10 +97,10 @@ The file it writes is short and meant to be edited:
 provider = "ollama"
 model = "qwen3.8:latest"
 
-[web]
+[yantra]
 port = 8321
 
-[clock]
+[samay]
 on = true
 port = 8780
 ```
@@ -123,17 +123,23 @@ Yantra shortens a long chat much earlier than it needs to.
 
 ```
 $ sarathi up
-clock  up at http://127.0.0.1:8780/#token=…  (pid 3324159)
-page   up at http://127.0.0.1:8321/  (pid 3324163)
-setu   up at http://127.0.0.1:8775/#token=…  (pid 3324170)
-home   up at http://127.0.0.1:8760/#token=…  (pid 3324178)
+samay      up at http://127.0.0.1:8780/#token=…  (pid 3324159)
+yantra     up at http://127.0.0.1:8321/  (pid 3324163)
+setu       up at http://127.0.0.1:8775/#token=…  (pid 3324170)
+sarathi    up at http://127.0.0.1:8760/#token=…  (pid 3324178)
 ```
+
+Each line names the project it started. Open the `sarathi` one: it
+links to all the others. With Dvara on, its line is the one without an
+address to open, `dvara      up on 8770 (no page here; yours is
+dvara-page, below)`, because Dvara's port answers Samay and its own
+page, not a browser ([notes/09](notes/09-each-by-its-own-name.md)).
 
 That starts **Samay's clock** and **Yantra's page**, in
 that order, and then the pages you look at: **Setu's page** (your
-accounts), **Dvara's owner page** when the door is on, and **the home
-page** that links them all. Bookmark the `home` address. The page asks once, at start-up, whether the clock runs, so
-the clock has to be there first. Setu isn't started: it runs only when
+accounts), **Dvara's owner page** when Dvara is on, and **the home
+page** that links them all. Bookmark the `sarathi` address. The page asks once, at start-up, whether Samay runs, so
+Samay has to be there first. Setu isn't started: it runs only when
 the agent uses an account. Both get the same model, so a scheduled run
 is answered by the same model as the page. Each piece's output goes to
 `~/.local/share/sarathi/logs/`.
@@ -155,7 +161,7 @@ sarathi phone 192.168.1.23:41234               # then: reach it over Wi-Fi
 sarathi phone --off
 ```
 
-turns on `[phone]`. The door's agents may then work the phone for the
+turns on `[phone]`. Dvara's agents may then work the phone for the
 one person marked `phone = true` in its actors file (dvara's
 `--sparsh`), and Yantra's page reconnects to a Wi-Fi phone by itself.
 On your phone: *Developer options → Wireless debugging*, then *Pair
@@ -165,7 +171,7 @@ said, not saved.
 
 **In the containers**, the phone is reached over Wi-Fi only: a container
 can't reach a USB cable without being handed every device on the bus.
-The image has `adb` and Sparsh; the page and the door mount `~/.android`
+The image has `adb` and Sparsh; the page and Dvara mount `~/.android`
 (so the key this computer paired with is theirs, and nothing is paired
 twice) and `~/.sparsh` (so your rules hold inside), and Sparsh
 reconnects to `[phone] address` whenever it looks for phones. The home
@@ -184,73 +190,73 @@ with the last lines of its log, not as "started".
 That's the process road, plain programs. The same commands run
 everything as containers instead, after `sarathi road podman` (below).
 
-### For other people, and your phone: `sarathi door`
+### For other people, and your phone: `sarathi dvara`
 
 ```bash
-sarathi door                  # which agent a Telegram bot answers as; the bot's token
-sarathi door --telegram greeter --telegram-id 8675309
-sarathi door --off
+sarathi dvara                  # which agent a Telegram bot answers as; the bot's token
+sarathi dvara --telegram greeter --telegram-id 8675309
+sarathi dvara --off
 ```
 
 turns on **dvara** as a third piece. `up` then starts clock, door, page,
 in that order:
 
 ```
-door   dvara --root ~/dvara/agents --actors ~/dvara/actors.toml --state ~/dvara/state
+dvara  dvara --root ~/dvara/agents --actors ~/dvara/actors.toml --state ~/dvara/state
              --ask --provider <model.provider> --model <model.model> --samay <samay>
-             serve --port <door.port> [--telegram <door.telegram>]
+             serve --port <dvara.port> [--telegram <dvara.telegram>]
 ```
 
 What a person would otherwise wire by hand in two places:
 
-* **The clock and the door know each other.** Both get the same
-  `SAMAY_DVARA_URL` (the door's address) and `SAMAY_DVARA_TOKEN` (the
-  door's own token), so a schedule made in a chat is checked by the clock
-  against the door that made it.
+* **Samay and Dvara know each other.** Both get the same
+  `SAMAY_DVARA_URL` (Dvara's address) and `SAMAY_DVARA_TOKEN` (Dvara's
+  own token), so a schedule made in a chat is checked by Samay
+  against the Dvara that made it.
 * **Tokens.** `DVARA_TOKEN` is made for you; `TELEGRAM_TOKEN` (from
   @BotFather) is typed at a hidden prompt. Both go to `secrets.env`, and
-  from there **to the door alone**: the page never holds the bot's token,
-  and the clock gets only the door's.
+  from there **to Dvara alone**: the page never holds the bot's token,
+  and Samay gets only Dvara's.
 * **dvara's files, only when missing.** A starter `actors.toml` (you, as
   the owner) and dvara's own example agents. dvara's formats; Sarathi
   never touches them again, and ships no agent of its own.
-* **The same model** as the page and the clock (`--provider`, `--model`).
+* **The same model** as the page and Samay (`--provider`, `--model`).
 * **Who may talk to it** is the actors file. Someone not in it gets
   silence, and `sarathi status` names their Telegram id, which is how
   you find your own:
 
   ```
-    door   running at http://127.0.0.1:8770/  (pid 3426486)
+    dvara      running on 8770 (no page here; yours is dvara-page, below)  (pid 3426486)
            messaged the bot but not in the actors file (telegram id): 8675309
   ```
 
 **Amazon or X from someone's phone.** Those sites are signed in to in a
-browser window on this computer. Give the door a window address and Setu
+browser window on this computer. Give Dvara a window address and Setu
 streams that window to their phone when they send `/connect amazon`
 (dvara's note 22):
 
 ```bash
-sarathi door --window-host 100.101.102.103      # your Tailscale address, say
-sarathi door --window-host 127.0.0.1 --window-url https://door.example.net   # behind your HTTPS
+sarathi dvara --window-host 100.101.102.103      # your Tailscale address, say
+sarathi dvara --window-host 127.0.0.1 --window-url https://door.example.net   # behind your HTTPS
 ```
 
-They become `[door] window_host / window_port / window_url`, passed to dvara
+They become `[dvara] window_host / window_port / window_url`, passed to dvara
 as Setu's `SETU_WINDOW_*`. A home network address works for people at home
 but is plain HTTP; Tailscale or your own HTTPS is the safe choice beyond it.
-On the Podman road the window runs in the door's container: it listens
+On the Podman road the window runs in Dvara's container: it listens
 on a fixed port there (`window_port`, else 8790), published on
 `window_host` alone, and the link says `window_url` or
 `http://window_host:port`.
 
 **Their own accounts page, from their phone.** When `window_host` is one
 address (your Tailscale or home-network address, not `0.0.0.0`), Setu's
-page listens there too, on its usual port, and the door builds people's
+page listens there too, on its usual port, and Dvara builds people's
 links with it: someone sends `/accounts page` and the link opens on
 their phone. This computer still reaches the page at `127.0.0.1`. With
 no `window_host`, or `0.0.0.0`, the page stays on this computer and the
 link opens only here. Connecting Amazon or X from that page gets its own
 streamed window on the same address, so it opens on their phone too. On
-the Podman road that window is published on the port after the door's
+the Podman road that window is published on the port after Dvara's
 (`window_port + 1`, else 8791). In its container even you, at this
 computer, are "another device", so without a `window_host` it is
 published on `127.0.0.1` for you alone. Behind a `window_url`, Setu's
@@ -259,13 +265,13 @@ page gets no window of its own: sign those sites in from the chat.
 Your own phone can use the same sign-ins as this computer's page: under
 `[actor.owner]`, `setu = "~/.local/state/setu"` with `setu_manage = true`,
 so `/connect amazon` from the chat signs in there (dvara's note 27). The
-image installs dvara with its browse extra, so an agent behind the door
+image installs dvara with its browse extra, so an agent behind Dvara
 can read Amazon or X when its package asks for them.
 
 A door that can't start (no actors file, a bot with no token) says why,
-and the clock and page start anyway. On the Podman road it's a third
-unit, `sarathi-door`, on a network shared with the others
-(`sarathi.network`), where the clock reaches it as `sarathi-door`.
+and Samay and Yantra start anyway. On the Podman road it's a third
+unit, `sarathi-dvara`, on a network shared with the others
+(`sarathi.network`), where Samay reaches it as `sarathi-dvara`.
 Each unit reads its own secrets from `~/.config/sarathi/units/<unit>.env`,
 copied from `secrets.env` by `up`. The image includes dvara when its
 checkout sits beside the others.
@@ -296,7 +302,7 @@ would otherwise start again at your next login. It starts nothing new;
 | after `git pull` in a checkout | nothing: it runs the checkout | `sarathi image` again, then `sarathi up` |
 | Amazon and X | your own Chrome | Chrome in the image |
 | connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
-| the door's streamed window | listens on `window_host` itself | published from the door's container |
+| Dvara's streamed window | listens on `window_host` itself | published from Dvara's container |
 | Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |
 | Setu's page for people's phones | `setu serve --also-host <window_host>` | published on `window_host` too; only the people's folders mounted |
 | the pages | plain programs | Setu's and Dvara's as containers; the home page as a user service (`~/.config/systemd/user/sarathi-home.service`) |
@@ -316,8 +322,8 @@ sarathi image                  # build the image (a few minutes, once per update
 sarathi up
 ```
 
-On this road `up` writes Quadlet units (`sarathi-clock`, `sarathi-page`,
-and `sarathi-door` when the door is on) into
+On this road `up` writes Quadlet units (`sarathi-samay`, `sarathi-yantra`,
+and `sarathi-dvara` when Dvara is on) into
 `~/.config/containers/systemd/`, and systemd starts them. When
 `sarathi.toml` changes a unit, or `sarathi image` built a newer image,
 `up` restarts what's affected and leaves the rest running. They come back on their own after a crash, and they start again
@@ -378,10 +384,10 @@ setu        ~/.local/bin/setu  (path)
             the bridge: your accounts, signed in once
             2 accounts connected: gmail:mine, homeassistant:home
 samay       ~/agent/samay/.venv/bin/samay  (beside)
-            the clock: work done later, with receipts
-            clock not running (start it: samay serve); schedules: 0 active, 0 paused
+            work done later, with receipts
+            not running (start it: samay serve); schedules: 0 active, 0 paused
 dvara       ~/agent/dvara/.venv/bin/dvara  (beside)
-            the door: many people and agents behind one service
+            many people and agents behind one service
             door serving at http://127.0.0.1:8770 (dvara serve); 3 agents, 2 people
 sparsh      ~/agent/sparsh/.venv/bin/sparsh  (beside)
             the hands: your phone, worked by number, with a yes before Send
@@ -395,8 +401,8 @@ The line under it is that piece's own account of itself: Yantra's
 release and the model it would ask (asked with the model, Setu and
 Samay `up` gives it, so a model Ollama hasn't pulled shows here with
 the `ollama pull` that fixes it, and so does a sibling it can't find), Setu's connections, Samay's clock, the phones Sparsh can reach, and
-whether the door is serving (asked about the folders `[door]` names;
-with the door off, dvara isn't asked). Sarathi repeats it and adds
+whether Dvara is serving (asked about the folders `[dvara]` names;
+with Dvara off, dvara isn't asked). Sarathi repeats it and adds
 nothing. Smritikosh has no status command, so for it "found, here" is
 the whole answer.
 
@@ -419,7 +425,7 @@ your home page:
 ```
 
 One page that links to each program's own page: Yantra's, Samay's,
-Setu's (`setu serve`) and, with the door on, Dvara's (`dvara page`).
+Setu's (`setu serve`) and, with Dvara on, Dvara's (`dvara page`).
 With Sparsh found (on the Podman road, once `[phone] address` is set), a **Your phone** card
 opens Yantra's page, where the phone panel shows the phone and what the
 agent did on it; Sparsh has no page of its own. Each
@@ -428,18 +434,18 @@ line (the one `sarathi status` prints), and has an **Open** link that
 opens the page already signed in. A page that isn't running shows the
 command that starts it.
 
-`sarathi up` starts it, with Setu's page and (with the door on) Dvara's,
-unless `[pages] on = false` in sarathi.toml. With the door on, Setu's page
+`sarathi up` starts it, with Setu's page and (with Dvara on) Dvara's,
+unless `[pages] on = false` in sarathi.toml. With Dvara on, Setu's page
 also knows where each person's own folder is (`--people`), for the
 one-time link `/accounts page` sends them, and Dvara's page reads each
 person's schedules from the Samay Sarathi found. A person's link opens
-only on an address their phone can reach: with `[door] window_host` set
+only on an address their phone can reach: with `[dvara] window_host` set
 to one address, Setu's page listens there too and the links use it
 (above); without it, they work only here. `sarathi home` runs it by
-hand. `[pages]` also holds their ports (`home_port`, `setu_port`,
-`door_port`), and `[door] owner` names your id in the actors file, which
-Dvara's page shows and answers for. Dvara's page gets the door's token and
-address from `up`, so your answers on it reach the door. No other page
+hand. `[pages]` also holds their ports (`sarathi_port`, `setu_port`,
+`dvara_port`), and `[dvara] owner` names your id in the actors file, which
+Dvara's page shows and answers for. Dvara's page gets Dvara's token and
+address from `up`, so your answers on it reach Dvara. No other page
 gets that token.
 
 It only links. Nothing on it starts, stops or changes anything. Because
@@ -463,11 +469,11 @@ In this order; the first hit wins:
 | | |
 |---|---|
 | `~/.config/sarathi/sarathi.toml` | the settings (`$SARATHI_CONFIG` for another folder) |
-| `~/.config/sarathi/secrets.env` | a cloud key, if you typed one, and the door's two tokens; readable only by you |
+| `~/.config/sarathi/secrets.env` | a cloud key, if you typed one, and Dvara's two tokens; readable only by you |
 | `~/.config/sarathi/units/` | the Podman road: each unit's own share of secrets.env, copied by `up`; yours alone |
 | `~/.config/containers/systemd/sarathi-*` | the Podman road's units and network, written by `up` (edit `sarathi.toml`, not these) |
 | `~/.config/systemd/user/sarathi-home.service` | the Podman road's home page, a plain user service (written by `up` too) |
-| `~/dvara/` | the door's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[door]` can name others) |
+| `~/dvara/` | Dvara's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[dvara]` can name others) |
 | `~/.local/share/sarathi/` | `home.token` the home page's key (yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
@@ -481,14 +487,16 @@ src/sarathi/
   siblings.py   which pieces exist, where each is found, and what its
                 status --json says, read by format  (notes/01); Sparsh,
                 the phone  (notes/07)
-  config.py     sarathi.toml and secrets.env: read, checked, written  (notes/02)
+  config.py     sarathi.toml and secrets.env: read, checked, written  (notes/02);
+                each table by its project's name, old names still read  (notes/09)
   first_run.py  sarathi init: which model answers, asked once  (notes/02)
-  services.py   sarathi up / down: start the clock and the page, know
-                which are ours  (notes/02); and the pages  (notes/06)
+  services.py   sarathi up / down: start Samay and the page, know
+                which are ours  (notes/02); and the pages  (notes/06);
+                each line by its project's name  (notes/09)
   podman.py     the same on the podman road: the image, the Quadlet
-                units, systemd  (notes/03); the door's unit  (notes/04);
+                units, systemd  (notes/03); Dvara's unit  (notes/04);
                 its streamed window, and the image's browser  (notes/05)
-  door.py       sarathi door: dvara turned on, its tokens, starter files,
+  door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
                 through the Sparsh found  (notes/08)
@@ -496,20 +504,20 @@ src/sarathi/
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
-  cli.py        sarathi init | door | road | image | up | down | status [--json] | home
+  cli.py        sarathi init | dvara | phone | road | image | up | down | status [--json] | home
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
-  test_pages_up.py
+  test_pages_up.py  test_phone.py  test_names.py
 ```
 
 ## Status
 
 Finding the pieces, the settings, starting them as plain processes or
 as Podman containers, and the household road (dvara on Telegram, wired
-to the clock) are all built, with a browser and bubblewrap inside the
+to Samay) are all built, with a browser and bubblewrap inside the
 containers. `sarathi up` also starts Setu's page, Dvara's owner page and
 the home page that links every program's page. Sparsh is found, its
-phones are said, and Yantra's page and the door are handed it; inside
+phones are said, and Yantra's page and Dvara are handed it; inside
 the containers the phone is reached over Wi-Fi (`sarathi phone`), tried
 against the emulator, not yet a real phone.
 
