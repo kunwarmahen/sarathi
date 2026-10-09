@@ -37,6 +37,15 @@ Chromium, and a profile from a desktop's Chrome may need signing in to
 again. That road has been built but not run on a real arm64 machine
 (below).
 
+**YOUR TIMEZONE, NOT UTC.** A container keeps UTC unless told otherwise,
+and a browser there tells every page so, while the address the page
+sees is New York's. X refused the streamed window's password from the
+containers; side by side with the desktop where it was accepted, a
+page could read three differences: the WebGL renderer, the screen size
+and this. Every container now gets this computer's timezone by name
+(`TZ`, from `/etc/timezone` or where `/etc/localtime` points), so a
+browser, the logs and the schedules keep your time.
+
 **AN ARM64 BUILD, UNDER EMULATION.** On an amd64 machine with
 `qemu-user-static`, the same staged sources built for arm64
 (`podman build --arch arm64`, 20 minutes, 1.35 GB) with no errors. Inside

@@ -677,3 +677,22 @@ def test_a_unit_under_its_old_name_is_stopped_before_it_is_removed(host, world):
     stop = host.calls.index(["systemctl", "--user", "stop", "sarathi-clock.service"])
     assert not old.exists() and stop >= 0
     assert (podman.unit_dir() / "sarathi-samay.container").exists()
+
+
+def test_every_container_keeps_this_computers_time(host, world, monkeypatch):
+    """In UTC a browser told every page so, while the address said New
+    York: X refused the streamed window's password on the mismatch."""
+    monkeypatch.setattr(podman, "host_timezone", lambda: "America/New_York")
+    with_door_secrets(world)
+    containers = [t for n, t in podman.units(DOOR).items() if n.endswith(".container")]
+    assert containers and all("Environment=TZ=America/New_York" in t for t in containers)
+
+
+def test_a_timezone_is_read_by_name_never_as_a_path(monkeypatch):
+    monkeypatch.setenv("TZ", ":Asia/Kolkata")
+    assert podman.host_timezone() == "Asia/Kolkata"
+    monkeypatch.setenv("TZ", "/etc/localtime")      # a path names no zone
+    monkeypatch.setattr(podman.os.path, "realpath",
+                        lambda _p: "/usr/share/zoneinfo/Europe/Berlin")
+    monkeypatch.setattr(podman.Path, "read_text", lambda self: "")
+    assert podman.host_timezone() == "Europe/Berlin"

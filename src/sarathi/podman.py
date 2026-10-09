@@ -312,10 +312,33 @@ def from_container(url: str) -> str:
     return url
 
 
+def host_timezone() -> str | None:
+    """This computer's timezone by name (``America/New_York``), or None.
+    A container is in UTC otherwise, and a browser there tells every page
+    so: a site that also sees a New York address reads the mismatch as a
+    bot (X refused the streamed window's password on it)."""
+    raw = os.environ.get("TZ", "").lstrip(":")
+    if "/" in raw and not raw.startswith("/"):
+        return raw
+    try:
+        named = Path("/etc/timezone").read_text().strip()
+        if named:
+            return named
+    except OSError:
+        pass
+    target = os.path.realpath("/etc/localtime")
+    _, found, name = target.partition("/zoneinfo/")
+    return name if found and name else None
+
+
 def container_env(config: Config) -> dict[str, str]:
     prefix = config.provider.upper()
     env = {"HOME": str(Path.home()), "YANTRA_PROVIDER": config.provider,
            "SAMAY_YANTRA": f"{IN_IMAGE}/yantra", "SAMAY_YANTRA_HOME": str(work_dir())}
+    zone = host_timezone()
+    if zone:
+        env["TZ"] = zone          # the browser's clock, the logs', the schedules'
+
     if config.model:
         env[f"{prefix}_MODEL"] = config.model
     base = config.base_url or ("http://localhost:11434/v1" if config.provider == "ollama"
