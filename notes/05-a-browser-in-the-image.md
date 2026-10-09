@@ -34,7 +34,21 @@ Debian's Chromium would open a Chrome profile only if it happened to be
 the same version or newer, and the path in the record wouldn't exist.
 Google ships Chrome for amd64 only, so elsewhere the image gets Debian's
 Chromium, and a profile from a desktop's Chrome may need signing in to
-again. That road is written but untested.
+again. That road has been built but not run on a real arm64 machine
+(below).
+
+**AN ARM64 BUILD, UNDER EMULATION.** On an amd64 machine with
+`qemu-user-static`, the same staged sources built for arm64
+(`podman build --arch arm64`, 20 minutes, 1.35 GB) with no errors. Inside
+it, `samay`, `sparsh`, `yantra status --json` and `setu serve` all ran;
+the page answered after 34 seconds, which is the emulator's slowness.
+The browser is Debian's Chromium 154, and adb is Debian's 34.0.5 with
+`pair`. Two things can't be judged under emulation, and both need a
+real Raspberry Pi:
+bubblewrap ("Creating new namespace failed": qemu's user mode doesn't
+make namespaces, and the same call walls a connector off in the amd64
+image) and Chromium itself (qemu stops it with "uncaught target signal
+5" before it draws a page).
 
 **NEWER HERE, REFUSED THERE.** Your desktop's Chrome updates itself; the
 image's is whatever was current when it was built. When the desktop's
@@ -279,5 +293,6 @@ network's service `inactive`.
   were my last three Amazon orders?"*.
 * **One place to find every page**: [note 06](06-one-bookmark.md),
   `sarathi home`.
-* **Later:** a phone over Tailscale, and the Chromium road on arm64 (a
-  Raspberry Pi), written but with no machine to try it on.
+* **Later:** a phone over Tailscale, and the Chromium road on arm64 run
+  on a real Raspberry Pi. It builds and its programs start (above);
+  Chromium and the wall are what's left to see.

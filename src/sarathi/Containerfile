@@ -55,10 +55,10 @@ RUN echo "this machine's browser: ${HOST_BROWSER:-none}" \
     fi \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p -m 1777 /tmp/.X11-unix
-# adb, for a phone reached over Wi-Fi (Sparsh, below). Google's
-# platform-tools where Google ships them (amd64): wireless debugging needs
-# adb 30 or newer, and Debian's is older. Elsewhere Debian's adb, which
-# still reaches a phone put on the network with `adb tcpip`.
+# adb, for a phone reached over Wi-Fi (Sparsh, below). Wireless
+# debugging (`adb pair`) needs adb 30 or newer. Google's platform-tools
+# where Google ships them (amd64), the newest; elsewhere Debian's, which
+# in trixie is 34 and pairs too.
 RUN apt-get update && apt-get install -y --no-install-recommends unzip \
  && if [ "$(dpkg --print-architecture)" = amd64 ]; then \
       curl -fsSL -o /tmp/pt.zip \

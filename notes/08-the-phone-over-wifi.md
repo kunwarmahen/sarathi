@@ -45,10 +45,11 @@ setting.
 
 With `[phone]` on:
 
-* **adb in the image.** Google's platform-tools on amd64, because
-  wireless debugging needs adb 30 or newer and Debian's is 29. Elsewhere
-  Debian's adb, which still reaches a phone put on the network with
-  `adb tcpip`. And Sparsh beside the other programs.
+* **adb in the image.** Wireless debugging (`adb pair`) needs adb 30 or
+  newer. The image has Google's platform-tools on amd64, the newest, and
+  Debian's adb elsewhere. In trixie that is 34.0.5, which has `pair` (an
+  arm64 build checked, [note 05](05-a-browser-in-the-image.md)). And
+  Sparsh beside the other programs.
 * **`~/.android`, mounted at the same path.** Pairing teaches the phone
   this computer's adb key, which lives there. With the same folder, the
   containers present the same key. **ONE KEY, NOTHING PAIRED TWICE.**
