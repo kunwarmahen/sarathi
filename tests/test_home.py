@@ -90,7 +90,7 @@ def get(server, path, token=GOOD):
 def test_the_keys_are_only_behind_the_home_token(served):
     assert get(served, "/api/pieces", token=None).status_code == 401
     assert get(served, "/api/pieces", token="wrong-token-of-some-length").status_code == 401
-    for path in ("/", "/page.js", "/page.css"):
+    for path in ("/", "/page.js", "/page.css", "/favicon.svg"):
         assert "key-1234567890" not in get(served, path, token=None).text
 
 
