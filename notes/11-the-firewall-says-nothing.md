@@ -61,6 +61,19 @@ The network comes from the address's own interface (`ip -o addr`, so
 around it. A Tailscale address gets its own interface's network the same
 way.
 
+With the line run, the same phone, port by port:
+
+```
+8790 rc=0
+8775 rc=0
+8791 rc=0
+```
+
+and a fresh link opened that person's own page in the phone's browser,
+**Setu · owner** with that folder's two connections and nothing of the
+owner's, the `#link=` already gone from the address bar. Its **What it
+did** opened too, past the browser's own tracker blocking.
+
 Only the Podman road says it. On the process road the windows take any
 free port, so there is no fixed list to name.
 
