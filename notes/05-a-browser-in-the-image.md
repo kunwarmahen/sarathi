@@ -81,6 +81,27 @@ never the container's own address, which no phone can reach.
 `window_host = "0.0.0.0"` without a `window_url` stops `up` with the
 reason, since that link would point nowhere.
 
+**SETU'S PAGE HAS A WINDOW OF ITS OWN.** Amazon connected from Setu's page,
+rather than the chat, starts its own sign-in in Setu's container, and that
+container had no window settings at all. Its link said `127.0.0.1`,
+which inside a container is the container. A probe showed what made this
+matter for everyone: a request from this computer's browser reaches a
+container from `10.89.9.34`, not `127.0.0.1`, so Setu's page counts you as
+another device too and always picks the streamed window. (That's the
+right call, since a window "here" would open on the container's screen,
+which nobody sees.) So Setu's unit now publishes a window of its own on
+the port after the door's (8791), on `window_host`, or on `127.0.0.1`
+when there is none. On the plain-programs road `setu serve` gets
+`SETU_WINDOW_HOST` from `window_host` and takes any free port, as the
+door does. A port something else holds is said before Setu starts.
+
+Live, on the owner's machine: a throwaway person claimed their link from
+`192.168.1.44:8775` and pressed Connect on Amazon. The sign-in said
+`{"event": "link", "url": "http://192.168.1.44:8791/w/…"}`. Chrome opened
+it (`{"event": "opened"}`), a second device got *"This sign-in is
+already open on another device."*, and Cancel ended it with nothing
+connected.
+
 ## The wall, and the probe that lied
 
 bubblewrap went into the image, and Setu said its connectors were

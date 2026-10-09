@@ -416,6 +416,23 @@ def window(config: Config) -> tuple[str, str, str] | None:
     return host, str(port), door.window_url or f"http://{host}:{port}"
 
 
+def setu_window(config: Config) -> tuple[str, str, str] | None:
+    """(host it is published on, port, the link's base) for Setu's page's
+    own streamed window. In its container everyone is on "another
+    device" -- you too, at this computer -- so Amazon from that page is
+    always the streamed window: on the door's window address when it is
+    one (people's phones), else on 127.0.0.1 (you alone). The port after
+    the door's window, so both can be open at once. None behind
+    ``window_url``: a public address that isn't Sarathi's to split."""
+    door = config.door
+    if not config.pages.on or (door is not None and door.window_url):
+        return None
+    host = config.people_host() or "127.0.0.1"
+    port = str(((door.window_port if door else None) or WINDOW_PORT) + 1)
+    shown = f"[{host}]" if ":" in host else host
+    return host, port, f"http://{shown}:{port}"
+
+
 def units(config: Config) -> dict[str, str]:
     """File name -> contents, for the Quadlet folder."""
     out = {}
@@ -482,7 +499,7 @@ def units(config: Config) -> dict[str, str]:
             f"127.0.0.1:{pages.setu_port}:{SETU_PAGE_PORT}", config,
             # people's links open on their phones (config.people_host)
             extra_container=(f"PublishPort={phones}:{pages.setu_port}:{SETU_PAGE_PORT}\n"
-                             if phones else ""),
+                             if phones else "") + setu_window_lines(config),
             more_volumes=[folders] if folders else None)
         if config.door is not None:
             door = config.door
@@ -497,6 +514,17 @@ def units(config: Config) -> dict[str, str]:
                 more_volumes=door_dirs(config))
     out[f"{NETWORK}.network"] = (f"{HEADER}\n[Network]\nNetworkName={NETWORK}\n")
     return out
+
+
+def setu_window_lines(config: Config) -> str:
+    shown = setu_window(config)
+    if shown is None:
+        return ""
+    host, port, url = shown
+    return (f"PublishPort={host}:{port}:{port}\n"
+            f"Environment=SETU_WINDOW_HOST=0.0.0.0\n"
+            f"Environment=SETU_WINDOW_PORT={port}\n"
+            f"Environment=SETU_WINDOW_URL={url}\n")
 
 
 def home_unit(config: Config) -> str | None:
@@ -736,6 +764,9 @@ def up(config: Config) -> tuple[list[str], bool]:
             continue
         taken = [(port, SETTINGS[name])] if answers(port) else []
         shown = window(config) if name == "door" else None
+        if shown and answers(int(shown[1])):
+            taken.append((int(shown[1]), "door.window_port"))
+        shown = setu_window(config) if name == "setu" else None
         if shown and answers(int(shown[1])):
             taken.append((int(shown[1]), "door.window_port"))
         if taken:

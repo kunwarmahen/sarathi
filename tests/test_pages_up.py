@@ -103,3 +103,5 @@ def test_on_one_window_address_setus_page_listens_there_too_and_the_door_links_t
     assert seen(stage, "setu")["argv"][-2:] == ["--also-host", "100.101.102.103"]
     assert seen(stage, "dvara")["env"]["SETU_PAGE_URL"] == \
         f"http://100.101.102.103:{ports['setu']}/"
+    # Amazon from a person's page: the window link opens on their phone too
+    assert seen(stage, "setu")["env"]["SETU_WINDOW_HOST"] == "100.101.102.103"

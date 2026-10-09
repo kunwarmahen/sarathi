@@ -213,7 +213,9 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
             if config.people_host():
                 # people's links open on their phones (config.people_host)
                 argv += ["--also-host", config.people_host()]
-        out.append(Service("setu", "setu", argv, pages.setu_port, says_address="  "))
+        out.append(Service("setu", "setu", argv, pages.setu_port,
+                           config.setu_window_env() if door_on else {},
+                           says_address="  "))
     else:
         notes.append("setu   page not started: setu was not found (see `sarathi status`)")
     if door is not None and door_on:

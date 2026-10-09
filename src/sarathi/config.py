@@ -124,6 +124,18 @@ class Config:
         host = (door.window_host or "").strip()
         return host if host and host not in NOT_ONE_ADDRESS else None
 
+    def setu_window_env(self) -> dict[str, str]:
+        """Setu's page's own streamed window, on the plain-programs road: a
+        person who connects Amazon from their page on a phone gets a
+        window link on the address their phone reaches (any free port, as
+        the door's). Nothing when that is not one address, or when the
+        door's window is behind ``window_url`` -- a public address that
+        isn't Sarathi's to split."""
+        host = self.people_host()
+        if host is None or self.door is None or self.door.window_url:
+            return {}
+        return {"SETU_WINDOW_HOST": host}
+
     def people_env(self) -> dict[str, str]:
         """The door's word for that page (``setu page-link`` reads it)."""
         host = self.people_host()

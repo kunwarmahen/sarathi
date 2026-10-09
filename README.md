@@ -237,7 +237,13 @@ page listens there too, on its usual port, and the door builds people's
 links with it: someone sends `/accounts page` and the link opens on
 their phone. This computer still reaches the page at `127.0.0.1`. With
 no `window_host`, or `0.0.0.0`, the page stays on this computer and the
-link opens only here.
+link opens only here. Connecting Amazon or X from that page gets its own
+streamed window on the same address, so it opens on their phone too. On
+the Podman road that window is published on the port after the door's
+(`window_port + 1`, else 8791). In its container even you, at this
+computer, are "another device", so without a `window_host` it is
+published on `127.0.0.1` for you alone. Behind a `window_url`, Setu's
+page gets no window of its own: sign those sites in from the chat.
 
 Your own phone can use the same sign-ins as this computer's page: under
 `[actor.owner]`, `setu = "~/.local/state/setu"` with `setu_manage = true`,
@@ -280,6 +286,7 @@ would otherwise start again at your next login. It starts nothing new;
 | Amazon and X | your own Chrome | Chrome in the image |
 | connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
 | the door's streamed window | listens on `window_host` itself | published from the door's container |
+| Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |
 | Setu's page for people's phones | `setu serve --also-host <window_host>` | published on `window_host` too; only the people's folders mounted |
 | the pages | plain programs | Setu's and Dvara's as containers; the home page as a user service (`~/.config/systemd/user/sarathi-home.service`) |
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |

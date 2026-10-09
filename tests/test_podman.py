@@ -554,6 +554,56 @@ def test_every_address_or_none_keeps_setus_page_here(host, world):
         assert config.people_env() == {}
 
 
+def test_setus_page_has_its_own_window_beside_the_doors(host, world):
+    """In its container everyone is on another device, the owner too: an
+    Amazon sign-in from Setu's page is always the streamed window, and it
+    had no address to give one -- the link said 127.0.0.1 inside."""
+    with_door_secrets(world)
+    config = Config("ollama", road="podman", door=Door(window_host="100.101.102.103"),
+                    pages=Pages(on=True, setu_port=8875))
+    setu = podman.units(config)["sarathi-setu.container"]
+    assert "PublishPort=100.101.102.103:8791:8791" in setu
+    assert "Environment=SETU_WINDOW_HOST=0.0.0.0" in setu
+    assert "Environment=SETU_WINDOW_URL=http://100.101.102.103:8791" in setu
+    door = podman.units(config)["sarathi-door.container"]
+    assert "PublishPort=100.101.102.103:8790:8790" in door        # the door keeps its own
+
+
+def test_with_no_window_address_setus_window_is_for_this_computer(host, world):
+    with_door_secrets(world)
+    for config in (Config("ollama", road="podman", door=Door(window_port=8800),
+                          pages=Pages(on=True)),
+                   Config("ollama", road="podman", pages=Pages(on=True))):
+        setu = podman.units(config)["sarathi-setu.container"]
+        port = 8801 if config.door else 8791
+        assert f"PublishPort=127.0.0.1:{port}:{port}" in setu
+        assert f"Environment=SETU_WINDOW_URL=http://127.0.0.1:{port}" in setu
+
+
+def test_behind_a_window_url_setus_page_gets_no_window_of_its_own(host, world):
+    with_door_secrets(world)
+    config = Config("ollama", road="podman",
+                    door=Door(window_host="100.101.102.103", window_url="https://door.example.net"),
+                    pages=Pages(on=True))
+    assert "SETU_WINDOW" not in podman.units(config)["sarathi-setu.container"]
+
+
+def test_a_taken_window_port_for_setus_page_is_said_before_it_starts(host, world,
+                                                                     monkeypatch):
+    with_door_secrets(world)
+    monkeypatch.setattr(podman, "preflight", lambda config: None)
+    config = Config("ollama", road="podman", door=Door(window_host="100.101.102.103"),
+                    pages=Pages(on=True))
+    host.answers[("systemctl", "--user", "is-active")] = subprocess.CompletedProcess(
+        [], 3, "", "")
+    host.taken = {8791}
+    lines, ok = podman.up(config)
+    assert not ok
+    assert ("setu   not started: something else is listening on port 8791 "
+            "(change door.window_port in sarathi.toml)") in lines
+    assert host.said("systemctl", "--user", "start", "sarathi-setu.service") == 0
+
+
 def test_the_owner_page_reaches_the_door_by_name_with_its_token_from_its_own_file(
         host, world):
     with_door_secrets(world)
