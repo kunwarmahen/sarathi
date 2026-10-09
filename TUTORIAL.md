@@ -515,14 +515,25 @@ what they type travels as plain web traffic across your Wi-Fi. If you
 use **Tailscale**, its address is the safe choice, encrypted and
 reachable wherever they are.
 
-The window uses port **8790** (`--window-port` changes it). If your
-computer has a firewall (`sudo ufw status` says *active*), let your home
-network reach that port, and close it again when you no longer need it:
+The window uses port **8790** (`--window-port` changes it). On the
+Podman road with the pages on, two more ports open on that address:
+**8775**, Setu's page, which a person reaches with `/accounts page`,
+and **8791**, the window that page streams when they connect Amazon or X
+from it. If your computer has a firewall, a phone gets nothing from
+those ports, just a page that keeps loading. `sarathi up` notices ufw or
+firewalld and prints the line that opens exactly those ports to your
+network:
 
-```bash
-sudo ufw allow from 192.168.1.0/24 to any port 8790 proto tcp     # your network's numbers
-sudo ufw delete allow from 192.168.1.0/24 to any port 8790 proto tcp
-``` Your computer runs
+```text
+firewall: ufw is on; if a phone can't open 192.168.1.44 on 8775, 8790, 8791, open them to your network (once is enough):
+  sudo ufw allow from 192.168.1.0/24 to any port 8775,8790,8791 proto tcp
+```
+
+Run that line yourself; Sarathi never changes your firewall. To close
+them again: `sudo ufw delete allow from 192.168.1.0/24 to any port
+8775,8790,8791 proto tcp`.
+
+Your computer runs
 that browser, so it handles what they type, their password included:
 offer it to people who already trust you with their agent.
 
@@ -532,6 +543,51 @@ To turn Dvara off again: `sarathi dvara --off`, then
 If another program on your computer already uses Dvara's port
 (8770), `sarathi up` says so and names the setting:
 `sarathi dvara --port 8771` (any free number), then `sarathi up`.
+
+**Your helper on your phone itself.** With Sparsh installed (its
+SETUP.md), the helper can work your Android phone: read a screen, tap,
+type, and ask you before Send, Pay or Delete. The containers can't reach
+a USB cable, so they reach the phone over your Wi-Fi.
+
+1. Plug the phone in once, with USB debugging on, and let it listen on
+   Wi-Fi. Android 11 and later: *Developer options → Wireless debugging*
+   → *Pair device with pairing code*, then `sarathi phone pair ADDRESS
+   CODE`. Android 10 and older have no such page:
+
+   ```bash
+   adb shell ip -4 addr show wlan0     # inet 192.168.1.161/24 ...: its Wi-Fi address
+   adb tcpip 5555                      # until the phone restarts
+   ```
+
+2. Tell Sarathi where it is, and restart:
+
+   ```bash
+   sarathi phone 192.168.1.161:5555
+   sarathi down && sarathi up
+   ```
+
+   It says what's still missing: *"nobody in ~/dvara/actors.toml is
+   marked `phone = true` yet"* (add `phone = true` under your
+   `[actor.owner]`), or *"minder, the agent on Telegram, can't use the
+   phone: its [tools] … leaves out "mcp__sparsh__*""* (add it to that
+   agent's `allow` line). The restart matters: before it, the containers
+   don't have this computer's key, and the phone asks *"Allow USB
+   debugging?"* for a key you don't know. Say no to that one.
+
+3. Try it from the computer, then from Telegram:
+
+   ```bash
+   podman exec sarathi-yantra yantra --prompt "On my phone, open Settings and tell me what the Battery row says."
+   #   The Battery row in Settings says: "Battery — 98% - charging".
+   ```
+
+   Then send your bot the same question.
+
+4. A schedule on your phone: ask your bot *"every morning at 8, tell me
+   my phone's battery"* and accept the card. If the phone is locked with
+   a PIN at 8, the bot asks you to unlock it and waits; with only a swipe
+   lock, it just goes. Dvara's tutorial, §18, shows how to test this now
+   instead of waiting for 8 o'clock.
 
 ---
 
@@ -554,7 +610,10 @@ you're most likely to meet:
 | `dvara not started: dvara.telegram is set but there is no TELEGRAM_TOKEN` | the bot's token wasn't saved | `sarathi dvara` again, and paste it |
 | `dvara not started: no actors file at ~/dvara/actors.toml` | dvara's list of people is missing | `sarathi dvara` writes a starter one |
 | the bot never answers you | you're not in the actors file yet | Step 6, "Let yourself in" |
+| a link from Dvara (`/accounts page`, a sign-in window) keeps loading on a phone | your firewall drops that port | run the `sudo ufw allow …` line `sarathi up` printed |
 | `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi up` |
+| the bot says the phone tools "aren't connected" | the agent's `[tools] allow` leaves the phone out | add `"mcp__sparsh__*"` to it; `sarathi phone ADDRESS` says which file |
+| a scheduled phone run is `skipped: the phone couldn't be reached` | the phone's address changed, or it restarted (`adb tcpip` is gone) | plug in, `adb tcpip 5555`, `sarathi phone ADDRESS` |
 | `dvara not started: something else is listening on port 8770 (change dvara.port in sarathi.toml)` | another program on your computer uses that port | `sarathi dvara --port 8771` (any free number), then `sarathi up` |
 | `I couldn't start that sign-in: the browser did not answer Target.createTarget` | containers from an older Sarathi: the browser had nowhere to write | update Sarathi, then `sarathi up` (it restarts what changed) |
 | `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |

@@ -318,6 +318,9 @@ network's service `inactive`.
 * **Yantra's site tools reading Amazon's orders** in the containers,
   with the sign-in from the phone. Not tried yet: ask the page *"what
   were my last three Amazon orders?"*.
+* **Setu's page and its window from a phone** (8775, 8791): the phone's
+  browser just kept loading, because ufw dropped both; `sarathi up` now
+  names the ports and the command ([note 11](11-the-firewall-says-nothing.md)).
 * **One place to find every page**: [note 06](06-one-bookmark.md),
   `sarathi home`.
 * **Later:** a phone over Tailscale, and the Chromium road on arm64 run

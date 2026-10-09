@@ -115,10 +115,19 @@ the link says ``window_url`` or ``http://window_host:port`` -- never the
 container's own address, which no phone can reach. SETU'S PAGE IS
 PUBLISHED THERE TOO, when ``window_host`` is one address (not 0.0.0.0):
 a person's link from ``/accounts page`` then opens on their phone.
+
+A FIREWALL IS NAMED, NOT OPENED. Publishing a port on the house address
+does nothing for a phone when ufw or firewalld drops it first: the page
+just spins, with nothing in any log. So when those ports are on one
+address and a firewall is on, ``up`` says which ports and the command
+that opens them to that network alone. It runs nothing: opening a port
+needs root, and is the owner's call; and it can't tell a port already
+opened (reading ufw's rules needs root too), so it says "if".
 """
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import shutil
@@ -136,6 +145,7 @@ from sarathi.config import (
     BOT_TOKEN,
     DOOR_TOKEN,
     KEY_NAMES,
+    NOT_ONE_ADDRESS,
     Config,
     ConfigError,
     config_dir,
@@ -174,6 +184,8 @@ OLD_UNITS = ("sarathi-clock", "sarathi-door", "sarathi-page", "sarathi-owner")
 SETTINGS = services.PORT_SETTINGS
 NETWORK = "sarathi"
 READY_TIMEOUT = 90.0
+#: Where ufw keeps its on/off switch, readable without root.
+UFW_CONF = Path("/etc/ufw/ufw.conf")
 HEADER = ("# Written by `sarathi up` from sarathi.toml, and rewritten whenever it\n"
           "# changes: edit sarathi.toml, not this file.\n")
 
@@ -480,6 +492,66 @@ def setu_window(config: Config) -> tuple[str, str, str] | None:
     port = str(((door.window_port if door else None) or WINDOW_PORT) + 1)
     shown = f"[{host}]" if ":" in host else host
     return host, port, f"http://{shown}:{port}"
+
+
+def house_ports(config: Config) -> tuple[str, list[int]] | None:
+    """(the house address, the ports published on it) for the door's
+    window, Setu's page and its window; None when nothing is published
+    beyond this computer."""
+    door = config.door
+    if door is None or not door.window_host or door.window_host in NOT_ONE_ADDRESS:
+        return None
+    ports = [int(window(config)[1])]
+    if config.people_host():
+        ports.append(config.pages.setu_port)
+        shown = setu_window(config)
+        if shown:
+            ports.append(int(shown[1]))
+    return door.window_host, sorted(ports)
+
+
+def firewall() -> str | None:
+    """"ufw" or "firewalld" when one is on, else None."""
+    try:
+        if "ENABLED=yes" in UFW_CONF.read_text().replace(" ", ""):
+            return "ufw"
+    except OSError:
+        pass
+    if run(["systemctl", "is-active", "--quiet", "firewalld"]).returncode == 0:
+        return "firewalld"
+    return None
+
+
+def house_network(host: str) -> str:
+    """192.168.1.44 -> 192.168.1.0/24, from the address's own interface;
+    the /24 around it when no interface says."""
+    said = run(["ip", "-o", "addr", "show"]).stdout if shutil.which("ip") else ""
+    for word in said.split():
+        if word.startswith(host + "/"):
+            return str(ipaddress.ip_interface(word).network)
+    try:
+        return str(ipaddress.ip_network(f"{host}/24", strict=False))
+    except ValueError:
+        return host
+
+
+def firewall_note(config: Config) -> list[str]:
+    """Lines naming the house ports and how to open them, when a firewall
+    is on (the module docstring)."""
+    shown = house_ports(config)
+    wall = firewall() if shown else None
+    if wall is None:
+        return []
+    host, ports = shown
+    if wall == "ufw":
+        command = (f"sudo ufw allow from {house_network(host)} to any port "
+                   f"{','.join(map(str, ports))} proto tcp")
+    else:
+        adds = " ".join(f"--add-port={p}/tcp" for p in ports)
+        command = f"sudo firewall-cmd --permanent {adds} && sudo firewall-cmd --reload"
+    return [f"firewall: {wall} is on; if a phone can't open {host} on "
+            f"{', '.join(map(str, ports))}, open them to your network (once is enough):",
+            f"  {command}"]
 
 
 def units(config: Config) -> dict[str, str]:
@@ -862,7 +934,7 @@ def up(config: Config) -> tuple[list[str], bool]:
         ok = False
         lines.append(f"{name:<{WIDTH}} did not come up (unit {unit}); the end of its journal:")
         lines += [f"         | {line}" for line in journal_tail(unit)]
-    return lines, ok
+    return lines + firewall_note(config), ok
 
 
 def _address(config: Config, name: str, url: str) -> str:

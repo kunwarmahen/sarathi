@@ -55,6 +55,7 @@ def host(world, monkeypatch):
     monkeypatch.setattr(podman, "run", recorder)
     recorder.taken = set()            # host ports something else listens on
     monkeypatch.setattr(podman, "answers", lambda port: port in recorder.taken)
+    monkeypatch.setattr(podman, "UFW_CONF", world / "ufw.conf")   # not this machine's
     return recorder
 
 
@@ -619,6 +620,53 @@ def test_a_taken_window_port_for_setus_page_is_said_before_it_starts(host, world
     assert ("setu       not started: something else is listening on port 8791 "
             "(change dvara.window_port in sarathi.toml)") in lines
     assert host.said("systemctl", "--user", "start", "sarathi-setu.service") == 0
+
+
+IP_ADDR = ("2: eno1    inet 192.168.1.44/24 brd 192.168.1.255 scope global eno1\n"
+           "3: tailscale0    inet 100.101.102.103/32 scope global tailscale0\n")
+
+
+def test_with_ufw_on_up_names_the_house_ports_and_the_command_to_open_them(
+        host, world, monkeypatch):
+    """The page on a phone just spun: ufw dropped 8775 and 8791, opened
+    long ago for 8790 alone, and nothing anywhere said so."""
+    with_door_secrets(world)
+    monkeypatch.setattr(podman, "preflight", lambda config: None)
+    monkeypatch.setattr(podman.shutil, "which", lambda name: f"/usr/bin/{name}")
+    (world / "ufw.conf").write_text("# comment\nENABLED=yes\nLOGLEVEL=low\n")
+    host.answers[("ip", "-o", "addr")] = subprocess.CompletedProcess([], 0, IP_ADDR, "")
+    config = Config("ollama", road="podman", door=Door(window_host="192.168.1.44"),
+                    pages=Pages(on=True, setu_port=8775))
+    assert podman.firewall_note(config) == [
+        "firewall: ufw is on; if a phone can't open 192.168.1.44 on 8775, 8790, 8791, "
+        "open them to your network (once is enough):",
+        "  sudo ufw allow from 192.168.1.0/24 to any port 8775,8790,8791 proto tcp"]
+    lines, _ = podman.up(config)
+    assert lines[-1].startswith("  sudo ufw allow from 192.168.1.0/24")
+    assert host.said("sudo") == 0                          # named, never run
+
+
+def test_firewalld_gets_its_own_command_and_no_firewall_gets_no_line(host, world):
+    config = Config("ollama", road="podman", door=Door(window_host="100.101.102.103"),
+                    pages=Pages(on=False))
+    host.answers[("systemctl", "is-active", "--quiet", "firewalld")] = \
+        subprocess.CompletedProcess([], 3, "", "")
+    assert podman.firewall_note(config) == []
+    del host.answers[("systemctl", "is-active", "--quiet", "firewalld")]
+    assert podman.firewall_note(config)[1] == (
+        "  sudo firewall-cmd --permanent --add-port=8790/tcp && sudo firewall-cmd --reload")
+
+
+def test_nothing_on_the_house_address_means_no_firewall_line(host, world):
+    (world / "ufw.conf").write_text("ENABLED=yes\n")
+    for door in (None, Door(), Door(window_host="127.0.0.1"), Door(window_host="0.0.0.0")):
+        config = Config("ollama", road="podman", door=door, pages=Pages(on=True))
+        assert podman.firewall_note(config) == []
+    (world / "ufw.conf").write_text("ENABLED=no\n")
+    host.answers[("systemctl", "is-active")] = subprocess.CompletedProcess([], 3, "", "")
+    config = Config("ollama", road="podman", door=Door(window_host="192.168.1.44"),
+                    pages=Pages(on=True))
+    assert podman.firewall_note(config) == []
 
 
 def test_the_owner_page_reaches_the_door_by_name_with_its_token_from_its_own_file(

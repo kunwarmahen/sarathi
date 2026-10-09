@@ -265,6 +265,14 @@ computer, are "another device", so without a `window_host` it is
 published on `127.0.0.1` for you alone. Behind a `window_url`, Setu's
 page gets no window of its own: sign those sites in from the chat.
 
+**A firewall is named, not opened.** These ports (8790, 8775, 8791 by
+default) do nothing for a phone when ufw or firewalld drops them; the
+page just keeps loading. When `window_host` is one address and either is
+on, `sarathi up` ends with the ports and the command that opens them to
+your network alone (`sudo ufw allow from 192.168.1.0/24 to any port
+8775,8790,8791 proto tcp`). It never runs it: that needs root and is
+your call ([notes/11](notes/11-the-firewall-says-nothing.md)).
+
 Your own phone can use the same sign-ins as this computer's page: under
 `[actor.owner]`, `setu = "~/.local/state/setu"` with `setu_manage = true`,
 so `/connect amazon` from the chat signs in there (dvara's note 27). The
@@ -498,7 +506,8 @@ src/sarathi/
                 each line by its project's name  (notes/09)
   podman.py     the same on the podman road: the image, the Quadlet
                 units, systemd  (notes/03); Dvara's unit  (notes/04);
-                its streamed window, and the image's browser  (notes/05)
+                its streamed window, and the image's browser  (notes/05);
+                the firewall named when phones are to reach it  (notes/11)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
