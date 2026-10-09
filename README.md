@@ -167,7 +167,9 @@ one person marked `phone = true` in its actors file (dvara's
 On your phone: *Developer options → Wireless debugging*, then *Pair
 device with pairing code* for the first two numbers, and the address on
 the Wireless debugging page itself for the third. A wrong address is
-said, not saved.
+said, not saved. Android 10 and older have no such page: plug the phone
+in once, run `adb tcpip 5555`, and give `sarathi phone` its Wi-Fi
+address with `:5555` ([notes/10](notes/10-a-real-phone.md)).
 
 **In the containers**, the phone is reached over Wi-Fi only: a container
 can't reach a USB cable without being handed every device on the bus.
@@ -519,7 +521,9 @@ containers. `sarathi up` also starts Setu's page, Dvara's owner page and
 the home page that links every program's page. Sparsh is found, its
 phones are said, and Yantra's page and Dvara are handed it; inside
 the containers the phone is reached over Wi-Fi (`sarathi phone`), tried
-against the emulator, not yet a real phone.
+against the emulator and a real Nexus 6P on Android 8.1, a schedule's
+locked phone asked about on Telegram and worked once unlocked
+([notes/10](notes/10-a-real-phone.md)).
 
 ## Tests
 

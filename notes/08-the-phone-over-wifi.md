@@ -92,8 +92,8 @@ The container's adb connected by itself, was trusted at once (the
 mounted key; no "allow USB debugging?" on the phone), and Sparsh read
 the screen.
 
-Not yet: a real phone over real Wi-Fi, with the containers on their own
-network. The emulator listens on this machine's loopback, which a
+~~Not yet: a real phone over real Wi-Fi, with the containers on their own
+network.~~ A Nexus 6P on the house Wi-Fi: [note 10](10-a-real-phone.md). The emulator listens on this machine's loopback, which a
 container on that network can't reach. A phone on the house network
 is the case this was built for.
 
