@@ -163,7 +163,8 @@ sarathi phone --off
 
 turns on `[phone]`. Dvara's agents may then work the phone for the
 one person marked `phone = true` in its actors file (dvara's
-`--sparsh`), and Yantra's page reconnects to a Wi-Fi phone by itself.
+`--sparsh`), through a package whose `[tools] allow` names
+`mcp__sparsh__*` (it says when the agent on Telegram doesn't), and Yantra's page reconnects to a Wi-Fi phone by itself.
 On your phone: *Developer options → Wireless debugging*, then *Pair
 device with pairing code* for the first two numbers, and the address on
 the Wireless debugging page itself for the third. A wrong address is

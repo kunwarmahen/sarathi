@@ -59,10 +59,14 @@ Along the way it found two things, both fixed where they belong:
 
 ## Not here yet
 
-* **`sarathi phone` doesn't look at the packages.** It says when nobody
-  is marked `phone = true`, but not when the agent on Telegram can't
-  use the phone because its `[tools] allow` leaves out
-  `mcp__sparsh__*`. Dvara now says so at the run; Sarathi could say it
-  when the phone is turned on.
+* ~~**`sarathi phone` doesn't look at the packages.**~~ It now says
+  when the agent on Telegram can't use the phone, as well as when
+  nobody is marked:
+
+  ```
+    minder, the agent on Telegram, can't use the phone: its [tools] in
+    ~/dvara/agents/minder/agent.toml leaves out "mcp__sparsh__*" -- add it
+    there (Sparsh still holds Send, Pay and Delete for your yes)
+  ```
 * **The image carries the Sparsh and Dvara it was built with.** Both
   fixes above reach the containers at the next `sarathi image`.

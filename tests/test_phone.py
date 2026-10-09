@@ -172,3 +172,23 @@ def test_nobody_marked_in_the_door_is_said(world, settings, capsys, monkeypatch)
     actors.write_text("[actor.owner]\nphone = true\n")
     phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
     assert "nobody in" not in capsys.readouterr().out
+
+
+def test_an_agent_on_telegram_that_leaves_the_phone_out_is_said(world, settings, capsys):
+    # A real schedule: its person unlocked the phone when asked, and the
+    # run on minder had no phone tool, minder's allow list leaving it out.
+    root = world / "agents"
+    (root / "minder").mkdir(parents=True)
+    package = root / "minder" / "agent.toml"
+    package.write_text('[agent]\nname = "minder"\n[tools]\nallow = ["web_fetch"]\n')
+    (world / "config" / "sarathi.toml").write_text(
+        render(Config("ollama", door=Door(telegram="minder", root=str(root)))))
+    phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
+    assert 'leaves out "mcp__sparsh__*"' in capsys.readouterr().out
+    for tools in ('allow = ["web_fetch", "mcp__sparsh__*"]', "", 'deny = ["bash"]'):
+        package.write_text(f'[agent]\nname = "minder"\n[tools]\n{tools}\n')
+        phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
+        assert "leaves out" not in capsys.readouterr().out, tools
+    package.write_text('[agent]\nname = "minder"\n[tools]\ndeny = ["mcp__sparsh__*"]\n')
+    phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
+    assert "leaves out" in capsys.readouterr().out

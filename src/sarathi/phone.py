@@ -17,7 +17,9 @@ at the same path, so a phone that trusts this computer trusts its
 containers, and nothing is paired twice.
 
 The door's agents get the phone only for the person marked ``phone =
-true`` in its actors file; this says so when nobody is.
+true`` in its actors file, and only through a package whose ``[tools]
+allow`` lets ``mcp__sparsh__*`` in; this says so when nobody is marked,
+or when the agent on Telegram leaves the phone out.
 """
 
 from __future__ import annotations
@@ -89,6 +91,12 @@ def run(args, found: Found) -> int:
     if config.door is not None and not _anyone_marked(config.door.path("actors")):
         print(f"  nobody in {config.door.actors} is marked `phone = true` yet: add it "
               "under your own [actor.…] so Dvara's agents may work the phone for you")
+    if config.door is not None and config.door.telegram:
+        package = config.door.path("root") / config.door.telegram / "agent.toml"
+        if not _lets_phone_in(package):
+            print(f"  {config.door.telegram}, the agent on Telegram, can't use the phone: "
+                  f"its [tools] in {package} leaves out \"mcp__sparsh__*\" -- add it "
+                  "there (Sparsh still holds Send, Pay and Delete for your yes)")
     print("next: `sarathi down && sarathi up` (or just `sarathi up`)")
     return 0
 
@@ -102,3 +110,24 @@ def _anyone_marked(actors) -> bool:
         return False
     return any(isinstance(body, dict) and body.get("phone") is True
                for body in (data.get("actor") or {}).values())
+
+
+def _lets_phone_in(package) -> bool:
+    """Whether an agent package lets Sparsh's tools in. Its ``[tools]
+    allow``, when present, is a complete list (Yantra's rule): one that
+    leaves out ``mcp__sparsh__*`` hides the phone from that agent however
+    the door was started. A schedule on a real phone found it: its
+    person unlocked the phone when asked, and the run had no phone tool.
+    A package that can't be read is not this command's to judge."""
+    import fnmatch
+    import tomllib
+
+    try:
+        tools = tomllib.loads(package.read_text()).get("tools") or {}
+    except (OSError, tomllib.TOMLDecodeError):
+        return True
+    name = "mcp__sparsh__look"
+    if any(fnmatch.fnmatch(name, pat) for pat in tools.get("deny") or ()):
+        return False
+    allow = tools.get("allow")
+    return allow is None or any(fnmatch.fnmatch(name, pat) for pat in allow)
