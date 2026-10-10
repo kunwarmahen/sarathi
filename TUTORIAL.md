@@ -583,6 +583,13 @@ a USB cable, so they reach the phone over your Wi-Fi.
 
    Then send your bot the same question.
 
+   Then one that stops for your yes: *"Call 555-0123 from my phone."*
+   The bot sends a photo of your phone's screen with the Call button
+   ringed in red, then one line (*"tap button "Call (dial)" … On the
+   screen: field "555-0123""*) with **approve** and **refuse** under it.
+   Press refuse. Nothing is dialled. For a tap only a picture can show,
+   like a pin on a map, see Dvara's tutorial §18.
+
 4. A schedule on your phone: ask your bot *"every morning at 8, tell me
    my phone's battery"* and accept the card. If the phone is locked with
    a PIN at 8, the bot asks you to unlock it and waits; with only a swipe
@@ -628,6 +635,7 @@ you're most likely to meet:
 | a link from Dvara (`/accounts page`, a sign-in window) keeps loading on a phone | your firewall drops that port | run the `sudo ufw allow …` line `sarathi up` printed |
 | `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi up` |
 | *"Your phone locked mid-task"* in the middle of a job | the screen went dark between two steps (a Sarathi from before `[phone] awake`) | `sarathi image`, then `sarathi up`; or `sarathi phone --awake always` |
+| a phone question comes as a long numbered list with no photo, or the bot opens Maps' rows one by one | containers from before the picture on every question | `sarathi image`, then `sarathi up` |
 | the bot says the phone tools "aren't connected" | the agent's `[tools] allow` leaves the phone out | add `"mcp__sparsh__*"` to it; `sarathi phone ADDRESS` says which file |
 | a scheduled phone run is `skipped: the phone couldn't be reached` | the phone's address changed, or it restarted (`adb tcpip` is gone) | plug in, `adb tcpip 5555`, `sarathi phone ADDRESS` |
 | `dvara not started: something else is listening on port 8770 (change dvara.port in sarathi.toml)` | another program on your computer uses that port | `sarathi dvara --port 8771` (any free number), then `sarathi up` |
