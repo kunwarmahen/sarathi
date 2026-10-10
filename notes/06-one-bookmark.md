@@ -164,5 +164,7 @@ is told which Chrome is here).
 
 * ~~**`setu serve` and `dvara page` as units**~~ Above.
 * ~~**The Podman road, tried for real.**~~ Run, above.
+* ~~**Anything to do on it but open pages.**~~ A chat with your agents,
+  passed through to Dvara: [note 12](12-a-chat-on-the-home-page.md).
 
 *The pieces here are called by their old names (clock, door, page, owner, home); they go by their projects' names now ([note 09](09-each-by-its-own-name.md)).*

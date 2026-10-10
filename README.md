@@ -217,7 +217,7 @@ in that order:
 ```
 dvara  dvara --root ~/dvara/agents --actors ~/dvara/actors.toml --state ~/dvara/state
              --ask --provider <model.provider> --model <model.model> --samay <samay>
-             serve --port <dvara.port> [--telegram <dvara.telegram>]
+             serve --port <dvara.port> --web [--telegram <dvara.telegram>]
 ```
 
 What a person would otherwise wire by hand in two places:
@@ -225,7 +225,12 @@ What a person would otherwise wire by hand in two places:
 * **Samay and Dvara know each other.** Both get the same
   `SAMAY_DVARA_URL` (Dvara's address) and `SAMAY_DVARA_TOKEN` (Dvara's
   own token), so a schedule made in a chat is checked by Samay
-  against the Dvara that made it.
+  against the Dvara that made it. Samay also gets `SAMAY_DVARA_ACTOR`,
+  your `[dvara] owner`: a schedule you make on Yantra's page still runs
+  straight from Samay, but its answer reaches you through Dvara (on
+  Telegram, and in the home page's chat).
+* **A chat on the home page.** Dvara starts with `--web`, its web
+  channel, and the home page shows it (below).
 * **Tokens.** `DVARA_TOKEN` is made for you; `TELEGRAM_TOKEN` (from
   @BotFather) is typed at a hidden prompt. Both go to `secrets.env`, and
   from there **to Dvara alone**: the page never holds the bot's token,
@@ -469,11 +474,22 @@ Dvara's page shows and answers for. Dvara's page gets Dvara's token and
 address from `up`, so your answers on it reach Dvara. No other page
 gets that token.
 
-It only links. Nothing on it starts, stops or changes anything. Because
+It links, and nothing on it starts, stops or changes anything. Because
 its links carry the other pages' keys, it has a key of its own (after the
 `#`, kept in `~/.local/share/sarathi/home.token`, or
 `$SARATHI_HOME_TOKEN`), and it listens on this computer only.
 ([notes/06](notes/06-one-bookmark.md))
+
+**Talk to your agents.** With Dvara on, the page also has a chat, above
+the cards: pick an agent, write, and the answer comes back a few seconds
+later. What a schedule sends you waits there too, even with no Telegram.
+A question an agent asks shows as a card with **Yes** and **No** (and
+goes to Telegram as well; the first answer counts). The chat holds no
+logic: every word goes to Dvara's web channel and back, as you, the
+`[dvara] owner`, with the same rules and allowance as on Telegram.
+Dvara's token stays in the home page's process, never in the browser.
+The chat is its own conversation: one on Telegram doesn't continue
+there. ([notes/12](notes/12-a-chat-on-the-home-page.md))
 
 ### Where it looks
 
@@ -525,7 +541,8 @@ src/sarathi/
                 agent works it, --awake  (notes/10)
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
-                the phone's card, which opens Yantra's page  (notes/07)
+                the phone's card, which opens Yantra's page  (notes/07); the
+                chat, passed through to Dvara's web channel as you  (notes/12)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | dvara | phone | road | image | up | down | status [--json] | home
 tests/
@@ -539,7 +556,8 @@ Finding the pieces, the settings, starting them as plain processes or
 as Podman containers, and the household road (dvara on Telegram, wired
 to Samay) are all built, with a browser and bubblewrap inside the
 containers. `sarathi up` also starts Setu's page, Dvara's owner page and
-the home page that links every program's page. Sparsh is found, its
+the home page that links every program's page, with a chat to your
+agents through Dvara where a schedule's answers wait for you. Sparsh is found, its
 phones are said, and Yantra's page and Dvara are handed it; inside
 the containers the phone is reached over Wi-Fi (`sarathi phone`), tried
 against the emulator and a real Nexus 6P on Android 8.1, a schedule's

@@ -247,11 +247,12 @@ def _said() -> dict[str, str]:
 
 
 def _serve_home(args) -> int:
-    from sarathi.home import Home, HomeServer, home_token
+    from sarathi.home import Chat, Home, HomeServer, home_token
 
     try:
-        server = HomeServer(Home(load(), _said), home_token(), host=args.host,
-                            port=args.port)
+        config = load()
+        server = HomeServer(Home(config, _said), home_token(), host=args.host,
+                            port=args.port, chat=Chat.for_config(config))
     except (ConfigError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

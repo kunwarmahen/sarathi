@@ -275,6 +275,13 @@ questions your agents are asking you). Open that address and bookmark
 it. It shows whether each page is running and opens any of them already
 signed in.
 
+Once Dvara is on (Step 6), the same page also has **Talk to your
+agents** at the top: a chat with the agents behind Dvara, with no
+Telegram needed. What a schedule sends you waits there as a line marked
+*Sent to you*, including the answers of schedules you make on Yantra's
+page. When an agent wants a yes, a card with **Yes** and **No** appears
+under the chat.
+
 ---
 
 ## Step 5 (optional) · Plain programs, or containers
@@ -412,6 +419,14 @@ sarathi status
 That number is you. Open `~/dvara/actors.toml`, find the lines under
 "Your Telegram id", remove the `#`s and put your number in. Message the
 bot again: it answers. (No restart needed; Dvara rereads the file.)
+
+**No phone handy?** Open the home page (the `sarathi` line `up`
+printed). With Dvara on, it has a chat at the top: pick `greeter`, say
+hello, and the answer appears a few seconds later. It's the same Dvara
+with the same rules, but its own conversation: what you said on
+Telegram doesn't carry over. If it says Dvara is running without its
+web channel, run `sarathi down` and `sarathi up` (on the Podman road,
+`sarathi image` first).
 
 **Your own accounts from your phone.** Under `[actor.owner]` in the same
 file, one of:

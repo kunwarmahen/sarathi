@@ -121,10 +121,12 @@ class TestStartedTogether:
             str(home / "dvara" / "actors.toml"), "--state", str(home / "dvara" / "state"),
             "--ask", "--provider", "ollama", "--model", "gemma4:12b",
             "--samay", str(bin_dir / "samay"),
-            "serve", "--host", "127.0.0.1", "--port", str(port), "--telegram", "greeter"]
+            "serve", "--host", "127.0.0.1", "--port", str(port), "--web",
+            "--telegram", "greeter"]
         for env in (clock["env"], gate["env"]):
             assert env["SAMAY_DVARA_URL"] == f"http://127.0.0.1:{port}"
             assert env["SAMAY_DVARA_TOKEN"] == "d" * 48
+            assert env["SAMAY_DVARA_ACTOR"] == "owner"
         assert gate["env"]["DVARA_TOKEN"] == "d" * 48
         assert gate["env"]["TELEGRAM_TOKEN"] == "123:bot"
         assert gate["env"]["OLLAMA_MODEL"] == "gemma4:12b"

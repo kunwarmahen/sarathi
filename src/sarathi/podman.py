@@ -569,7 +569,10 @@ def units(config: Config) -> dict[str, str]:
             extra_container=f"Environment=SAMAY_PUBLIC_URL=http://127.0.0.1:"
                             f"{config.clock_port}/\n"
                             + (f"Environment=SAMAY_DVARA_URL=http://{UNITS['dvara']}:"
-                               f"{DOOR_PORT}\n" if config.door else ""))
+                               f"{DOOR_PORT}\n"
+                               # a schedule made on Yantra's page is told to you
+                               f"Environment=SAMAY_DVARA_ACTOR={config.door.owner}\n"
+                               if config.door else ""))
         page_exec += f"--samay {IN_IMAGE}/samay"
         page_unit = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"
     else:
@@ -582,7 +585,7 @@ def units(config: Config) -> dict[str, str]:
                      + (f"--model {config.model} " if config.model else "")
                      + (f"--samay {IN_IMAGE}/samay " if config.clock_on else "--samay off ")
                      + (f"--sparsh {IN_IMAGE}/sparsh " if config.phone else "")
-                     + f"serve --host 0.0.0.0 --port {DOOR_PORT}"
+                     + f"serve --host 0.0.0.0 --port {DOOR_PORT} --web"
                      + (f" --telegram {door.telegram}" if door.telegram else ""))
         if config.clock_on:
             after = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"

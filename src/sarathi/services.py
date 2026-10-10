@@ -19,7 +19,7 @@ files:
                    with SAMAY_YANTRA=<the yantra Sarathi found>
     dvara   dvara --root/--actors/--state <dvara.*> --ask --samay <samay>
                   [--sparsh <sparsh>, with [phone] on]
-                  serve --port <dvara.port> [--telegram <dvara.telegram>]
+                  serve --port <dvara.port> --web [--telegram <dvara.telegram>]
     setu    setu serve --port <pages.setu_port>
                   [--people <dvara.state>/setu, with Dvara on: each person's
                   own folder, for the link /accounts page sends them;
@@ -37,7 +37,10 @@ chat runs through the door as its person, and Samay checks every such
 schedule against the door that made it. So both get the same
 ``SAMAY_DVARA_URL`` (the door's address) and ``SAMAY_DVARA_TOKEN`` (the
 door's own token, from secrets.env): the wiring a person would
-otherwise copy by hand into two places and get wrong in one. The order
+otherwise copy by hand into two places and get wrong in one. And
+``SAMAY_DVARA_ACTOR``, the owner: a schedule made at this computer, on
+Yantra's page, runs here but its answer still reaches you through the
+door -- on Telegram, and on the home page's chat (``--web``). The order
 is clock, door, page -- the door, like the page, asks once at start-up
 whether the clock is running.
 
@@ -255,8 +258,9 @@ def door_env(config: Config, at: str | None = None) -> dict[str, str]:
     if not token:
         raise ConfigError(f"dvara is on but has no {DOOR_TOKEN}: run `sarathi dvara`")
     assert config.door is not None
+    # a schedule made at this computer (Yantra's page) is told to the owner
     return {"SAMAY_DVARA_URL": at or f"http://{HOST}:{config.door.port}",
-            "SAMAY_DVARA_TOKEN": token}
+            "SAMAY_DVARA_TOKEN": token, "SAMAY_DVARA_ACTOR": config.door.owner}
 
 
 def door_problems(config: Config, found: dict[str, Found] | None) -> list[str]:
@@ -309,7 +313,8 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
         else:
             notes.append(f"{'dvara':<{WIDTH}} no phone: sparsh was not found "
                          "(see `sarathi status`)")
-    argv += ["serve", "--host", HOST, "--port", str(door.port)]
+    # --web: the home page's chat, and every notice kept for it (dvara web.py)
+    argv += ["serve", "--host", HOST, "--port", str(door.port), "--web"]
     if door.telegram:
         argv += ["--telegram", door.telegram]
     secrets = read_secrets()

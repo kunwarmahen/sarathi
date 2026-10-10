@@ -25,6 +25,28 @@
       <code>#token=…</code>. The page keeps the key after that.</p>
   </div>
 
+  <section id="chat" aria-labelledby="h-chat" hidden>
+    <div class="section-head">
+      <h2 id="h-chat">Talk to your agents</h2>
+      <span class="count" id="chat-state" aria-live="polite"></span>
+    </div>
+    <p class="lede">Through Dvara, as on Telegram: the same rules and allowance. What a
+      schedule sends you waits here too. This chat is its own conversation; one on
+      Telegram doesn't continue here.</p>
+    <div class="chat">
+      <div id="lines" class="lines" role="log" aria-live="polite" tabindex="0"></div>
+      <div id="waiting" class="waiting"></div>
+      <form id="say" class="say">
+        <label class="sr" for="agent">Agent</label>
+        <select id="agent"></select>
+        <label class="sr" for="text">Message</label>
+        <textarea id="text" rows="2" placeholder="Write to your agent. Enter sends; Shift+Enter for a new line."></textarea>
+        <button type="submit" class="send">Send</button>
+      </form>
+      <div id="chat-problem" class="warn" hidden></div>
+    </div>
+  </section>
+
   <section aria-labelledby="h-pages">
     <div class="section-head">
       <h2 id="h-pages">Your pages</h2>
@@ -37,7 +59,7 @@
 
 <footer class="foot">
   <span id="updated"></span>
-  <span>This page only links. Nothing here starts or changes anything.</span>
+  <span>This page links, and passes your chat to Dvara. Nothing here starts or changes anything.</span>
 </footer>
 </body>
 </html>
