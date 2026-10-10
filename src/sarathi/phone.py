@@ -43,6 +43,12 @@ def _sparsh(found: Found, *argv: str) -> tuple[int, str]:
     return done.returncode, (done.stdout + done.stderr).strip()
 
 
+#: What each ``--awake`` word does, said back.
+SCREEN = {"working": "kept on, then your own timeout 2 minutes after the last step",
+          "always": "never asleep (a phone set aside for the agent)",
+          "off": "left to its own timeout"}
+
+
 def run(args, found: Found) -> int:
     try:
         config = load()
@@ -85,9 +91,13 @@ def run(args, found: Found) -> int:
     elif config.road == "podman":
         print("note: on the podman road the containers can't reach a phone on a cable: "
               "give its Wi-Fi address (sarathi phone ADDRESS)")
-    settings_path().write_text(render(replace(config, phone=Phone(address=address))))
+    awake = args.awake or (config.phone.awake if config.phone else None)
+    settings_path().write_text(render(replace(config, phone=Phone(address=address,
+                                                                  awake=awake))))
     where = f"over Wi-Fi at {address}" if address else "on a USB cable"
     print(f"the phone is on in {settings_path()}, {where}")
+    if args.awake:
+        print(f"  its screen while an agent works it: {SCREEN[args.awake]}")
     if config.door is not None and not _anyone_marked(config.door.path("actors")):
         print(f"  nobody in {config.door.actors} is marked `phone = true` yet: add it "
               "under your own [actor.…] so Dvara's agents may work the phone for you")

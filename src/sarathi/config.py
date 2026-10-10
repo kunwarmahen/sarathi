@@ -64,8 +64,11 @@ KNOWN: dict[str, set[str]] = {
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner"},
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
-    "phone": {"on", "address"},
+    "phone": {"on", "address", "awake"},
 }
+#: Sparsh's words for the phone's screen while an agent works it
+#: (``SPARSH_AWAKE``): kept on while working, never asleep, left alone.
+AWAKE = ("working", "always", "off")
 
 #: The names these had before each piece went by its project's name. A
 #: file written then still reads; the next one Sarathi writes uses the new.
@@ -102,6 +105,9 @@ class Phone:
     #: ``192.168.1.23:41234``: the phone's wireless debugging address.
     #: None: a phone on a USB cable (the process road only).
     address: str | None = None
+    #: The screen while an agent works it, as Sparsh's ``SPARSH_AWAKE``
+    #: (one of AWAKE). None: Sparsh's own default, kept on while working.
+    awake: str | None = None
 
 
 @dataclass(frozen=True)
@@ -290,7 +296,11 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                                                     address)):
         raise ConfigError(f"{where}: phone.address must be an address and port, like "
                           f"\"192.168.1.23:41234\", not {address!r}")
-    phone = Phone(address=address) if phone_table.get("on", False) else None
+    awake = phone_table.get("awake") or None
+    if awake is not None and awake not in AWAKE:
+        raise ConfigError(f"{where}: phone.awake is one of {', '.join(AWAKE)}, "
+                          f"not {awake!r}")
+    phone = Phone(address=address, awake=awake) if phone_table.get("on", False) else None
     return Config(provider=provider, road=road, door=door, pages=pages, phone=phone,
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
@@ -370,7 +380,9 @@ def _render_phone(phone: Phone | None) -> str:
         return head + "on = false\n"
     address = f'address = "{phone.address}"' if phone.address else \
         '# address = "192.168.1.23:41234"   # its Wireless debugging address'
-    return head + f"on = true\n{address}\n"
+    awake = f'awake = "{phone.awake}"' if phone.awake else \
+        '# awake = "working"   # its screen while an agent works it: working, always, off'
+    return head + f"on = true\n{address}\n{awake}\n"
 
 
 def _render_door(door: Door | None) -> str:

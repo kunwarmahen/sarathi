@@ -589,6 +589,21 @@ a USB cable, so they reach the phone over your Wi-Fi.
    lock, it just goes. Dvara's tutorial, §18, shows how to test this now
    instead of waiting for 8 o'clock.
 
+5. Leave the phone's screen to Sparsh while the helper works it: it's
+   kept on, and your own screen timeout comes back two minutes after the
+   last step. For an old phone kept just for the helper, keep it on for
+   good:
+
+   ```bash
+   sarathi phone --awake always      # or working (the default), or off
+   sarathi up
+   ```
+
+   And answer on the card, not in words: when the helper is about to
+   send something, the question comes with **Yes** and **No** buttons.
+   If it asks *"shall I send it?"* in plain words instead, say yes and
+   it does the step again and asks with the buttons.
+
 ---
 
 ## When something goes wrong
@@ -612,6 +627,7 @@ you're most likely to meet:
 | the bot never answers you | you're not in the actors file yet | Step 6, "Let yourself in" |
 | a link from Dvara (`/accounts page`, a sign-in window) keeps loading on a phone | your firewall drops that port | run the `sudo ufw allow …` line `sarathi up` printed |
 | `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi up` |
+| *"Your phone locked mid-task"* in the middle of a job | the screen went dark between two steps (a Sarathi from before `[phone] awake`) | `sarathi image`, then `sarathi up`; or `sarathi phone --awake always` |
 | the bot says the phone tools "aren't connected" | the agent's `[tools] allow` leaves the phone out | add `"mcp__sparsh__*"` to it; `sarathi phone ADDRESS` says which file |
 | a scheduled phone run is `skipped: the phone couldn't be reached` | the phone's address changed, or it restarted (`adb tcpip` is gone) | plug in, `adb tcpip 5555`, `sarathi phone ADDRESS` |
 | `dvara not started: something else is listening on port 8770 (change dvara.port in sarathi.toml)` | another program on your computer uses that port | `sarathi dvara --port 8771` (any free number), then `sarathi up` |

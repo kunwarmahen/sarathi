@@ -321,9 +321,13 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
 
 def phone_env(config: Config) -> dict[str, str]:
     """Sparsh's name for the phone's Wi-Fi address: it reconnects to it
-    whenever it looks for phones, so a restart finds the phone again."""
+    whenever it looks for phones, so a restart finds the phone again. And
+    ``[phone] awake``, its screen while an agent works it."""
     phone = config.phone
-    return {"SPARSH_CONNECT": phone.address} if phone is not None and phone.address else {}
+    if phone is None:
+        return {}
+    pairs = (("SPARSH_CONNECT", phone.address), ("SPARSH_AWAKE", phone.awake))
+    return {k: v for k, v in pairs if v}
 
 
 def work_dir() -> Path:

@@ -6,7 +6,9 @@ TURNED ON, AND REACHED THE WAY ANOTHER COMPUTER WOULD. With no [phone],
 no unit, no door and no page mentions it. With it, the containers get
 the address (never a USB device), the key folder this computer paired
 with, and the person's Sparsh rules, at the same paths. A wrong address
-is said when it is set, not saved to fail at `up`.
+is said when it is set, not saved to fail at `up`. The screen's word
+(`awake`) reaches Sparsh on both roads, and survives the address being
+set again; a word Sparsh doesn't know is said, not passed on.
 """
 
 from __future__ import annotations
@@ -47,6 +49,21 @@ def test_the_phone_reads_back_as_written():
     for chosen in (Config("ollama", phone=WIFI), Config("ollama", phone=Phone()),
                    Config("ollama")):
         assert parse(render(chosen)) == chosen
+
+
+def test_the_screens_word_reads_back_and_a_wrong_one_is_said():
+    chosen = Config("ollama", phone=Phone(address=ADDRESS, awake="always"))
+    assert parse(render(chosen)) == chosen
+    assert '# awake = "working"' in render(Config("ollama", phone=WIFI))
+    with pytest.raises(ConfigError, match="phone.awake is one of working, always, off"):
+        parse('[model]\nprovider = "ollama"\n[phone]\non = true\nawake = "on"\n')
+
+
+def test_the_screens_word_reaches_sparsh_on_both_roads(host):
+    config = podman_config(phone=Phone(address=ADDRESS, awake="always"))
+    assert services.phone_env(config) == {"SPARSH_CONNECT": ADDRESS, "SPARSH_AWAKE": "always"}
+    assert "Environment=SPARSH_AWAKE=always\n" in podman.phone_env(config)
+    assert "SPARSH_AWAKE" not in podman.phone_env(podman_config(phone=WIFI))
 
 
 def test_an_address_that_is_not_one_stops_everything():
@@ -125,8 +142,8 @@ def sparsh_that(world, says: str, code: int = 0) -> Found:
     return Found(next(s for s in SIBLINGS if s.name == "sparsh"), program=str(prog))
 
 
-def args(*words, off=False):
-    return argparse.Namespace(words=list(words), off=off)
+def args(*words, off=False, awake=None):
+    return argparse.Namespace(words=list(words), off=off, awake=awake)
 
 
 def test_an_address_that_answers_is_saved(world, settings, capsys):
@@ -154,6 +171,14 @@ def test_pair_runs_sparsh_and_says_what_comes_next(world, settings, capsys):
 def test_a_cable_on_the_podman_road_is_warned_about(world, settings, capsys):
     assert phone.run(args(), sparsh_that(world, "")) == 0
     assert "can't reach a phone on a cable" in capsys.readouterr().out
+
+
+def test_awake_is_saved_and_kept_when_the_address_is_set_again(world, settings, capsys):
+    found = sparsh_that(world, f"connected to {ADDRESS}")
+    assert phone.run(args(awake="always"), found) == 0
+    assert "never asleep" in capsys.readouterr().out
+    phone.run(args(ADDRESS), found)
+    assert load().phone == Phone(address=ADDRESS, awake="always")
 
 
 def test_off_turns_it_off(world, settings):

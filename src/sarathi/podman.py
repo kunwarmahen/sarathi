@@ -377,10 +377,9 @@ def phone_dirs(config: Config) -> list[Path]:
 
 
 def phone_env(config: Config) -> str:
-    """The phone's Wi-Fi address, as Sparsh's ``SPARSH_CONNECT``."""
-    phone = config.phone
-    return (f"Environment=SPARSH_CONNECT={phone.address}\n"
-            if phone is not None and phone.address else "")
+    """The phone's Wi-Fi address, as Sparsh's ``SPARSH_CONNECT``, and its
+    screen while an agent works it, as ``SPARSH_AWAKE``."""
+    return "".join(f"Environment={k}={v}\n" for k, v in services.phone_env(config).items())
 
 
 def people_dir(config: Config) -> Path | None:

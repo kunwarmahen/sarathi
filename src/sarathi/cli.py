@@ -38,7 +38,7 @@ from pathlib import Path
 
 from sarathi import __version__, door, first_run, podman, services
 from sarathi.services import WIDTH
-from sarathi.config import PROVIDERS, ConfigError, load, render, settings_path
+from sarathi.config import AWAKE, PROVIDERS, ConfigError, load, render, settings_path
 from sarathi.siblings import SIBLINGS, Found, env_name, find, find_all, locate
 
 FORMAT = "sarathi.status.v1"
@@ -89,6 +89,8 @@ def build_parser() -> argparse.ArgumentParser:
                            help="nothing: a phone on a cable; ADDRESS: over Wi-Fi; "
                                 "pair ADDRESS CODE: trust this computer, once")
     phone_cmd.add_argument("--off", action="store_true", help="stop giving the phone out")
+    phone_cmd.add_argument("--awake", choices=AWAKE, help="its screen while an agent works "
+                           "it: working (default: kept on, then yours back), always, off")
 
     road = subs.add_parser("road", help="how `up` starts things: plain programs or "
                            "containers; with no road, say which")

@@ -158,6 +158,7 @@ start by hand ([notes/07](notes/07-the-phone-stays-on-the-cable.md)).
 sarathi phone                                  # a phone on a USB cable (process road)
 sarathi phone pair 192.168.1.23:37000 123456   # once: trust this computer over Wi-Fi
 sarathi phone 192.168.1.23:41234               # then: reach it over Wi-Fi
+sarathi phone --awake always                   # its screen while an agent works it
 sarathi phone --off
 ```
 
@@ -171,6 +172,15 @@ the Wireless debugging page itself for the third. A wrong address is
 said, not saved. Android 10 and older have no such page: plug the phone
 in once, run `adb tcpip 5555`, and give `sarathi phone` its Wi-Fi
 address with `:5555` ([notes/10](notes/10-a-real-phone.md)).
+
+**Its screen while an agent works it.** A local model can think for
+longer than the phone's screen timeout between steps, and a dark screen
+locks. Sparsh keeps it on while an agent works and puts your own timeout
+back after (`working`, the default). `--awake always` keeps it on for
+good, for a phone set aside for the agent; `--awake off` leaves it
+alone. It becomes `[phone] awake` in sarathi.toml and Sparsh's
+`SPARSH_AWAKE` in the containers and the plain programs, since Yantra's
+`.env` never reaches a container (Sparsh's note 09).
 
 **In the containers**, the phone is reached over Wi-Fi only: a container
 can't reach a USB cable without being handed every device on the bus.
@@ -511,7 +521,8 @@ src/sarathi/
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
-                through the Sparsh found  (notes/08)
+                through the Sparsh found  (notes/08); its screen while an
+                agent works it, --awake  (notes/10)
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07)

@@ -68,5 +68,11 @@ Along the way it found two things, both fixed where they belong:
     ~/dvara/agents/minder/agent.toml leaves out "mcp__sparsh__*" -- add it
     there (Sparsh still holds Send, Pay and Delete for your yes)
   ```
+* ~~**The phone's screen in the containers.**~~ `[phone] awake` (and
+  `sarathi phone --awake`) becomes Sparsh's `SPARSH_AWAKE` in both
+  containers and on the plain-programs road, because Yantra's `.env`
+  never reaches a container. Sparsh keeps the screen on while an agent
+  works (its note 09); a rename from Telegram had stopped at the lock
+  screen.
 * **The image carries the Sparsh and Dvara it was built with.** Both
   fixes above reach the containers at the next `sarathi image`.
