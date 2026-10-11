@@ -566,7 +566,7 @@ Each line says **where** a piece was found and **which rule** found it.
 The line under it is that piece's own account of itself: Yantra's
 release and the model it would ask (asked with the model, Setu and
 Samay `up` gives it, so a model Ollama hasn't pulled shows here with
-the `ollama pull` that fixes it, and so does a sibling it can't find), Setu's connections, Samay's clock, the phones Sparsh can reach, and
+the `ollama pull` that fixes it, and so does a sibling it can't find), Setu's connections (and any sign-in the site refused, with `setu connect …` to fix it), Samay's clock, the phones Sparsh can reach, and
 whether Dvara is serving (asked about the folders `[dvara]` names;
 with Dvara off, dvara isn't asked). Sarathi repeats it and adds
 nothing. Smritikosh has no status command, so its line is "found,

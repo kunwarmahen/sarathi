@@ -158,10 +158,17 @@ def read_status(program: str, expected: str, before: list[str] | None = None,
 
 
 def _say_setu(data: dict[str, Any]) -> str:
-    refs = [c.get("ref", "?") for c in data.get("connections") or []]
+    rows = data.get("connections") or []
+    refs = [c.get("ref", "?") for c in rows]
     if not refs:
         return "no accounts connected (connect one: setu connect gmail)"
-    return f"{len(refs)} account{'s' * (len(refs) != 1)} connected: {', '.join(refs)}"
+    said = f"{len(refs)} account{'s' * (len(refs) != 1)} connected: {', '.join(refs)}"
+    # a sign-in the site refused (Google's 7-day Testing expiry): Setu's own mark
+    gone = [c for c in rows if c.get("expired")]
+    if gone:
+        said += ("; SIGN-IN EXPIRED, sign in again: " + ", ".join(
+            f"setu connect {c.get('connector')} --as {c.get('account')}" for c in gone))
+    return said
 
 
 def _say_samay(data: dict[str, Any]) -> str:

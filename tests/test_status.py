@@ -285,3 +285,13 @@ def test_yantra_is_told_the_sparsh_up_names_without_turning_it_on(world, capsys)
     (config / "sarathi.toml").write_text('[model]\nprovider = "ollama"\n')
     code, out = run(capsys, "status")
     assert f"would ask ollama for auto:{world / 'bin' / 'sparsh'}" in out
+
+
+def test_a_sign_in_setu_found_expired_is_said_with_how_to_sign_in_again():
+    from sarathi.siblings import _say_setu
+    said = _say_setu({"connections": [
+        {"ref": "gmail:mine", "connector": "gmail", "account": "mine",
+         "expired": {"since": "2026-10-11T12:00:00Z", "why": "HTTP 400"}},
+        {"ref": "homeassistant:home", "connector": "homeassistant", "account": "home"}]})
+    assert said == ("2 accounts connected: gmail:mine, homeassistant:home; SIGN-IN EXPIRED, "
+                    "sign in again: setu connect gmail --as mine")
