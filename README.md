@@ -239,7 +239,8 @@ out again, and nothing is deleted.
 **Smritikosh's own dashboard** (its `ui/`, a Next.js app) is built by
 `sarathi smritikosh` (`npm install`, `next build`, again whenever its
 `ui/` has a newer commit than the build) and started by `sarathi up`
-after Smritikosh, at **http://localhost:3000**, on this computer only.
+after Smritikosh, at **http://localhost:3000/dashboard/memories**, on this computer only (the home page
+links there: the bare address can open blank in a browser).
 On the Podman road it's a user service (`sarathi-smritikosh-ui.service`)
 run with your machine's Node, so no Node goes into the image. The home
 page's **Memory** card links to it. `[smritikosh] dashboard = false` stops
@@ -559,7 +560,7 @@ smritikosh  ~/agent/smritikosh/.venv/bin/smritikosh-mcp  (sarathi.toml)
             a memory store (Yantra keeps its own without it)
 
 memory: smritikosh at http://127.0.0.1:8080 -- postgres ok; degraded; 12 remembered for asha
-  its dashboard: http://localhost:3000/
+  its dashboard: http://localhost:3000/dashboard/memories
 ```
 
 Each line says **where** a piece was found and **which rule** found it.

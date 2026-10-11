@@ -530,7 +530,7 @@ def test_the_dashboard_is_linked_only_when_it_answers_as_smritikosh(world, tmp_p
     config = replace(ON, smritikosh=replace(SET_UP, checkout=str(tmp_path),
                                             dashboard_port=9))     # nothing listens
     dash = smritikosh.dashboard(config)
-    assert dash["up"] is False and dash["url"] == "http://localhost:9/"
+    assert dash["up"] is False and dash["url"] == "http://localhost:9/dashboard/memories"
     assert "`sarathi smritikosh` builds it" in dash["start"]
     assert smritikosh.dashboard(replace(ON, smritikosh=replace(
         SET_UP, checkout=str(tmp_path / "no-ui")))) is None

@@ -1157,6 +1157,10 @@ def dashboard_env(kosh: Smritikosh) -> dict[str, str]:
             "AUTH_TRUST_HOST": "true"}
 
 
+#: The dashboard's own first page: where its root sends a signed-in person.
+DASHBOARD_PAGE = "dashboard/memories"
+
+
 def dashboard(config: Config) -> dict[str, Any] | None:
     """Smritikosh's own dashboard: where it is, whether it answers as
     itself, and what starts it. None without a checkout that has one."""
@@ -1165,9 +1169,11 @@ def dashboard(config: Config) -> dict[str, Any] | None:
         return None
     kosh = config.smritikosh
     port = kosh.dashboard_port
-    url = f"http://localhost:{port}/"
+    base = f"http://localhost:{port}/"
+    # straight to the memories: the bare address can open blank in a browser
+    url = f"{base}{DASHBOARD_PAGE}"
     try:
-        with urllib.request.urlopen(f"{url}login", timeout=2.0) as answer:
+        with urllib.request.urlopen(f"{base}login", timeout=2.0) as answer:
             up = b"Smritikosh" in answer.read(200_000)
     except (OSError, ValueError):
         up = False

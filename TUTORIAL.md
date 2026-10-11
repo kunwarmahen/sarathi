@@ -722,7 +722,8 @@ flights`, then `/memory find aeroplane seating`. It finds the window
 seat, though the two share no word.
 
 **See everything it remembers.** Smritikosh has a page of its own, its
-dashboard, and `sarathi up` starts it: open **http://localhost:3000**,
+dashboard, and `sarathi up` starts it: open **http://localhost:3000/dashboard/memories**
+(the bare `localhost:3000` can open blank),
 or **Open Smritikosh's dashboard** on the home page's Memory card. Sign
 in with your Smritikosh username and password. That's not a key: if you
 set Smritikosh up by hand, it's the password you chose then; if Sarathi
@@ -789,7 +790,7 @@ you're most likely to meet:
 | `SIGN-IN EXPIRED, sign in again: setu connect gmail --as …` | Google expired the sign-in (apps in Testing: every 7 days) | that command; publish your Google app to stop it (Step 2) |
 | `mcp server 'gmail-…' exited unexpectedly (code 2)` | an older Yantra hiding the reason (usually the line above) | `setu list` shows the reason; `sarathi image`, then `sarathi up`, for the newer Yantra |
 | `dashboard  not built: no npm here` | Node.js isn't installed | install Node.js 20 or newer, then `sarathi smritikosh` again |
-| the dashboard signs you in, then shows the login page again | it was opened as `127.0.0.1:3000` | open `http://localhost:3000` instead |
+| the dashboard signs you in, then shows the login page again | it was opened as `127.0.0.1:3000` | open `http://localhost:3000/dashboard/memories` instead |
 | `smritikosh-ui not started: not built yet` | the dashboard wasn't built (or `ui/` changed since) | `sarathi smritikosh`, then `sarathi up` |
 | `memory.via = "smritikosh" but it isn't set up yet` | sarathi.toml was edited by hand | `sarathi smritikosh` |
 | `the cloud road turns memories into numbers with OpenAI, and there is no OPENAI_API_KEY` | a cloud model, and no OpenAI key for Smritikosh's meanings | paste one when asked, or `sarathi smritikosh --local` (Ollama's `nomic-embed-text`) |
