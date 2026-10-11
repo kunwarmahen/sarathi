@@ -743,6 +743,10 @@ they're found and used as they are. `--no-full` leaves them out again.
 **Bring across what it already knew.** The old file isn't emptied or
 moved. On Yantra's page, type `/memory copy local` once.
 
+Schedules you make at this computer use it too: a morning check that
+asks *"what's the weather where I live?"* knows where that is, the same
+as the page.
+
 **Try it.** On Yantra's page: `/memory add Prefers a window seat on
 flights`, then `/memory find aeroplane seating`. It finds the window
 seat, though the two share no word.

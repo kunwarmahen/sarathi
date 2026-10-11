@@ -36,7 +36,8 @@ files:
                   checkout (its .env is there), after its database container,
                   with [memory] via = "smritikosh"; then Yantra gets
                   --mcp-config <its server> and YANTRA_MEMORY, YANTRA_USER and
-                  SMRITIKOSH_API_KEY, and Dvara --memory <its server>, each
+                  SMRITIKOSH_API_KEY, Samay the same for the runs it starts
+                  (in SAMAY_YANTRA, and its env), and Dvara --memory <its server>, each
                   person's key read from Dvara's memory.json (smritikosh.py)
     smritikosh-ui  next start --hostname 127.0.0.1 --port <smritikosh.dashboard_port>,
                   Smritikosh's own dashboard, in its ui/, once built
@@ -87,6 +88,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import signal
 import socket
@@ -157,8 +159,9 @@ def model_env(config: Config, environ: dict[str, str] | None = None) -> dict[str
     if config.context_window:
         env[f"{prefix}_CONTEXT_WINDOW"] = str(config.context_window)
     # the door's two tokens go to the door alone (and the clock its token,
-    # as SAMAY_DVARA_TOKEN), and Smritikosh's key to Yantra alone: never
-    # to every piece that reads secrets.env
+    # as SAMAY_DVARA_TOKEN), and your Smritikosh key only to what runs as
+    # you (Yantra's page, Samay's runs): never to every piece that reads
+    # secrets.env
     from sarathi.smritikosh import SECRETS as MEMORY_SECRETS
 
     secrets = {k: v for k, v in read_secrets().items()
@@ -198,12 +201,21 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
             services.append(dash)
     door = door_service(config, found, env, clock_on, notes)
     meet = door_env(config) if door is not None else {}
+    memory_env: dict[str, str] = {}
+    run_yantra = [yantra.program]
+    if memory is not None:
+        from sarathi import smritikosh
+
+        memory_env = smritikosh.yantra_env()
+        run_yantra += ["--mcp-config", str(memory_files(config)[0])]
     if clock_on:
+        # a schedule made at this computer runs as you, so it remembers as
+        # Yantra's page does: your Smritikosh account, with your key
         services.append(Service(
             "samay", "samay", [samay.program, "serve", "--port", str(config.clock_port)],
             config.clock_port,
-            {**env, "SAMAY_YANTRA": yantra.program, "SAMAY_YANTRA_HOME": str(work_dir()),
-             **meet},
+            {**env, "SAMAY_YANTRA": shlex.join(run_yantra),
+             "SAMAY_YANTRA_HOME": str(work_dir()), **meet, **memory_env},
             says_address="page: "))
     if door is not None:
         services.append(door)
@@ -215,12 +227,7 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         # auto, not on: no phone at the start still means no phone tools
         # until the person says to use one (Yantra's phone panel).
         page_argv += ["--sparsh", f"auto:{found['sparsh'].program}"]
-    memory_env: dict[str, str] = {}
-    if memory is not None:
-        from sarathi import smritikosh
-
-        page_argv += ["--mcp-config", str(memory_files(config)[0])]
-        memory_env = smritikosh.yantra_env()
+    page_argv += run_yantra[1:]
     services.append(Service("yantra", "yantra", page_argv, config.web_port,
                             {**env, **phone_env(config), **memory_env}))
     if config.pages.on:

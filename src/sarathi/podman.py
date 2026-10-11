@@ -138,7 +138,8 @@ this machine's Node: no Node in the image, and it reaches Smritikosh where
 its unit publishes it, 127.0.0.1.
 Yantra's and Dvara's containers start ``smritikosh-mcp`` from the image,
 pointed at ``http://sarathi-smritikosh:8080``; Yantra gets your key in
-its env file, and Dvara reads each person's from its memory.json.
+its env file, Samay too (the runs it starts are yours, and remember as
+the page does), and Dvara reads each person's from its memory.json.
 
 A FIREWALL IS NAMED, NOT OPENED. Publishing a port on the house address
 does nothing for a phone when ufw or firewalld drops it first: the page
@@ -384,8 +385,12 @@ def host_timezone() -> str | None:
 
 def container_env(config: Config) -> dict[str, str]:
     prefix = config.provider.upper()
+    run_yantra = f"{IN_IMAGE}/yantra"
+    if config.remembers_in_smritikosh:
+        # Samay's runs keep memories where Yantra's page does (units)
+        run_yantra += f" --mcp-config {memory_files(config)[0]}"
     env = {"HOME": str(Path.home()), "YANTRA_PROVIDER": config.provider,
-           "SAMAY_YANTRA": f"{IN_IMAGE}/yantra", "SAMAY_YANTRA_HOME": str(work_dir())}
+           "SAMAY_YANTRA": run_yantra, "SAMAY_YANTRA_HOME": str(work_dir())}
     zone = host_timezone()
     if zone:
         env["TZ"] = zone          # the browser's clock, the logs', the schedules'
@@ -452,7 +457,9 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
         from sarathi import smritikosh
 
         if smritikosh.KEY in held:
+            # yours: Yantra's page, and the runs Samay starts for you
             out[UNITS["yantra"]][smritikosh.KEY] = held[smritikosh.KEY]
+            out[UNITS["samay"]][smritikosh.KEY] = held[smritikosh.KEY]
         checkout = config.smritikosh.path()
         assert checkout is not None
         out[UNITS["smritikosh"]] = smritikosh.container_dotenv(
@@ -614,11 +621,22 @@ def units(config: Config) -> dict[str, str]:
     page_exec = (f"{IN_IMAGE}/yantra --web --host 0.0.0.0 --port {PAGE_PORT} "
                  f"--setu {IN_IMAGE}/setu ")
     page_unit = ""
+    memory_env, memory_dirs, memory_after = "", [], ""
+    if config.remembers_in_smritikosh:
+        from sarathi import smritikosh
+
+        memory_env = "".join(f"Environment={k}={v}\n" for k, v in
+                             smritikosh.yantra_env().items() if k != smritikosh.KEY)
+        memory_dirs = [smritikosh.mcp_dir()]
+        memory_after = (f"Wants={UNITS['smritikosh']}.service\n"
+                        f"After={UNITS['smritikosh']}.service\n")
     if config.clock_on:
+        # a schedule made at this computer runs as you, so it remembers as
+        # Yantra's page does (SAMAY_YANTRA, container_env)
         out[f"{UNITS['samay']}.container"] = _unit(
             "Sarathi: Samay", UNITS["samay"],
             f"{IN_IMAGE}/samay serve --host 0.0.0.0 --port {CLOCK_PORT}",
-            f"127.0.0.1:{config.clock_port}:{CLOCK_PORT}", config,
+            f"127.0.0.1:{config.clock_port}:{CLOCK_PORT}", config, memory_after,
             # where a browser here reaches it, so Samay prints and reports
             # that, not the container's own bind (an older image ignores it)
             extra_container=f"Environment=SAMAY_PUBLIC_URL=http://127.0.0.1:"
@@ -627,7 +645,8 @@ def units(config: Config) -> dict[str, str]:
                                f"{DOOR_PORT}\n"
                                # a schedule made on Yantra's page is told to you
                                f"Environment=SAMAY_DVARA_ACTOR={config.door.owner}\n"
-                               if config.door else ""))
+                               if config.door else "") + memory_env,
+            more_volumes=memory_dirs or None)
         page_exec += f"--samay {IN_IMAGE}/samay"
         page_unit = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"
     else:
@@ -667,17 +686,10 @@ def units(config: Config) -> dict[str, str]:
         # auto: no phone answering at the start means no phone tools until
         # you press "use this phone" -- as on the process road
         page_exec += f" --sparsh auto:{IN_IMAGE}/sparsh"
-    memory_env, memory_dirs = "", []
     if config.remembers_in_smritikosh:
         yantra_file, _ = memory_files(config)
         page_exec += f" --mcp-config {yantra_file}"
-        from sarathi import smritikosh
-
-        memory_env = "".join(f"Environment={k}={v}\n" for k, v in
-                             smritikosh.yantra_env().items() if k != smritikosh.KEY)
-        memory_dirs = [smritikosh.mcp_dir()]
-        page_unit += (f"Wants={UNITS['smritikosh']}.service\n"
-                      f"After={UNITS['smritikosh']}.service\n")
+        page_unit += memory_after
         out.update(memory_units(config))
     out[f"{UNITS['yantra']}.container"] = _unit(
         "Sarathi: Yantra's page", UNITS["yantra"], page_exec,

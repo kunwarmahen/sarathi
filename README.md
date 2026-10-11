@@ -214,7 +214,9 @@ started as it is. A key in secrets.env or in Yantra's `.env` is checked
 and kept, so no new account is made.
 
 **Each person's memories are their own.** A Smritikosh key opens only
-its own account's memories. Yours reaches Yantra alone. Dvara starts the
+its own account's memories. Yours reaches only what runs as you:
+Yantra's page, and Samay for a schedule made at this computer, so a
+morning check knows what the page knows. Dvara starts the
 server for each person's turn with that person's key, so one person's
 facts can't reach another's agent. A person added to the actors file
 later gets an account the next time you run `sarathi smritikosh`. Dvara

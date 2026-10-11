@@ -21,6 +21,7 @@ is a recorder.
 from __future__ import annotations
 
 import json
+import shlex
 import stat
 import subprocess
 from dataclasses import replace
@@ -245,12 +246,28 @@ def test_on_the_process_road_smritikosh_starts_first_and_yantra_is_pointed_at_it
     assert "sk-mine" not in config_file.read_text()
 
 
-def test_your_key_reaches_yantra_and_no_other_piece(world, kosh):
+def test_your_key_reaches_what_runs_as_you_and_no_other_piece(world, kosh):
     planned, _ = services.plan(kosh, found(world))
     for service in planned:
-        if service.name != "yantra":
+        if service.name not in ("yantra", "samay"):
             assert smritikosh.KEY not in service.env, service.name
     assert "OPENAI_API_KEY" in services.model_env(kosh)     # an ordinary key still goes
+
+
+def test_a_run_samay_starts_remembers_where_yantras_page_does(world, kosh):
+    planned, _ = services.plan(kosh, found(world))
+    by = {s.name: s for s in planned}
+    page = by["yantra"].argv
+    server = page[page.index("--mcp-config") + 1]
+    run = shlex.split(by["samay"].env["SAMAY_YANTRA"])
+    assert run[1:] == ["--mcp-config", server]
+    assert by["samay"].env["YANTRA_MEMORY"] == "smritikosh"
+    assert by["samay"].env["YANTRA_USER"] == by["yantra"].env["YANTRA_USER"]
+    assert by["samay"].env[smritikosh.KEY] == "sk-mine"
+    local, _ = services.plan(replace(kosh, memory="local"), found(world))
+    samay = next(s for s in local if s.name == "samay")
+    assert "--mcp-config" not in samay.env["SAMAY_YANTRA"]
+    assert "YANTRA_MEMORY" not in samay.env and smritikosh.KEY not in samay.env
 
 
 def test_dvara_reads_each_persons_key_from_its_own_file(world, kosh, tmp_path):
@@ -304,7 +321,18 @@ def test_on_podman_its_settings_name_the_database_container_and_the_host(host, k
     assert server["POSTGRES_URL"].endswith("@sarathi-smritikosh-db:5432/smritikosh")
     assert server["EMBEDDING_BASE_URL"] == "http://host.containers.internal:11434"
     assert held["sarathi-yantra"][smritikosh.KEY] == "sk-mine"
-    assert smritikosh.KEY not in held["sarathi-samay"]
+    # Samay's runs are yours too; Dvara's are each person's own (memory.json)
+    assert held["sarathi-samay"][smritikosh.KEY] == "sk-mine"
+    assert smritikosh.KEY not in held.get("sarathi-dvara", {})
+
+
+def test_on_podman_samays_runs_start_with_your_memory(host, kosh):
+    units = podman.units(replace(kosh, road="podman"))
+    samay = units["sarathi-samay.container"]
+    assert "After=sarathi-smritikosh.service" in samay
+    assert "Environment=YANTRA_MEMORY=smritikosh" in samay
+    assert "--mcp-config" in samay and "smritikosh-yantra-podman.json" in samay
+    assert "sk-mine" not in samay
 
 
 def test_off_on_podman_writes_no_smritikosh_unit(host, kosh):

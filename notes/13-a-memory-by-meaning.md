@@ -73,7 +73,8 @@ separation is the store's, not Sarathi's promise:
 
 * **you**: an account named as Yantra knows you (`$YANTRA_USER`, else
   your login), and its key in secrets.env as `SMRITIKOSH_API_KEY`. `up`
-  hands it to Yantra alone; Samay and the pages never see it.
+  hands it to what runs as you: Yantra's page, and Samay for the runs
+  it starts (below). Dvara and the pages never see it.
 * **each person in Dvara's actors file**: an account of their own
   (`dvara-<id>`) and a key of their own, in Dvara's `memory.json`,
   readable by you alone. Dvara starts the memory server for each turn
@@ -272,6 +273,43 @@ makes 21 pages. Started as Sarathi starts it, on a spare port, it served
 *Smritikosh — Memory Dashboard*, `/` went to `/dashboard/memories`, and a
 wrong password came back through the API as `CredentialsSignin`.
 
+## A schedule remembers too
+
+A schedule made at this computer runs as you: Samay starts Yantra
+itself (`SAMAY_YANTRA`), with Samay's own environment. Sarathi gave
+Yantra's page the Smritikosh server and your key and gave Samay
+neither, so a morning check that should know you live in Pune read
+Yantra's built-in file instead, a different set of facts.
+
+**WHAT RUNS AS YOU REMEMBERS AS YOU.** With `[memory] via =
+"smritikosh"`, `up` now hands Samay what it hands the page:
+`SAMAY_YANTRA` carries `--mcp-config <the same server file>`, and
+Samay's environment gets `YANTRA_MEMORY`, `YANTRA_USER` and your key,
+which the runs it starts inherit. On the Podman road, Samay's unit gets
+the same lines, its env file gets the key, the server's folder is
+mounted, and it starts after Smritikosh. A schedule that goes through
+Dvara is untouched: Dvara runs it as its person, with that person's key
+(dvara's note 37), never yours.
+
+The key now reaches two pieces, not one. Both run your own turns, and
+a schedule's run is as much yours as a message on the page.
+
+**Receipt.** A scheduled run started exactly as Samay starts it
+(`DirectRunner`, `qwen3.8:latest` through Ollama), against a real
+Smritikosh with the environment `up` builds, asked *"List up to three
+things you remember about me"*, answered with the two facts that
+account holds (here with the person's own details taken out):
+
+```
+- Your name is <name>.
+- You use Gmail (<address>) as your "mine" account.
+```
+
+The same run without it (Samay as before) answered with three other
+facts, about work, hardware and a writing habit: the ones in Yantra's
+built-in file. Two stores, two different sets of facts, and the first
+run read the store the page reads.
+
 ## What is not here yet
 
 * **The Podman road, run.** The units are written and tested, and
@@ -279,7 +317,7 @@ wrong password came back through the API as `CredentialsSignin`.
   programs. On this machine it needs `sarathi smritikosh`, then
   `sarathi image`, then `sarathi up`.
 * ~~**Neo4j, MongoDB, Redis.**~~ `--full`, below.
-* **Samay's runs.** A scheduled run is Yantra started by Samay, and it
-  still remembers in Yantra's own file.
+* ~~**Samay's runs.**~~ A schedule made at this computer remembers as
+  your page does (above).
 * **A person removed from the actors file** keeps their account and
   memories in Smritikosh; nothing is deleted on Sarathi's say-so.
