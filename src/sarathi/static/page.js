@@ -56,6 +56,48 @@ function card(p) {
     h("span.ref", {}, p.url));
 }
 
+// Where your memories are kept: Yantra's own file, or Smritikosh. Its one
+// button is `sarathi smritikosh` (or --off) once Smritikosh is set up.
+const memory = { busy: false, said: "" };
+
+function memoryCard(m) {
+  const kosh = m.via === "smritikosh";
+  const badge = kosh ? (m.up ? ["up", "Smritikosh"] : ["down", "Smritikosh, not answering"])
+                     : ["up", "built-in file"];
+  const count = h("div.meta", {}, "The list itself is on Yantra's page, under the bookmark.");
+  let action;
+  if (kosh || m.set_up) {
+    const to = kosh ? "local" : "smritikosh";
+    action = h("button.open", { type: "button", disabled: memory.busy },
+               kosh ? "Back to the built-in file" : "Switch to Smritikosh");
+    action.addEventListener("click", () => switchMemory(to));
+  } else {
+    action = [h("div.meta", {}, "Set up Smritikosh, which finds a memory by meaning, " +
+                "once, in a terminal:"), h("div.cmd", {}, "sarathi smritikosh")];
+  }
+  return h("article.card", {},
+    h("div.card-head", {}, h("h3", {}, "Memory"),
+      h("span.badge." + badge[0], {}, badge[1])),
+    h("div.who", {}, "What your agents remember about you, and where it is kept."),
+    m.said ? h("div.said", {}, m.said) : null,
+    count, action,
+    memory.said ? h("div.meta", { role: "status" }, memory.said) : null);
+}
+
+async function switchMemory(via) {
+  memory.busy = true;
+  memory.said = "Switching…";
+  refresh();
+  try {
+    const done = await api("/api/memory", { via });
+    memory.said = done.said;
+  } catch (err) {
+    memory.said = err.message;
+  }
+  memory.busy = false;
+  refresh();
+}
+
 async function refresh() {
   const gate = document.getElementById("gate");
   if (!token) { gate.hidden = false; return; }
@@ -78,7 +120,9 @@ async function refresh() {
   const up = body.pieces.filter((p) => p.up).length;
   document.getElementById("facts").replaceChildren(
     h("span", {}, `${up} of ${body.pieces.length} running`));
-  document.getElementById("pieces").replaceChildren(...body.pieces.map(card));
+  const cards = body.pieces.map(card);
+  if (body.memory) cards.push(memoryCard(body.memory));
+  document.getElementById("pieces").replaceChildren(...cards);
   if (body.chat && !chat.on) startChat();
   document.getElementById("updated").textContent =
     `Updated ${new Date().toLocaleTimeString()}`;

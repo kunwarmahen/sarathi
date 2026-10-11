@@ -266,7 +266,7 @@ def test_a_newer_chrome_here_rebuilds_the_image_s_browser(host, monkeypatch):
     arg, step = text.index("ARG HOST_BROWSER"), text.index("google-chrome-stable")
     assert arg < step and "${HOST_BROWSER" in text[arg:step]
     built = []
-    monkeypatch.setattr(podman, "stage", lambda into, env=None: [])
+    monkeypatch.setattr(podman, "stage", lambda into, env=None, config=None: [])
     monkeypatch.setattr(podman.shutil, "which", lambda name: name)
     monkeypatch.setattr(podman, "browser_version", lambda argv: (155, 0, 8059, 39))
     monkeypatch.setattr(podman.subprocess, "run",
@@ -281,7 +281,7 @@ def test_the_image_is_built_for_this_machine_whatever_the_base_tags_hold(host, m
     the next plain `sarathi image` built arm64 and the door took three
     minutes to start under qemu."""
     built = []
-    monkeypatch.setattr(podman, "stage", lambda into, env=None: [])
+    monkeypatch.setattr(podman, "stage", lambda into, env=None, config=None: [])
     monkeypatch.setattr(podman.shutil, "which", lambda name: None)
     monkeypatch.setattr(podman.os, "uname", lambda: os.uname_result(
         ("Linux", "box", "7.0", "#1", "x86_64")))

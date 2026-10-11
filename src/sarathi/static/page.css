@@ -162,6 +162,8 @@ body.embedded section { margin-top: 18px; }
   text-decoration: none;
 }
 .open:hover { filter: brightness(1.08); }
+button.open { border: 0; font: inherit; font-weight: 600; cursor: pointer; }
+button.open:disabled { opacity: .55; cursor: progress; }
 .said { color: var(--ink-3); font-size: 13px; overflow-wrap: anywhere; }
 
 /* -- the chat (Dvara's web channel) ----------------------------------------- */

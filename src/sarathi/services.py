@@ -31,6 +31,12 @@ files:
                   DVARA_TOKEN and DVARA_URL: the door's own token and
                   address, so your answers reach it; Samay, for schedules
     home    sarathi home --port <pages.home_port>
+    smritikosh  uvicorn smritikosh.api.main:app --port <smritikosh.port>, in its
+                  checkout (its .env is there), after its database container,
+                  with [memory] via = "smritikosh"; then Yantra gets
+                  --mcp-config <its server> and YANTRA_MEMORY, YANTRA_USER and
+                  SMRITIKOSH_API_KEY, and Dvara --memory <its server>, each
+                  person's key read from Dvara's memory.json (smritikosh.py)
 
 THE DOOR AND THE CLOCK ARE TOLD ABOUT EACH OTHER. A schedule made in a
 chat runs through the door as its person, and Samay checks every such
@@ -48,6 +54,11 @@ Both get the same model settings (``YANTRA_PROVIDER``, ``<PROVIDER>_MODEL``,
 ``<PROVIDER>_CONTEXT_WINDOW`` and so on, plus secrets.env), so a scheduled
 run is answered by the same model as the page. A real environment variable outranks secrets.env, the
 same rule Yantra applies to its own ``.env``.
+
+A PIECE STARTED WITH OTHER WORDS STARTS AGAIN. A piece still running
+from an earlier ``up`` is left alone -- unless what ``up`` would start it
+with now differs (memory switched on, say): then it is stopped and
+started with the new, as the podman road restarts a rewritten unit.
 
 ONE OF EACH, AND NEVER SOMEONE ELSE'S. Before starting anything, ``up``
 asks whether it is already there. A piece Sarathi started and that is
@@ -120,6 +131,11 @@ class Service:
     #: Samay's carries the page's token after '#', without which the page
     #: cannot be used. None: the plain address is the whole answer.
     says_address: str | None = None
+    #: Where it starts (its own checkout, for a program that reads a .env
+    #: there); None: Sarathi's work folder.
+    cwd: Path | None = None
+    #: Run just before it starts: a line to print, or a SetupError.
+    prepare: Any = None
 
     @property
     def url(self) -> str:
@@ -138,9 +154,12 @@ def model_env(config: Config, environ: dict[str, str] | None = None) -> dict[str
     if config.context_window:
         env[f"{prefix}_CONTEXT_WINDOW"] = str(config.context_window)
     # the door's two tokens go to the door alone (and the clock its token,
-    # as SAMAY_DVARA_TOKEN): never to every piece that reads secrets.env
+    # as SAMAY_DVARA_TOKEN), and Smritikosh's key to Yantra alone: never
+    # to every piece that reads secrets.env
+    from sarathi.smritikosh import SECRETS as MEMORY_SECRETS
+
     secrets = {k: v for k, v in read_secrets().items()
-               if k not in environ and k not in (DOOR_TOKEN, BOT_TOKEN)}
+               if k not in environ and k not in (DOOR_TOKEN, BOT_TOKEN, *MEMORY_SECRETS)}
     env.update(secrets)
     key = KEY_NAMES.get(config.provider)
     if key and key not in environ and key not in env:
@@ -168,6 +187,9 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
     # once, at start-up, and tells the model what it heard for the whole
     # session -- so a page started first would say "not running" forever.
     services = []
+    memory = memory_service(config, notes)
+    if memory is not None:
+        services.append(memory)
     door = door_service(config, found, env, clock_on, notes)
     meet = door_env(config) if door is not None else {}
     if clock_on:
@@ -187,11 +209,56 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         # auto, not on: no phone at the start still means no phone tools
         # until the person says to use one (Yantra's phone panel).
         page_argv += ["--sparsh", f"auto:{found['sparsh'].program}"]
+    memory_env: dict[str, str] = {}
+    if memory is not None:
+        from sarathi import smritikosh
+
+        page_argv += ["--mcp-config", str(memory_files(config)[0])]
+        memory_env = smritikosh.yantra_env()
     services.append(Service("yantra", "yantra", page_argv, config.web_port,
-                            {**env, **phone_env(config)}))
+                            {**env, **phone_env(config), **memory_env}))
     if config.pages.on:
         services += page_services(config, found, door is not None, notes)
     return services, notes
+
+
+def memory_files(config: Config) -> tuple[Path, Path]:
+    """The Smritikosh server, as Yantra and Dvara start it on this road."""
+    from sarathi import smritikosh
+
+    checkout = config.smritikosh.path()
+    assert checkout is not None
+    return smritikosh.mcp_files(config, command=str(smritikosh.program(checkout)),
+                                url=config.smritikosh.url, suffix="")
+
+
+def memory_service(config: Config, notes: list[str]) -> Service | None:
+    """Smritikosh's server, with ``[memory] via = "smritikosh"``: started
+    in its checkout, after its database container."""
+    if not config.remembers_in_smritikosh:
+        return None
+    from sarathi import smritikosh
+
+    kosh = config.smritikosh
+    checkout = kosh.path()
+    assert checkout is not None
+    uvicorn = smritikosh.program(checkout, "uvicorn")
+    if not uvicorn.is_file():
+        notes.append(f"{'smritikosh':<{WIDTH}} not started: no server program in "
+                     f"{checkout} (run `sarathi smritikosh`)")
+        return None
+
+    def database() -> str | None:
+        db = smritikosh.Database.parse(smritikosh.read_dotenv(checkout / ".env").get(
+            "POSTGRES_URL", "postgresql://smritikosh:smritikosh@localhost:5432/smritikosh"))
+        said: list[str] = []
+        smritikosh.start_database(kosh, db, said.append)
+        return said[0] if said else None
+
+    return Service("smritikosh", "smritikosh",
+                   [str(uvicorn), "smritikosh.api.main:app", "--host", HOST,
+                    "--port", str(kosh.port)],
+                   kosh.port, {"BOOTSTRAP_ADMIN": "0"}, cwd=checkout, prepare=database)
 
 
 #: Width of a piece's name in the lines `up`, `down` and `status` print.
@@ -203,7 +270,8 @@ OLD_NAMES = {"clock": "samay", "door": "dvara", "page": "yantra", "owner": "dvar
 #: The sarathi.toml key that moves each piece's port, for "change it" lines.
 PORT_SETTINGS = {"yantra": "yantra.port", "samay": "samay.port", "dvara": "dvara.port",
                  "setu": "pages.setu_port", "dvara-page": "pages.dvara_port",
-                 "sarathi": "pages.sarathi_port"}
+                 "sarathi": "pages.sarathi_port", "smritikosh": "smritikosh.port",
+                 "smritikosh-db": "smritikosh.db_port"}
 
 
 def sarathi_program() -> str:
@@ -305,6 +373,9 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     argv += ["--provider", config.provider] + (["--model", config.model] if config.model
                                                else [])
     argv += ["--samay", samay] if clock_on and samay else ["--samay", "off"]
+    if config.remembers_in_smritikosh and config.smritikosh.path() is not None:
+        # each person's turns, with each person's own key (memory.json)
+        argv += ["--memory", str(memory_files(config)[1])]
     sparsh = found["sparsh"].program if "sparsh" in found else None
     if config.phone is not None:
         if sparsh is not None:
@@ -423,8 +494,8 @@ def start(service: Service, owner: bool = False) -> str:
         log.write(f"\n--- sarathi up {datetime.now(UTC).isoformat(timespec='seconds')}: "
                   f"{' '.join(service.argv)}\n".encode())
         log.flush()
-        proc = subprocess.Popen(service.argv, cwd=work_dir(), env={**os.environ, **service.env,
-                                                       "PYTHONUNBUFFERED": "1"},
+        proc = subprocess.Popen(service.argv, cwd=service.cwd or work_dir(),
+                                env={**os.environ, **service.env, "PYTHONUNBUFFERED": "1"},
                                 stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
                                 start_new_session=True)
     _started.append(proc)
@@ -490,6 +561,11 @@ def up(config: Config, found: dict[str, Found]) -> tuple[list[str], bool]:
     owner = any(service.name == "dvara-page" for service in services)
     for service in services:
         record = ours.get(service.name)
+        if record and alive(record["pid"]) and record.get("argv") != service.argv:
+            # started with other words (memory switched, say): start again
+            stop(service.name, record)
+            lines.append(f"{service.name:<{WIDTH}} restarting with the new settings")
+            record = None
         if record and alive(record["pid"]):
             address = record.get("address") or record["url"]
             lines.append(f"{service.name:<{WIDTH}} already running "
@@ -508,6 +584,17 @@ def up(config: Config, found: dict[str, Found]) -> tuple[list[str], bool]:
             lines.append(f"{service.name:<{WIDTH}} not started: something else is listening on "
                          f"port {service.port} (change {setting} in sarathi.toml)")
             continue
+        if service.prepare is not None:
+            from sarathi.smritikosh import SetupError
+
+            try:
+                ready = service.prepare()
+            except SetupError as exc:
+                ok = False
+                lines.append(f"{service.name:<{WIDTH}} not started: {exc}")
+                continue
+            if ready:
+                lines.append(ready)
         said = start(service, owner)
         ok = ok and said.startswith(f"{service.name:<{WIDTH}} up ")
         lines.append(said)

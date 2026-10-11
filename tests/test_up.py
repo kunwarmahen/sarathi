@@ -86,6 +86,18 @@ def test_a_second_up_starts_nothing_new(stage, capsys):
         in out
 
 
+def test_a_piece_whose_settings_changed_is_started_again_with_them(stage, capsys):
+    run(capsys, "up")
+    before = services.records()["yantra"]["pid"]
+    toml = stage["world"] / "config" / "sarathi.toml"
+    toml.write_text(toml.read_text().replace("[samay]\n", "[samay]\non = false\n"))
+    code, out = run(capsys, "up")
+    assert code == 0, out
+    assert "yantra     restarting with the new settings" in out
+    assert services.records()["yantra"]["pid"] != before
+    assert "--no-samay" in seen(stage, "yantra")["argv"]
+
+
 def test_down_stops_what_up_started_and_status_says_so(stage, capsys):
     run(capsys, "up")
     pids = [r["pid"] for r in services.records().values()]

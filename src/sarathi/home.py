@@ -10,14 +10,24 @@ its own port, and the token-protected ones (Samay, Setu, Dvara) want the
 address their program printed, token and all. Four addresses and three
 keys is a lot to keep. ``sarathi home`` is one bookmark:
 
-    GET /api/pieces     each page: what it is for, up or down, its link
+    GET /api/pieces     each page: what it is for, up or down, its link;
+                        and where your memories are kept
+    POST /api/memory    {"via": "local"|"smritikosh"}: the one switch here
 
 LINKING, AND A CHAT THAT ONLY PASSES THROUGH. Sarathi holds no logic of
 its own, and this page doesn't change that. Up or down is whether the
 page's port answers; the line under it is the program's own ``status``
 (the same one ``sarathi status`` prints); and **Open** is that program's
-page. Nothing on it starts, stops or changes anything. A page that isn't
-running says the command that starts it.
+page. A page that isn't running says the command that starts it.
+
+ONE SWITCH: WHERE YOUR MEMORIES ARE KEPT. The memory card says which store
+Yantra uses -- its own file, or Smritikosh -- and, for Smritikosh, whether
+it answers and how many memories are yours. Its button is the same as
+``sarathi smritikosh`` / ``--off`` once Smritikosh is set up: it writes
+``[memory] via`` and runs ``sarathi up``, which starts Yantra (and Dvara)
+again with it. Setting Smritikosh up the first time stays in a terminal:
+it may need a password typed, and it can take a minute. Nothing else on
+the page starts, stops or changes anything.
 
 With Dvara on, the page also has a chat: Dvara's web channel (its
 ``web.py``), as you, the owner. Every word goes to Dvara and comes back
@@ -59,20 +69,21 @@ import hmac
 import json
 import os
 import secrets
+import subprocess
 import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from sarathi.config import DOOR_TOKEN, Config, read_secrets, state_dir
+from sarathi.config import DOOR_TOKEN, Config, read_secrets, render, settings_path, state_dir
 from sarathi.services import HOST, answers
 from sarathi.siblings import SIBLINGS, locate
 
@@ -185,17 +196,75 @@ def home_token() -> str:
     return token
 
 
+def memory_status(config: Config) -> dict[str, Any]:
+    """The memory card: which store, and for Smritikosh how it is doing."""
+    from sarathi import smritikosh
+
+    seen = smritikosh.health(config) if config.remembers_in_smritikosh else {}
+    return {"via": config.memory, "set_up": config.smritikosh.checkout is not None,
+            "up": seen.get("up"), "memories": seen.get("memories"),
+            "said": smritikosh.health_line(config, seen or None)}
+
+
+def run_up() -> None:
+    """``sarathi up``, behind the answer: it outlives this request, and
+    this page, if it is ever the one restarted."""
+    from sarathi.services import sarathi_program
+
+    log = state_dir() / "logs" / "memory-switch.log"
+    log.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with open(log, "ab") as out:
+        subprocess.Popen([sarathi_program(), "up"], stdin=subprocess.DEVNULL, stdout=out,
+                         stderr=subprocess.STDOUT, start_new_session=True)
+
+
 class Home:
     """What ``/api/pieces`` answers, apart from HTTP."""
 
     def __init__(self, config: Config, said: Callable[[], dict[str, str]],
-                 *, up: Callable[[int], bool] = answers, every: float = STATUS_EVERY) -> None:
+                 *, up: Callable[[int], bool] = answers, every: float = STATUS_EVERY,
+                 memory: Callable[[Config], dict[str, Any]] = memory_status,
+                 restart: Callable[[], None] = run_up) -> None:
         self.config = config
         self._said = said
         self._up = up
         self._every = every
         self._cache: tuple[float, dict[str, str]] | None = None
+        self._memory = memory
+        self._memory_cache: tuple[float, dict[str, Any]] | None = None
+        self._restart = restart
         self._lock = threading.Lock()
+
+    def memory(self) -> dict[str, Any]:
+        with self._lock:
+            now = time.monotonic()
+            if self._memory_cache is None or now - self._memory_cache[0] > self._every:
+                self._memory_cache = (now, self._memory(self.config))
+            return self._memory_cache[1]
+
+    def switch(self, via: str) -> tuple[int, str]:
+        """(status, words): ``[memory] via`` written, and ``sarathi up`` run."""
+        from sarathi.config import MEMORY_ROADS, ConfigError, load
+
+        if via not in MEMORY_ROADS:
+            return 400, f"via is one of {', '.join(MEMORY_ROADS)}"
+        try:
+            config = load()          # as it is on disk now, not as it was at start
+        except ConfigError as exc:
+            return 409, str(exc)
+        if via == "smritikosh" and config.smritikosh.checkout is None:
+            return 409, ("Smritikosh isn't set up yet: run `sarathi smritikosh` in a "
+                         "terminal once; this switch works after that")
+        if via == config.memory:
+            return 200, f"already {via}"
+        config = replace(config, memory=via)
+        settings_path().write_text(render(config))
+        with self._lock:
+            self.config, self._memory_cache = config, None
+        self._restart()
+        where = "Smritikosh" if via == "smritikosh" else "Yantra's own file"
+        return 200, (f"Switching to {where}: Yantra and Dvara start again with it, "
+                     "in about a minute. Nothing is deleted.")
 
     def said(self) -> dict[str, str]:
         """Each program's one line from its own status, asked at most every
@@ -393,6 +462,7 @@ def _handler(server: HomeServer):
                 return None
             try:
                 return self._json(200, {"pieces": server.home.pieces(),
+                                        "memory": server.home.memory(),
                                         "chat": server.chat is not None})
             except Exception as exc:     # a bug is a 500 that says what, not a hang
                 return self._json(500, {"detail": f"{type(exc).__name__}: {exc}"})
@@ -400,10 +470,21 @@ def _handler(server: HomeServer):
         def do_POST(self) -> None:
             url = urlparse(self.path)
             parts = url.path.strip("/").split("/")
+            if parts == ["api", "memory"]:
+                if not self._keyed():
+                    return None
+                try:
+                    size = int(self.headers.get("Content-Length") or 0)
+                    body = json.loads(self.rfile.read(min(size, MAX_BODY)) or b"{}")
+                except ValueError:
+                    return self._json(400, {"detail": "the body must be JSON"})
+                via = body.get("via") if isinstance(body, dict) else None
+                code, words = server.home.switch(str(via))
+                return self._json(code, {"detail" if code >= 400 else "said": words})
             if parts[:2] != ["api", "chat"] or len(parts) not in (2, 4) or \
                     (len(parts) == 4 and parts[2] not in ("asks", "holds")):
-                return self._json(405, {"detail": "this page only links, and passes "
-                                                  "your chat to Dvara"})
+                return self._json(405, {"detail": "this page only links, passes your "
+                                                  "chat to Dvara, and switches memory"})
             if not self._keyed():
                 return None
             try:

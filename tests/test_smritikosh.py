@@ -1,0 +1,353 @@
+"""`sarathi smritikosh`: memories found by meaning, set up once, switched freely.
+
+The biases these tests encode:
+
+* THE BUILT-IN FILE UNLESS YOU SAID OTHERWISE. A new sarathi.toml says
+  ``local``; Smritikosh is used only after it is set up, and ``--off``
+  goes back with nothing deleted.
+* WHAT IS THERE IS USED, NEVER REPLACED. An existing ``.env`` keeps its
+  embedding size (the tables were built for it); a key you already have
+  is checked and kept, and one that doesn't open your memories is not
+  used.
+* ONE PERSON'S KEY, ONE PERSON'S MEMORIES. Your key reaches Yantra
+  alone; Dvara's people each get an account and key of their own, and
+  you are you there too; no key is ever written into a file that can be
+  pasted (the MCP configs carry only ``${...}``).
+
+Smritikosh's API is a stand-in that remembers accounts and keys; podman
+is a recorder.
+"""
+
+from __future__ import annotations
+
+import json
+import stat
+import subprocess
+from dataclasses import replace
+from pathlib import Path
+
+import pytest
+
+from sarathi import config as settings_mod
+from sarathi import podman, services, smritikosh
+from sarathi.config import Config, ConfigError, Door, Pages, Smritikosh, parse, render
+from sarathi.home import Home
+
+SET_UP = Smritikosh(checkout="/opt/kosh", volume="pgdata")
+ON = Config("ollama", "gemma4:12b", pages=Pages(on=False), memory="smritikosh",
+            smritikosh=SET_UP)
+
+
+# ---- the settings -----------------------------------------------------------------
+
+
+def test_a_new_settings_file_remembers_in_the_built_in_file():
+    fresh = parse(render(Config("ollama")))
+    assert fresh.memory == "local" and not fresh.remembers_in_smritikosh
+    assert 'via = "local"' in render(Config("ollama"))
+
+
+def test_smritikosh_set_up_reads_back_as_written():
+    assert parse(render(ON)) == ON
+
+
+def test_switching_to_smritikosh_before_it_is_set_up_says_what_to_run():
+    with pytest.raises(ConfigError, match="run `sarathi smritikosh`"):
+        parse('[model]\nprovider = "ollama"\n[memory]\nvia = "smritikosh"\n')
+    with pytest.raises(ConfigError, match="memory.via is one of local, smritikosh"):
+        parse('[model]\nprovider = "ollama"\n[memory]\nvia = "elsewhere"\n')
+
+
+def test_off_goes_back_to_the_built_in_file_and_keeps_the_set_up(world):
+    path = settings_mod.settings_path()
+    path.parent.mkdir(parents=True)
+    path.write_text(render(ON))
+    args = type("A", (), {"off": True, "local": False})()
+    assert smritikosh.run_command(args, ON) == 0
+    back = settings_mod.load()
+    assert back.memory == "local" and back.smritikosh == SET_UP
+
+
+# ---- its .env ---------------------------------------------------------------------
+
+
+def test_a_value_replaces_its_commented_example_and_notes_are_not_values(tmp_path):
+    text = "# EMBEDDING_DIMENSIONS=1536   # must match\nLLM_PROVIDER=claude\n"
+    filled = smritikosh.fill_dotenv(text, {"EMBEDDING_DIMENSIONS": "768", "JWT_SECRET": "s"})
+    assert filled.splitlines()[0] == "EMBEDDING_DIMENSIONS=768"
+    assert filled.rstrip().endswith("JWT_SECRET=s")
+    (tmp_path / ".env").write_text("EMBEDDING_MODEL=nomic-embed-text    # ollama\n"
+                                   'POSTGRES_URL="postgresql+asyncpg://u:p@h:5433/d"\n')
+    read = smritikosh.read_dotenv(tmp_path / ".env")
+    assert read["EMBEDDING_MODEL"] == "nomic-embed-text"
+    assert smritikosh.Database.parse(read["POSTGRES_URL"]).port == 5433
+
+
+def test_an_existing_secret_is_never_replaced_even_a_short_one(world, tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("JWT_SECRET=short-but-theirs\nPOSTGRES_URL=postgresql+asyncpg://"
+                   "smritikosh:pw@localhost:5432/smritikosh\n")
+    before = env.read_text()
+    smritikosh.settle_dotenv(Config("ollama"), tmp_path, print, pulled=[],
+                             cloud_key=lambda: None)
+    assert env.read_text() == before
+
+
+def test_an_existing_env_keeps_its_size_and_gains_only_a_secret(world, tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("EMBEDDING_PROVIDER=openai\nEMBEDDING_DIMENSIONS=1536\n"
+                   "POSTGRES_URL=postgresql+asyncpg://smritikosh:pw@localhost:5432/smritikosh\n")
+    said: list[str] = []
+    db = smritikosh.settle_dotenv(Config("ollama"), tmp_path, said.append, pulled=[],
+                                  cloud_key=lambda: None)
+    after = smritikosh.read_dotenv(env)
+    assert after["EMBEDDING_DIMENSIONS"] == "1536" and len(after["JWT_SECRET"]) >= 32
+    assert db.password == "pw" and "kept" in said[0]
+
+
+def test_a_new_env_on_the_local_road_is_built_for_768_and_says_so(world, tmp_path):
+    said: list[str] = []
+    smritikosh.settle_dotenv(Config("ollama"), tmp_path, said.append,
+                             pulled=["qwen3.8:latest"], cloud_key=lambda: None)
+    env = smritikosh.read_dotenv(tmp_path / ".env")
+    assert (env["EMBEDDING_MODEL"], env["EMBEDDING_DIMENSIONS"]) == ("nomic-embed-text", "768")
+    assert stat.S_IMODE((tmp_path / ".env").stat().st_mode) == 0o600
+    assert any("another embedding model later means an empty database" in s for s in said)
+    assert any("`ollama pull nomic-embed-text`" in s for s in said)
+
+
+def test_the_cloud_road_without_an_openai_key_stops_and_names_the_local_road(world, tmp_path):
+    with pytest.raises(smritikosh.SetupError, match="OPENAI_API_KEY"):
+        smritikosh.settle_dotenv(Config("anthropic"), tmp_path, print, pulled=None,
+                                 cloud_key=lambda: None)
+    assert not (tmp_path / ".env").exists()
+
+
+# ---- accounts and keys ------------------------------------------------------------
+
+
+class FakeApi:
+    """Accounts, logins and keys, as Smritikosh's API answers them."""
+
+    def __init__(self):
+        self.accounts: dict[str, str] = {}
+        self.keys: dict[str, str] = {}          # key -> account
+
+    def register(self, token, user, password, role="user"):
+        assert token == "admin-token"
+        if user in self.accounts:
+            return 409
+        self.accounts[user] = password
+        return 201
+
+    def login(self, user, password):
+        return f"tok-{user}" if self.accounts.get(user) == password else None
+
+    def mint(self, token, name):
+        key = f"sk-{token[4:]}-{len(self.keys)}"
+        self.keys[key] = token[4:]
+        return key
+
+    def memories(self, key, user, limit=500):
+        return 3 if self.keys.get(key) == user else None
+
+
+class Admin(smritikosh.Accounts):
+    def admin(self):
+        return "admin-token"
+
+
+def accounts(api) -> smritikosh.Accounts:
+    return Admin(api, print, lambda q: pytest.fail("asked"), False)
+
+
+def test_a_key_in_yantras_env_is_checked_kept_and_moved_to_secrets(world, monkeypatch):
+    api = FakeApi()
+    api.keys["sk-old"] = "asha"
+    monkeypatch.setattr(smritikosh, "keys_elsewhere",
+                        lambda: [("yantra/.env", "sk-wrong"), ("yantra/.env", "sk-old")])
+    said: list[str] = []
+    assert smritikosh.own_key(api, accounts(api), "asha", said.append) == "sk-old"
+    assert settings_mod.read_secrets()[smritikosh.KEY] == "sk-old"
+    assert "doesn't open 'asha'" in said[0] and api.accounts == {}
+
+
+def test_with_no_key_anywhere_you_get_an_account_and_a_key_of_your_own(world, monkeypatch):
+    api = FakeApi()
+    monkeypatch.setattr(smritikosh, "keys_elsewhere", lambda: [])
+    key = smritikosh.own_key(api, accounts(api), "asha", print)
+    assert api.keys[key] == "asha" and "asha" in api.accounts
+
+
+def test_each_person_gets_their_own_account_and_you_are_you(world, tmp_path):
+    actors = tmp_path / "actors.toml"
+    actors.write_text("[actor.owner]\n[actor.priya]\n[actor.ravi]\n")
+    door = Door(actors=str(actors), state=str(tmp_path / "state"))
+    config = replace(ON, door=door)
+    api = FakeApi()
+    api.accounts["dvara-ravi"] = "x"
+    api.keys["sk-ravi"] = "dvara-ravi"
+    smritikosh.write_people(config, {"ravi": {"user": "dvara-ravi", "key": "sk-ravi"}})
+    smritikosh.people_keys(config, api, accounts(api), "asha", "sk-mine", print)
+    people = smritikosh.read_people(config)
+    assert people["owner"] == {"user": "asha", "key": "sk-mine"}
+    assert people["ravi"]["key"] == "sk-ravi"                       # kept: it still opens
+    assert api.keys[people["priya"]["key"]] == "dvara-priya"       # theirs, not yours
+    path = smritikosh.people_path(config)
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_an_account_already_there_without_its_password_is_not_guessed_at(world):
+    api = FakeApi()
+    api.accounts["asha"] = "theirs"
+    with pytest.raises(smritikosh.SetupError, match="doesn't know its password"):
+        accounts(api).make("asha", "k", "secrets.env")
+
+
+# ---- what `up` hands each piece ---------------------------------------------------
+
+
+@pytest.fixture
+def kosh(world, tmp_path):
+    checkout = tmp_path / "kosh"
+    for name in ("uvicorn", "smritikosh-mcp", "alembic"):
+        (checkout / ".venv" / "bin").mkdir(parents=True, exist_ok=True)
+        (checkout / ".venv" / "bin" / name).write_text("")
+    (checkout / ".env").write_text(
+        "POSTGRES_URL=postgresql+asyncpg://smritikosh:pw@localhost:5432/smritikosh\n"
+        "EMBEDDING_BASE_URL=http://localhost:11434\n")
+    settings_mod.save_secret(smritikosh.KEY, "sk-mine")
+    settings_mod.save_secret("OPENAI_API_KEY", "sk-openai")
+    return replace(ON, smritikosh=replace(SET_UP, checkout=str(checkout)))
+
+
+def found(world):
+    from conftest import program
+    from sarathi.siblings import Found, SIBLINGS
+
+    bin_dir = world / "bin"
+    return {s.name: Found(s, str(program(bin_dir, s.name)) if s.name in
+                          ("yantra", "setu", "samay", "dvara") else None)
+            for s in SIBLINGS}
+
+
+def test_on_the_process_road_smritikosh_starts_first_and_yantra_is_pointed_at_it(world,
+                                                                                kosh):
+    planned, _ = services.plan(kosh, found(world))
+    assert planned[0].name == "smritikosh"
+    assert planned[0].cwd == Path(kosh.smritikosh.checkout)      # its .env is there
+    page = next(s for s in planned if s.name == "yantra")
+    config_file = Path(page.argv[page.argv.index("--mcp-config") + 1])
+    assert page.env["YANTRA_MEMORY"] == "smritikosh"
+    assert page.env[smritikosh.KEY] == "sk-mine"
+    server = json.loads(config_file.read_text())["servers"]["smritikosh"]
+    assert server["env"]["SMRITIKOSH_API_KEY"] == "${SMRITIKOSH_API_KEY}"
+    assert "sk-mine" not in config_file.read_text()
+
+
+def test_your_key_reaches_yantra_and_no_other_piece(world, kosh):
+    planned, _ = services.plan(kosh, found(world))
+    for service in planned:
+        if service.name != "yantra":
+            assert smritikosh.KEY not in service.env, service.name
+    assert "OPENAI_API_KEY" in services.model_env(kosh)     # an ordinary key still goes
+
+
+def test_dvara_reads_each_persons_key_from_its_own_file(world, kosh, tmp_path):
+    from conftest import program
+    door = Door(actors=str(program(tmp_path, "actors.toml")), root=str(tmp_path),
+                state=str(tmp_path / "state"))
+    settings_mod.save_secret("DVARA_TOKEN", "t")
+    planned, notes = services.plan(replace(kosh, door=door), found(world))
+    dvara = next(s for s in planned if s.name == "dvara")
+    file = Path(dvara.argv[dvara.argv.index("--memory") + 1])
+    env = json.loads(file.read_text())["servers"]["smritikosh"]["env"]
+    assert env == {"SMRITIKOSH_API_KEY": "${DVARA_MEMORY_KEY}",
+                   "SMRITIKOSH_USER_ID": "${DVARA_MEMORY_USER}",
+                   "SMRITIKOSH_BASE_URL": "http://127.0.0.1:8080"}
+    assert smritikosh.KEY not in dvara.env
+
+
+def test_with_memory_local_nothing_of_smritikosh_is_started_or_handed(world, kosh):
+    planned, _ = services.plan(replace(kosh, memory="local"), found(world))
+    assert "smritikosh" not in [s.name for s in planned]
+    page = next(s for s in planned if s.name == "yantra")
+    assert "--mcp-config" not in page.argv and "YANTRA_MEMORY" not in page.env
+
+
+# ---- the podman road --------------------------------------------------------------
+
+
+@pytest.fixture
+def host(world, monkeypatch):
+    monkeypatch.setenv("HOME", str(world / "home"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(world / "home" / ".config"))
+    monkeypatch.setattr(podman, "run", lambda argv, **kw: subprocess.CompletedProcess(
+        argv, 0, "", ""))
+
+
+def test_on_podman_the_database_and_server_are_units_and_mount_nothing_else(host, kosh):
+    road = replace(kosh, road="podman")
+    units = podman.units(road)
+    db, api = units["sarathi-smritikosh-db.container"], units["sarathi-smritikosh.container"]
+    assert "Volume=pgdata:/var/lib/postgresql/data:Z" in db
+    assert "PublishPort=127.0.0.1:5432:5432" in db
+    assert "Volume=" not in api and "UserNS" not in api
+    assert "After=sarathi-smritikosh.service" in units["sarathi-yantra.container"]
+    assert "--mcp-config" in units["sarathi-yantra.container"]
+    assert "sk-mine" not in "".join(units.values())
+
+
+def test_on_podman_its_settings_name_the_database_container_and_the_host(host, kosh):
+    held = podman.unit_secrets(replace(kosh, road="podman"))
+    server = held["sarathi-smritikosh"]
+    assert server["POSTGRES_URL"].endswith("@sarathi-smritikosh-db:5432/smritikosh")
+    assert server["EMBEDDING_BASE_URL"] == "http://host.containers.internal:11434"
+    assert held["sarathi-yantra"][smritikosh.KEY] == "sk-mine"
+    assert smritikosh.KEY not in held["sarathi-samay"]
+
+
+def test_off_on_podman_writes_no_smritikosh_unit(host, kosh):
+    assert not any("smritikosh" in name
+                   for name in podman.units(replace(kosh, road="podman", memory="local")))
+
+
+# ---- the home page's switch -------------------------------------------------------
+
+
+def test_the_switch_writes_the_setting_and_starts_again(world):
+    path = settings_mod.settings_path()
+    path.parent.mkdir(parents=True)
+    path.write_text(render(replace(ON, memory="local")))
+    restarted = []
+    home = Home(settings_mod.load(), dict, memory=lambda c: {"via": c.memory},
+                restart=lambda: restarted.append(1))
+    code, said = home.switch("smritikosh")
+    assert code == 200 and "Nothing is deleted" in said and restarted == [1]
+    assert settings_mod.load().memory == "smritikosh"
+    assert home.memory() == {"via": "smritikosh"}
+
+
+def test_the_switch_wont_turn_on_what_was_never_set_up(world):
+    path = settings_mod.settings_path()
+    path.parent.mkdir(parents=True)
+    path.write_text(render(Config("ollama")))
+    home = Home(settings_mod.load(), dict, memory=lambda c: {},
+                restart=lambda: pytest.fail("restarted"))
+    code, said = home.switch("smritikosh")
+    assert code == 409 and "`sarathi smritikosh`" in said
+    assert home.switch("nowhere")[0] == 400
+
+
+def test_a_run_stopped_after_making_an_account_logs_in_to_it_next_time(world):
+    api = FakeApi()
+    real_mint = api.mint
+    api.mint = lambda token, name: (_ for _ in ()).throw(smritikosh.SetupError("stopped"))
+    with pytest.raises(smritikosh.SetupError):
+        accounts(api).make("dvara-priya", "k", "memory.json")
+    assert "dvara-priya" in api.accounts           # made, and its key never minted
+    api.mint = real_mint
+    key = accounts(api).make("dvara-priya", "k", "memory.json")
+    assert api.keys[key] == "dvara-priya"
+    path = settings_mod.state_dir() / smritikosh.ACCOUNTS_FILE
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600

@@ -116,6 +116,20 @@ container's own address, which no phone can reach. SETU'S PAGE IS
 PUBLISHED THERE TOO, when ``window_host`` is one address (not 0.0.0.0):
 a person's link from ``/accounts page`` then opens on their phone.
 
+SMRITIKOSH, with ``[memory] via = "smritikosh"``, is two more units.
+Its database (``sarathi-smritikosh-db``) runs the pgvector image on the
+volume ``sarathi smritikosh`` found or made -- the same data on both
+roads, so the plain container of the same name is stopped first: two
+servers on one data folder would ruin it. Its server
+(``sarathi-smritikosh``) runs from Sarathi's image, which has Smritikosh
+in it when ``[smritikosh] checkout`` names one, and reads its own
+``.env`` from a file of its own (``units/sarathi-smritikosh.env``) with
+the database's address made the database container's name, and
+Ollama's the host's. Neither mounts anything of the other pieces'.
+Yantra's and Dvara's containers start ``smritikosh-mcp`` from the image,
+pointed at ``http://sarathi-smritikosh:8080``; Yantra gets your key in
+its env file, and Dvara reads each person's from its memory.json.
+
 A FIREWALL IS NAMED, NOT OPENED. Publishing a port on the house address
 does nothing for a phone when ufw or firewalld drops it first: the page
 just spins, with nothing in any log. So when those ports are on one
@@ -164,9 +178,12 @@ CHECKOUTS = ("yantra", "setu", "samay")
 #: Built into the image when its checkout is there: the door needs dvara,
 #: and the phone needs sparsh.
 OPTIONAL_CHECKOUTS = ("dvara", "sparsh")
+#: Built in from where sarathi.toml says, when it says (``[smritikosh]``).
+MEMORY_CHECKOUT = "smritikosh"
 #: Ports inside the containers; the host ports come from sarathi.toml.
 PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
 SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
+SMRITIKOSH_PORT = 8080
 #: The streamed sign-in window's port when sarathi.toml names none: a
 #: container's port has to be known to be published.
 WINDOW_PORT = 8790
@@ -174,7 +191,8 @@ WINDOW_PORT = 8790
 BROWSER = "/usr/bin/google-chrome"
 UNITS = {"samay": "sarathi-samay", "dvara": "sarathi-dvara", "yantra": "sarathi-yantra",
          "setu": "sarathi-setu", "dvara-page": "sarathi-dvara-page",
-         "sarathi": "sarathi-home"}
+         "sarathi": "sarathi-home", "smritikosh-db": "sarathi-smritikosh-db",
+         "smritikosh": "sarathi-smritikosh"}
 #: Not a container: an ordinary user service (see the module docstring).
 SERVICE_UNITS = ("sarathi",)
 #: The containers' names before each went by its project's name: stopped
@@ -216,10 +234,15 @@ def checkouts(env: dict[str, str] | None = None) -> dict[str, Path]:
     return found
 
 
-def stage(into: Path, env: dict[str, str] | None = None) -> list[str]:
+def stage(into: Path, env: dict[str, str] | None = None,
+          config: Config | None = None) -> list[str]:
     """A clean build context: each checkout's HEAD, and the Containerfile."""
     lines = []
-    for name, repo in checkouts(env).items():
+    found = checkouts(env)
+    memory = config.smritikosh.path() if config is not None else None
+    if memory is not None and (memory / ".git").exists():
+        found[MEMORY_CHECKOUT] = memory
+    for name, repo in found.items():
         head = run(["git", "-C", str(repo), "rev-parse", "--short", "HEAD"]).stdout.strip()
         dirty = run(["git", "-C", str(repo), "status", "--porcelain"]).stdout.splitlines()
         with tempfile.TemporaryDirectory() as tmp:
@@ -238,6 +261,9 @@ def stage(into: Path, env: dict[str, str] | None = None) -> list[str]:
         if not (into / name).exists():
             (into / name).mkdir(parents=True)    # empty: the image is built without it
             lines.append(f"{name:<7} not found beside the others: built without it")
+    if not (into / MEMORY_CHECKOUT).exists():
+        (into / MEMORY_CHECKOUT).mkdir(parents=True)
+        lines.append(f"{MEMORY_CHECKOUT} not set up (`sarathi smritikosh`): built without it")
     shutil.copy(Path(__file__).with_name("Containerfile"), into / "Containerfile")
     return lines
 
@@ -252,10 +278,10 @@ def platform() -> str:
     return f"linux/{arch.get(machine, machine)}"
 
 
-def build(engine: str = "podman") -> int:
+def build(engine: str = "podman", config: Config | None = None) -> int:
     with tempfile.TemporaryDirectory(prefix="sarathi-build-") as tmp:
         print("building from:")
-        for line in stage(Path(tmp)):
+        for line in stage(Path(tmp), config=config):
             print(f"  {line}")
         print(flush=True)
         here = browser_version([BROWSER, "--version"]) if shutil.which(BROWSER) else None
@@ -409,6 +435,20 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
     door = {} if config.door is None or DOOR_TOKEN not in held else \
         {"SAMAY_DVARA_TOKEN": held[DOOR_TOKEN]}
     out = {UNITS["yantra"]: dict(model), UNITS["samay"]: {**model, **door}}
+    if config.remembers_in_smritikosh:
+        from sarathi import smritikosh
+
+        if smritikosh.KEY in held:
+            out[UNITS["yantra"]][smritikosh.KEY] = held[smritikosh.KEY]
+        checkout = config.smritikosh.path()
+        assert checkout is not None
+        out[UNITS["smritikosh"]] = smritikosh.container_dotenv(
+            checkout, db_host=UNITS["smritikosh-db"])
+        db = smritikosh.Database.parse(smritikosh.read_dotenv(checkout / ".env").get(
+            "POSTGRES_URL", "postgresql://smritikosh:smritikosh@localhost:5432/smritikosh"))
+        out[UNITS["smritikosh-db"]] = {"POSTGRES_USER": db.user,
+                                       "POSTGRES_PASSWORD": db.password,
+                                       "POSTGRES_DB": db.name}
     if config.door is not None:
         out[UNITS["dvara"]] = {**model, **door,
                               **{k: held[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in held}}
@@ -585,10 +625,15 @@ def units(config: Config) -> dict[str, str]:
                      + (f"--model {config.model} " if config.model else "")
                      + (f"--samay {IN_IMAGE}/samay " if config.clock_on else "--samay off ")
                      + (f"--sparsh {IN_IMAGE}/sparsh " if config.phone else "")
+                     + (f"--memory {memory_files(config)[1]} "
+                        if config.remembers_in_smritikosh else "")
                      + f"serve --host 0.0.0.0 --port {DOOR_PORT} --web"
                      + (f" --telegram {door.telegram}" if door.telegram else ""))
         if config.clock_on:
             after = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"
+        if config.remembers_in_smritikosh:
+            after += (f"Wants={UNITS['smritikosh']}.service\n"
+                      f"After={UNITS['smritikosh']}.service\n")
         shown = window(config)
         streamed = "" if shown is None else (
             f"PublishPort={shown[0]}:{shown[1]}:{shown[1]}\n"
@@ -600,16 +645,30 @@ def units(config: Config) -> dict[str, str]:
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
             extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
                             + streamed + people_url(config) + phone_env(config),
-            more_volumes=door_dirs(config) + phone_dirs(config))
+            more_volumes=door_dirs(config) + phone_dirs(config)
+            + ([mcp_dir()] if config.remembers_in_smritikosh else []))
         page_unit += f"After={UNITS['dvara']}.service\n"
     if config.phone is not None:
         # auto: no phone answering at the start means no phone tools until
         # you press "use this phone" -- as on the process road
         page_exec += f" --sparsh auto:{IN_IMAGE}/sparsh"
+    memory_env, memory_dirs = "", []
+    if config.remembers_in_smritikosh:
+        yantra_file, _ = memory_files(config)
+        page_exec += f" --mcp-config {yantra_file}"
+        from sarathi import smritikosh
+
+        memory_env = "".join(f"Environment={k}={v}\n" for k, v in
+                             smritikosh.yantra_env().items() if k != smritikosh.KEY)
+        memory_dirs = [smritikosh.mcp_dir()]
+        page_unit += (f"Wants={UNITS['smritikosh']}.service\n"
+                      f"After={UNITS['smritikosh']}.service\n")
+        out.update(memory_units(config))
     out[f"{UNITS['yantra']}.container"] = _unit(
         "Sarathi: Yantra's page", UNITS["yantra"], page_exec,
         f"127.0.0.1:{config.web_port}:{PAGE_PORT}", config, page_unit,
-        extra_container=phone_env(config), more_volumes=phone_dirs(config))
+        extra_container=phone_env(config) + memory_env,
+        more_volumes=phone_dirs(config) + memory_dirs)
     if config.pages.on:
         pages = config.pages
         folders = people_dir(config)
@@ -637,6 +696,73 @@ def units(config: Config) -> dict[str, str]:
                 more_volumes=door_dirs(config))
     out[f"{NETWORK}.network"] = (f"{HEADER}\n[Network]\nNetworkName={NETWORK}\n")
     return out
+
+
+def mcp_dir() -> Path:
+    from sarathi.smritikosh import mcp_dir as folder
+
+    return folder()
+
+
+def memory_files(config: Config) -> tuple[Path, Path]:
+    """Smritikosh's server as Yantra's and Dvara's containers start it."""
+    from sarathi.smritikosh import mcp_files
+
+    return mcp_files(config, command=f"{IN_IMAGE}/smritikosh-mcp",
+                     url=f"http://{UNITS['smritikosh']}:{SMRITIKOSH_PORT}",
+                     suffix="-podman")
+
+
+def memory_units(config: Config) -> dict[str, str]:
+    """Smritikosh's database and server (the module docstring). Lean on
+    purpose: neither runs as you nor mounts any other piece's files."""
+    from sarathi.smritikosh import DB_IMAGE
+
+    kosh = config.smritikosh
+    db, api = UNITS["smritikosh-db"], UNITS["smritikosh"]
+    serve = (f"/opt/smritikosh/.venv/bin/uvicorn smritikosh.api.main:app "
+             f"--host 0.0.0.0 --port {SMRITIKOSH_PORT}")
+    return {
+        f"{db}.container": f"""{HEADER}
+[Unit]
+Description=Sarathi: Smritikosh's database
+
+[Container]
+Image={DB_IMAGE}
+ContainerName={db}
+Network={NETWORK}.network
+PublishPort=127.0.0.1:{kosh.db_port}:5432
+Volume={kosh.volume}:/var/lib/postgresql/data:Z
+EnvironmentFile={env_file(db)}
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+""",
+        f"{api}.container": f"""{HEADER}
+[Unit]
+Description=Sarathi: Smritikosh, the memory server
+Wants={db}.service
+After={db}.service
+
+[Container]
+Image={IMAGE}
+ContainerName={api}
+Network={NETWORK}.network
+Exec={serve}
+PublishPort=127.0.0.1:{kosh.port}:{SMRITIKOSH_PORT}
+RunInit=true
+EnvironmentFile={env_file(api)}
+
+[Service]
+Restart=on-failure
+SuccessExitStatus=143
+
+[Install]
+WantedBy=default.target
+"""}
 
 
 def setu_window_lines(config: Config) -> str:
@@ -850,6 +976,11 @@ def preflight(config: Config) -> None:
                             "window_url must say the address a phone opens")
         if problems:
             raise ConfigError("dvara cannot start: " + "; ".join(problems))
+    if config.remembers_in_smritikosh and run(
+            ["podman", "run", "--rm", "--entrypoint", "test", IMAGE, "-x",
+             f"{IN_IMAGE}/smritikosh-mcp"]).returncode != 0:
+        raise ConfigError("memory.via is smritikosh, but the image has no Smritikosh: "
+                          "run `sarathi image` again")
     ours = [name for name, r in records().items() if alive(r["pid"])]
     if ours:
         raise ConfigError(f"{', '.join(ours)} still running as plain processes: "
@@ -877,7 +1008,13 @@ def up(config: Config) -> tuple[list[str], bool]:
     if not config.clock_on:
         lines.append(f"{'samay':<{WIDTH}} off in sarathi.toml")
     ok = True
-    wanted = [("samay", config.clock_port)] if config.clock_on else []
+    wanted = []
+    if config.remembers_in_smritikosh:
+        said, db_ok = memory_database(config, changed)
+        lines += said
+        ok = ok and db_ok
+        wanted.append(("smritikosh", config.smritikosh.port))
+    wanted += [("samay", config.clock_port)] if config.clock_on else []
     if config.door is not None:
         wanted.append(("dvara", config.door.port))
     wanted.append(("yantra", config.web_port))
@@ -939,7 +1076,42 @@ def up(config: Config) -> tuple[list[str], bool]:
     return lines + firewall_note(config), ok
 
 
+def memory_database(config: Config, changed: set[str]) -> tuple[list[str], bool]:
+    """Smritikosh's database unit, running and ready, before its server.
+    The plain container on the same volume is stopped first."""
+    from sarathi import smritikosh
+
+    kosh, unit, lines = config.smritikosh, UNITS["smritikosh-db"], []
+    name = "smritikosh-db"
+    if smritikosh.stop_database(kosh):
+        lines.append(f"{name:<{WIDTH}} the plain container {kosh.database} stopped: "
+                     f"{unit} uses its volume ({kosh.volume}) now")
+    if active(unit) and f"{unit}.container" in changed:
+        run(["systemctl", "--user", "stop", f"{unit}.service"])
+        lines.append(f"{name:<{WIDTH}} restarting with the new settings  (unit {unit})")
+    if active(unit):
+        lines.append(f"{name:<{WIDTH}} already running on 127.0.0.1:{kosh.db_port}  "
+                     f"(unit {unit})")
+        return lines, True
+    if answers(kosh.db_port):
+        lines.append(f"{name:<{WIDTH}} not started: something else is listening on port "
+                     f"{kosh.db_port} (change smritikosh.db_port in sarathi.toml)")
+        return lines, False
+    started = run(["systemctl", "--user", "start", f"{unit}.service"])
+    db = smritikosh.Database.parse(smritikosh.read_dotenv(
+        (kosh.path() or Path(".")) / ".env").get(
+        "POSTGRES_URL", "postgresql://smritikosh:smritikosh@localhost:5432/smritikosh"))
+    if started.returncode == 0 and smritikosh.db_ready(unit, db, READY_TIMEOUT):
+        lines.append(f"{name:<{WIDTH}} up on 127.0.0.1:{kosh.db_port}  (unit {unit})")
+        return lines, True
+    lines.append(f"{name:<{WIDTH}} did not come up (unit {unit}); the end of its journal:")
+    lines += [f"         | {line}" for line in journal_tail(unit)]
+    return lines, False
+
+
 def _address(config: Config, name: str, url: str) -> str:
+    if name == "smritikosh-db":
+        return f"127.0.0.1:{config.smritikosh.db_port} (PostgreSQL)"
     if name == "samay":
         return clock_address(config) or url
     if name in ("setu", "dvara-page", "sarathi"):
@@ -951,7 +1123,8 @@ def down(remove: bool = False) -> list[str]:
     """Stop the units. They stay installed -- and so start again at the
     next login, which is what they are for -- unless ``remove``."""
     lines = retire_old()
-    for name in ("sarathi", "dvara-page", "setu", "yantra", "dvara", "samay"):
+    for name in ("sarathi", "dvara-page", "setu", "yantra", "dvara", "samay",
+                 "smritikosh", "smritikosh-db"):
         unit = UNITS[name]
         if not unit_file(name).exists():
             continue
@@ -983,7 +1156,9 @@ def running(config: Config) -> list[dict]:
     out = []
     door_port = config.door.port if config.door else None
     pages = config.pages
-    for name, port in (("samay", config.clock_port), ("dvara", door_port),
+    for name, port in (("smritikosh-db", config.smritikosh.db_port),
+                       ("smritikosh", config.smritikosh.port),
+                       ("samay", config.clock_port), ("dvara", door_port),
                        ("yantra", config.web_port), ("setu", pages.setu_port),
                        ("dvara-page", pages.door_port), ("sarathi", pages.home_port)):
         unit = UNITS[name]

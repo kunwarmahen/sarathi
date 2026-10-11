@@ -47,8 +47,9 @@ Telegram, is Step 6, when you want it. Sparsh, which lets the helper
 work an Android phone plugged into this computer, is optional: install
 it (its SETUP.md) and Sarathi finds it, and Yantra's page gets a phone
 panel. `sarathi phone` turns it on for Dvara too, and on the
-containers' road it reaches the phone over Wi-Fi. Smritikosh, a bigger memory store, is optional too; Sarathi will
-mention it, and you can ignore it.)
+containers' road it reaches the phone over Wi-Fi. Smritikosh, a memory
+that finds things by meaning, is optional too: Step 7, when the helper
+starts forgetting things you told it.)
 
 ---
 
@@ -184,10 +185,19 @@ Pulled models that can talk:
   1) qwen3.8:latest
   2) gemma4:12b
 Choose one [1 = qwen3.8:latest]:
+Where should what you tell it be remembered?
+  1) Yantra's own file on this computer -- nothing to install
+  2) Smritikosh, which finds a memory by meaning, not only its words --
+     a database in a container, set up now (about a minute)
+Choose 1 or 2 [1]:
 wrote ~/.config/sarathi/sarathi.toml
   answering: ollama, qwen3.8:latest
+  memory: Yantra's own file (`sarathi smritikosh` switches to Smritikosh)
 next: `sarathi up`
 ```
+
+The last question can wait: press Enter. Yantra's own file is all you
+need to start, and Step 7 switches whenever you like.
 
 **In the cloud** (choose 2 or 3). Paste your key when asked. Nothing
 shows as you paste, which is on purpose:
@@ -628,6 +638,71 @@ a USB cable, so they reach the phone over your Wi-Fi.
 
 ---
 
+## Step 7 (optional) · A memory that finds things by meaning
+
+The helper remembers things about you: where you live, how you like
+answers. Out of the box it keeps them in a small file that matches
+**words**. Ask *"find me flights to Austin"* and it won't think of
+*"lives near RDU"*, because the two share no word. Smritikosh is a memory
+that searches by **meaning**, so it finds it.
+
+You need Podman (Smritikosh keeps its memories in a database that runs
+in a container) and, on your own computer's road, Ollama's small model
+for meanings:
+
+```bash
+ollama pull nomic-embed-text
+sarathi smritikosh
+```
+
+It takes about a minute and says each thing it does. The lines to look
+for:
+
+```
+settings   wrote ~/agent/smritikosh/.env: ollama, nomic-embed-text, 768 dimensions
+           (the tables are built for 768 now; another embedding model later means an empty database)
+database   started smritikosh-postgres (docker.io/pgvector/pgvector:pg17, volume smritikosh-pgdata)
+you        account 'asha' and its key (in secrets.env)
+memory: smritikosh (in ~/.config/sarathi/sarathi.toml)
+```
+
+Then start things again, so the helper uses it:
+
+```bash
+sarathi up                  # on the containers' road: sarathi image first, then sarathi up
+```
+
+`sarathi status` now ends with a line like `memory: smritikosh at
+http://127.0.0.1:8080 -- postgres ok, degraded; 0 remembered for asha`.
+**Degraded is fine.** It means Smritikosh's optional extras are left
+out, and the helper doesn't use them.
+
+**Bring across what it already knew.** The old file isn't emptied or
+moved. On Yantra's page, type `/memory copy local` once.
+
+**Try it.** On Yantra's page: `/memory add Prefers a window seat on
+flights`, then `/memory find aeroplane seating`. It finds the window
+seat, though the two share no word.
+
+**With Dvara on,** everyone in your actors file gets a memory of their
+own: their own account and key, so one person's facts never reach
+another's helper. You are you there too, so what you told Yantra's page,
+your helper on Telegram knows. Someone you add later gets theirs the next
+time you run `sarathi smritikosh`. A helper remembers people only if its
+package asks for it (`[memory] via = "local"` in its `agent.toml`; with
+Smritikosh on, that means Smritikosh).
+
+**Changed your mind?** `sarathi smritikosh --off`, then `sarathi up`, or
+the **Memory** card on the home page, which does both. Nothing is
+deleted either way, and the same card switches back.
+
+**Already set Smritikosh up by hand** (Yantra's SMRITIKOSH.md)? Run
+`SARATHI_SMRITIKOSH=~/src/smritikosh/.venv/bin/smritikosh-mcp sarathi smritikosh`
+with your own path. It uses your database, settings and key as they are,
+and makes no new account for you.
+
+---
+
 ## When something goes wrong
 
 Sarathi tries to say what happened and what fixes it. The messages
@@ -657,6 +732,11 @@ you're most likely to meet:
 | `I couldn't start that sign-in: the browser did not answer Target.createTarget` | containers from an older Sarathi: the browser had nowhere to write | update Sarathi, then `sarathi up` (it restarts what changed) |
 | `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |
 | `dvara cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
+| `memory.via = "smritikosh" but it isn't set up yet` | sarathi.toml was edited by hand | `sarathi smritikosh` |
+| `the cloud road turns memories into numbers with OpenAI, and there is no OPENAI_API_KEY` | a cloud model, and no OpenAI key for Smritikosh's meanings | paste one when asked, or `sarathi smritikosh --local` (Ollama's `nomic-embed-text`) |
+| `Smritikosh already has an account 'NAME' and Sarathi doesn't know its password` | an account made by hand, without its key in Sarathi | run `sarathi smritikosh` in a terminal and type its password once |
+| `memory: smritikosh, NOT ANSWERING` in `sarathi status` | Smritikosh's server is stopped | `sarathi up` |
+| `memory.via is smritikosh, but the image has no Smritikosh` | containers' road, image built before `sarathi smritikosh` | `sarathi image`, then `sarathi up` |
 | `door did not come up` or `page did not come up`, and its journal says `image platform (linux/arm64/v8) does not match` | the image was built for another machine (an older `sarathi image` after an arm64 build) | `sarathi image`, then `sarathi up` |
 
 Each program also writes down what it printed:
@@ -676,7 +756,8 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Their conversations, and their own sign-ins | `~/dvara/state/` |
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
 | Your schedules and their history | Samay's folder, `~/.samay/` |
-| What the helper remembers about you | `~/.local/state/yantra/` |
+| What the helper remembers about you | `~/.local/state/yantra/`, or with Smritikosh on, its database (the `smritikosh-pgdata` volume) |
+| Each person's Smritikosh key, for Dvara | `~/dvara/state/memory.json` (only you can read it) |
 | What Sarathi started, and what each printed | `~/.local/share/sarathi/` |
 
 Sarathi doesn't move anything: each program keeps its files where it

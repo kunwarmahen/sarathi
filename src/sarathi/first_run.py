@@ -19,6 +19,13 @@ stay in the shell's history. It is typed at a hidden prompt and saved
 to secrets.env, readable only by its owner. A key already in the
 environment is used where it is and never copied.
 
+THE LAST QUESTION IS MEMORY, AND ITS ANSWER IS USUALLY "AS IT IS".
+Yantra's built-in file works with nothing installed, and is the default.
+Smritikosh, which finds a memory by meaning, is offered beside it; picked,
+it is set up then and there (``sarathi smritikosh``, smritikosh.py), and
+a setup that can't finish leaves the built-in file in place and says
+what stopped it.
+
 Everything can be given as flags, so a script or a container can run
 ``sarathi init --provider ollama --model qwen3.8:latest`` with nobody
 there to answer.
@@ -143,11 +150,34 @@ def run(args, *, ask: Callable[[str], str] = input,
                     clock_on=not args.no_clock,
                     clock_port=args.clock_port or DEFAULT_CLOCK_PORT,
                     road="podman" if getattr(args, "podman", False) else "process")
+    memory = getattr(args, "memory", None)
+    if memory is None and interactive:
+        print("Where should what you tell it be remembered?\n"
+              "  1) Yantra's own file on this computer -- nothing to install\n"
+              "  2) Smritikosh, which finds a memory by meaning, not only its words --\n"
+              "     a database in a container, set up now (about a minute)")
+        pick = ask("Choose 1 or 2 [1]: ").strip() or "1"
+        memory = "smritikosh" if pick == "2" else "local"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(render(config))
     answering = f"{provider}, {model}" if model else f"{provider}, its default model"
     print(f"wrote {path}\n  answering: {answering}")
     for line in said:
         print(f"  {line}")
+    if memory == "smritikosh":
+        from sarathi import smritikosh
+
+        print("  memory: setting up Smritikosh")
+        try:
+            config = smritikosh.setup(config, ask_secret=ask_secret, interactive=interactive,
+                                      say=lambda line: print(f"    {line}"))
+        except smritikosh.SetupError as exc:
+            print(f"  memory: the built-in file for now -- Smritikosh: {exc}\n"
+                  "    `sarathi smritikosh` tries again")
+        else:
+            path.write_text(render(config))
+            print("  memory: smritikosh")
+    else:
+        print("  memory: Yantra's own file (`sarathi smritikosh` switches to Smritikosh)")
     print("next: `sarathi up`")
     return 0

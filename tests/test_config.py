@@ -69,9 +69,10 @@ def test_the_local_road_offers_a_choice_and_never_an_embedding_model(world, monk
                                                                      capsys):
     monkeypatch.setattr(first_run, "ollama_models",
                         lambda root: ["nomic-embed-text:latest", "gemma4:12b", "qwen3.8:latest"])
-    answers = iter(["1", "2"])
+    answers = iter(["1", "2", ""])    # Enter at the memory question: the built-in file
     assert first_run.run(init_args(), ask=lambda q: next(answers), interactive=True) == 0
     assert config.load() == Config("ollama", "gemma4:12b")
+    assert config.load().memory == "local"
     assert "nomic" not in capsys.readouterr().out
 
 
@@ -91,8 +92,8 @@ def test_ollama_not_answering_still_leaves_a_working_file(world, monkeypatch, ca
 
 
 def test_a_typed_key_is_saved_readable_only_by_its_owner(world):
-    first_run.run(init_args(provider="anthropic"), ask_secret=lambda q: "sk-typed",
-                  interactive=True)
+    first_run.run(init_args(provider="anthropic", memory="local"),
+                  ask_secret=lambda q: "sk-typed", interactive=True)
     path = config.secrets_path()
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert config.read_secrets() == {"ANTHROPIC_API_KEY": "sk-typed"}
@@ -101,8 +102,8 @@ def test_a_typed_key_is_saved_readable_only_by_its_owner(world):
 
 def test_a_key_already_in_the_environment_is_never_copied(world, monkeypatch, capsys):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-env")
-    first_run.run(init_args(provider="openai"), ask_secret=lambda q: pytest.fail("asked"),
-                  interactive=True)
+    first_run.run(init_args(provider="openai", memory="local"),
+                  ask_secret=lambda q: pytest.fail("asked"), interactive=True)
     assert not config.secrets_path().exists()
     assert "from your environment (not copied anywhere)" in capsys.readouterr().out
 

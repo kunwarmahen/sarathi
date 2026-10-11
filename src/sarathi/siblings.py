@@ -20,6 +20,8 @@ WHERE TO LOOK, IN ORDER:
 
     SARATHI_<NAME>    a path you set (SARATHI_SAMAY=/opt/samay/bin/samay)
     PATH              what your shell would run
+    sarathi.toml      where a setup command recorded it (``[smritikosh]
+                      checkout``, written by ``sarathi smritikosh``)
     beside            <dir>/<name>/.venv/bin/<program>, for checkouts kept
                       side by side; <dir> is SARATHI_SIBLINGS, or the
                       folder this checkout of Sarathi sits in
@@ -231,9 +233,11 @@ NOT_ASKED = "off in sarathi.toml (`sarathi dvara` turns it on)"
 
 def find(sibling: Sibling, env: dict[str, str] | None = None,
          before: list[str] | None = None, ask: bool = True,
-         asked_with: dict[str, str] | None = None) -> Found:
+         asked_with: dict[str, str] | None = None, kept: str | None = None) -> Found:
     found = Found(sibling)
     hit = locate(sibling, env)
+    if kept and (hit is None or hit[1] == "beside") and Path(kept).is_file():
+        hit = (kept, "sarathi.toml")
     if hit is None:
         return found
     found.program, found.how = hit
@@ -254,13 +258,16 @@ def find(sibling: Sibling, env: dict[str, str] | None = None,
 
 def find_all(env: dict[str, str] | None = None,
              before: dict[str, list[str] | None] | None = None,
-             asked_with: dict[str, dict[str, str]] | None = None) -> list[Found]:
+             asked_with: dict[str, dict[str, str]] | None = None,
+             kept: dict[str, str] | None = None) -> list[Found]:
     """Every sibling. ``before``: options a sibling's status is asked
     with, by name -- the door's folders, from sarathi.toml; None for a
     name means not asked at all (the door is off). ``asked_with``:
-    environment added when asking, by name -- Yantra's model settings."""
+    environment added when asking, by name -- Yantra's model settings.
+    ``kept``: a program's path as sarathi.toml records it, by name."""
     before = before or {}
     asked_with = asked_with or {}
+    kept = kept or {}
     return [find(s, env, before.get(s.name), ask=before.get(s.name, []) is not None,
-                 asked_with=asked_with.get(s.name))
+                 asked_with=asked_with.get(s.name), kept=kept.get(s.name))
             for s in SIBLINGS]

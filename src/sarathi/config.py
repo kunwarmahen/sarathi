@@ -16,6 +16,13 @@ it, written readable by its owner only, so ``sarathi.toml`` can be shown
 to someone or pasted into a question without leaking anything. A key
 already in the environment is used as it is and never copied.
 
+MEMORY IS YANTRA'S OWN FILE UNLESS YOU SAY OTHERWISE. ``[memory] via``
+is ``local`` (the built-in file) or ``smritikosh`` (a memory server that
+searches by meaning); ``sarathi smritikosh`` sets that server up and
+switches to it, ``sarathi smritikosh --off`` switches back, and nothing
+is deleted either way. Its key, and each Dvara person's, are Sarathi's
+to hand out, never written here.
+
 With ``[dvara] on = true``, ``up`` also starts Dvara, the door your
 agents live behind for other people and for you on your phone. Its two
 tokens (dvara's own, and the Telegram bot's) are in secrets.env too.
@@ -65,7 +72,15 @@ KNOWN: dict[str, set[str]] = {
              "window_port", "window_url", "owner"},
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
     "phone": {"on", "address", "awake"},
+    "memory": {"via"},
+    "smritikosh": {"checkout", "port", "database", "volume", "db_port"},
 }
+#: Where Yantra (and Dvara's people) keep what they remember.
+MEMORY_ROADS = ("local", "smritikosh")
+DEFAULT_SMRITIKOSH_PORT, DEFAULT_DB_PORT = 8080, 5432
+#: The database container `sarathi smritikosh` starts, or finds, and the
+#: volume its data is in.
+SMRITIKOSH_DB, SMRITIKOSH_VOLUME = "smritikosh-postgres", "smritikosh-pgdata"
 #: Sparsh's words for the phone's screen while an agent works it
 #: (``SPARSH_AWAKE``): kept on while working, never asleep, left alone.
 AWAKE = ("working", "always", "off")
@@ -111,6 +126,28 @@ class Phone:
 
 
 @dataclass(frozen=True)
+class Smritikosh:
+    """The memory server, as ``sarathi smritikosh`` set it up: ``[smritikosh]``."""
+
+    #: Its checkout (the API, its .env, ``smritikosh-mcp``). None: not set
+    #: up yet -- ``sarathi smritikosh`` finds or clones one.
+    checkout: str | None = None
+    port: int = DEFAULT_SMRITIKOSH_PORT
+    #: Its PostgreSQL container, the volume that container keeps its data
+    #: in, and the port it is published on here.
+    database: str = SMRITIKOSH_DB
+    volume: str = SMRITIKOSH_VOLUME
+    db_port: int = DEFAULT_DB_PORT
+
+    def path(self) -> Path | None:
+        return Path(self.checkout).expanduser() if self.checkout else None
+
+    @property
+    def url(self) -> str:
+        return f"http://127.0.0.1:{self.port}"
+
+
+@dataclass(frozen=True)
 class Config:
     provider: str
     model: str | None = None
@@ -125,6 +162,13 @@ class Config:
     #: How many tokens the model holds, as Yantra's <PROVIDER>_CONTEXT_WINDOW:
     #: when to shorten a long conversation. None: Yantra's default.
     context_window: int | None = None
+    #: ``local`` (Yantra's built-in file) or ``smritikosh``.
+    memory: str = "local"
+    smritikosh: Smritikosh = Smritikosh()
+
+    @property
+    def remembers_in_smritikosh(self) -> bool:
+        return self.memory == "smritikosh"
 
     def people_host(self) -> str | None:
         """Where people's phones reach Setu's page, for the link ``/accounts
@@ -301,7 +345,24 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
         raise ConfigError(f"{where}: phone.awake is one of {', '.join(AWAKE)}, "
                           f"not {awake!r}")
     phone = Phone(address=address, awake=awake) if phone_table.get("on", False) else None
+    via = data.get("memory", {}).get("via", "local")
+    if via not in MEMORY_ROADS:
+        raise ConfigError(f"{where}: memory.via is one of {', '.join(MEMORY_ROADS)}, "
+                          f"not {via!r}")
+    kosh = data.get("smritikosh", {})
+    for key in ("checkout", "database", "volume"):
+        if not isinstance(kosh.get(key, ""), str):
+            raise ConfigError(f"{where}: smritikosh.{key} must be text")
+    smritikosh = Smritikosh(checkout=kosh.get("checkout") or None,
+                            port=_port(kosh, "port", DEFAULT_SMRITIKOSH_PORT, "smritikosh"),
+                            database=kosh.get("database") or SMRITIKOSH_DB,
+                            volume=kosh.get("volume") or SMRITIKOSH_VOLUME,
+                            db_port=_port(kosh, "db_port", DEFAULT_DB_PORT, "smritikosh"))
+    if via == "smritikosh" and smritikosh.checkout is None:
+        raise ConfigError(f"{where}: memory.via = \"smritikosh\" but it isn't set up "
+                          "yet: run `sarathi smritikosh`")
     return Config(provider=provider, road=road, door=door, pages=pages, phone=phone,
+                  memory=via, smritikosh=smritikosh,
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   context_window=window,
@@ -366,7 +427,34 @@ setu_port = {config.pages.setu_port}
 dvara_port = {config.pages.door_port}
 
 {_render_door(config.door)}
-{_render_phone(config.phone)}"""
+{_render_phone(config.phone)}
+{_render_memory(config)}"""
+
+
+def _render_memory(config: Config) -> str:
+    kosh = config.smritikosh
+    head = f"""# What your agents remember about you: local (Yantra's own file on this
+# computer) or smritikosh (a memory server that finds a memory by meaning,
+# not only by its words). `sarathi smritikosh` sets it up and switches;
+# `sarathi smritikosh --off` switches back. Nothing is deleted either way.
+[memory]
+via = "{config.memory}"
+"""
+    if kosh.checkout is None:
+        return head
+    lines = [f'checkout = "{kosh.checkout}"']
+    for key, value, default in (("port", kosh.port, DEFAULT_SMRITIKOSH_PORT),
+                                ("database", kosh.database, SMRITIKOSH_DB),
+                                ("volume", kosh.volume, SMRITIKOSH_VOLUME),
+                                ("db_port", kosh.db_port, DEFAULT_DB_PORT)):
+        shown = json.dumps(value)
+        lines.append(f"{key} = {shown}" if value != default else f"# {key} = {shown}")
+    return head + ("""
+# Smritikosh, as `sarathi smritikosh` set it up: its checkout, the port its
+# server listens on, and its database (a PostgreSQL container, the volume
+# that holds its data, and the port it is published on here).
+[smritikosh]
+""" + "\n".join(lines) + "\n")
 
 
 def _render_phone(phone: Phone | None) -> str:

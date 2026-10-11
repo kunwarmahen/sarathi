@@ -1,9 +1,10 @@
-# Sarathi -- Yantra, Setu and Samay in one image.
+# Sarathi -- Yantra, Setu and Samay (and Dvara, Sparsh, Smritikosh) in one image.
 #
 # Not built by hand: `sarathi image` puts a clean copy of each project's
 # committed code beside this file and builds from there. The context is
 #
-#   yantra/  setu/  samay/  dvara/  sparsh/ (each maybe empty)  Containerfile
+#   yantra/  setu/  samay/  dvara/  sparsh/  smritikosh/ (the last three maybe
+#   empty)  Containerfile
 #
 # ONE IMAGE, SEVERAL CONTAINERS. The projects call each other as programs
 # -- the page runs `setu run gmail:mine` and `samay mcp`, the clock runs
@@ -112,6 +113,16 @@ COPY sparsh/ /opt/sparsh/
 RUN if [ -f /opt/sparsh/pyproject.toml ]; then \
       cd /opt/sparsh && uv sync --frozen --no-dev && \
       ln -s /opt/sparsh/.venv/bin/sparsh /usr/local/bin/; \
+    fi
+
+# Smritikosh, the memory server, when `sarathi smritikosh` set one up (an
+# empty folder otherwise): its server runs from this image as a container
+# of its own, and Yantra's and Dvara's containers start `smritikosh-mcp`,
+# the small program that reaches it. The mcp extra is that program.
+COPY smritikosh/ /opt/smritikosh/
+RUN if [ -f /opt/smritikosh/pyproject.toml ]; then \
+      cd /opt/smritikosh && uv sync --no-dev --extra mcp && \
+      ln -s /opt/smritikosh/.venv/bin/smritikosh-mcp /usr/local/bin/; \
     fi
 
 # A pipe, not a terminal: without this, `podman logs` stays empty until

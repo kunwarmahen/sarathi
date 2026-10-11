@@ -5,6 +5,9 @@
                               phone: its tokens, a Telegram bot, starter files
     sarathi phone [ADDRESS]   your phone for the door's agents, and over Wi-Fi
                               for the containers (`phone pair ADDRESS CODE` once)
+    sarathi smritikosh        memories found by meaning: set Smritikosh up (its
+                              database, settings, tables, accounts, keys) and
+                              switch to it; --off goes back to the built-in file
     sarathi road [ROAD]       how `up` starts things: process (plain programs) or
                               podman (containers); switching stops the other road
     sarathi image             build the image the podman road runs
@@ -16,7 +19,8 @@
     sarathi home              one page linking every program's page, with status
 
 ``init`` takes flags for everything it asks (``--provider``, ``--model``,
-``--base-url``, ``--yantra-port``, ``--samay-port``, ``--no-samay``), so it
+``--base-url``, ``--yantra-port``, ``--samay-port``, ``--no-samay``,
+``--memory``), so it
 can run with nobody there.
 
 ``status`` exits 0 when every piece Sarathi needs is found and readable,
@@ -65,7 +69,18 @@ def build_parser() -> argparse.ArgumentParser:
                       help="do not start Samay")
     init.add_argument("--podman", action="store_true",
                       help="start things as Podman containers (see `sarathi image`)")
+    init.add_argument("--memory", choices=("local", "smritikosh"),
+                      help="where what you tell it is remembered: local (Yantra's own "
+                           "file, the default) or smritikosh (set up now)")
     init.add_argument("--force", action="store_true", help="replace sarathi.toml")
+
+    kosh = subs.add_parser("smritikosh", help="memories found by meaning: set up "
+                           "Smritikosh and switch to it (--off: back to the built-in file)")
+    kosh.add_argument("--off", action="store_true",
+                      help="back to Yantra's built-in file; nothing is deleted")
+    kosh.add_argument("--local", action="store_true",
+                      help="a new Smritikosh on the local road (Ollama) even when "
+                           "[model] is a cloud one")
 
     door_cmd = subs.add_parser("dvara", aliases=["door"],
                                help="Dvara, for other people and your phone: "
@@ -237,13 +252,35 @@ def _yantra_env(config) -> dict[str, str]:
     return env
 
 
+def _kept(config) -> dict[str, str] | None:
+    """Programs where sarathi.toml records them: Smritikosh's, once set up."""
+    checkout = config.smritikosh.path() if config else None
+    if checkout is None:
+        return None
+    from sarathi.smritikosh import program
+
+    return {"smritikosh": str(program(checkout))}
+
+
 def _said() -> dict[str, str]:
     """Each sibling's one line, asked as `sarathi status` asks it."""
     config = _settings_or_none()
     found = find_all(before={"dvara": door_folders(config)} if config else None,
-                     asked_with={"yantra": _yantra_env(config)} if config else None)
+                     asked_with={"yantra": _yantra_env(config)} if config else None,
+                     kept=_kept(config))
     return {f.sibling.name: f.said or f.error or ("not found" if f.program is None else "")
             for f in found}
+
+
+def _memory(config) -> dict | None:
+    """Where memories are kept, and how that is going (smritikosh.py)."""
+    if config is None:
+        return None
+    from sarathi import smritikosh
+
+    seen = smritikosh.health(config) if config.remembers_in_smritikosh else {}
+    return {"via": config.memory, "said": smritikosh.health_line(config, seen or None),
+            **{k: seen.get(k) for k in ("up", "url", "memories")}}
 
 
 def _serve_home(args) -> int:
@@ -277,6 +314,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in ("dvara", "door"):
         dvara = next(f for f in find_all() if f.sibling.name == "dvara")
         return door.run(args, dvara)
+    if args.command == "smritikosh":
+        from sarathi import smritikosh
+
+        try:
+            return smritikosh.run_command(args, load())
+        except ConfigError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     if args.command == "phone":
         from sarathi import phone
 
@@ -286,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "road":
             return switch_road(args.road)
         if args.command == "image":
-            return podman.build()
+            return podman.build(config=_settings_or_none())
         if args.command == "down":
             config = _settings_or_none()
             on_podman = config is not None and config.road == "podman"
@@ -294,7 +339,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         config = _settings_or_none()
         found = find_all(before={"dvara": door_folders(config)} if config else None,
-                         asked_with={"yantra": _yantra_env(config)} if config else None)
+                         asked_with={"yantra": _yantra_env(config)} if config else None,
+                         kept=_kept(config))
         if args.command == "up":
             config = load()
             if config.road == "podman":
@@ -309,9 +355,12 @@ def main(argv: list[str] | None = None) -> int:
     # status
     started = podman.running(config) if config and config.road == "podman" \
         else services.running()
+    memory = _memory(config)
     if args.json_out:
         print(json.dumps({"format": FORMAT, "version": __version__, "ok": _ok(found),
-                          "siblings": [f.as_json() for f in found], "started": started}))
+                          "siblings": [f.as_json() for f in found], "started": started,
+                          "memory": memory}))
     else:
-        print("\n".join(_lines(found) + _running_lines(started)))
+        tail = ["", memory["said"]] if memory else []
+        print("\n".join(_lines(found) + _running_lines(started) + tail))
     return 0 if _ok(found) else 1

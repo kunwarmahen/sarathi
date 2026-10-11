@@ -75,8 +75,14 @@ Pulled models that can talk:
   2) gemma4:12b
   ...
 Choose one [1 = qwen3.8:latest]:
+Where should what you tell it be remembered?
+  1) Yantra's own file on this computer -- nothing to install
+  2) Smritikosh, which finds a memory by meaning, not only its words --
+     a database in a container, set up now (about a minute)
+Choose 1 or 2 [1]:
 wrote ~/.config/sarathi/sarathi.toml
   answering: ollama, qwen3.8:latest
+  memory: Yantra's own file (`sarathi smritikosh` switches to Smritikosh)
 next: `sarathi up`
 ```
 
@@ -86,9 +92,13 @@ offered. On a cloud road the key is typed at a hidden prompt and saved
 to `secrets.env`, readable only by you. A key already in your
 environment is used where it is and never copied.
 
+The last question is where memories are kept. Enter keeps Yantra's own
+file; **2** sets Smritikosh up there and then (`sarathi smritikosh`,
+below), and leaves the file in place if it can't finish.
+
 Every question has a flag, so a script can answer them all:
 `sarathi init --provider ollama --model gemma4:12b --yantra-port 8400
---no-samay`.
+--no-samay --memory local`.
 
 The file it writes is short and meant to be edited:
 
@@ -151,6 +161,58 @@ found, the page is started with `--sparsh auto:<that sparsh>`: Yantra uses that 
 attached and you say to use it (the phone panel's **use this phone**).
 No phone at the start means no phone tools, the same as a Yantra you
 start by hand ([notes/07](notes/07-the-phone-stays-on-the-cable.md)).
+
+### A memory by meaning: `sarathi smritikosh`
+
+Yantra remembers you in a file of its own, which matches words: *"find
+me flights"* never finds *"lives near RDU"*. Smritikosh finds it by
+meaning. One command sets it up and switches to it:
+
+```
+$ sarathi smritikosh
+checkout   ~/agent/smritikosh  (beside)
+settings   wrote ~/agent/smritikosh/.env: ollama, nomic-embed-text, 768 dimensions
+           (the tables are built for 768 now; another embedding model later means an empty database)
+database   started smritikosh-postgres (docker.io/pgvector/pgvector:pg17, volume smritikosh-pgdata)
+tables     30 step(s) run
+server     started for these steps at http://127.0.0.1:8080 (able to make its first admin)
+admin      made 'sarathi'; its password is in secrets.env
+you        account 'asha' and its key (in secrets.env)
+dvara      2 in the actors file: you as 'asha', 1 with an account of their own (priya new); keys in ~/dvara/state/memory.json
+memory: smritikosh (in ~/.config/sarathi/sarathi.toml)
+  what the built-in file holds stays there: type `/memory copy local` on Yantra's page once to bring it across
+next: `sarathi up`
+```
+
+It does every step of Yantra's SMRITIKOSH.md, each skipped when already
+done: Smritikosh's checkout (`SARATHI_SMRITIKOSH`, beside the others, or
+cloned there), its programs, its `.env` (the local road with Ollama, or
+the cloud road with OpenAI's embeddings, by `[model]`; `--local` for the
+local one on a cloud model), a PostgreSQL container with pgvector, its
+tables, your account (named as Yantra knows you) with its own key, and
+an account and key for each person in Dvara's actors file. Then
+`sarathi up` starts Smritikosh before Yantra and Dvara and hands each the
+way to reach it, on either road.
+
+**A Smritikosh you already have is used, not replaced.** Its `.env` is
+read, and only a missing secret is added. Its database container is
+started as it is. A key in secrets.env or in Yantra's `.env` is checked
+and kept, so no new account is made.
+
+**Each person's memories are their own.** A Smritikosh key opens only
+its own account's memories. Yours reaches Yantra alone. Dvara starts the
+server for each person's turn with that person's key, so one person's
+facts can't reach another's agent. A person added to the actors file
+later gets an account the next time you run `sarathi smritikosh`. Dvara
+gives memory only to an agent whose package asks for it (`[memory] via`
+in its agent.toml).
+
+**Going back is one command:** `sarathi smritikosh --off`, or the
+**Memory** card on the home page. Nothing is deleted either way.
+
+Neo4j, MongoDB and Redis are left out. Smritikosh says "degraded"
+without them, which is fine for everything Yantra asks of it.
+([notes/13](notes/13-a-memory-by-meaning.md))
 
 ### Your phone: `sarathi phone`
 
@@ -335,6 +397,7 @@ would otherwise start again at your next login. It starts nothing new;
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
 | Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
 | Yantra's own `.env` | read, as in a terminal | not in the image: model settings come from `[model]` in sarathi.toml only |
+| Smritikosh (`[memory] via = "smritikosh"`) | its database container, then its server in its checkout | two units on the same database volume (`sarathi-smritikosh-db`, `sarathi-smritikosh`); Smritikosh in the image |
 
 Your accounts, schedules and memories are the same files either way, so
 switching loses nothing. A port something else already uses stops that
@@ -379,6 +442,12 @@ What goes into the containers:
   and Yantra's memory are mounted from where they are on your machine,
   at the same paths, and the containers run as you. Nothing is copied,
   and the process road and the Podman road see the same things.
+* **Smritikosh, when your memories are kept there.** Its database runs
+  the pgvector image on the same volume as on the plain road (`up` stops
+  the plain container first: two servers on one data folder would ruin
+  it), and its server runs from Sarathi's image, which carries Smritikosh
+  once `sarathi smritikosh` has recorded its checkout. Run `sarathi image`
+  after `sarathi smritikosh`. Neither mounts anything of the others'.
 * **Ollama stays on your machine.** The containers reach it at
   `host.containers.internal`, so Ollama has to listen on more than
   127.0.0.1 (`OLLAMA_HOST=0.0.0.0`).
@@ -418,8 +487,10 @@ dvara       ~/agent/dvara/.venv/bin/dvara  (beside)
 sparsh      ~/agent/sparsh/.venv/bin/sparsh  (beside)
             the hands: your phone, worked by number, with a yes before Send
             phone emulator-5554 (sdk_gphone64_x86_64) ready
-smritikosh  not found (optional) -- install it, or set SARATHI_SMRITIKOSH=/path/to/smritikosh-mcp
+smritikosh  ~/agent/smritikosh/.venv/bin/smritikosh-mcp  (sarathi.toml)
             a memory store (Yantra keeps its own without it)
+
+memory: smritikosh at http://127.0.0.1:8080 -- postgres ok, degraded; 12 remembered for asha
 ```
 
 Each line says **where** a piece was found and **which rule** found it.
@@ -429,8 +500,10 @@ Samay `up` gives it, so a model Ollama hasn't pulled shows here with
 the `ollama pull` that fixes it, and so does a sibling it can't find), Setu's connections, Samay's clock, the phones Sparsh can reach, and
 whether Dvara is serving (asked about the folders `[dvara]` names;
 with Dvara off, dvara isn't asked). Sarathi repeats it and adds
-nothing. Smritikosh has no status command, so for it "found, here" is
-the whole answer.
+nothing. Smritikosh has no status command, so its line is "found,
+here", and the last line says where your memories are kept: Yantra's
+own file, or Smritikosh with what its `/health` says and how many
+memories are yours.
 
 After `sarathi up`, `status` also lists what it started, and whether
 each one is still running. If one has exited, it shows the end of its
@@ -474,7 +547,12 @@ Dvara's page shows and answers for. Dvara's page gets Dvara's token and
 address from `up`, so your answers on it reach Dvara. No other page
 gets that token.
 
-It links, and nothing on it starts, stops or changes anything. Because
+The **Memory** card says where your memories are kept and, for
+Smritikosh, whether it answers. Once Smritikosh is set up, its button
+switches between it and Yantra's own file: it writes `[memory] via` and
+runs `sarathi up`, which starts Yantra and Dvara again with it.
+
+Apart from that switch, it links, and nothing on it starts, stops or changes anything. Because
 its links carry the other pages' keys, it has a key of its own (after the
 `#`, kept in `~/.local/share/sarathi/home.token`, or
 `$SARATHI_HOME_TOKEN`), and it listens on this computer only.
@@ -499,6 +577,7 @@ In this order; the first hit wins:
 |---|---|
 | `env` | a path you set: `SARATHI_YANTRA`, `SARATHI_SETU`, `SARATHI_SAMAY`, `SARATHI_DVARA`, `SARATHI_SPARSH`, `SARATHI_SMRITIKOSH` |
 | `path` | what your shell would run |
+| `sarathi.toml` | Smritikosh, where `sarathi smritikosh` set it up (`[smritikosh] checkout`) |
 | `beside` | `<dir>/<name>/.venv/bin/<program>`, for checkouts kept side by side. `<dir>` is `SARATHI_SIBLINGS`, or the folder this checkout of Sarathi sits in |
 
 ### Where its files live
@@ -506,12 +585,13 @@ In this order; the first hit wins:
 | | |
 |---|---|
 | `~/.config/sarathi/sarathi.toml` | the settings (`$SARATHI_CONFIG` for another folder) |
-| `~/.config/sarathi/secrets.env` | a cloud key, if you typed one, and Dvara's two tokens; readable only by you |
+| `~/.config/sarathi/secrets.env` | a cloud key, if you typed one, Dvara's two tokens, and Smritikosh's key and admin password; readable only by you |
 | `~/.config/sarathi/units/` | the Podman road: each unit's own share of secrets.env, copied by `up`; yours alone |
 | `~/.config/containers/systemd/sarathi-*` | the Podman road's units and network, written by `up` (edit `sarathi.toml`, not these) |
 | `~/.config/systemd/user/sarathi-home.service` | the Podman road's home page, a plain user service (written by `up` too) |
 | `~/dvara/` | Dvara's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[dvara]` can name others) |
-| `~/.local/share/sarathi/` | `home.token` the home page's key (yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
+| `~/dvara/state/memory.json` | with Smritikosh on: each person's name and key there, for Dvara; yours alone |
+| `~/.local/share/sarathi/` | `smritikosh-accounts.json` the passwords of the Smritikosh accounts Sarathi made, and `mcp/` how Yantra and Dvara start `smritikosh-mcp` (no key in it); `home.token` the home page's key (yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
 are still in `~/.samay`, and Setu's sign-ins are still where Setu put
@@ -543,11 +623,15 @@ src/sarathi/
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07); the
                 chat, passed through to Dvara's web channel as you  (notes/12)
+  smritikosh.py sarathi smritikosh: Smritikosh set up and switched to, an
+                account and key for you and for each person behind Dvara;
+                its line in status, its card on the home page  (notes/13)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
-  cli.py        sarathi init | dvara | phone | road | image | up | down | status [--json] | home
+  cli.py        sarathi init | dvara | phone | smritikosh | road | image | up | down |
+                status [--json] | home
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
-  test_pages_up.py  test_phone.py  test_names.py
+  test_pages_up.py  test_phone.py  test_names.py  test_smritikosh.py
 ```
 
 ## Status
@@ -562,7 +646,10 @@ phones are said, and Yantra's page and Dvara are handed it; inside
 the containers the phone is reached over Wi-Fi (`sarathi phone`), tried
 against the emulator and a real Nexus 6P on Android 8.1, a schedule's
 locked phone asked about on Telegram and worked once unlocked
-([notes/10](notes/10-a-real-phone.md)).
+([notes/10](notes/10-a-real-phone.md)). Smritikosh is set up by one
+command and switched on and off from it or the home page, with an
+account of its own for each person behind Dvara; run on plain programs,
+written and tested for Podman ([notes/13](notes/13-a-memory-by-meaning.md)).
 
 ## Tests
 
