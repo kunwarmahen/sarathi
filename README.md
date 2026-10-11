@@ -200,8 +200,13 @@ an account and key for each person in Dvara's actors file. Then
 `sarathi up` starts Smritikosh before Yantra and Dvara and hands each the
 way to reach it, on either road.
 
-**A Smritikosh you already have is used, not replaced.** Its `.env` is
-read, and only a missing secret is added. Its database container is
+**A Smritikosh you already have is used, not replaced.** With its
+database container already here, Sarathi looks for the checkout whose
+`.env` opens it (beside the others, the folder above them, `~/src`,
+`~/Documents`, home), so a setup made by hand is found without being
+named. It never clones around an existing database or writes a new `.env`
+for it: a new one would hold another password and another `JWT_SECRET`.
+Its `.env` is read, and only a missing secret is added. Its database container is
 started as it is. A key in secrets.env or in Yantra's `.env` is checked
 and kept, so no new account is made.
 

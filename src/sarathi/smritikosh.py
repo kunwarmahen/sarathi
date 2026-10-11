@@ -407,12 +407,62 @@ def stop_database(kosh: Smritikosh) -> bool:
     return True
 
 
+def opens(checkout: Path, found: dict[str, Any]) -> bool:
+    """Whether this checkout's .env holds the database container's own
+    user and password: then it is the setup that made it."""
+    url = read_dotenv(checkout / ".env").get("POSTGRES_URL")
+    if not url:
+        return False
+    env = dict(item.split("=", 1) for item in (found.get("Config") or {}).get("Env") or []
+               if "=" in item)
+    try:
+        db = Database.parse(url)
+    except SetupError:
+        return False
+    return (db.user, db.password) == (env.get("POSTGRES_USER", "postgres"),
+                                      env.get("POSTGRES_PASSWORD"))
+
+
+def checkout_for_database(found: dict[str, Any]) -> Path | None:
+    """The checkout that made a database already here, looked for where a
+    person keeps one: beside the others, the folder above them, ~/src,
+    home. FOUND BY ITS PASSWORD, never by its name alone."""
+    root = beside_dir()
+    places = [root, root.parent] if root is not None else []
+    places += [Path.home() / "src", Path.home() / "Documents", Path.home()]
+    for place in places:
+        candidate = place / "smritikosh"
+        if (candidate / "pyproject.toml").is_file() and opens(candidate, found):
+            return candidate
+    return None
+
+
+def stranger_database(kosh: Smritikosh, found: dict[str, Any],
+                      checkout: Path | None) -> str:
+    """Why a database that is already here can't be set up afresh, and
+    the ways on."""
+    where = f"{checkout}/.env" if checkout else "no checkout of Smritikosh found"
+    return (f"a Smritikosh database is already here ({kosh.database}, volume "
+            f"{volume_of(found) or '?'}), made with another setup's .env, and {where}. "
+            "A new .env would not open it (another password, another JWT_SECRET). "
+            "Point Sarathi at the checkout that made it: SARATHI_SMRITIKOSH="
+            "/path/to/smritikosh/.venv/bin/smritikosh-mcp sarathi smritikosh -- or copy "
+            "that checkout's .env here, or set smritikosh.database (and db_port) in "
+            "sarathi.toml to start a separate one")
+
+
 def migrate(checkout: Path, say: Callable[[str], None]) -> None:
     done = run([str(program(checkout, "alembic")), "upgrade", "head"], cwd=checkout)
     if done.returncode != 0:
         said = (done.stderr or done.stdout).strip()
         hint = (" -- the database has no pgvector: it must come from the pgvector "
-                "image" if "vector" in said else "")
+                "image" if "vector" in said else
+                f" -- the password in {checkout / '.env'} (POSTGRES_URL) is not the "
+                "database's: that .env came from another setup than the database "
+                "did. Point Sarathi at the checkout that made the database "
+                "(SARATHI_SMRITIKOSH=/path/.venv/bin/smritikosh-mcp), or put its "
+                "POSTGRES_URL and JWT_SECRET here" if "password authentication" in said
+                else "")
         raise SetupError(f"building its tables failed{hint}:\n{said[-600:]}")
     ran = [line for line in (done.stderr + done.stdout).splitlines()
            if "Running upgrade" in line]
@@ -743,6 +793,17 @@ def setup(config: Config, *, local: bool = False, say: Callable[[str], None] = p
         raise SetupError("Smritikosh's database runs in a container, and podman is not "
                          "installed")
     checkout, how = find_checkout(config)
+    # A database already here was made by some setup's .env. A new .env
+    # would hold another password and another JWT_SECRET (which may
+    # encrypt its stored sign-ins), so that setup's checkout is found
+    # first, never cloned around.
+    existing = container(config.smritikosh.database)
+    if existing is not None and (checkout is None or not opens(checkout, existing)):
+        made = checkout_for_database(existing)
+        if made is not None and how in ("", "beside"):
+            checkout, how = made, f"its .env opens {config.smritikosh.database}"
+        else:
+            raise SetupError(stranger_database(config.smritikosh, existing, checkout))
     if checkout is None:
         checkout = clone(say)
         how = "cloned"

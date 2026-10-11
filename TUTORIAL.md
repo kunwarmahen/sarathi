@@ -718,10 +718,11 @@ Smritikosh on, that means Smritikosh).
 the **Memory** card on the home page, which does both. Nothing is
 deleted either way, and the same card switches back.
 
-**Already set Smritikosh up by hand** (Yantra's SMRITIKOSH.md)? Run
-`SARATHI_SMRITIKOSH=~/src/smritikosh/.venv/bin/smritikosh-mcp sarathi smritikosh`
-with your own path. It uses your database, settings and key as they are,
-and makes no new account for you.
+**Already set Smritikosh up by hand** (Yantra's SMRITIKOSH.md)? Just run
+`sarathi smritikosh`. It finds your setup by its database, and uses your
+database, settings and key as they are, making no new account for you.
+If you keep it somewhere unusual, say where:
+`SARATHI_SMRITIKOSH=/your/path/smritikosh/.venv/bin/smritikosh-mcp sarathi smritikosh`.
 
 ---
 
@@ -754,6 +755,7 @@ you're most likely to meet:
 | `I couldn't start that sign-in: the browser did not answer Target.createTarget` | containers from an older Sarathi: the browser had nowhere to write | update Sarathi, then `sarathi up` (it restarts what changed) |
 | `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |
 | `dvara cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
+| `a Smritikosh database is already here … made with another setup's .env` | your own Smritikosh is somewhere Sarathi didn't look | `SARATHI_SMRITIKOSH=/path/to/smritikosh/.venv/bin/smritikosh-mcp sarathi smritikosh` |
 | `memory.via = "smritikosh" but it isn't set up yet` | sarathi.toml was edited by hand | `sarathi smritikosh` |
 | `the cloud road turns memories into numbers with OpenAI, and there is no OPENAI_API_KEY` | a cloud model, and no OpenAI key for Smritikosh's meanings | paste one when asked, or `sarathi smritikosh --local` (Ollama's `nomic-embed-text`) |
 | `Smritikosh already has an account 'NAME' and Sarathi doesn't know its password` | an account made by hand, without its key in Sarathi | run `sarathi smritikosh` in a terminal and type its password once |

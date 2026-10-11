@@ -351,3 +351,65 @@ def test_a_run_stopped_after_making_an_account_logs_in_to_it_next_time(world):
     assert api.keys[key] == "dvara-priya"
     path = settings_mod.state_dir() / smritikosh.ACCOUNTS_FILE
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+# ---- a database already here --------------------------------------------------------
+
+DB = {"Config": {"Env": ["POSTGRES_USER=smritikosh", "POSTGRES_PASSWORD=the-old-one"]},
+      "Mounts": [{"Destination": "/var/lib/postgresql/data", "Name": "pgdata"}],
+      "State": {"Running": True}}
+
+
+def a_checkout(where: Path, password: str | None) -> Path:
+    where.mkdir(parents=True)
+    (where / "pyproject.toml").write_text("")
+    if password is not None:
+        (where / ".env").write_text(f"POSTGRES_URL=postgresql+asyncpg://smritikosh:"
+                                    f"{password}@localhost:5432/smritikosh\n")
+    return where
+
+
+@pytest.fixture
+def your_machine(world, monkeypatch):
+    """A database made months ago by a checkout kept in the folder above
+    the others; the one beside them is a stray clone with a new .env."""
+    monkeypatch.setenv("HOME", str(world / "home"))
+    monkeypatch.setattr(smritikosh, "container", lambda name: DB)
+    real_which = smritikosh.shutil.which
+    monkeypatch.setattr(smritikosh.shutil, "which", lambda name, **kw: (
+        "/usr/bin/podman" if name == "podman" else real_which(name, **kw)))
+    above = a_checkout(world / "smritikosh", "the-old-one")
+    stray = a_checkout(world / "checkouts" / "smritikosh", "a-new-random-one")
+    seen = {}
+
+    def stop(checkout, say):        # the step after the checkout is chosen
+        seen["checkout"] = checkout
+        raise smritikosh.SetupError("stop here")
+    monkeypatch.setattr(smritikosh, "sync", stop)
+    return above, stray, seen
+
+
+def test_the_checkout_whose_env_opens_the_database_is_used_not_a_clone(your_machine):
+    above, stray, seen = your_machine
+    with pytest.raises(smritikosh.SetupError, match="stop here"):
+        smritikosh.setup(Config("ollama"), say=print, interactive=False)
+    assert seen["checkout"] == above
+
+
+def test_with_no_checkout_that_opens_it_nothing_is_cloned_or_written(your_machine,
+                                                                      monkeypatch):
+    above, stray, seen = your_machine
+    (above / ".env").unlink()
+    monkeypatch.setattr(smritikosh, "clone", lambda say: pytest.fail("cloned"))
+    with pytest.raises(smritikosh.SetupError, match="SARATHI_SMRITIKOSH"):
+        smritikosh.setup(Config("ollama"), say=print, interactive=False)
+    assert "checkout" not in seen
+
+
+def test_a_checkout_you_named_that_doesnt_open_it_is_refused_not_overridden(
+        your_machine, monkeypatch):
+    above, stray, seen = your_machine
+    named = replace(ON, smritikosh=replace(SET_UP, checkout=str(stray)))
+    with pytest.raises(smritikosh.SetupError, match="another password, another JWT_SECRET"):
+        smritikosh.setup(named, say=print, interactive=False)
+    assert "checkout" not in seen

@@ -168,6 +168,21 @@ after. That `.env` names MongoDB, which wasn't running, and Smritikosh's
 is up from `/openapi.json`, which carries Smritikosh's name, and reads
 `/health` only for the detail.
 
+**Found on your machine: a clone around your own database.** Run with
+no `SARATHI_SMRITIKOSH`, Sarathi found no Smritikosh beside the others
+(yours is in the folder above them). It cloned one there, wrote it a new
+`.env`, and pointed it at the `smritikosh-postgres` you made in March:
+`password authentication failed for user "smritikosh"`. Nothing in the
+database changed, but matching the password would only have hidden it:
+the new `.env` had a new `JWT_SECRET` too. Now a database already here
+decides. Sarathi looks for the checkout whose `.env` holds that
+container's own user and password (beside the others, the folder above,
+`~/src`, `~/Documents`, home) and uses it. With none, it stops before
+cloning or writing anything and says how to name one. A checkout you
+named that doesn't open the database is refused, not overridden. On
+this machine it now picks `~/Documents/ai/smritikosh` over the stray
+`agent/smritikosh`.
+
 **Found on the way: a fresh clone didn't run.** Smritikosh doesn't commit
 its `uv.lock`, so a clone resolves its dependencies anew. That gave `mcp`
 2.3, which renamed the `FastMCP` that `smritikosh-mcp` is built on, and
