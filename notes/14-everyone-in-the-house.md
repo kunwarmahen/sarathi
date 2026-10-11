@@ -62,6 +62,16 @@ Dvara's page with who, which agent, the cost and the tools, labelled
 *web*, and their words stay theirs. That rule was already Dvara's; this
 note adds no second one.
 
+## Why here, and not in Dvara
+
+Sarathi holds the wiring and no logic of its own, and a sign-in looks
+like logic. But Dvara's web channel was built to trust a caller that
+names the person (note 34 there), and the home page was already that
+caller, holding the only key that can open it. So who may open the home
+page is the home page's question, the same as its own key was. What a
+person may DO once they're in (agents, allowance, rules, memories) is
+never asked here; Dvara answers it as it does on Telegram.
+
 ## Where the phone reaches it
 
 The home page listened on this computer only. With `[dvara]

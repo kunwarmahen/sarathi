@@ -33,6 +33,11 @@ in one of the projects above, where people who use that project alone
 get it too. And it never becomes something those projects need: every
 one of them works without Sarathi.
 
+The one thing it keeps of its own is who may open its home page: your
+key, and the sign-ins of the people in the house, each of them an id in
+Dvara's actors file. Who they are, what they may use and what they may
+spend stay Dvara's ([notes/14](notes/14-everyone-in-the-house.md)).
+
 It also imports none of them. Each lives in its own environment, with
 its own dependencies, so Sarathi runs each as a program and reads the
 JSON it prints. Sarathi itself has no dependencies.
@@ -694,7 +699,7 @@ In this order; the first hit wins:
 | `~/dvara/` | Dvara's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[dvara]` can name others) |
 | `~/dvara/state/memory.json` | with Smritikosh on: each person's name and key there, for Dvara; yours alone |
 | `<smritikosh>/ui/.env.local` | the dashboard's own sign-in secret, written by `sarathi smritikosh` only when there is none |
-| `~/.local/share/sarathi/` | `smritikosh-accounts.json` the passwords of the Smritikosh accounts Sarathi made, and `mcp/` how Yantra and Dvara start `smritikosh-mcp` (no key in it); `home.token` the home page's key (yours alone), `people.json` the people in the house's sign-ins (hashes only; yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
+| `~/.local/share/sarathi/` | `smritikosh-accounts.json` the passwords of the Smritikosh accounts Sarathi made, and `mcp/` how Yantra, Samay's runs and Dvara start `smritikosh-mcp` (no key in it); `home.token` the home page's key (yours alone), `people.json` the people in the house's sign-ins (hashes only; yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
 are still in `~/.samay`, and Setu's sign-ins are still where Setu put

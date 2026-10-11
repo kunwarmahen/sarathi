@@ -850,11 +850,14 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Your Smritikosh key, for the helper | `~/.config/sarathi/secrets.env`, as `SMRITIKOSH_API_KEY` |
 | Each person's Smritikosh key, for Dvara | `~/dvara/state/memory.json` (only you can read it) |
 | Passwords of the Smritikosh accounts Sarathi made | `~/.local/share/sarathi/smritikosh-accounts.json` (only you) |
+| Who in the house can sign in to the home page | `~/.local/share/sarathi/people.json` (only you; passwords kept as hashes) |
+| What an agent noticed about someone, waiting for their `/remember` | `~/dvara/state/offered.json` (only you) |
 | What Sarathi started, and what each printed | `~/.local/share/sarathi/` |
 
 Sarathi doesn't move anything: each program keeps its files where it
 always has. To start over with Sarathi, delete its two folders; your
-accounts, schedules and memories stay.
+accounts, schedules and memories stay (the people in the house would
+need inviting again).
 
 ---
 
