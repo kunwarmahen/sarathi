@@ -46,6 +46,24 @@ reaches the browser, the way Dvara's own page keeps it:
     POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}}
     GET  /api/chat/file?line=&n=  a file an answer carried
 
+EVERYONE IN THE HOUSE, EACH THEIR OWN CHAT. The other people in
+Dvara's actors file sign in here too (people.py: an invite from the
+owner, a password chosen once), and the same chat speaks to Dvara as
+them. A person signed in gets their chat and nothing else: the cards,
+the keys, the memory switch and the people list answer 403, whatever
+the script in their browser draws. The owner sees and invites them:
+
+    GET  /api/me                   who this is: the owner, or a person
+    GET  /api/people               everyone in the actors file, signed in or not
+    POST /api/people/NAME/invite   a one-time link to send them
+    POST /api/people/NAME/sign-out every device of theirs signed out
+    POST /api/claim                {"link", "password"}: an invite used
+    POST /api/sign-in              {"name", "password"}: a session for this device
+    POST /api/sign-out             this device signed out
+
+With ``--also-host`` (the door's window address, when it is one) the page
+listens there too, so a phone at home can open a person's link.
+
 THE LINK CARRIES THE KEY. Samay's, Setu's and Dvara's pages each keep
 their token in their own folder (``serve.token``, ``page.token``), which
 the containers mount at the same path as this machine, so one click
@@ -87,6 +105,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from sarathi.config import DOOR_TOKEN, Config, read_secrets, render, settings_path, state_dir
+from sarathi.people import INVITE_HOURS, People, PeopleError, actor_ids
 from sarathi.services import HOST, answers
 from sarathi.siblings import SIBLINGS, locate
 
@@ -308,7 +327,8 @@ CHAT_TIMEOUT = 15.0
 
 
 class Chat:
-    """Dvara's web channel, as the owner. Passes through; decides nothing."""
+    """Dvara's web channel, as whoever this page says is talking: the owner,
+    or a person signed in (people.py). Passes through; decides nothing."""
 
     def __init__(self, url: str, token: str, actor: str) -> None:
         self.url = url.rstrip("/")
@@ -328,11 +348,12 @@ class Chat:
         return cls(f"http://{HOST}:{door.port}", token, door.owner)
 
     def call(self, method: str, path: str, body: dict | None = None,
-             query: dict | None = None) -> tuple[bytes, str]:
-        q = urllib.parse.urlencode({"actor": self.actor, **(query or {})})
+             query: dict | None = None, *, actor: str | None = None) -> tuple[bytes, str]:
+        actor = actor or self.actor
+        q = urllib.parse.urlencode({"actor": actor, **(query or {})})
         data = None
         if body is not None:
-            data = json.dumps({**body, "actor": self.actor}).encode()
+            data = json.dumps({**body, "actor": actor}).encode()
         request = urllib.request.Request(
             f"{self.url}{path}?{q}", data=data, method=method,
             headers={"Authorization": f"Bearer {self.token}",
@@ -354,20 +375,45 @@ class Chat:
                                  f"{getattr(exc, 'reason', exc)}") from None
 
     def json(self, method: str, path: str, body: dict | None = None,
-             query: dict | None = None) -> dict[str, Any]:
-        raw, _ = self.call(method, path, body, query)
+             query: dict | None = None, *, actor: str | None = None) -> dict[str, Any]:
+        raw, _ = self.call(method, path, body, query, actor=actor)
         return json.loads(raw or b"{}")
+
+
+def invite_address(config: Config, link: str) -> tuple[str, bool]:
+    """(the address a person opens, whether a phone can reach it): the
+    house address the door's window uses, when it is one; else this
+    computer, and the owner is told so."""
+    host = config.people_host()
+    shown = f"[{host}]" if host and ":" in host else host
+    base = f"http://{shown or HOST}:{config.pages.home_port}/"
+    return f"{base}#invite={link}", host is not None
 
 
 class HomeServer:
     def __init__(self, home: Home, token: str, *, host: str = HOST,
-                 port: int = DEFAULT_PORT, chat: Chat | None = None) -> None:
+                 port: int = DEFAULT_PORT, chat: Chat | None = None,
+                 people: People | None = None, also_host: str | None = None) -> None:
         self.home = home
         self.chat = chat
         self.token = token
+        self.people = people
         self.httpd = ThreadingHTTPServer((host, port), _handler(self))
         self.httpd.daemon_threads = True
-        self._thread: threading.Thread | None = None
+        # the house address too (people_host), so a phone at home reaches it
+        self.also: ThreadingHTTPServer | None = None
+        #: Why the house address isn't served, when it was asked for and isn't.
+        self.also_problem: str | None = None
+        if also_host and also_host != host:
+            try:
+                self.also = ThreadingHTTPServer((also_host, self.httpd.server_address[1]),
+                                                _handler(self))
+                self.also.daemon_threads = True
+            except OSError as exc:
+                # Tailscale down, a moved address: your own page still opens here
+                self.also_problem = f"{also_host} can't be listened on ({exc.strerror})"
+
+        self._threads: list[threading.Thread] = []
 
     @property
     def url(self) -> str:
@@ -381,18 +427,36 @@ class HomeServer:
         return f"{self.url}#token={self.token}"
 
     def serve_forever(self) -> None:
+        if self.also is not None:
+            threading.Thread(target=self.also.serve_forever, name="sarathi-home-house",
+                             daemon=True).start()
         self.httpd.serve_forever()
 
     def start(self) -> None:
-        self._thread = threading.Thread(target=self.httpd.serve_forever,
-                                        name="sarathi-home", daemon=True)
-        self._thread.start()
+        for httpd in (self.httpd, self.also):
+            if httpd is not None:
+                thread = threading.Thread(target=httpd.serve_forever,
+                                          name="sarathi-home", daemon=True)
+                thread.start()
+                self._threads.append(thread)
 
     def stop(self) -> None:
-        self.httpd.shutdown()
-        self.httpd.server_close()
-        if self._thread is not None:
-            self._thread.join()
+        for httpd in (self.httpd, self.also):
+            if httpd is not None:
+                httpd.shutdown()
+                httpd.server_close()
+        for thread in self._threads:
+            thread.join()
+
+
+@dataclass(frozen=True)
+class Who:
+    """Who a request is from: the owner (the page's key), or a person
+    signed in, by their id in Dvara's actors file."""
+
+    owner: bool
+    actor: str | None          # None: the owner, with no door to name them in
+    session: str | None = None
 
 
 def _handler(server: HomeServer):
@@ -417,20 +481,49 @@ def _handler(server: HomeServer):
         def _json(self, code: int, data: dict[str, Any]) -> None:
             self._send(code, json.dumps(data).encode(), "application/json")
 
-        def _keyed(self) -> bool:
+        def _who(self) -> Who | None:
+            """The owner, a person, or None (and a 401 said)."""
             offered = self.headers.get("Authorization", "")
             if hmac.compare_digest(offered.encode(), f"Bearer {server.token}".encode()):
-                return True
-            self._json(401, {"detail": "missing or wrong token"})
-            return False
+                return Who(True, server.chat.actor if server.chat else None)
+            session = offered.removeprefix("Bearer ").strip()
+            if server.people is not None and session.startswith("s."):
+                name = server.people.who(session)
+                if name is not None:
+                    return Who(False, name, session)
+            self._json(401, {"detail": "missing or wrong token, or signed out"})
+            return None
 
-        def _chat(self, method: str, path: str, body: dict | None = None,
+        def _owner(self) -> Who | None:
+            who = self._who()
+            if who is not None and not who.owner:
+                self._json(403, {"detail": "only the owner's own page has that"})
+                return None
+            return who
+
+        def _body(self) -> dict | None:
+            try:
+                size = int(self.headers.get("Content-Length") or 0)
+                if size > MAX_BODY:
+                    self._json(413, {"detail": "that message is too long"})
+                    return None
+                body = json.loads(self.rfile.read(size) or b"{}")
+            except ValueError:
+                self._json(400, {"detail": "the body must be JSON"})
+                return None
+            if not isinstance(body, dict):
+                self._json(400, {"detail": "the body must be a JSON object"})
+                return None
+            return body
+
+        def _chat(self, who: Who, method: str, path: str, body: dict | None = None,
                   query: dict | None = None) -> None:
             if server.chat is None:
                 return self._json(404, {"detail": "no chat here: Dvara is off, or "
                                                   "has no token yet (`sarathi dvara`)"})
             try:
-                return self._json(200, server.chat.json(method, path, body, query))
+                return self._json(200, server.chat.json(method, path, body, query,
+                                                        actor=who.actor))
             except ChatError as exc:
                 return self._json(exc.status, {"detail": str(exc)})
 
@@ -440,19 +533,29 @@ def _handler(server: HomeServer):
                 name, kind = STATIC[url.path]
                 return self._send(200, files("sarathi").joinpath("static", name)
                                   .read_bytes(), kind)
-            if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file"):
+            if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
+                                "/api/people"):
                 return self._json(404, {"detail": "not found"})
-            if not self._keyed():
+            who = self._owner() if url.path in ("/api/pieces", "/api/people") \
+                else self._who()
+            if who is None:
                 return None
             query = {k: v[-1] for k, v in parse_qs(url.query).items()}
+            if url.path == "/api/me":
+                return self._json(200, {"owner": who.owner, "name": who.actor,
+                                        "chat": server.chat is not None})
+            if url.path == "/api/people":
+                return self._people_list()
             if url.path == "/api/chat":
-                return self._chat("GET", "/web", query={"after": query.get("after", "0")})
+                return self._chat(who, "GET", "/web",
+                                  query={"after": query.get("after", "0")})
             if url.path == "/api/chat/file":
                 if server.chat is None:
                     return self._json(404, {"detail": "no chat here"})
                 try:
                     raw, named = server.chat.call("GET", "/web/file", query={
-                        "line": query.get("line", "0"), "n": query.get("n", "0")})
+                        "line": query.get("line", "0"), "n": query.get("n", "0")},
+                        actor=who.actor)
                 except ChatError as exc:
                     return self._json(exc.status, {"detail": str(exc)})
                 self.send_response(200)
@@ -468,47 +571,124 @@ def _handler(server: HomeServer):
             try:
                 return self._json(200, {"pieces": server.home.pieces(),
                                         "memory": server.home.memory(),
-                                        "chat": server.chat is not None})
+                                        "chat": server.chat is not None,
+                                        "people": server.people is not None
+                                        and server.home.config.door is not None})
             except Exception as exc:     # a bug is a 500 that says what, not a hang
                 return self._json(500, {"detail": f"{type(exc).__name__}: {exc}"})
+
+        # ---- people (people.py): the owner adds them, they sign in --------------
+
+        def _known(self) -> list[str]:
+            door = server.home.config.door
+            if door is None:
+                raise PeopleError("Dvara is off: people sign in to talk to their agents "
+                                  "through it (`sarathi dvara`)")
+            return actor_ids(door.path("actors"))
+
+        def _people_list(self) -> None:
+            if server.people is None:
+                return self._json(404, {"detail": "no sign-ins here"})
+            door = server.home.config.door
+            try:
+                known = self._known()
+                kept = {p.name: p for p in server.people.listing()}
+            except PeopleError as exc:
+                return self._json(409, {"detail": str(exc)})
+            owner = door.owner if door else None
+            out = []
+            for name in sorted(set(known) | set(kept)):
+                if name == owner:
+                    continue
+                p = kept.get(name)
+                out.append({**(p.as_dict() if p else {"name": name, "signed_up": False,
+                                                       "invite_until": None, "devices": 0,
+                                                       "last_used": None}),
+                            "on_roster": name in known})
+            _, reachable = invite_address(server.home.config, "")
+            return self._json(200, {"people": out, "reachable": reachable})
+
+        def _device(self) -> str:
+            return self.headers.get("User-Agent", "")[:80]
+
+        def _people_post(self, parts: list[str]) -> None:
+            if server.people is None:
+                return self._json(404, {"detail": "no sign-ins here"})
+            if parts == ["api", "sign-in"] or parts == ["api", "claim"]:
+                body = self._body()
+                if body is None:
+                    return None
+                try:
+                    if parts[1] == "claim":
+                        name, session = server.people.claim(
+                            str(body.get("link") or ""), str(body.get("password") or ""),
+                            self._device())
+                    else:
+                        name = str(body.get("name") or "").strip()
+                        session = server.people.sign_in(
+                            name, str(body.get("password") or ""), self._device())
+                except PeopleError as exc:
+                    return self._json(403, {"detail": str(exc)})
+                return self._json(200, {"name": name, "session": session})
+            if parts == ["api", "sign-out"]:
+                who = self._who()
+                if who is None:
+                    return None
+                if who.session:
+                    server.people.leave(who.session)
+                return self._json(200, {"said": "signed out on this device"})
+            # the owner's: /api/people/NAME/invite, /api/people/NAME/sign-out
+            if self._owner() is None:
+                return None
+            name, act = parts[2], parts[3]
+            try:
+                if act == "invite":
+                    link = server.people.invite(name, self._known(),
+                                                server.home.config.door.owner)
+                    url, reachable = invite_address(server.home.config, link)
+                    return self._json(200, {"url": url, "reachable": reachable,
+                                            "hours": INVITE_HOURS})
+                gone = server.people.sign_out(name)
+            except PeopleError as exc:
+                return self._json(409, {"detail": str(exc)})
+            return self._json(200, {"said": f"{name} signed out on {gone} "
+                                            f"device{'s' if gone != 1 else ''}"})
 
         def do_POST(self) -> None:
             url = urlparse(self.path)
             parts = url.path.strip("/").split("/")
+            if parts in (["api", "sign-in"], ["api", "claim"], ["api", "sign-out"]) or \
+                    (len(parts) == 4 and parts[:2] == ["api", "people"]
+                     and parts[3] in ("invite", "sign-out")):
+                return self._people_post(parts)
             if parts == ["api", "memory"]:
-                if not self._keyed():
+                if self._owner() is None:
                     return None
-                try:
-                    size = int(self.headers.get("Content-Length") or 0)
-                    body = json.loads(self.rfile.read(min(size, MAX_BODY)) or b"{}")
-                except ValueError:
-                    return self._json(400, {"detail": "the body must be JSON"})
-                via = body.get("via") if isinstance(body, dict) else None
-                code, words = server.home.switch(str(via))
+                body = self._body()
+                if body is None:
+                    return None
+                code, words = server.home.switch(str(body.get("via")))
                 return self._json(code, {"detail" if code >= 400 else "said": words})
             if parts[:2] != ["api", "chat"] or len(parts) not in (2, 4) or \
                     (len(parts) == 4 and parts[2] not in ("asks", "holds")):
                 return self._json(405, {"detail": "this page only links, passes your "
-                                                  "chat to Dvara, and switches memory"})
-            if not self._keyed():
+                                                  "chat to Dvara, signs people in, and "
+                                                  "switches memory"})
+            who = self._who()
+            if who is None:
                 return None
-            try:
-                size = int(self.headers.get("Content-Length") or 0)
-                if size > MAX_BODY:
-                    return self._json(413, {"detail": "that message is too long"})
-                body = json.loads(self.rfile.read(size) or b"{}")
-            except ValueError:
-                return self._json(400, {"detail": "the body must be JSON"})
-            if not isinstance(body, dict):
-                return self._json(400, {"detail": "the body must be a JSON object"})
+            body = self._body()
+            if body is None:
+                return None
             # only what Dvara's web channel takes, and never who: that's set here
             if len(parts) == 2:
-                return self._chat("POST", "/web/message", {
+                return self._chat(who, "POST", "/web/message", {
                     "agent": body.get("agent"), "text": body.get("text")})
             if parts[2] == "asks":
-                return self._chat("POST", f"/web/asks/{urllib.parse.quote(parts[3])}",
+                return self._chat(who, "POST",
+                                  f"/web/asks/{urllib.parse.quote(parts[3])}",
                                   {"approve": body.get("approve")})
-            return self._chat("POST", f"/web/holds/{urllib.parse.quote(parts[3])}",
+            return self._chat(who, "POST", f"/web/holds/{urllib.parse.quote(parts[3])}",
                               {"answers": body.get("answers")})
 
     return Handler

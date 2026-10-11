@@ -225,3 +225,26 @@ button.open:disabled { opacity: .55; cursor: progress; }
   .say select { grid-column: 1 / -1; }
   .line { max-width: 100%; }
 }
+
+/* -- signing in, and the owner's list of people ----------------------------- */
+.signin { max-width: 420px; }
+.signin h2 { font-size: 17px; }
+.signin-form { display: grid; gap: 6px; margin-top: 4px; }
+.signin-form label { font-size: 13px; color: var(--ink-2); }
+.signin-form input {
+  font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; min-width: 0;
+}
+.signin-form input[readonly] { background: var(--sunk); }
+.signin-form .send { justify-self: start; margin-top: 6px; }
+#signin-problem { margin-top: 8px; }
+.signin .meta { margin-top: 18px; }
+.linkish {
+  font: inherit; font-size: 13px; color: var(--accent); background: none; border: 0;
+  padding: 0; cursor: pointer; text-decoration: underline;
+}
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+          gap: 12px; }
+.card .buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.card .buttons .open { margin-top: 0; }
+#people-said { margin-top: 8px; }

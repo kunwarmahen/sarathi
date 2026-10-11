@@ -1,31 +1,42 @@
 // Sarathi's home page: one card per program's page, drawn from /api/pieces,
 // and a chat with your agents that passes through to Dvara (/api/chat).
-// Every value goes in as text, never as markup. The key arrives after "#",
-// is kept in this browser, and leaves the address bar at once. The links
-// it draws carry each page's own key, so they open with no referrer.
+// Every value goes in as text, never as markup. The owner's key arrives
+// after "#token=", is kept in this browser, and leaves the address bar at
+// once. The links it draws carry each page's own key, so they open with no
+// referrer. Someone else in the house signs in instead (an invite link,
+// "#invite=", once; then their name and password) and gets their own chat,
+// nothing else: the server holds that line, this script only draws it.
 "use strict";
 
 const KEY = "sarathi.home.token";
+const SESSION = "sarathi.home.session";
 const EVERY = 20000;
 
-function keep(token) {
-  try { localStorage.setItem(KEY, token); } catch (_) { /* private window */ }
+function keep(name, value) {
+  try {
+    if (value) localStorage.setItem(name, value); else localStorage.removeItem(name);
+  } catch (_) { /* private window */ }
 }
-function kept() {
-  try { return localStorage.getItem(KEY) || ""; } catch (_) { return ""; }
-}
-
-function takeToken() {
-  const fresh = new URLSearchParams(location.hash.slice(1)).get("token");
-  if (fresh) {
-    keep(fresh);
-    history.replaceState(null, "", location.pathname + location.search);
-    return fresh;
-  }
-  return kept();
+function kept(name) {
+  try { return localStorage.getItem(name) || ""; } catch (_) { return ""; }
 }
 
-const token = takeToken();
+// "#token=" (the owner) or "#invite=" (a person's one-time link), taken
+// from the address bar at once either way.
+function takeHash() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const fresh = hash.get("token");
+  const invite = hash.get("invite") || "";
+  if (fresh || invite) history.replaceState(null, "", location.pathname + location.search);
+  if (fresh) keep(KEY, fresh);
+  return invite;
+}
+
+const invite = takeHash();
+// the owner's key first: on the owner's own browser it opens everything
+let token = kept(KEY) || kept(SESSION);
+let me = null;
+let invited = false;     // the invite on this address has been used, here
 
 function h(spec, attrs, ...kids) {
   const [tag, ...classes] = spec.split(".");
@@ -107,9 +118,47 @@ async function switchMemory(via) {
   refresh();
 }
 
+function show(id, on) { document.getElementById(id).hidden = !on; }
+
+function signedOut(said) {
+  // a session that stopped working is forgotten; the owner's key is kept
+  if (token && token === kept(SESSION)) keep(SESSION, "");
+  if (token && token === kept(KEY) && said) keep(KEY, "");
+  token = kept(KEY) || kept(SESSION);
+  me = null;
+  for (const id of ["chat", "pages", "people"]) show(id, false);
+  document.getElementById("facts").replaceChildren();
+  signInForm(invite && !said ? "invite" : "sign-in", said);
+}
+
+async function whoAmI() {
+  if (!token) return null;
+  const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` },
+                                       cache: "no-store" });
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.status);
+  return res.json();
+}
+
 async function refresh() {
-  const gate = document.getElementById("gate");
-  if (!token) { gate.hidden = false; return; }
+  // an invite link opens its own form first, even in a browser already signed in
+  if (invite && !invited) return signInForm("invite");
+  if (!me && !document.getElementById("signin").hidden && !token) return;
+  let found;
+  try {
+    found = await whoAmI();
+  } catch (_) {
+    document.getElementById("updated").textContent =
+      "Couldn't reach Sarathi. Is sarathi home still running?";
+    return;
+  }
+  if (!found) {
+    if (!me) return signedOut(token ? "That device was signed out. Sign in again." : "");
+    return signedOut("You were signed out. Sign in again.");
+  }
+  me = found;
+  show("signin", false);
+  if (!me.owner) return drawPerson();
   let res;
   try {
     res = await fetch("/api/pieces", { headers: { Authorization: `Bearer ${token}` },
@@ -119,22 +168,166 @@ async function refresh() {
       "Couldn't reach Sarathi. Is sarathi home still running?";
     return;
   }
-  if (res.status === 401) { gate.hidden = false; return; }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     document.getElementById("updated").textContent = `Couldn't read it: ${body.detail}`;
     return;
   }
-  gate.hidden = true;
+  show("pages", true);
   const up = body.pieces.filter((p) => p.up).length;
   document.getElementById("facts").replaceChildren(
     h("span", {}, `${up} of ${body.pieces.length} running`));
   const cards = body.pieces.map(card);
   if (body.memory) cards.push(memoryCard(body.memory));
   document.getElementById("pieces").replaceChildren(...cards);
+  if (body.people) drawPeople();
   if (body.chat && !chat.on) startChat();
   document.getElementById("updated").textContent =
     `Updated ${new Date().toLocaleTimeString()}`;
+}
+
+// ---- someone in the house: their chat, and a way out ---------------------------
+
+function drawPerson() {
+  const out = h("button.linkish", { type: "button" }, "Sign out");
+  out.addEventListener("click", async () => {
+    try { await api("/api/sign-out", {}); } catch (_) { /* gone already */ }
+    keep(SESSION, "");
+    location.reload();
+  });
+  document.getElementById("facts").replaceChildren(
+    h("span", {}, `Signed in as ${me.name}`), out);
+  document.getElementById("h-chat").textContent = "Talk to your agents";
+  document.getElementById("foot-said").textContent =
+    "Your chat goes to Dvara as you, with your own allowance and rules. " +
+    "The person running this house sees which agent you used and what it cost, " +
+    "never what you said.";
+  if (!me.chat) {
+    document.getElementById("updated").textContent =
+      "Dvara isn't running right now, so there's no chat. Try again later.";
+    return;
+  }
+  if (!chat.on) startChat();
+  document.getElementById("updated").textContent =
+    `Updated ${new Date().toLocaleTimeString()}`;
+}
+
+function signInForm(mode, said) {
+  show("signin", true);
+  const choosing = mode === "invite";
+  const name = document.getElementById("signin-name");
+  const password = document.getElementById("signin-password");
+  document.getElementById("h-signin").textContent =
+    choosing ? "Choose your password" : "Sign in";
+  document.getElementById("signin-lede").textContent = choosing
+    ? "This link works once. Choose a password of at least 8 characters; after this " +
+      "you sign in with your name and that password."
+    : "To talk to your agents. The person who runs this house gave you your name; " +
+      "you chose the password.";
+  document.getElementById("signin-password-label").textContent =
+    choosing ? "New password" : "Password";
+  password.autocomplete = choosing ? "new-password" : "current-password";
+  if (choosing) {
+    name.value = invite.split(".")[0];
+    name.readOnly = true;
+  }
+  document.getElementById("signin-go").textContent = choosing ? "Set it and sign in"
+                                                              : "Sign in";
+  const problemEl = document.getElementById("signin-problem");
+  problemEl.hidden = !said;
+  problemEl.textContent = said || "";
+  const form = document.getElementById("signin-form");
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const go = document.getElementById("signin-go");
+    go.disabled = true;
+    try {
+      const path = choosing ? "/api/claim" : "/api/sign-in";
+      const body = choosing ? { link: invite, password: password.value }
+                            : { name: name.value.trim(), password: password.value };
+      const res = await fetch(path, { method: "POST", cache: "no-store",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const got = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(got.detail || `status ${res.status}`);
+      keep(SESSION, got.session);
+      token = got.session;
+      invited = true;
+      name.readOnly = false;
+      password.value = "";
+      refresh();
+    } catch (err) {
+      problemEl.hidden = false;
+      problemEl.textContent = err.message;
+    } finally {
+      go.disabled = false;
+    }
+  };
+}
+
+// ---- the owner's list of the people in the house -------------------------------
+
+const people = { links: {} };
+
+function personRow(p, reachable) {
+  const state = !p.on_roster ? "not in Dvara's actors file any more"
+    : p.signed_up ? `signed in on ${p.devices} device${p.devices === 1 ? "" : "s"}` +
+                    (p.last_used ? `, last ${when(p.last_used)}` : "")
+    : p.invite_until ? "invited, not opened yet" : "no sign-in yet";
+  const inviteB = h("button.open", { type: "button" },
+                    p.signed_up ? "New link (resets their password)"
+                    : p.invite_until ? "New link" : "Invite");
+  inviteB.addEventListener("click", async () => {
+    try {
+      const got = await api(`/api/people/${encodeURIComponent(p.name)}/invite`, {});
+      people.links[p.name] = got;
+      document.getElementById("people-said").textContent = "";
+    } catch (err) {
+      document.getElementById("people-said").textContent = err.message;
+    }
+    drawPeople();
+  });
+  let outB = null;
+  if (p.devices) {
+    outB = h("button.no", { type: "button" }, "Sign out everywhere");
+    outB.addEventListener("click", async () => {
+      try {
+        const got = await api(`/api/people/${encodeURIComponent(p.name)}/sign-out`, {});
+        document.getElementById("people-said").textContent = got.said;
+      } catch (err) {
+        document.getElementById("people-said").textContent = err.message;
+      }
+      drawPeople();
+    });
+  }
+  const link = people.links[p.name];
+  return h("article.card", {},
+    h("div.card-head", {}, h("h3", {}, p.name),
+      h("span.badge." + (p.signed_up ? "up" : "down"), {}, state)),
+    link ? [h("div.meta", {}, `Send ${p.name} this link. It works once, on the first ` +
+                              `device, within ${link.hours} hours:`),
+            h("div.cmd", {}, link.url),
+            link.reachable ? null : h("div.warn", {}, "It opens on this computer only. " +
+              "For a phone at home, give Dvara a window address " +
+              "(sarathi dvara --window-host ADDRESS), sarathi up, and make a new link.")]
+         : null,
+    !link && !reachable && !p.signed_up
+      ? h("div.meta", {}, "Links open on this computer only until Dvara has a window " +
+                          "address on your home network.") : null,
+    h("div.buttons", {}, p.on_roster ? inviteB : null, outB));
+}
+
+async function drawPeople() {
+  show("people", true);
+  try {
+    const got = await api("/api/people");
+    const rows = got.people.map((p) => personRow(p, got.reachable));
+    document.getElementById("people-list").replaceChildren(...(rows.length ? rows :
+      [h("div.empty", {}, "Nobody but you in Dvara's actors file yet. Add someone " +
+                          "there ([actor.name]: their agents and allowance), then " +
+                          "invite them here.")]));
+  } catch (err) {
+    document.getElementById("people-said").textContent = err.message;
+  }
 }
 
 // ---- the chat -----------------------------------------------------------------
@@ -279,7 +472,7 @@ async function say(event) {
   const agent = document.getElementById("agent").value;
   if (!text.value.trim() || !agent || chat.sending) return;
   chat.sending = true;
-  const send = document.querySelector(".send");
+  const send = document.querySelector("#say .send");
   send.disabled = true;
   try {
     await api("/api/chat", { agent, text: text.value });

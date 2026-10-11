@@ -49,6 +49,10 @@ firewall: ufw is on; if a phone can't open 192.168.1.44 on 8775, 8790, 8791, ope
   sudo ufw allow from 192.168.1.0/24 to any port 8775,8790,8791 proto tcp
 ```
 
+The home page's own port joined the list when the people in the house
+began signing in there ([note 14](14-everyone-in-the-house.md)): the
+same line now names 8760 too.
+
 It runs none of it. Opening a port needs root and is the owner's call,
 and a program that edits the firewall on the way up is one nobody can
 safely run twice. The price is the word "if": reading ufw's rules also

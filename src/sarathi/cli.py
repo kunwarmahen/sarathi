@@ -17,7 +17,12 @@
     sarathi status            each piece: found where, what it says, and
                               what `up` started
     sarathi status --json     the same, as sarathi.status.v1
-    sarathi home              one page linking every program's page, with status
+    sarathi home              one page linking every program's page, with status,
+                              and a chat with your agents
+    sarathi invite NAME       a one-time link for someone in Dvara's actors file:
+                              they choose a password and get their own chat
+    sarathi people            who can sign in to the home page; --sign-out NAME
+                              ends their devices, --remove NAME their sign-in
 
 ``init`` takes flags for everything it asks (``--provider``, ``--model``,
 ``--base-url``, ``--yantra-port``, ``--samay-port``, ``--no-samay``,
@@ -132,6 +137,18 @@ def build_parser() -> argparse.ArgumentParser:
     home_cmd.add_argument("--host", default="127.0.0.1",
                           help="this computer only, unless you say otherwise")
     home_cmd.add_argument("--port", type=int, default=8760)
+    home_cmd.add_argument("--also-host", dest="also_host", metavar="ADDRESS",
+                          help="listen on this address too, where phones at home reach "
+                               "it (the door's window_host)")
+    invite = subs.add_parser("invite", help="a one-time link for someone in the house: "
+                             "they choose a password, then have their own chat")
+    invite.add_argument("name", help="their id in Dvara's actors file")
+    people_cmd = subs.add_parser("people", help="who can sign in to the home page")
+    people_do = people_cmd.add_mutually_exclusive_group()
+    people_do.add_argument("--sign-out", dest="sign_out", metavar="NAME",
+                           help="sign NAME out on every device")
+    people_do.add_argument("--remove", metavar="NAME",
+                           help="NAME's sign-in gone: password, invite and devices")
     status = subs.add_parser("status", help="what is here, and what each piece says")
     status.add_argument("--json", dest="json_out", action="store_true",
                         help=f"print {FORMAT} instead of lines")
@@ -297,17 +314,25 @@ def _memory(config) -> dict | None:
 
 def _serve_home(args) -> int:
     from sarathi.home import Chat, Home, HomeServer, home_token
+    from sarathi.people import People
 
     try:
         config = load()
         server = HomeServer(Home(config, _said), home_token(), host=args.host,
-                            port=args.port, chat=Chat.for_config(config))
+                            port=args.port, chat=Chat.for_config(config),
+                            people=People(), also_host=args.also_host)
     except (ConfigError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(f"your home page:\n  {server.page_url}\n"
           "(the part after # is its key: open it once, the page keeps it. Ctrl-C stops.)",
           flush=True)
+    if server.also_problem:
+        print(f"not for the people in the house: {server.also_problem}; this computer "
+              "only until it can be", flush=True)
+    if server.also is not None:
+        print(f"and for the people in the house: http://{args.also_host}:"
+              f"{server.httpd.server_address[1]}/ (they sign in)", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -317,10 +342,69 @@ def _serve_home(args) -> int:
     return 0
 
 
+def _people(args) -> int:
+    """`sarathi invite NAME` and `sarathi people`: the home page's sign-ins."""
+    from sarathi.home import invite_address
+    from sarathi.people import INVITE_HOURS, People, PeopleError, actor_ids
+
+    try:
+        config = load()
+        people = People()
+        if config.door is None:
+            raise PeopleError("Dvara is off: the people in the house talk to their agents "
+                              "through it. Turn it on with `sarathi dvara`")
+        if args.command == "invite":
+            link = people.invite(args.name, actor_ids(config.door.path("actors")),
+                                 config.door.owner)
+            url, reachable = invite_address(config, link)
+            print(f"{args.name}'s link, for one device, within {INVITE_HOURS} hours:\n"
+                  f"  {url}\n"
+                  "They open it and choose a password; after that they sign in with "
+                  f"{args.name!r} and that password, and see their own chat only.")
+            if not reachable:
+                print("It opens on this computer only: for a phone at home, give Dvara a "
+                      "window address (`sarathi dvara --window-host ADDRESS`), then "
+                      "`sarathi up` and invite again.")
+            return 0
+        if args.sign_out:
+            gone = people.sign_out(args.sign_out)
+            print(f"{args.sign_out} signed out on {gone} device{'s' if gone != 1 else ''}")
+            return 0
+        if args.remove:
+            people.remove(args.remove)
+            print(f"{args.remove}'s sign-in is gone; they're still in Dvara's actors file")
+            return 0
+        known = actor_ids(config.door.path("actors"))
+        kept = {p.name: p for p in people.listing()}
+        names = [n for n in sorted(set(known) | set(kept)) if n != config.door.owner]
+        if not names:
+            print("Nobody but you in Dvara's actors file yet.")
+        for name in names:
+            p = kept.get(name)
+            if p is None:
+                said = "no sign-in yet: `sarathi invite " + name + "`"
+            elif p.signed_up:
+                said = f"signed up, on {p.devices} device{'s' if p.devices != 1 else ''}"
+                said += f", last {p.last_used}" if p.last_used else ""
+            else:
+                said = "invited, not opened yet"
+            if p is not None and p.invite_until:
+                said += f"; a link open until {p.invite_until}"
+            if name not in known:
+                said += "; not in Dvara's actors file any more"
+            print(f"{name:<{WIDTH}} {said}")
+        return 0
+    except (ConfigError, PeopleError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "home":
         return _serve_home(args)
+    if args.command in ("invite", "people"):
+        return _people(args)
     if args.command == "init":
         return first_run.run(args)
     if args.command in ("dvara", "door"):

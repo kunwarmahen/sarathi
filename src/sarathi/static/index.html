@@ -19,11 +19,23 @@
 </header>
 
 <main>
-  <div id="gate" class="gate" hidden>
-    <h2>This page needs its key</h2>
-    <p>Open the address <code>sarathi home</code> printed, the one ending in
-      <code>#token=…</code>. The page keeps the key after that.</p>
-  </div>
+  <section id="signin" class="signin" aria-labelledby="h-signin" hidden>
+    <h2 id="h-signin">Sign in</h2>
+    <p class="lede" id="signin-lede">To talk to your agents. The person who runs this
+      house gave you your name; you chose the password.</p>
+    <form id="signin-form" class="signin-form">
+      <label for="signin-name">Name</label>
+      <input id="signin-name" name="username" autocomplete="username" autocapitalize="none"
+             spellcheck="false" required>
+      <label for="signin-password" id="signin-password-label">Password</label>
+      <input id="signin-password" name="password" type="password"
+             autocomplete="current-password" required>
+      <button type="submit" class="send" id="signin-go">Sign in</button>
+    </form>
+    <div id="signin-problem" class="warn" role="alert" hidden></div>
+    <p class="meta" id="signin-owner">Running this house? Open the address
+      <code>sarathi home</code> printed, the one ending in <code>#token=…</code>.</p>
+  </section>
 
   <section id="chat" aria-labelledby="h-chat" hidden>
     <div class="section-head">
@@ -47,7 +59,7 @@
     </div>
   </section>
 
-  <section aria-labelledby="h-pages">
+  <section id="pages" aria-labelledby="h-pages" hidden>
     <div class="section-head">
       <h2 id="h-pages">Your pages</h2>
     </div>
@@ -55,11 +67,23 @@
       already signed in.</p>
     <div id="pieces" class="cards"></div>
   </section>
+
+  <section id="people" aria-labelledby="h-people" hidden>
+    <div class="section-head">
+      <h2 id="h-people">People in the house</h2>
+    </div>
+    <p class="lede">Everyone in Dvara's actors file can sign in here and talk to their
+      own agents, with their own allowance and rules. They see their chat and nothing
+      else on this page. Invite someone, send them the link, and they choose a password
+      the first time they open it.</p>
+    <div id="people-list" class="people"></div>
+    <div id="people-said" class="meta" role="status"></div>
+  </section>
 </main>
 
 <footer class="foot">
   <span id="updated"></span>
-  <span>This page links, passes your chat to Dvara, and switches where your memories are kept. Nothing else here starts or changes anything.</span>
+  <span id="foot-said">This page links, passes your chat to Dvara, signs in the people in the house, and switches where your memories are kept. Nothing else here starts or changes anything.</span>
 </footer>
 </body>
 </html>

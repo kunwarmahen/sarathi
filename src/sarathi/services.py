@@ -30,7 +30,8 @@ files:
                   --as <dvara.owner> --port <pages.dvara_port>, with
                   DVARA_TOKEN and DVARA_URL: the door's own token and
                   address, so your answers reach it; Samay, for schedules
-    home    sarathi home --port <pages.home_port>
+    home    sarathi home --port <pages.home_port> [--also-host <dvara.window_host>,
+                  when that is one address: people sign in from their phones]
     smritikosh  uvicorn smritikosh.api.main:app --port <smritikosh.port>, in its
                   checkout (its .env is there), after its database container,
                   with [memory] via = "smritikosh"; then Yantra gets
@@ -335,9 +336,11 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
             # the door's token stays server-side in the page, never in a browser
             {DOOR_TOKEN: token, "DVARA_URL": f"http://{HOST}:{door.port}"},
             says_address="  "))
-    out.append(Service("sarathi", "sarathi", [sarathi_program(), "home", "--port",
-                                              str(pages.home_port)],
-                       pages.home_port, says_address="  "))
+    home = [sarathi_program(), "home", "--port", str(pages.home_port)]
+    if door_on and config.people_host():
+        # the people in the house sign in from their phones (people.py)
+        home += ["--also-host", config.people_host()]
+    out.append(Service("sarathi", "sarathi", home, pages.home_port, says_address="  "))
     return out
 
 

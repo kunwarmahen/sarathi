@@ -638,9 +638,9 @@ def test_with_ufw_on_up_names_the_house_ports_and_the_command_to_open_them(
     config = Config("ollama", road="podman", door=Door(window_host="192.168.1.44"),
                     pages=Pages(on=True, setu_port=8775))
     assert podman.firewall_note(config) == [
-        "firewall: ufw is on; if a phone can't open 192.168.1.44 on 8775, 8790, 8791, "
+        "firewall: ufw is on; if a phone can't open 192.168.1.44 on 8760, 8775, 8790, 8791, "
         "open them to your network (once is enough):",
-        "  sudo ufw allow from 192.168.1.0/24 to any port 8775,8790,8791 proto tcp"]
+        "  sudo ufw allow from 192.168.1.0/24 to any port 8760,8775,8790,8791 proto tcp"]
     lines, _ = podman.up(config)
     assert lines[-1].startswith("  sudo ufw allow from 192.168.1.0/24")
     assert host.said("sudo") == 0                          # named, never run

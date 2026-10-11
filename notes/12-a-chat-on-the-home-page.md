@@ -71,9 +71,10 @@ moving above the box on the narrow screen.
 
 ## What is not here yet
 
-* **Everyone in the house signing in.** The chat speaks as the owner.
-  Each person with their own sign-in and their own lines is the next
-  piece of work, in front of the same Dvara channel.
+* ~~**Everyone in the house signing in.**~~ Done in
+  [note 14](14-everyone-in-the-house.md): `sarathi invite NAME`, a
+  password chosen once, and their own chat as their own Dvara actor, in
+  front of the same channel.
 * **Push to a phone.** The page asks for new lines every few seconds
   while it's open; nothing arrives with it closed.
 * **The Podman road, tried.** The units are written (`--web` on Dvara's,

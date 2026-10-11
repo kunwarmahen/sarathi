@@ -409,11 +409,12 @@ published on `127.0.0.1` for you alone. Behind a `window_url`, Setu's
 page gets no window of its own: sign those sites in from the chat.
 
 **A firewall is named, not opened.** These ports (8790, 8775, 8791 by
-default) do nothing for a phone when ufw or firewalld drops them; the
+default, and the home page's 8760, where the people in the house sign
+in) do nothing for a phone when ufw or firewalld drops them; the
 page just keeps loading. When `window_host` is one address and either is
 on, `sarathi up` ends with the ports and the command that opens them to
 your network alone (`sudo ufw allow from 192.168.1.0/24 to any port
-8775,8790,8791 proto tcp`). It never runs it: that needs root and is
+8760,8775,8790,8791 proto tcp`). It never runs it: that needs root and is
 your call ([notes/11](notes/11-the-firewall-says-nothing.md)).
 
 Your own phone can use the same sign-ins as this computer's page: under
@@ -626,8 +627,9 @@ runs `sarathi up`, which starts Yantra and Dvara again with it.
 Apart from that switch, it links, and nothing on it starts, stops or changes anything. Because
 its links carry the other pages' keys, it has a key of its own (after the
 `#`, kept in `~/.local/share/sarathi/home.token`, or
-`$SARATHI_HOME_TOKEN`), and it listens on this computer only.
-([notes/06](notes/06-one-bookmark.md))
+`$SARATHI_HOME_TOKEN`). It listens on this computer, and on `[dvara]
+window_host` when that is one address, for the people in the house
+(below). ([notes/06](notes/06-one-bookmark.md))
 
 **Talk to your agents.** With Dvara on, the page also has a chat, above
 the cards: pick an agent, write, and the answer comes back a few seconds
@@ -639,6 +641,31 @@ logic: every word goes to Dvara's web channel and back, as you, the
 Dvara's token stays in the home page's process, never in the browser.
 The chat is its own conversation: one on Telegram doesn't continue
 there. ([notes/12](notes/12-a-chat-on-the-home-page.md))
+
+**Everyone in the house.** The other people in Dvara's actors file can
+sign in to the same page and get their own chat, as themselves:
+
+```
+$ sarathi invite priya
+priya's link, for one device, within 48 hours:
+  http://192.168.1.44:8760/#invite=priya.…
+```
+
+They open the link (once, within two days), choose a password, and from
+then on sign in with their name and that password. They see their chat
+and nothing else: no cards, no keys, no memory switch. Each turn is
+theirs in Dvara, with their own allowance, rules, folder, memories and
+sign-ins. Dvara's page shows you who used which agent and what it cost,
+never their words. **People in the house**, below the cards, lists
+everyone in the actors file with **Invite** (the link to send) and
+**Sign out everywhere**. `sarathi people` lists them in a terminal;
+`--sign-out NAME` ends their devices, `--remove NAME` their sign-in. A
+new link for someone already signed up resets their password. The link
+opens on a phone when `[dvara] window_host` is one address (your home
+network, or Tailscale), the same address Setu's page uses; without it,
+on this computer only, and it says so. Passwords are kept as scrypt,
+links and sessions only as hashes, in `~/.local/share/sarathi/people.json`.
+([notes/14](notes/14-everyone-in-the-house.md))
 
 ### Where it looks
 
@@ -665,7 +692,7 @@ In this order; the first hit wins:
 | `~/dvara/` | Dvara's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[dvara]` can name others) |
 | `~/dvara/state/memory.json` | with Smritikosh on: each person's name and key there, for Dvara; yours alone |
 | `<smritikosh>/ui/.env.local` | the dashboard's own sign-in secret, written by `sarathi smritikosh` only when there is none |
-| `~/.local/share/sarathi/` | `smritikosh-accounts.json` the passwords of the Smritikosh accounts Sarathi made, and `mcp/` how Yantra and Dvara start `smritikosh-mcp` (no key in it); `home.token` the home page's key (yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
+| `~/.local/share/sarathi/` | `smritikosh-accounts.json` the passwords of the Smritikosh accounts Sarathi made, and `mcp/` how Yantra and Dvara start `smritikosh-mcp` (no key in it); `home.token` the home page's key (yours alone), `people.json` the people in the house's sign-ins (hashes only; yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
 are still in `~/.samay`, and Setu's sign-ins are still where Setu put
@@ -696,17 +723,21 @@ src/sarathi/
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07); the
-                chat, passed through to Dvara's web channel as you  (notes/12)
+                chat, passed through to Dvara's web channel as you  (notes/12),
+                or as the person signed in  (notes/14)
+  people.py     the people in the house signing in to the home page: an
+                invite that works once, a password, a session per device,
+                each one an id in Dvara's actors file  (notes/14)
   smritikosh.py sarathi smritikosh: Smritikosh set up and switched to, an
                 account and key for you and for each person behind Dvara;
                 --full, Neo4j, MongoDB, Redis; its dashboard built and
                 started; its line in status, its card on the home page  (notes/13)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | dvara | phone | smritikosh | road | image | up | down |
-                status [--json] | home
+                status [--json] | home | invite | people
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
-  test_pages_up.py  test_phone.py  test_names.py  test_smritikosh.py
+  test_pages_up.py  test_phone.py  test_names.py  test_smritikosh.py  test_people.py
 ```
 
 ## Status
@@ -716,7 +747,9 @@ as Podman containers, and the household road (dvara on Telegram, wired
 to Samay) are all built, with a browser and bubblewrap inside the
 containers. `sarathi up` also starts Setu's page, Dvara's owner page and
 the home page that links every program's page, with a chat to your
-agents through Dvara where a schedule's answers wait for you. Sparsh is found, its
+agents through Dvara where a schedule's answers wait for you, and a
+sign-in for each person in the house to a chat of their own
+([notes/14](notes/14-everyone-in-the-house.md); run as plain programs). Sparsh is found, its
 phones are said, and Yantra's page and Dvara are handed it; inside
 the containers the phone is reached over Wi-Fi (`sarathi phone`), tried
 against the emulator and a real Nexus 6P on Android 8.1, a schedule's

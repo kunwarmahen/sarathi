@@ -557,7 +557,7 @@ def house_ports(config: Config) -> tuple[str, list[int]] | None:
         return None
     ports = [int(window(config)[1])]
     if config.people_host():
-        ports.append(config.pages.setu_port)
+        ports += [config.pages.setu_port, config.pages.home_port]
         shown = setu_window(config)
         if shown:
             ports.append(int(shown[1]))
@@ -846,13 +846,15 @@ def home_unit(config: Config) -> str | None:
         return None
     env = "".join(f"Environment={k}={v}\n" for k, v in (
         ("SARATHI_CONFIG", config_dir()), ("SARATHI_STATE", state_dir())))
+    # the people in the house sign in from their phones (people.py)
+    house = f" --also-host {config.people_host()}" if config.people_host() else ""
     return f"""{HEADER}
 [Unit]
 Description=Sarathi: the home page, linking every program's page
 After={UNITS['yantra']}.service
 
 [Service]
-ExecStart={sarathi_program()} home --port {config.pages.home_port}
+ExecStart={sarathi_program()} home --port {config.pages.home_port}{house}
 {env}Restart=on-failure
 
 [Install]

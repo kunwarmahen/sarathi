@@ -573,27 +573,53 @@ what they type travels as plain web traffic across your Wi-Fi. If you
 use **Tailscale**, its address is the safe choice, encrypted and
 reachable wherever they are.
 
-The window uses port **8790** (`--window-port` changes it). On the
-Podman road with the pages on, two more ports open on that address:
-**8775**, Setu's page, which a person reaches with `/accounts page`,
-and **8791**, the window that page streams when they connect Amazon or X
+The window uses port **8790** (`--window-port` changes it). With the
+pages on, more ports open on that address: **8760**, the home page,
+where the people in the house sign in (below); **8775**, Setu's page,
+which a person reaches with `/accounts page`; and, on the Podman road,
+**8791**, the window that page streams when they connect Amazon or X
 from it. If your computer has a firewall, a phone gets nothing from
 those ports, just a page that keeps loading. `sarathi up` notices ufw or
 firewalld and prints the line that opens exactly those ports to your
 network:
 
 ```text
-firewall: ufw is on; if a phone can't open 192.168.1.44 on 8775, 8790, 8791, open them to your network (once is enough):
-  sudo ufw allow from 192.168.1.0/24 to any port 8775,8790,8791 proto tcp
+firewall: ufw is on; if a phone can't open 192.168.1.44 on 8760, 8775, 8790, 8791, open them to your network (once is enough):
+  sudo ufw allow from 192.168.1.0/24 to any port 8760,8775,8790,8791 proto tcp
 ```
 
 Run that line yourself; Sarathi never changes your firewall. To close
 them again: `sudo ufw delete allow from 192.168.1.0/24 to any port
-8775,8790,8791 proto tcp`.
+8760,8775,8790,8791 proto tcp`.
 
 Your computer runs
 that browser, so it handles what they type, their password included:
 offer it to people who already trust you with their agent.
+
+**A chat of their own, without Telegram.** Someone in the actors file
+who doesn't use Telegram can talk to their agents on the home page, as
+themselves. With the window address set (above), invite them:
+
+```bash
+sarathi invite priya
+```
+
+```
+priya's link, for one device, within 48 hours:
+  http://192.168.1.44:8760/#invite=priya.…
+They open it and choose a password; after that they sign in with 'priya' and that password, and see their own chat only.
+```
+
+Send them that link however you like (a text message, say). It works
+once: the phone that opens it first chooses a password, and from then
+on they sign in with their name and that password. They see their own
+chat and nothing else on the page. It runs with their allowance and
+their agents, and you see on Dvara's page what they spent, not what they
+said. The home page has a **People in the house** list that does the
+same with buttons: **Invite** shows the link, **Sign out everywhere**
+signs them out on every device. Forgot their password? Invite them
+again: the new link lets them choose a new one. `sarathi people` lists
+who has signed in.
 
 To turn Dvara off again: `sarathi dvara --off`, then
 `sarathi down && sarathi up`.
