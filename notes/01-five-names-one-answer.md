@@ -90,7 +90,11 @@ samay       clock not running (start it: samay serve); schedules: 0 active, 0 pa
 Smritikosh has no status command. Sarathi could probe a port and guess
 that a listener there is it, but a guess printed in the same font as a
 fact is worse than no line. For it, "found, here" is the whole answer
-until it can say more for itself.
+until it can say more for itself. Once `sarathi smritikosh` has set it up
+([note 13](13-a-memory-by-meaning.md)), Sarathi knows its address from
+sarathi.toml, and `status` adds a line of its own: what Smritikosh's
+`/health` says, asked of a server that answered with its own name first,
+and how many memories are yours.
 
 Yantra can now. `yantra status --json` gives its release and the model
 a turn would ask (Yantra's note 117). Sarathi asks it with what `up`

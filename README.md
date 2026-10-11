@@ -113,6 +113,9 @@ port = 8321
 [samay]
 on = true
 port = 8780
+
+[memory]
+via = "local"          # or "smritikosh", once `sarathi smritikosh` set it up
 ```
 
 A table or key Sarathi doesn't know (`[clok]`) stops `up` with its
@@ -149,7 +152,10 @@ That starts **Samay's clock** and **Yantra's page**, in
 that order, and then the pages you look at: **Setu's page** (your
 accounts), **Dvara's owner page** when Dvara is on, and **the home
 page** that links them all. Bookmark the `sarathi` address. The page asks once, at start-up, whether Samay runs, so
-Samay has to be there first. Setu isn't started: it runs only when
+Samay has to be there first. With `[memory] via = "smritikosh"`,
+Smritikosh's database and server start before all of them
+(`smritikosh  up at http://127.0.0.1:8080/`), since Yantra and Dvara
+connect to it as they start. Setu isn't started: it runs only when
 the agent uses an account. Both get the same model, so a scheduled run
 is answered by the same model as the page. Each piece's output goes to
 `~/.local/share/sarathi/logs/`.

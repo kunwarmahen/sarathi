@@ -123,11 +123,14 @@ dvara       not found (optional) -- install it, or set SARATHI_DVARA=/path/to/dv
             many people and agents behind one service
 smritikosh  not found (optional) -- install it, or set SARATHI_SMRITIKOSH=/path/to/smritikosh-mcp
             a memory store (Yantra keeps its own without it)
+
+memory: the built-in file (local); `sarathi smritikosh` switches to Smritikosh
 ```
 
 Each line says **where** it found a program and **how** (`beside` means
 "in the folder next to Sarathi"). The line under it is that program
-describing itself. "not found (optional)" is fine.
+describing itself. "not found (optional)" is fine. The last line says
+where the helper keeps what it remembers about you (Step 7).
 
 > **Something says "not found" that isn't optional?** The line tells you
 > the fix: install it beside the others, or point Sarathi at it with the
@@ -231,8 +234,12 @@ port = 8780
 
 [run]
 road = "process"
+
+[memory]
+via = "local"
 ```
 
+(There are a few more tables, each with a comment saying what it does.)
 Your key is **not** in it. It's in `secrets.env` beside it, so this file
 is safe to show someone if you need help.
 
@@ -283,7 +290,9 @@ settings) and, once you turn Dvara on in Step 6,
 Dvara's (your door: who's on it, their files and schedules, and the
 questions your agents are asking you). Open that address and bookmark
 it. It shows whether each page is running and opens any of them already
-signed in.
+signed in. Its **Memory** card says where the helper keeps what it
+remembers about you, and once you've done Step 7 it switches between the
+two.
 
 Once Dvara is on (Step 6), the same page also has **Talk to your
 agents** at the top: a chat with the agents behind Dvara, with no
