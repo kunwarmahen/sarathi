@@ -458,7 +458,7 @@ would otherwise start again at your next login. It starts nothing new;
 | Dvara's streamed window | listens on `window_host` itself | published from Dvara's container |
 | Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |
 | Setu's page for people's phones | `setu serve --also-host <window_host>` | published on `window_host` too; only the people's folders mounted |
-| the pages | plain programs | Setu's and Dvara's as containers; the home page as a user service (`~/.config/systemd/user/sarathi-home.service`) |
+| the pages | plain programs | Setu's and Dvara's as containers; the home page, and Smritikosh's dashboard when it's on, as user services (`~/.config/systemd/user/sarathi-home.service`, `sarathi-smritikosh-ui.service`) |
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
 | Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
 | Yantra's own `.env` | read, as in a terminal | not in the image: model settings come from `[model]` in sarathi.toml only |
@@ -648,6 +648,7 @@ In this order; the first hit wins:
 | `env` | a path you set: `SARATHI_YANTRA`, `SARATHI_SETU`, `SARATHI_SAMAY`, `SARATHI_DVARA`, `SARATHI_SPARSH`, `SARATHI_SMRITIKOSH` |
 | `path` | what your shell would run |
 | `sarathi.toml` | Smritikosh, where `sarathi smritikosh` set it up (`[smritikosh] checkout`) |
+| its database | Smritikosh only, while `sarathi smritikosh` sets it up: with its database container already here, the checkout whose `.env` holds that container's user and password (beside, the folder above, `~/src`, `~/Documents`, home). Nothing is cloned around an existing database |
 | `beside` | `<dir>/<name>/.venv/bin/<program>`, for checkouts kept side by side. `<dir>` is `SARATHI_SIBLINGS`, or the folder this checkout of Sarathi sits in |
 
 ### Where its files live
@@ -656,9 +657,10 @@ In this order; the first hit wins:
 |---|---|
 | `~/.config/sarathi/sarathi.toml` | the settings (`$SARATHI_CONFIG` for another folder) |
 | `~/.config/sarathi/secrets.env` | a cloud key, if you typed one, Dvara's two tokens, and Smritikosh's key and admin password; readable only by you |
-| `~/.config/sarathi/units/` | the Podman road: each unit's own share of secrets.env, copied by `up`; yours alone |
+| `~/.config/sarathi/units/` | the Podman road: each unit's own share of secrets.env, copied by `up`, and Smritikosh's settings as its container reads them (with `--full`, each store's settings from the container it was copied from); yours alone |
 | `~/.config/containers/systemd/sarathi-*` | the Podman road's units and network, written by `up` (edit `sarathi.toml`, not these) |
 | `~/.config/systemd/user/sarathi-home.service` | the Podman road's home page, a plain user service (written by `up` too) |
+| `~/.config/systemd/user/sarathi-smritikosh-ui.service` | the Podman road's Smritikosh dashboard, run with your Node (written by `up`, with Smritikosh on) |
 | `~/dvara/` | Dvara's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[dvara]` can name others) |
 | `~/dvara/state/memory.json` | with Smritikosh on: each person's name and key there, for Dvara; yours alone |
 | `<smritikosh>/ui/.env.local` | the dashboard's own sign-in secret, written by `sarathi smritikosh` only when there is none |
@@ -720,8 +722,10 @@ against the emulator and a real Nexus 6P on Android 8.1, a schedule's
 locked phone asked about on Telegram and worked once unlocked
 ([notes/10](notes/10-a-real-phone.md)). Smritikosh is set up by one
 command and switched on and off from it or the home page, with an
-account of its own for each person behind Dvara; run on plain programs,
-written and tested for Podman ([notes/13](notes/13-a-memory-by-meaning.md)).
+account of its own for each person behind Dvara, Neo4j, MongoDB and Redis
+with `--full`, and its own dashboard built and started beside it; run on
+plain programs, written and tested for Podman
+([notes/13](notes/13-a-memory-by-meaning.md)).
 
 ## Tests
 

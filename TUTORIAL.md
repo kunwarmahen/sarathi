@@ -727,6 +727,11 @@ your helper on Telegram knows. Someone you add later gets theirs the next
 time you run `sarathi smritikosh`. A helper remembers people only if its
 package asks for it (`[memory] via = "local"` in its `agent.toml`; with
 Smritikosh on, that means Smritikosh).
+Each person can sign in to the dashboard as themselves too: their
+account is `dvara-<their id>`, and its password is in
+`~/.local/share/sarathi/smritikosh-accounts.json`. To give someone an
+account you made in the dashboard instead, see the README, "Where the
+keys are".
 
 **Changed your mind?** `sarathi smritikosh --off`, then `sarathi up`, or
 the **Memory** card on the home page, which does both. Nothing is
@@ -826,3 +831,6 @@ accounts, schedules and memories stay.
   person. @BotFather makes one and gives you its token.
 * **Actors file** — dvara's list of the people it answers, and what
   each may use.
+* **Memory key** — a long password (`sk-smriti-…`) that opens one
+  person's memories in Smritikosh, and nobody else's. Sarathi keeps them;
+  you sign in to the dashboard with a username and password instead.
