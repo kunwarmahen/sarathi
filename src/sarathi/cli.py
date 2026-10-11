@@ -286,7 +286,12 @@ def _memory(config) -> dict | None:
     from sarathi import smritikosh
 
     seen = smritikosh.health(config) if config.remembers_in_smritikosh else {}
-    return {"via": config.memory, "said": smritikosh.health_line(config, seen or None),
+    said = smritikosh.health_line(config, seen or None)
+    dash = smritikosh.dashboard(config) if config.remembers_in_smritikosh else None
+    if dash:
+        said += (f"\n  its dashboard: {dash['url']}" if dash["up"] else
+                 f"\n  its dashboard isn't running: {dash['start']}")
+    return {"via": config.memory, "said": said, "dashboard": dash,
             **{k: seen.get(k) for k in ("up", "url", "memories")}}
 
 

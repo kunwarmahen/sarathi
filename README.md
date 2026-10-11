@@ -155,7 +155,8 @@ page** that links them all. Bookmark the `sarathi` address. The page asks once, 
 Samay has to be there first. With `[memory] via = "smritikosh"`,
 Smritikosh's database and server start before all of them
 (`smritikosh  up at http://127.0.0.1:8080/`), since Yantra and Dvara
-connect to it as they start. Setu isn't started: it runs only when
+connect to it as they start, and its dashboard just after
+(`smritikosh-ui up at http://127.0.0.1:3000/`). Setu isn't started: it runs only when
 the agent uses an account. Both get the same model, so a scheduled run
 is answered by the same model as the page. Each piece's output goes to
 `~/.local/share/sarathi/logs/`.
@@ -181,6 +182,7 @@ settings   wrote ~/agent/smritikosh/.env: ollama, nomic-embed-text, 768 dimensio
            (the tables are built for 768 now; another embedding model later means an empty database)
 database   started smritikosh-postgres (docker.io/pgvector/pgvector:pg17, volume smritikosh-pgdata)
 tables     30 step(s) run
+dashboard  built; `sarathi up` starts it on 127.0.0.1:3000
 server     started for these steps at http://127.0.0.1:8080 (able to make its first admin)
 admin      made 'sarathi'; its password is in secrets.env
 you        account 'asha' and its key (in secrets.env)
@@ -233,7 +235,46 @@ it lacks. `up` starts them first on both roads; on Podman each becomes a
 unit copied from its container, with the same image (by id, never a
 `latest` tag), the same data and the same ports. `--no-full` leaves them
 out again, and nothing is deleted.
-([notes/13](notes/13-a-memory-by-meaning.md))
+
+**Smritikosh's own dashboard** (its `ui/`, a Next.js app) is built by
+`sarathi smritikosh` (`npm install`, `next build`, again whenever its
+`ui/` has a newer commit than the build) and started by `sarathi up`
+after Smritikosh, at **http://localhost:3000**, on this computer only.
+On the Podman road it's a user service (`sarathi-smritikosh-ui.service`)
+run with your machine's Node, so no Node goes into the image. The home
+page's **Memory** card links to it. `[smritikosh] dashboard = false` stops
+starting it, and `dashboard_port` moves it. It needs Node.js 20 or newer;
+without npm, the setup says so and everything else still works.
+
+**Signing in to the dashboard** takes a Smritikosh username and password,
+never a key:
+
+| Account | Its password |
+|---|---|
+| yours (named as Yantra knows you) | the one you chose, if you set Smritikosh up by hand; if Sarathi made it, in `~/.local/share/sarathi/smritikosh-accounts.json` |
+| `dvara-<id>`, each person behind Dvara | `~/.local/share/sarathi/smritikosh-accounts.json` |
+| `sarathi`, the admin Sarathi made (only if it had to) | `SMRITIKOSH_ADMIN_PASSWORD` in `~/.config/sarathi/secrets.env` |
+
+**Where the keys are.** You put none anywhere: `sarathi smritikosh` does.
+
+| Whose | Where | Used by |
+|---|---|---|
+| yours | `SMRITIKOSH_API_KEY` in `~/.config/sarathi/secrets.env` | Yantra |
+| yours, on Telegram | `"owner"` in `~/dvara/state/memory.json` | Dvara |
+| each person behind Dvara | `"<id>"` in `~/dvara/state/memory.json` | Dvara, for that person's turns only |
+
+To give someone an account you made yourself in the dashboard, sign in
+as them, make a key under **Settings → API keys** (shown once), and add
+them to `memory.json` by hand, with `user` exactly that account's name:
+
+```json
+{"people": {"owner": {"user": "asha", "key": "sk-smriti-…"},
+            "priya": {"user": "priya", "key": "sk-smriti-…"}}}
+```
+
+Always the person's own key, never an admin's: a key opens only its own
+account's memories, which is what keeps one person's memories away from
+another's agent. ([notes/13](notes/13-a-memory-by-meaning.md))
 
 ### Your phone: `sarathi phone`
 
@@ -421,7 +462,7 @@ would otherwise start again at your next login. It starts nothing new;
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
 | Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
 | Yantra's own `.env` | read, as in a terminal | not in the image: model settings come from `[model]` in sarathi.toml only |
-| Smritikosh (`[memory] via = "smritikosh"`) | its database container, then its server in its checkout | two units on the same database volume (`sarathi-smritikosh-db`, `sarathi-smritikosh`); Smritikosh in the image; with `--full`, a unit each for Neo4j, MongoDB and Redis, copied from their containers |
+| Smritikosh (`[memory] via = "smritikosh"`) | its database container, then its server in its checkout | two units on the same database volume (`sarathi-smritikosh-db`, `sarathi-smritikosh`); Smritikosh in the image; with `--full`, a unit each for Neo4j, MongoDB and Redis, copied from their containers; its dashboard a user service with your Node |
 
 Your accounts, schedules and memories are the same files either way, so
 switching loses nothing. A port something else already uses stops that
@@ -518,6 +559,7 @@ smritikosh  ~/agent/smritikosh/.venv/bin/smritikosh-mcp  (sarathi.toml)
             a memory store (Yantra keeps its own without it)
 
 memory: smritikosh at http://127.0.0.1:8080 -- postgres ok; degraded; 12 remembered for asha
+  its dashboard: http://localhost:3000/
 ```
 
 Each line says **where** a piece was found and **which rule** found it.
@@ -575,7 +617,8 @@ address from `up`, so your answers on it reach Dvara. No other page
 gets that token.
 
 The **Memory** card says where your memories are kept and, for
-Smritikosh, whether it answers. Once Smritikosh is set up, its button
+Smritikosh, whether it answers, with **Open Smritikosh's dashboard** when
+the dashboard is running (or what starts it when it isn't). Once Smritikosh is set up, its button
 switches between it and Yantra's own file: it writes `[memory] via` and
 runs `sarathi up`, which starts Yantra and Dvara again with it.
 
@@ -618,6 +661,7 @@ In this order; the first hit wins:
 | `~/.config/systemd/user/sarathi-home.service` | the Podman road's home page, a plain user service (written by `up` too) |
 | `~/dvara/` | Dvara's own files: `actors.toml`, `agents/`, `state/` (dvara's defaults; `[dvara]` can name others) |
 | `~/dvara/state/memory.json` | with Smritikosh on: each person's name and key there, for Dvara; yours alone |
+| `<smritikosh>/ui/.env.local` | the dashboard's own sign-in secret, written by `sarathi smritikosh` only when there is none |
 | `~/.local/share/sarathi/` | `smritikosh-accounts.json` the passwords of the Smritikosh accounts Sarathi made, and `mcp/` how Yantra and Dvara start `smritikosh-mcp` (no key in it); `home.token` the home page's key (yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
@@ -652,7 +696,8 @@ src/sarathi/
                 chat, passed through to Dvara's web channel as you  (notes/12)
   smritikosh.py sarathi smritikosh: Smritikosh set up and switched to, an
                 account and key for you and for each person behind Dvara;
-                its line in status, its card on the home page  (notes/13)
+                --full, Neo4j, MongoDB, Redis; its dashboard built and
+                started; its line in status, its card on the home page  (notes/13)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | dvara | phone | smritikosh | road | image | up | down |
                 status [--json] | home

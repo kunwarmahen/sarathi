@@ -992,6 +992,7 @@ def setup(config: Config, *, local: bool = False, full: bool | None = None,
     kosh = replace(config.smritikosh, checkout=str(checkout), db_port=db.port)
     kosh = start_database(kosh, db, say)
     migrate(checkout, say)
+    build_dashboard(kosh, checkout, say)
     if full if full is not None else config.smritikosh.full:
         kosh = settle_extras(kosh, checkout, say)
     else:
@@ -1072,6 +1073,111 @@ def health(config: Config) -> dict[str, Any]:
     if up and key:
         out["memories"] = api.memories(key, owner_name())
     return out
+
+
+# ---- its dashboard ----------------------------------------------------------------
+#
+# SMRITIKOSH'S OWN PAGE, STARTED WITH IT. Its ui/ is a Next.js app that
+# signs in through Smritikosh's own /auth/token, with a username and
+# password, never a key from Sarathi. `sarathi smritikosh` builds it once
+# (npm install, next build), and again when the checkout's ui/ has a newer
+# commit than the build. `up` starts the build (`next start`, never the
+# slow dev server) on 127.0.0.1 after Smritikosh: a plain program on the
+# process road, a user service on Podman, so no Node goes into the image.
+# Its .env.local (AUTH_SECRET) is written only when there is none.
+
+
+def ui_dir(checkout: Path) -> Path:
+    return checkout / "ui"
+
+
+def built(checkout: Path) -> bool:
+    """A build there, and none of ui/'s commits newer than it."""
+    stamp = ui_dir(checkout) / ".next" / "BUILD_ID"
+    if not stamp.is_file():
+        return False
+    try:
+        last = run(["git", "-C", str(checkout), "log", "-1", "--format=%ct", "--", "ui"]
+                   ).stdout.strip()
+    except OSError:              # no git here: the build stands
+        return True
+    return not last.isdigit() or int(last) <= stamp.stat().st_mtime
+
+
+def build_dashboard(kosh: Smritikosh, checkout: Path, say: Callable[[str], None]) -> None:
+    ui = ui_dir(checkout)
+    if not kosh.dashboard or not (ui / "package.json").is_file():
+        return
+    npm = shutil.which("npm")
+    if npm is None:
+        say("dashboard  not built: no npm here (install Node.js 20 or newer, then run "
+            "this again)")
+        return
+    local = ui / ".env.local"
+    if not local.exists():
+        write_private(local, f"SMRITIKOSH_API_URL={kosh.url}\n"
+                             f"AUTH_SECRET={secrets.token_hex(32)}\n")
+        say(f"dashboard  wrote {local}")
+    if not (ui / "node_modules").is_dir():
+        say("dashboard  installing (npm install, a minute or two)")
+        done = run([npm, "install", "--no-audit", "--no-fund"], cwd=ui)
+        if done.returncode != 0:
+            raise SetupError(f"npm install failed in {ui}: {done.stderr.strip()[-400:]}")
+    if built(checkout):
+        say("dashboard  already built")
+        return
+    say("dashboard  building (next build, a minute or two)")
+    # Smritikosh's address is written into the build (its /api/backend
+    # route), so it is built with the one Sarathi runs it on
+    done = run([npm, "run", "build"], cwd=ui,
+               env={**os.environ, "SMRITIKOSH_API_URL": kosh.url})
+    if done.returncode != 0:
+        raise SetupError(f"building the dashboard failed in {ui}:\n"
+                         f"{(done.stderr or done.stdout).strip()[-600:]}")
+    say(f"dashboard  built; `sarathi up` starts it on 127.0.0.1:{kosh.dashboard_port}")
+
+
+def dashboard_argv(kosh: Smritikosh) -> list[str] | None:
+    """How `up` starts it, or None when it won't (off, or not built)."""
+    checkout = kosh.path()
+    if not kosh.dashboard or checkout is None or not built(checkout):
+        return None
+    return [str(ui_dir(checkout) / "node_modules" / ".bin" / "next"), "start",
+            "--hostname", "127.0.0.1", "--port", str(kosh.dashboard_port)]
+
+
+def dashboard_env(kosh: Smritikosh) -> dict[str, str]:
+    """Where it finds Smritikosh, and the address it answers on. LOCALHOST,
+    NOT 127.0.0.1: its sign-in sends the browser to localhost whatever it
+    is told, and a cookie set for one name is not sent to the other, so
+    every link says localhost (it still listens on 127.0.0.1 alone).
+    AUTH_SECRET stays in its .env.local."""
+    return {"SMRITIKOSH_API_URL": kosh.url,
+            "AUTH_URL": f"http://localhost:{kosh.dashboard_port}",
+            "AUTH_TRUST_HOST": "true"}
+
+
+def dashboard(config: Config) -> dict[str, Any] | None:
+    """Smritikosh's own dashboard: where it is, whether it answers as
+    itself, and what starts it. None without a checkout that has one."""
+    checkout = config.smritikosh.path()
+    if checkout is None or not (ui_dir(checkout) / "package.json").is_file():
+        return None
+    kosh = config.smritikosh
+    port = kosh.dashboard_port
+    url = f"http://localhost:{port}/"
+    try:
+        with urllib.request.urlopen(f"{url}login", timeout=2.0) as answer:
+            up = b"Smritikosh" in answer.read(200_000)
+    except (OSError, ValueError):
+        up = False
+    if not kosh.dashboard:
+        start = "set dashboard = true under [smritikosh] in sarathi.toml, then `sarathi up`"
+    elif not built(checkout):
+        start = "`sarathi smritikosh` builds it, then `sarathi up`"
+    else:
+        start = "`sarathi up`"
+    return {"url": url, "up": up, "start": start}
 
 
 def health_line(config: Config, seen: dict[str, Any] | None = None) -> str:

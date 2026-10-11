@@ -132,6 +132,10 @@ HOLDS THEIR DATA: the same image, by its id (a ``latest`` tag would pull
 a newer server onto old data), the same mounts, the settings it was made
 with, published on 127.0.0.1 at the same ports. The plain container is
 stopped first, as the database's is.
+Smritikosh's own dashboard is a user service like the home page
+(``sarathi-smritikosh-ui.service``), run from its checkout's build with
+this machine's Node: no Node in the image, and it reaches Smritikosh where
+its unit publishes it, 127.0.0.1.
 Yantra's and Dvara's containers start ``smritikosh-mcp`` from the image,
 pointed at ``http://sarathi-smritikosh:8080``; Yantra gets your key in
 its env file, and Dvara reads each person's from its memory.json.
@@ -200,9 +204,10 @@ UNITS = {"samay": "sarathi-samay", "dvara": "sarathi-dvara", "yantra": "sarathi-
          "sarathi": "sarathi-home", "smritikosh-db": "sarathi-smritikosh-db",
          "smritikosh": "sarathi-smritikosh", "smritikosh-neo4j": "sarathi-smritikosh-neo4j",
          "smritikosh-mongodb": "sarathi-smritikosh-mongodb",
-         "smritikosh-redis": "sarathi-smritikosh-redis"}
+         "smritikosh-redis": "sarathi-smritikosh-redis",
+         "smritikosh-ui": "sarathi-smritikosh-ui"}
 #: Not a container: an ordinary user service (see the module docstring).
-SERVICE_UNITS = ("sarathi",)
+SERVICE_UNITS = ("sarathi", "smritikosh-ui")
 #: The containers' names before each went by its project's name: stopped
 #: and removed by `up` and `down`, so an old one never holds a port.
 OLD_UNITS = ("sarathi-clock", "sarathi-door", "sarathi-page", "sarathi-owner")
@@ -866,10 +871,35 @@ def unit_file(name: str) -> Path:
             else unit_dir() / f"{unit}.container")
 
 
-def install_home(text: str | None) -> bool:
-    """Write, or remove, the home page's service; True when it changed. It
-    is enabled, so it starts at login as the Quadlet units do."""
-    path = unit_file("sarathi")
+def dashboard_unit(config: Config) -> str | None:
+    """Smritikosh's dashboard as a user service, or None when it isn't to run."""
+    from sarathi import smritikosh
+
+    kosh = config.smritikosh
+    argv = smritikosh.dashboard_argv(kosh) if config.remembers_in_smritikosh else None
+    if argv is None:
+        return None
+    env = "".join(f"Environment={k}={v}\n" for k, v in smritikosh.dashboard_env(kosh).items())
+    return f"""{HEADER}
+[Unit]
+Description=Sarathi: Smritikosh's own dashboard
+After={UNITS['smritikosh']}.service
+
+[Service]
+WorkingDirectory={smritikosh.ui_dir(kosh.path())}
+ExecStart={' '.join(argv)}
+{env}Restart=on-failure
+
+[Install]
+WantedBy=default.target
+"""
+
+
+def install_home(text: str | None, name: str = "sarathi") -> bool:
+    """Write, or remove, a user service (the home page's, or the
+    dashboard's); True when it changed. It is enabled, so it starts at
+    login as the Quadlet units do."""
+    path = unit_file(name)
     if text is None:
         if not path.exists():
             return False
@@ -1055,6 +1085,8 @@ def up(config: Config) -> tuple[list[str], bool]:
     changed = install(units(config))
     if install_home(home_unit(config)):
         changed.add(unit_file("sarathi").name)
+    if install_home(dashboard_unit(config), "smritikosh-ui"):
+        changed.add(unit_file("smritikosh-ui").name)
     lines = retired + (["units rewritten from sarathi.toml"] if changed else [])
     newest = image_id(IMAGE)
     note = browser_note()
@@ -1085,6 +1117,8 @@ def up(config: Config) -> tuple[list[str], bool]:
         if config.door is not None:
             wanted.append(("dvara-page", config.pages.door_port))
         wanted.append(("sarathi", config.pages.home_port))
+    if dashboard_unit(config) is not None:
+        wanted.append(("smritikosh-ui", config.smritikosh.dashboard_port))
     owner = any(name == "dvara-page" for name, _ in wanted)
     for name, port in wanted:
         unit = UNITS[name]
@@ -1216,7 +1250,8 @@ def down(remove: bool = False) -> list[str]:
     """Stop the units. They stay installed -- and so start again at the
     next login, which is what they are for -- unless ``remove``."""
     lines = retire_old()
-    for name in ("sarathi", "dvara-page", "setu", "yantra", "dvara", "samay",
+    for name in ("smritikosh-ui", "sarathi", "dvara-page", "setu", "yantra", "dvara",
+                 "samay",
                  "smritikosh", "smritikosh-db", "smritikosh-neo4j", "smritikosh-mongodb",
                  "smritikosh-redis"):
         unit = UNITS[name]
@@ -1236,6 +1271,7 @@ def down(remove: bool = False) -> list[str]:
         run(["systemctl", "--user", "stop", f"{NETWORK}-network.service"])
         install({})
         install_home(None)
+        install_home(None, "smritikosh-ui")
         run(["podman", "network", "rm", NETWORK])    # quadlet made it; nothing uses it now
         lines.append("units removed: nothing starts at login until the next `sarathi up`")
     else:
@@ -1254,7 +1290,8 @@ def running(config: Config) -> list[dict]:
                        ("smritikosh", config.smritikosh.port),
                        ("samay", config.clock_port), ("dvara", door_port),
                        ("yantra", config.web_port), ("setu", pages.setu_port),
-                       ("dvara-page", pages.door_port), ("sarathi", pages.home_port)):
+                       ("dvara-page", pages.door_port), ("sarathi", pages.home_port),
+                       ("smritikosh-ui", config.smritikosh.dashboard_port)):
         unit = UNITS[name]
         if port is None or not unit_file(name).exists():
             continue

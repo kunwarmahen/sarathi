@@ -27,7 +27,10 @@ it answers and how many memories are yours. Its button is the same as
 ``[memory] via`` and runs ``sarathi up``, which starts Yantra (and Dvara)
 again with it. Setting Smritikosh up the first time stays in a terminal:
 it may need a password typed, and it can take a minute. Nothing else on
-the page starts, stops or changes anything.
+the page starts, stops or changes anything. The card also links to
+Smritikosh's own dashboard, when its checkout has one: open when it
+answers as Smritikosh, else the command that starts it. Its sign-in is
+Smritikosh's own (a username and password), never a key from here.
 
 With Dvara on, the page also has a chat: Dvara's web channel (its
 ``web.py``), as you, the owner. Every word goes to Dvara and comes back
@@ -203,7 +206,9 @@ def memory_status(config: Config) -> dict[str, Any]:
     seen = smritikosh.health(config) if config.remembers_in_smritikosh else {}
     return {"via": config.memory, "set_up": config.smritikosh.checkout is not None,
             "up": seen.get("up"), "memories": seen.get("memories"),
-            "said": smritikosh.health_line(config, seen or None)}
+            "said": smritikosh.health_line(config, seen or None),
+            "server": config.smritikosh.url if config.remembers_in_smritikosh else None,
+            "dashboard": smritikosh.dashboard(config)}
 
 
 def run_up() -> None:

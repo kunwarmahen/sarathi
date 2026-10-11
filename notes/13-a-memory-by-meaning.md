@@ -234,6 +234,44 @@ admin's password. A failed admin login now makes the admin again through
 the bootstrap. If an admin of that name really is there, it says the
 password in secrets.env is wrong.
 
+## Its own dashboard, started with it
+
+Smritikosh has a page of its own: its `ui/`, a Next.js app that signs in
+through Smritikosh's `/auth/token` with a username and password and shows
+the memories, the facts and the audit trail. It was left out at first,
+to keep Node off the list of things to run. Wanting to *see* what the
+helper remembers turned out to be the first thing a person asks for.
+Yantra's bookmark chip shows the list, but not the rest.
+
+`sarathi smritikosh` builds it (`npm install`, `next build`), and builds
+it again when `ui/` has a newer commit than the build. `up` starts the
+build with `next start` after Smritikosh, never the dev server, which
+compiles every page on first visit. It listens on 127.0.0.1:3000. On
+Podman it's a user service beside the home page's, run with the
+machine's own Node, so the image stays as it was. The home page's Memory
+card links to it when it answers *as Smritikosh* (its page title), not
+merely when something listens on 3000. It writes `ui/.env.local` only
+when there is none.
+
+**IT SAYS LOCALHOST.** Its sign-in sends the browser to `localhost`
+whatever address it is given. A cookie set for `127.0.0.1` is not sent
+to `localhost`, so a person who opened it as 127.0.0.1 is signed in and
+then shown the login page again. Every link Sarathi gives says
+`localhost`, and `AUTH_URL` does too; it still listens on 127.0.0.1
+alone. **SMRITIKOSH'S ADDRESS IS BUILT IN** (its `/api/backend` route), so
+it is built with the address Sarathi runs Smritikosh on.
+
+**Receipt.** The first `next build` on this machine failed: the dashboard
+had only ever been run with `npm run dev`, which doesn't check types, and
+21 type errors had gathered. The admin's user table read `user.app_id`,
+which no user has (the field is `app_ids`, a list), so the cell had always
+been blank. Three media hooks returned untyped answers, which broke every
+use in the upload form. And a graph link read a position before the
+layout had set it. Fixed in Smritikosh; `tsc` is clean, and the build
+makes 21 pages. Started as Sarathi starts it, on a spare port, it served
+*Smritikosh — Memory Dashboard*, `/` went to `/dashboard/memories`, and a
+wrong password came back through the API as `CredentialsSignin`.
+
 ## What is not here yet
 
 * **The Podman road, run.** The units are written and tested, and

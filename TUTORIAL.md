@@ -684,6 +684,7 @@ for:
 settings   wrote ~/agent/smritikosh/.env: ollama, nomic-embed-text, 768 dimensions
            (the tables are built for 768 now; another embedding model later means an empty database)
 database   started smritikosh-postgres (docker.io/pgvector/pgvector:pg17, volume smritikosh-pgdata)
+dashboard  built; `sarathi up` starts it on 127.0.0.1:3000
 you        account 'asha' and its key (in secrets.env)
 memory: smritikosh (in ~/.config/sarathi/sarathi.toml)
 ```
@@ -708,6 +709,16 @@ moved. On Yantra's page, type `/memory copy local` once.
 **Try it.** On Yantra's page: `/memory add Prefers a window seat on
 flights`, then `/memory find aeroplane seating`. It finds the window
 seat, though the two share no word.
+
+**See everything it remembers.** Smritikosh has a page of its own, its
+dashboard, and `sarathi up` starts it: open **http://localhost:3000**,
+or **Open Smritikosh's dashboard** on the home page's Memory card. Sign
+in with your Smritikosh username and password. That's not a key: if you
+set Smritikosh up by hand, it's the password you chose then; if Sarathi
+made your account, the password is in
+`~/.local/share/sarathi/smritikosh-accounts.json`. **Memories** lists what
+the helper remembers about you. (The dashboard needs Node.js; without it,
+everything else still works.)
 
 **With Dvara on,** everyone in your actors file gets a memory of their
 own: their own account and key, so one person's facts never reach
@@ -759,6 +770,9 @@ you're most likely to meet:
 | `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |
 | `dvara cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
 | `a Smritikosh database is already here … made with another setup's .env` | your own Smritikosh is somewhere Sarathi didn't look | `SARATHI_SMRITIKOSH=/path/to/smritikosh/.venv/bin/smritikosh-mcp sarathi smritikosh` |
+| `dashboard  not built: no npm here` | Node.js isn't installed | install Node.js 20 or newer, then `sarathi smritikosh` again |
+| the dashboard signs you in, then shows the login page again | it was opened as `127.0.0.1:3000` | open `http://localhost:3000` instead |
+| `smritikosh-ui not started: not built yet` | the dashboard wasn't built (or `ui/` changed since) | `sarathi smritikosh`, then `sarathi up` |
 | `memory.via = "smritikosh" but it isn't set up yet` | sarathi.toml was edited by hand | `sarathi smritikosh` |
 | `the cloud road turns memories into numbers with OpenAI, and there is no OPENAI_API_KEY` | a cloud model, and no OpenAI key for Smritikosh's meanings | paste one when asked, or `sarathi smritikosh --local` (Ollama's `nomic-embed-text`) |
 | `Smritikosh already has an account 'NAME' and Sarathi doesn't know its password` | an account made by hand, without its key in Sarathi | run `sarathi smritikosh` in a terminal and type its password once |
@@ -784,7 +798,9 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
 | Your schedules and their history | Samay's folder, `~/.samay/` |
 | What the helper remembers about you | `~/.local/state/yantra/`, or with Smritikosh on, its database (the `smritikosh-pgdata` volume) |
+| Your Smritikosh key, for the helper | `~/.config/sarathi/secrets.env`, as `SMRITIKOSH_API_KEY` |
 | Each person's Smritikosh key, for Dvara | `~/dvara/state/memory.json` (only you can read it) |
+| Passwords of the Smritikosh accounts Sarathi made | `~/.local/share/sarathi/smritikosh-accounts.json` (only you) |
 | What Sarathi started, and what each printed | `~/.local/share/sarathi/` |
 
 Sarathi doesn't move anything: each program keeps its files where it

@@ -74,11 +74,14 @@ KNOWN: dict[str, set[str]] = {
     "phone": {"on", "address", "awake"},
     "memory": {"via"},
     "smritikosh": {"checkout", "port", "database", "volume", "db_port", "full", "neo4j",
-                   "mongodb", "redis"},
+                   "mongodb", "redis", "dashboard", "dashboard_port"},
 }
 #: Where Yantra (and Dvara's people) keep what they remember.
 MEMORY_ROADS = ("local", "smritikosh")
 DEFAULT_SMRITIKOSH_PORT, DEFAULT_DB_PORT = 8080, 5432
+#: Smritikosh's own dashboard (its ui/, a Next.js app): built by `sarathi
+#: smritikosh`, started by `up` after Smritikosh, linked from the home page.
+DEFAULT_DASHBOARD_PORT = 3000
 #: The database container `sarathi smritikosh` starts, or finds, and the
 #: volume its data is in.
 SMRITIKOSH_DB, SMRITIKOSH_VOLUME = "smritikosh-postgres", "smritikosh-pgdata"
@@ -145,6 +148,9 @@ class Smritikosh:
     neo4j: str = "smritikosh-neo4j"
     mongodb: str = "smritikosh-mongo"
     redis: str = "smritikosh-redis"
+    #: Start Smritikosh's own dashboard with it (`up`), and its port.
+    dashboard: bool = True
+    dashboard_port: int = DEFAULT_DASHBOARD_PORT
 
     def extras(self) -> dict[str, str]:
         """Store -> its container, with ``full`` on; empty without."""
@@ -365,6 +371,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     for key in ("checkout", "database", "volume", "neo4j", "mongodb", "redis"):
         if not isinstance(kosh.get(key, ""), str):
             raise ConfigError(f"{where}: smritikosh.{key} must be text")
+    if not isinstance(kosh.get("dashboard", True), bool):
+        raise ConfigError(f"{where}: smritikosh.dashboard must be true or false")
     if not isinstance(kosh.get("full", False), bool):
         raise ConfigError(f"{where}: smritikosh.full must be true or false")
     smritikosh = Smritikosh(checkout=kosh.get("checkout") or None,
@@ -373,6 +381,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                             volume=kosh.get("volume") or SMRITIKOSH_VOLUME,
                             db_port=_port(kosh, "db_port", DEFAULT_DB_PORT, "smritikosh"),
                             full=kosh.get("full", False),
+                            dashboard=kosh.get("dashboard", True),
+                            dashboard_port=_port(kosh, "dashboard_port",
+                                                 DEFAULT_DASHBOARD_PORT, "smritikosh"),
                             **{k: kosh[k] for k in ("neo4j", "mongodb", "redis")
                                if kosh.get(k)})
     if via == "smritikosh" and smritikosh.checkout is None:
@@ -463,10 +474,13 @@ via = "{config.memory}"
     for key, value, default in (("port", kosh.port, DEFAULT_SMRITIKOSH_PORT),
                                 ("database", kosh.database, SMRITIKOSH_DB),
                                 ("volume", kosh.volume, SMRITIKOSH_VOLUME),
-                                ("db_port", kosh.db_port, DEFAULT_DB_PORT)):
+                                ("db_port", kosh.db_port, DEFAULT_DB_PORT),
+                                ("dashboard_port", kosh.dashboard_port,
+                                 DEFAULT_DASHBOARD_PORT)):
         shown = json.dumps(value)
         lines.append(f"{key} = {shown}" if value != default else f"# {key} = {shown}")
     lines.append(f"full = {'true' if kosh.full else 'false'}")
+    lines.append(f"dashboard = {'true' if kosh.dashboard else 'false'}")
     if kosh.full:
         lines += [f"{key} = {json.dumps(getattr(kosh, key))}"
                   for key in ("neo4j", "mongodb", "redis")]
@@ -476,6 +490,8 @@ via = "{config.memory}"
 # that holds its data, and the port it is published on here). full: Neo4j,
 # MongoDB and Redis too (`sarathi smritikosh --full`), each in the container
 # named below; without it, PostgreSQL alone, which is all Yantra uses.
+# dashboard: start Smritikosh's own dashboard (its ui/) with it, on
+# dashboard_port, 127.0.0.1 only; the home page links to it.
 [smritikosh]
 """ + "\n".join(lines) + "\n")
 

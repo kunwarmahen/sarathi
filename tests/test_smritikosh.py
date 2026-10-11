@@ -511,3 +511,73 @@ def test_full_reads_back_and_no_full_turns_it_off(world):
     from sarathi.cli import build_parser
     with pytest.raises(SystemExit):
         build_parser().parse_args(["smritikosh", "--full", "--no-full"])
+
+
+# ---- Smritikosh's own dashboard ----------------------------------------------------
+
+
+def a_ui(checkout: Path, built: bool) -> Path:
+    ui = checkout / "ui"
+    (ui / ".next").mkdir(parents=True)
+    (ui / "package.json").write_text("{}")
+    if built:
+        (ui / ".next" / "BUILD_ID").write_text("b1")
+    return ui
+
+
+def test_the_dashboard_is_linked_only_when_it_answers_as_smritikosh(world, tmp_path):
+    a_ui(tmp_path, built=False)
+    config = replace(ON, smritikosh=replace(SET_UP, checkout=str(tmp_path),
+                                            dashboard_port=9))     # nothing listens
+    dash = smritikosh.dashboard(config)
+    assert dash["up"] is False and dash["url"] == "http://localhost:9/"
+    assert "`sarathi smritikosh` builds it" in dash["start"]
+    assert smritikosh.dashboard(replace(ON, smritikosh=replace(
+        SET_UP, checkout=str(tmp_path / "no-ui")))) is None
+    assert parse(render(config)).smritikosh.dashboard_port == 9
+
+
+def test_up_starts_the_built_dashboard_after_smritikosh_on_this_computer_only(world, kosh):
+    checkout = Path(kosh.smritikosh.checkout)
+    a_ui(checkout, built=True)
+    planned, _ = services.plan(kosh, found(world))
+    names = [s.name for s in planned]
+    assert names.index("smritikosh-ui") == names.index("smritikosh") + 1
+    ui = planned[names.index("smritikosh-ui")]
+    assert ui.argv[1:] == ["start", "--hostname", "127.0.0.1", "--port", "3000"]
+    assert ui.env["SMRITIKOSH_API_URL"] == "http://127.0.0.1:8080"
+    assert "AUTH_SECRET" not in ui.env          # stays in its own .env.local
+    off = replace(kosh, smritikosh=replace(kosh.smritikosh, dashboard=False))
+    assert "smritikosh-ui" not in [s.name for s in services.plan(off, found(world))[0]]
+
+
+def test_an_unbuilt_dashboard_is_said_not_started(world, kosh):
+    a_ui(Path(kosh.smritikosh.checkout), built=False)
+    planned, notes = services.plan(kosh, found(world))
+    assert "smritikosh-ui" not in [s.name for s in planned]
+    assert any("`sarathi smritikosh` builds it" in n for n in notes)
+
+
+def test_on_podman_the_dashboard_is_a_user_service_with_no_node_in_the_image(host, kosh):
+    a_ui(Path(kosh.smritikosh.checkout), built=True)
+    unit = podman.dashboard_unit(replace(kosh, road="podman"))
+    assert "ExecStart=" in unit and "next start --hostname 127.0.0.1 --port 3000" in unit
+    assert "After=sarathi-smritikosh.service" in unit
+    assert podman.dashboard_unit(replace(kosh, road="podman", memory="local")) is None
+
+
+def test_a_build_older_than_the_ui_s_last_commit_is_built_again(world, tmp_path,
+                                                                 monkeypatch):
+    import shutil as sh
+    monkeypatch.setenv("PATH", str(Path(sh.which("git", path="/usr/bin:/bin")).parent))
+    ui = a_ui(tmp_path, built=True)
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (ui / "page.tsx").write_text("x")
+    import os
+    os.utime(ui / ".next" / "BUILD_ID", (1, 1))          # built long ago
+    subprocess.run(["git", "-C", str(tmp_path), "add", "ui/page.tsx"], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "-c", "user.name=t", "-c",
+                    "user.email=t@t", "commit", "-qm", "ui"], check=True)
+    assert smritikosh.built(tmp_path) is False
+    os.utime(ui / ".next" / "BUILD_ID")                  # built now
+    assert smritikosh.built(tmp_path) is True

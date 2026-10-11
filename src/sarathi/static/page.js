@@ -75,13 +75,22 @@ function memoryCard(m) {
     action = [h("div.meta", {}, "Set up Smritikosh, which finds a memory by meaning, " +
                 "once, in a terminal:"), h("div.cmd", {}, "sarathi smritikosh")];
   }
+  const dash = m.dashboard;
+  const portal = !dash ? null : dash.up
+    ? [h("a.open", { href: dash.url, target: "_blank", rel: "noopener noreferrer" },
+         "Open Smritikosh's dashboard"),
+       h("div.meta", {}, "Sign in with your Smritikosh username and password.")]
+    : h("div.meta", {}, `Smritikosh's dashboard isn't running: ${dash.start.replace(/`/g, "")}.`);
   return h("article.card", {},
     h("div.card-head", {}, h("h3", {}, "Memory"),
       h("span.badge." + badge[0], {}, badge[1])),
     h("div.who", {}, "What your agents remember about you, and where it is kept."),
     m.said ? h("div.said", {}, m.said) : null,
     count, action,
-    memory.said ? h("div.meta", { role: "status" }, memory.said) : null);
+    memory.said ? h("div.meta", { role: "status" }, memory.said) : null,
+    portal,
+    m.server ? h("span.ref", {}, m.server) : null,
+    dash ? h("span.ref", {}, dash.url) : null);
 }
 
 async function switchMemory(via) {

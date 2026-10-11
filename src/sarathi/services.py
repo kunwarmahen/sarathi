@@ -37,6 +37,8 @@ files:
                   --mcp-config <its server> and YANTRA_MEMORY, YANTRA_USER and
                   SMRITIKOSH_API_KEY, and Dvara --memory <its server>, each
                   person's key read from Dvara's memory.json (smritikosh.py)
+    smritikosh-ui  next start --hostname 127.0.0.1 --port <smritikosh.dashboard_port>,
+                  Smritikosh's own dashboard, in its ui/, once built
 
 THE DOOR AND THE CLOCK ARE TOLD ABOUT EACH OTHER. A schedule made in a
 chat runs through the door as its person, and Samay checks every such
@@ -190,6 +192,9 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
     memory = memory_service(config, notes)
     if memory is not None:
         services.append(memory)
+        dash = dashboard_service(config, notes)
+        if dash is not None:
+            services.append(dash)
     door = door_service(config, found, env, clock_on, notes)
     meet = door_env(config) if door is not None else {}
     if clock_on:
@@ -262,6 +267,21 @@ def memory_service(config: Config, notes: list[str]) -> Service | None:
                    kosh.port, {"BOOTSTRAP_ADMIN": "0"}, cwd=checkout, prepare=database)
 
 
+def dashboard_service(config: Config, notes: list[str]) -> Service | None:
+    """Smritikosh's own dashboard, after Smritikosh (smritikosh.py)."""
+    from sarathi import smritikosh
+
+    kosh = config.smritikosh
+    argv = smritikosh.dashboard_argv(kosh)
+    if argv is None:
+        if kosh.dashboard and smritikosh.dashboard(config) is not None:
+            notes.append(f"{'smritikosh-ui':<{WIDTH}} not started: not built yet "
+                         "(`sarathi smritikosh` builds it)")
+        return None
+    return Service("smritikosh-ui", "smritikosh", argv, kosh.dashboard_port,
+                   smritikosh.dashboard_env(kosh), cwd=smritikosh.ui_dir(kosh.path()))
+
+
 #: Width of a piece's name in the lines `up`, `down` and `status` print.
 WIDTH = 10
 #: What each piece was called before it went by its project's name.
@@ -272,7 +292,8 @@ OLD_NAMES = {"clock": "samay", "door": "dvara", "page": "yantra", "owner": "dvar
 PORT_SETTINGS = {"yantra": "yantra.port", "samay": "samay.port", "dvara": "dvara.port",
                  "setu": "pages.setu_port", "dvara-page": "pages.dvara_port",
                  "sarathi": "pages.sarathi_port", "smritikosh": "smritikosh.port",
-                 "smritikosh-db": "smritikosh.db_port"}
+                 "smritikosh-db": "smritikosh.db_port",
+                 "smritikosh-ui": "smritikosh.dashboard_port"}
 
 
 def sarathi_program() -> str:
