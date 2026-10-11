@@ -266,7 +266,9 @@ Open **http://127.0.0.1:8321/** in your browser. That's the helper. Try:
 The second one is a schedule. The helper will say back *when* it will
 run and *what* it will do, and wait for your yes before saving it. After
 that, Samay's clock does it every weekday at 8, whether or not the page
-is open. Its own page (the `clock` address above, token included) lists
+is open. If a run needs your yes for something you didn't allow up
+front (a schedule to turn a light off, say), it asks you on Telegram and
+on the home page's chat, rather than giving up. Its own page (the `clock` address above, token included) lists
 every schedule and every run.
 
 When you're done:
@@ -496,8 +498,8 @@ you gave the bot:
 1. **A schedule.** Send *"check whether example.com is up once an hour,
    and only tell me if it's down"*. It says back when it will run and
    asks if that's right. Say yes. A card arrives with two buttons:
-   *Save a schedule … when: every hour … without asking, it may also
-   use: web_fetch*. Press approve. If a card ever comes before you've
+   *New schedule … When: every hour … May use without asking:
+   web_fetch*. Press approve. If a card ever comes before you've
    said yes, refuse it: the card is the real yes, and you can always
    ask again.
 2. **A record.** Ask for the same with *"…and keep a record in
@@ -508,6 +510,15 @@ you gave the bot:
    `~/agent/samay/.venv/bin/samay run-now <id>` (the id is in the bot's
    answer, or in `samay list`; on containers,
    `podman exec sarathi-samay samay run-now <id>`).
+   **A schedule that changes something** works the same way. Say *"turn
+   off the stairs light in 5 minutes"* (with Home Assistant connected).
+   The card should name the one switch it may use (*call_service — only
+   with domain=switch, service=turn_off, entity_id=…*). If instead it says
+   in capitals *NOTHING ALLOWED HERE CAN CHANGE ANYTHING*, approve anyway
+   or refuse and ask again. Either way, at its time anything nobody
+   allowed comes to you here as a Yes/No and waits 30 minutes; it never
+   just fails quietly. A run that was refused something says so, with
+   how to allow it next time.
 3. **Gmail, connected from the chat.** Send `/connect gmail`. Open the
    link on your phone, sign in to Google and allow it. Your phone then
    tries to open a page at `http://127.0.0.1:…` and **fails to load it.

@@ -296,7 +296,10 @@ What a person would otherwise wire by hand in two places:
   against the Dvara that made it. Samay also gets `SAMAY_DVARA_ACTOR`,
   your `[dvara] owner`: a schedule you make on Yantra's page still runs
   straight from Samay, but its answer reaches you through Dvara (on
-  Telegram, and in the home page's chat).
+  Telegram, and in the home page's chat), and so does any question it
+  has: a write nobody allowed ahead of time is put to you there as a
+  Yes/No (Dvara's `POST /ask`), waiting the schedule's wait, instead of
+  being refused (Samay's notes/07).
 * **A chat on the home page.** Dvara starts with `--web`, its web
   channel, and the home page shows it (below).
 * **Tokens.** `DVARA_TOKEN` is made for you; `TELEGRAM_TOKEN` (from
