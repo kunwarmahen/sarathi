@@ -51,8 +51,13 @@ in that file is you, with your own account, so what you told Yantra's
 page is what Dvara's agents know about you on Telegram. A person added
 to the actors file later gets theirs the next time this runs.
 
-NEO4J, MONGODB AND REDIS ARE LEFT OUT. Smritikosh runs without them and
-says "degraded", which is fine for everything Yantra asks of it.
+NEO4J, MONGODB AND REDIS ONLY WITH ``--full``. Smritikosh runs without
+them and says "degraded", which is fine for everything Yantra asks of it
+(remember, recall, list, forget: PostgreSQL alone). ``--full`` adds them
+the way the database is added: the container already serving the address
+the ``.env`` names is used (found by its published port), one is made
+only when none is, and the ``.env`` gains only the lines it lacks.
+``--no-full`` leaves them out again; nothing is deleted.
 """
 
 from __future__ import annotations
@@ -469,6 +474,164 @@ def migrate(checkout: Path, say: Callable[[str], None]) -> None:
     say(f"tables     {len(ran)} step(s) run" if ran else "tables     up to date")
 
 
+# ---- the other three stores (--full) ----------------------------------------------
+
+
+@dataclass(frozen=True)
+class Extra:
+    """One of the stores Smritikosh can use beside PostgreSQL."""
+
+    name: str              # "neo4j" | "mongodb" | "redis"
+    key: str               # the .env line that names its address
+    url: str               # that address, when the .env says nothing
+    image: str             # for a container made here
+    port: int              # its port inside the container
+    data: str              # where its data is, inside the container
+    what: str              # what Smritikosh keeps there
+
+
+EXTRAS = (
+    Extra("neo4j", "NEO4J_URI", "bolt://localhost:7687", "docker.io/library/neo4j:5.26-community",
+          7687, "/data", "linked facts"),
+    Extra("mongodb", "MONGODB_URL", "mongodb://localhost:27017", "docker.io/library/mongo:7",
+          27017, "/data/db", "its audit trail"),
+    Extra("redis", "REDIS_URL", "redis://localhost:6379/0", "docker.io/library/redis:7-alpine",
+          6379, "/data", "its job queue and shared rate limits"),
+)
+#: How long a store made or started here may take to listen (Neo4j is slow).
+EXTRA_READY = 120.0
+
+
+def host_port(url: str, default: int) -> int:
+    try:
+        return urllib.parse.urlsplit(url).port or default
+    except ValueError:
+        return default
+
+
+def published(found: dict[str, Any], inner: int) -> int | None:
+    """The host port a container publishes its ``inner`` port on."""
+    for binding in ((found.get("HostConfig") or {}).get("PortBindings") or {}).get(
+            f"{inner}/tcp") or []:
+        if str(binding.get("HostPort", "")).isdigit():
+            return int(binding["HostPort"])
+    return None
+
+
+def store_container(extra: Extra, port: int, named: str) -> dict[str, Any] | None:
+    """The container serving this store at ``port``: the one sarathi.toml
+    names, else any whose image is the store's and that publishes it."""
+    found = container(named)
+    if found is not None:
+        return found
+    listed = run(["podman", "ps", "-a", "--format", "{{.Names}}"]).stdout.split()
+    for name in listed:
+        candidate = container(name)
+        image = (candidate or {}).get("ImageName") or ""
+        keyword = "mongo" if extra.name == "mongodb" else extra.name
+        if candidate and keyword in image and published(candidate, extra.port) == port:
+            return candidate
+    return None
+
+
+def settle_extras(kosh: Smritikosh, checkout: Path, say: Callable[[str], None],
+                  wait: float = EXTRA_READY) -> Smritikosh:
+    """Neo4j, MongoDB and Redis running, each found or made, and the .env
+    naming them; the settings with the containers' names."""
+    path = checkout / ".env"
+    held = read_dotenv(path)
+    added: dict[str, str] = {}
+    names: dict[str, str] = {}
+    for extra in EXTRAS:
+        url = held.get(extra.key) or extra.url
+        if not held.get(extra.key):
+            added[extra.key] = extra.url
+        port = host_port(url, extra.port)
+        env: list[str] = []
+        if extra.name == "neo4j":
+            user = held.get("NEO4J_USER") or "neo4j"
+            password = held.get("NEO4J_PASSWORD") or secrets.token_hex(12)
+            for key, value in (("NEO4J_USER", user), ("NEO4J_PASSWORD", password)):
+                if not held.get(key):
+                    added[key] = value
+            env = ["NEO4J_AUTH=" + f"{user}/{password}", 'NEO4J_PLUGINS=["apoc"]']
+        if extra.name == "mongodb" and not held.get("MONGODB_DB_NAME"):
+            added["MONGODB_DB_NAME"] = "smritikosh_audit"
+        named = getattr(kosh, extra.name)
+        found = store_container(extra, port, named)
+        if found is None:
+            if listening(port):
+                raise SetupError(f"something that isn't a {extra.name} container Sarathi "
+                                 f"can find is on port {port}: change {extra.key} in "
+                                 f"{path}, or stop it")
+            argv = ["podman", "run", "-d", "--name", named,
+                    "-p", f"127.0.0.1:{port}:{extra.port}",
+                    "-v", f"{named}:{extra.data}:Z"]
+            for item in env:
+                argv += ["-e", item]
+            done = run(argv + [extra.image])
+            if done.returncode != 0:
+                raise SetupError(f"could not start {extra.name}: {done.stderr.strip()}")
+            say(f"{extra.name:<10} started {named} ({extra.image}, volume {named})")
+        else:
+            named = found.get("Name") or named
+            if not (found.get("State") or {}).get("Running"):
+                done = run(["podman", "start", named])
+                if done.returncode != 0:
+                    raise SetupError(f"could not start {named}: {done.stderr.strip()}")
+                say(f"{extra.name:<10} started {named} (yours, on {port})")
+            else:
+                say(f"{extra.name:<10} {named} already running (on {port})")
+            if extra.name == "neo4j":
+                auth = [e for e in (found.get("Config") or {}).get("Env") or []
+                        if e.startswith("NEO4J_AUTH=")]
+                if auth and auth[0] != env[0]:
+                    say(f"           {named} was made with another NEO4J_AUTH than the "
+                        f"NEO4J_USER/NEO4J_PASSWORD in {path}: its /health will say so")
+        names[extra.name] = named
+        deadline = time.monotonic() + wait
+        while not listening(port):
+            if time.monotonic() > deadline:
+                raise SetupError(f"{extra.name} ({named}) is not answering on {port}: "
+                                 f"`podman logs {named}`")
+            time.sleep(1)
+    if added:
+        write_private(path, fill_dotenv(path.read_text(), added))
+        say(f"settings   added to {path}: {', '.join(added)}")
+    return replace(kosh, full=True, **names)
+
+
+def start_extras(kosh: Smritikosh) -> list[str]:
+    """The stores' plain containers, started for ``up`` (process road)."""
+    lines = []
+    for extra in EXTRAS:
+        name = kosh.extras().get(extra.name)
+        if name is None:
+            continue
+        found = container(name)
+        if found is None:
+            raise SetupError(f"no {extra.name} container {name!r}: run `sarathi smritikosh "
+                             "--full` again")
+        if not (found.get("State") or {}).get("Running"):
+            done = run(["podman", "start", name])
+            if done.returncode != 0:
+                raise SetupError(f"could not start {name}: {done.stderr.strip()}")
+            lines.append(f"{extra.name:<10} started {name}")
+    return lines
+
+
+def stop_extras(kosh: Smritikosh) -> list[str]:
+    """The plain containers stopped, for the podman road's units, which use
+    their data (never two servers on one data folder)."""
+    stopped = []
+    for name in kosh.extras().values():
+        found = container(name)
+        if found is not None and (found.get("State") or {}).get("Running"):
+            run(["podman", "stop", name])
+            stopped.append(name)
+    return stopped
+
+
 # ---- its API ----------------------------------------------------------------------
 
 
@@ -666,8 +829,9 @@ class Accounts:
             raise NeedsBootstrap
         token = self.api.login(ADMIN, password)
         if token is None:
-            raise SetupError(f"the admin {ADMIN!r} would not log in with the password in "
-                             "secrets.env")
+            # a database made again since: the admin is made again too
+            # (and if it IS there, make_admin says its password is wrong)
+            raise NeedsBootstrap
         self._token = token
         return token
 
@@ -724,8 +888,9 @@ def make_admin(api: Api, say: Callable[[str], None]) -> None:
     password = secrets.token_urlsafe(24)
     code = api.register(None, ADMIN, password, role="admin")
     if code == 409:
-        raise SetupError(f"Smritikosh has an admin called {ADMIN!r} that Sarathi has no "
-                         f"password for: put it in secrets.env as {ADMIN_PASSWORD}")
+        raise SetupError(f"Smritikosh has an admin called {ADMIN!r}, and the password for "
+                         f"it in secrets.env ({ADMIN_PASSWORD}) is missing or wrong: put "
+                         "the right one there")
     if code != 201:
         raise SetupError(f"Smritikosh would not make its first admin ({code})")
     save_secret(ADMIN_PASSWORD, password)
@@ -782,7 +947,8 @@ def people_keys(config: Config, api: Api, accounts: Accounts, me: str, mine: str
 # ---- the command ------------------------------------------------------------------
 
 
-def setup(config: Config, *, local: bool = False, say: Callable[[str], None] = print,
+def setup(config: Config, *, local: bool = False, full: bool | None = None,
+          say: Callable[[str], None] = print,
           ask_secret: Callable[[str], str] = getpass.getpass,
           interactive: bool | None = None) -> Config:
     """Every step, in order; the settings to write when they all worked."""
@@ -826,6 +992,10 @@ def setup(config: Config, *, local: bool = False, say: Callable[[str], None] = p
     kosh = replace(config.smritikosh, checkout=str(checkout), db_port=db.port)
     kosh = start_database(kosh, db, say)
     migrate(checkout, say)
+    if full if full is not None else config.smritikosh.full:
+        kosh = settle_extras(kosh, checkout, say)
+    else:
+        kosh = replace(kosh, full=False)
 
     me = owner_name()
     said: set[str] = set()
@@ -849,8 +1019,9 @@ def setup(config: Config, *, local: bool = False, say: Callable[[str], None] = p
         with serving(checkout, kosh, bootstrap=False, say=say) as api:
             steps(api)
     if config.road == "podman":
-        # the unit uses this volume from now on; never two servers on it
+        # the units use this data from now on; never two servers on it
         stop_database(kosh)
+        stop_extras(kosh)
     return replace(config, memory="smritikosh", smritikosh=kosh)
 
 
@@ -865,7 +1036,9 @@ def run_command(args, config: Config) -> int:
               "  `sarathi smritikosh` switches again. next: `sarathi up`")
         return 0
     try:
-        done = setup(config, local=args.local)
+        full = True if getattr(args, "full", False) else (
+            False if getattr(args, "no_full", False) else None)
+        done = setup(config, local=args.local, full=full)
     except SetupError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -914,7 +1087,9 @@ def health_line(config: Config, seen: dict[str, Any] | None = None) -> str:
     said = seen["health"]
     count = seen["memories"]
     many = ("?" if count is None else f"{count}+" if count >= COUNT_LIMIT else str(count))
-    how = (f"postgres {said.get('postgres')}, {said.get('status')}" if said else
+    stores = ", ".join(f"{k} {said[k]}" for k in ("postgres", "neo4j", "mongodb")
+                       if said and said.get(k) not in (None, "not_configured"))
+    how = (f"{stores}; {said.get('status')}" if said else
            "its /health is slow to say (MongoDB or Neo4j named in its .env, not running)")
     return (f"memory: smritikosh at {seen['url']} -- {how}; {many} remembered for "
             f"{owner_name()}")
@@ -953,11 +1128,13 @@ def yantra_env() -> dict[str, str]:
     return env
 
 
-def container_dotenv(checkout: Path, *, db_host: str) -> dict[str, str]:
+def container_dotenv(checkout: Path, *, db_host: str,
+                     extras: dict[str, str] | None = None) -> dict[str, str]:
     """Smritikosh's .env as its container must read it: the database by
     its name on Sarathi's network, and Ollama on the host."""
     from sarathi.podman import from_container
 
+    extras = extras or {}
     values = read_dotenv(checkout / ".env")
     values.pop("BOOTSTRAP_ADMIN", None)
     if values.get("POSTGRES_URL"):
@@ -965,4 +1142,13 @@ def container_dotenv(checkout: Path, *, db_host: str) -> dict[str, str]:
     for key in ("LLM_BASE_URL", "EMBEDDING_BASE_URL", "LLM_FALLBACK_BASE_URL"):
         if values.get(key):
             values[key] = from_container(values[key])
+    # with --full, each store by its unit's name on Sarathi's network;
+    # without, its line is left out, so nothing waits on a store not there
+    for extra in EXTRAS:
+        if extra.name in extras and values.get(extra.key):
+            parts = urllib.parse.urlsplit(values[extra.key])
+            values[extra.key] = urllib.parse.urlunsplit(parts._replace(
+                netloc=f"{extras[extra.name]}:{extra.port}"))
+        elif extra.name not in extras:
+            values.pop(extra.key, None)
     return values

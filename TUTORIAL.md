@@ -695,9 +695,12 @@ sarathi up                  # on the containers' road: sarathi image first, then
 ```
 
 `sarathi status` now ends with a line like `memory: smritikosh at
-http://127.0.0.1:8080 -- postgres ok, degraded; 0 remembered for asha`.
+http://127.0.0.1:8080 -- postgres ok; degraded; 0 remembered for asha`.
 **Degraded is fine.** It means Smritikosh's optional extras are left
-out, and the helper doesn't use them.
+out, and the helper doesn't use them. To run them anyway (Neo4j, MongoDB
+and Redis, about 1 GB more memory), add `--full`: `sarathi smritikosh
+--full`, then `sarathi up`. If you already run them for Smritikosh,
+they're found and used as they are. `--no-full` leaves them out again.
 
 **Bring across what it already knew.** The old file isn't emptied or
 moved. On Yantra's page, type `/memory copy local` once.

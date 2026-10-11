@@ -126,6 +126,12 @@ in it when ``[smritikosh] checkout`` names one, and reads its own
 ``.env`` from a file of its own (``units/sarathi-smritikosh.env``) with
 the database's address made the database container's name, and
 Ollama's the host's. Neither mounts anything of the other pieces'.
+With ``[smritikosh] full``, Neo4j, MongoDB and Redis are a unit each
+(``sarathi-smritikosh-neo4j`` and so on), COPIED FROM THE CONTAINER THAT
+HOLDS THEIR DATA: the same image, by its id (a ``latest`` tag would pull
+a newer server onto old data), the same mounts, the settings it was made
+with, published on 127.0.0.1 at the same ports. The plain container is
+stopped first, as the database's is.
 Yantra's and Dvara's containers start ``smritikosh-mcp`` from the image,
 pointed at ``http://sarathi-smritikosh:8080``; Yantra gets your key in
 its env file, and Dvara reads each person's from its memory.json.
@@ -192,7 +198,9 @@ BROWSER = "/usr/bin/google-chrome"
 UNITS = {"samay": "sarathi-samay", "dvara": "sarathi-dvara", "yantra": "sarathi-yantra",
          "setu": "sarathi-setu", "dvara-page": "sarathi-dvara-page",
          "sarathi": "sarathi-home", "smritikosh-db": "sarathi-smritikosh-db",
-         "smritikosh": "sarathi-smritikosh"}
+         "smritikosh": "sarathi-smritikosh", "smritikosh-neo4j": "sarathi-smritikosh-neo4j",
+         "smritikosh-mongodb": "sarathi-smritikosh-mongodb",
+         "smritikosh-redis": "sarathi-smritikosh-redis"}
 #: Not a container: an ordinary user service (see the module docstring).
 SERVICE_UNITS = ("sarathi",)
 #: The containers' names before each went by its project's name: stopped
@@ -443,7 +451,9 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
         checkout = config.smritikosh.path()
         assert checkout is not None
         out[UNITS["smritikosh"]] = smritikosh.container_dotenv(
-            checkout, db_host=UNITS["smritikosh-db"])
+            checkout, db_host=UNITS["smritikosh-db"],
+            extras={store: UNITS[f"smritikosh-{store}"]
+                    for store in config.smritikosh.extras()})
         db = smritikosh.Database.parse(smritikosh.read_dotenv(checkout / ".env").get(
             "POSTGRES_URL", "postgresql://smritikosh:smritikosh@localhost:5432/smritikosh"))
         out[UNITS["smritikosh-db"]] = {"POSTGRES_USER": db.user,
@@ -722,7 +732,11 @@ def memory_units(config: Config) -> dict[str, str]:
     db, api = UNITS["smritikosh-db"], UNITS["smritikosh"]
     serve = (f"/opt/smritikosh/.venv/bin/uvicorn smritikosh.api.main:app "
              f"--host 0.0.0.0 --port {SMRITIKOSH_PORT}")
-    return {
+    extras = extra_units(config)
+    after = "".join(f"Wants={UNITS[n]}.service\nAfter={UNITS[n]}.service\n"
+                    for n in ("smritikosh-db", *(f"smritikosh-{e}" for e in
+                                                 kosh.extras())))
+    return {**extras,
         f"{db}.container": f"""{HEADER}
 [Unit]
 Description=Sarathi: Smritikosh's database
@@ -744,9 +758,7 @@ WantedBy=default.target
         f"{api}.container": f"""{HEADER}
 [Unit]
 Description=Sarathi: Smritikosh, the memory server
-Wants={db}.service
-After={db}.service
-
+{after}
 [Container]
 Image={IMAGE}
 ContainerName={api}
@@ -763,6 +775,53 @@ SuccessExitStatus=143
 [Install]
 WantedBy=default.target
 """}
+
+
+def extra_units(config: Config) -> dict[str, str]:
+    """Neo4j, MongoDB and Redis, each a unit copied from its plain
+    container (the module docstring). A container that is gone is left
+    out, and `up` says so."""
+    from sarathi.smritikosh import container
+
+    out = {}
+    for store, name in config.smritikosh.extras().items():
+        found = container(name)
+        if found is None:
+            continue
+        unit = UNITS[f"smritikosh-{store}"]
+        image = found.get("Image") or found.get("ImageName")
+        own = set(run(["podman", "image", "inspect", "--format",
+                       "{{range .Config.Env}}{{println .}}{{end}}", str(image)]
+                      ).stdout.splitlines())
+        made = [e for e in (found.get("Config") or {}).get("Env") or []
+                if e not in own and not e.startswith(("HOSTNAME=", "container=", "HOME="))]
+        if made:
+            write_private(env_file(unit), "# Written by `sarathi up` from the container "
+                          f"{name}.\n" + "".join(f"{e}\n" for e in made))
+        mounts = "".join(
+            f"Volume={m.get('Name') if m.get('Type') == 'volume' else m.get('Source')}:"
+            f"{m.get('Destination')}\n" for m in found.get("Mounts") or [])
+        ports = "".join(
+            f"PublishPort=127.0.0.1:{b['HostPort']}:{inner.split('/')[0]}\n"
+            for inner, bound in ((found.get("HostConfig") or {}).get("PortBindings")
+                                 or {}).items()
+            for b in bound or [] if str(b.get("HostPort", "")).isdigit())
+        out[f"{unit}.container"] = f"""{HEADER}
+[Unit]
+Description=Sarathi: Smritikosh's {store}, from the container {name}
+
+[Container]
+Image={image}
+ContainerName={unit}
+Network={NETWORK}.network
+{ports}{mounts}{f"EnvironmentFile={env_file(unit)}" + chr(10) if made else ""}
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+"""
+    return out
 
 
 def setu_window_lines(config: Config) -> str:
@@ -1013,6 +1072,9 @@ def up(config: Config) -> tuple[list[str], bool]:
         said, db_ok = memory_database(config, changed)
         lines += said
         ok = ok and db_ok
+        said, extras_ok = memory_extras(config, changed)
+        lines += said
+        ok = ok and extras_ok
         wanted.append(("smritikosh", config.smritikosh.port))
     wanted += [("samay", config.clock_port)] if config.clock_on else []
     if config.door is not None:
@@ -1109,6 +1171,37 @@ def memory_database(config: Config, changed: set[str]) -> tuple[list[str], bool]
     return lines, False
 
 
+def memory_extras(config: Config, changed: set[str]) -> tuple[list[str], bool]:
+    """Neo4j, MongoDB and Redis units, with ``full``: the plain containers
+    stopped first, then each unit started and listening."""
+    from sarathi import smritikosh
+
+    lines, ok = [], True
+    for name in smritikosh.stop_extras(config.smritikosh):
+        lines.append(f"{'smritikosh':<{WIDTH}} the plain container {name} stopped: its "
+                     "unit uses its data now")
+    for store, plain in config.smritikosh.extras().items():
+        key, unit = f"smritikosh-{store}", UNITS[f"smritikosh-{store}"]
+        if not unit_file(key).exists():
+            ok = False
+            lines.append(f"{key:<{WIDTH}} not started: no container {plain} to copy "
+                         "(`sarathi smritikosh --full`)")
+            continue
+        if active(unit) and f"{unit}.container" in changed:
+            run(["systemctl", "--user", "stop", f"{unit}.service"])
+        if active(unit):
+            lines.append(f"{key:<{WIDTH}} already running  (unit {unit})")
+            continue
+        started = run(["systemctl", "--user", "start", f"{unit}.service"])
+        if started.returncode == 0 and active(unit):
+            lines.append(f"{key:<{WIDTH}} up  (unit {unit}, from {plain})")
+        else:
+            ok = False
+            lines.append(f"{key:<{WIDTH}} did not come up (unit {unit}); its journal:")
+            lines += [f"         | {line}" for line in journal_tail(unit)]
+    return lines, ok
+
+
 def _address(config: Config, name: str, url: str) -> str:
     if name == "smritikosh-db":
         return f"127.0.0.1:{config.smritikosh.db_port} (PostgreSQL)"
@@ -1124,7 +1217,8 @@ def down(remove: bool = False) -> list[str]:
     next login, which is what they are for -- unless ``remove``."""
     lines = retire_old()
     for name in ("sarathi", "dvara-page", "setu", "yantra", "dvara", "samay",
-                 "smritikosh", "smritikosh-db"):
+                 "smritikosh", "smritikosh-db", "smritikosh-neo4j", "smritikosh-mongodb",
+                 "smritikosh-redis"):
         unit = UNITS[name]
         if not unit_file(name).exists():
             continue

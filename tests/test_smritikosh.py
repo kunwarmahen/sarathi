@@ -413,3 +413,101 @@ def test_a_checkout_you_named_that_doesnt_open_it_is_refused_not_overridden(
     with pytest.raises(smritikosh.SetupError, match="another password, another JWT_SECRET"):
         smritikosh.setup(named, say=print, interactive=False)
     assert "checkout" not in seen
+
+
+# ---- Neo4j, MongoDB and Redis (--full) ----------------------------------------------
+
+YOURS = {
+    "neo4j_container": {
+        "Name": "neo4j_container", "Image": "sha256:n30",
+        "ImageName": "docker.io/library/neo4j:latest",
+        "Config": {"Env": ["NEO4J_AUTH=neo4j/kept-secret", "PATH=/usr/bin",
+                           "NEO4J_HOME=/var/lib/neo4j"]},
+        "Mounts": [{"Type": "bind", "Source": "/home/you/neo4j/data", "Destination": "/data"}],
+        "HostConfig": {"PortBindings": {"7687/tcp": [{"HostIp": "", "HostPort": "7687"}],
+                                        "7474/tcp": [{"HostIp": "", "HostPort": "7474"}]}},
+        "State": {"Running": False}},
+    "mongodb": {
+        "Name": "mongodb", "Image": "sha256:m0", "ImageName": "docker.io/library/mongo:latest",
+        "Config": {"Env": []},
+        "Mounts": [{"Type": "volume", "Name": "mongodb", "Destination": "/data/db"}],
+        "HostConfig": {"PortBindings": {"27017/tcp": [{"HostIp": "", "HostPort": "27017"}]}},
+        "State": {"Running": True}},
+}
+
+
+@pytest.fixture
+def stores(world, monkeypatch, tmp_path):
+    """Your Neo4j and MongoDB containers; no Redis yet."""
+    ran: list[list[str]] = []
+    up = {7687, 27017}                      # Redis listens once it is made
+
+    def run(argv, **kw):
+        ran.append(argv)
+        if argv[:3] == ["podman", "run", "-d"]:
+            up.add(6379)
+        out = "\n".join(YOURS) if argv[:3] == ["podman", "ps", "-a"] else ""
+        if argv[:3] == ["podman", "image", "inspect"]:
+            out = "PATH=/usr/bin\nNEO4J_HOME=/var/lib/neo4j\n"
+        return subprocess.CompletedProcess(argv, 0, out, "")
+    monkeypatch.setattr(smritikosh, "run", run)
+    monkeypatch.setattr(podman, "run", run)
+    monkeypatch.setattr(smritikosh, "container", lambda name: YOURS.get(name))
+    monkeypatch.setattr(smritikosh, "listening", lambda port, host="127.0.0.1": port in up)
+    checkout = tmp_path / "kosh"
+    checkout.mkdir()
+    (checkout / ".env").write_text("NEO4J_URI=bolt://localhost:7687\nNEO4J_USER=neo4j\n"
+                                   "NEO4J_PASSWORD=kept-secret\n"
+                                   "MONGODB_URL=mongodb://localhost:27017\n")
+    return checkout, ran
+
+
+def test_full_uses_your_containers_by_their_address_and_adds_only_what_is_missing(stores):
+    checkout, ran = stores
+    said: list[str] = []
+    kosh = smritikosh.settle_extras(Smritikosh(checkout=str(checkout)), checkout,
+                                    said.append, wait=0)
+    assert (kosh.full, kosh.neo4j, kosh.mongodb) == (True, "neo4j_container", "mongodb")
+    env = smritikosh.read_dotenv(checkout / ".env")
+    assert env["NEO4J_PASSWORD"] == "kept-secret"                 # yours, untouched
+    assert env["REDIS_URL"] == "redis://localhost:6379/0"         # the one it lacked
+    assert ["podman", "start", "neo4j_container"] in ran
+    made = next(a for a in ran if a[:3] == ["podman", "run", "-d"])
+    assert "127.0.0.1:6379:6379" in made and made[-1].endswith("redis:7-alpine")
+    assert not any(a[:3] == ["podman", "run", "-d"] and "mongo" in a[-1] for a in ran)
+
+
+def test_a_unit_copies_its_container_by_image_id_never_a_tag(host, stores):
+    checkout, _ = stores
+    config = replace(ON, road="podman", smritikosh=replace(
+        SET_UP, checkout=str(checkout), full=True, neo4j="neo4j_container",
+        mongodb="mongodb", redis="nowhere"))
+    units = podman.units(config)
+    neo = units["sarathi-smritikosh-neo4j.container"]
+    assert "Image=sha256:n30" in neo and "latest" not in neo
+    assert "Volume=/home/you/neo4j/data:/data" in neo
+    assert "PublishPort=127.0.0.1:7687:7687" in neo
+    assert "Volume=mongodb:/data/db" in units["sarathi-smritikosh-mongodb.container"]
+    assert "sarathi-smritikosh-redis.container" not in units      # no container to copy
+    kept = podman.env_file("sarathi-smritikosh-neo4j").read_text()
+    assert "NEO4J_AUTH=neo4j/kept-secret" in kept and "PATH=" not in kept
+    api = units["sarathi-smritikosh.container"]
+    assert "After=sarathi-smritikosh-neo4j.service" in api
+
+
+def test_inside_containers_each_store_is_reached_by_its_unit_or_left_out(tmp_path):
+    (tmp_path / ".env").write_text("NEO4J_URI=bolt://localhost:7687\n"
+                                   "MONGODB_URL=mongodb://localhost:27017\n")
+    full = smritikosh.container_dotenv(tmp_path, db_host="db",
+                                       extras={"neo4j": "sarathi-smritikosh-neo4j"})
+    assert full["NEO4J_URI"] == "bolt://sarathi-smritikosh-neo4j:7687"
+    assert "MONGODB_URL" not in full          # not run here: nothing waits on it
+
+
+def test_full_reads_back_and_no_full_turns_it_off(world):
+    config = replace(ON, smritikosh=replace(SET_UP, full=True, neo4j="neo4j_container"))
+    assert parse(render(config)) == config
+    assert parse(render(ON)).smritikosh.extras() == {}
+    from sarathi.cli import build_parser
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["smritikosh", "--full", "--no-full"])

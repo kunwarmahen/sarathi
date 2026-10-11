@@ -191,14 +191,56 @@ pins `mcp<2` and names numpy. With that, Smritikosh installed in a
 throwaway image the way Sarathi's Containerfile installs it, and its
 programs imported (`mcp 1.30.0`, numpy 2.5.4).
 
+## `--full`: the other three stores, the same way
+
+Yantra needs PostgreSQL alone. Smritikosh can use three more: Neo4j for
+facts that link (you, your city, your airport) in its own context
+building, MongoDB for an audit trail, Redis for its job queue and shared
+rate limits. Without them it says "degraded". A Smritikosh set up by
+hand from its own guide usually names Neo4j and MongoDB in its `.env`
+whether or not they run. Then its `/health` waits half a minute on
+MongoDB, and its log fills with Neo4j's refusals.
+
+`sarathi smritikosh --full` treats each like the database. **THE ADDRESS
+IN THE `.env` FINDS ITS CONTAINER**: the one that publishes that port
+with that store's image (or the name `[smritikosh]` records). It is
+started as it is. One is made, on 127.0.0.1, only when none is found.
+The `.env` gains only the lines it lacks: on this machine, `REDIS_URL`
+alone. The Neo4j password is never replaced, and a container made with
+another one is named in a line, not changed.
+
+On Podman each store becomes a unit **COPIED FROM ITS CONTAINER**: its
+image by id (this machine's Neo4j runs `neo4j:latest`, and a unit
+naming the tag could pull a newer server onto old data), its mounts as
+they are (bind folders, named and unnamed volumes alike), the settings
+it was made with minus the image's own, and its ports on 127.0.0.1. The
+plain container is stopped first, the same rule as the database's.
+Without `--full`, a store's line is left out of the server's copy of
+the `.env` there, so nothing waits on a store that isn't running.
+
+**Receipt.** A scratch `--full` on its own ports (17687, 27018, 16379)
+made all three in 30 seconds, adding only `MONGODB_DB_NAME` to a `.env`
+that named the rest. A second run found all three running and left them.
+`/health` then answered in 0.4 seconds with `"status": "ok"`, postgres,
+neo4j and mongodb `ok`, and `sarathi status` said `postgres ok, neo4j ok,
+mongodb ok; ok`. Priya's turn through Dvara still answered from her own
+memories alone. Read-only against this machine's own `.env`, it picks
+`neo4j_container` (7687), `mongodb` (27017) and `smritikosh-redis` (6379),
+and would add only `REDIS_URL`.
+
+That run also found **a lost admin**. The scratch database had been
+deleted and made again, and secrets.env still held the old `sarathi`
+admin's password. A failed admin login now makes the admin again through
+the bootstrap. If an admin of that name really is there, it says the
+password in secrets.env is wrong.
+
 ## What is not here yet
 
 * **The Podman road, run.** The units are written and tested, and
   Smritikosh installs in an image, but the receipt above is plain
   programs. On this machine it needs `sarathi smritikosh`, then
   `sarathi image`, then `sarathi up`.
-* **Neo4j, MongoDB, Redis.** Left out; Smritikosh runs "degraded",
-  which is everything Yantra asks of it. Maybe a later `--full`.
+* ~~**Neo4j, MongoDB, Redis.**~~ `--full`, below.
 * **Samay's runs.** A scheduled run is Yantra started by Samay, and it
   still remembers in Yantra's own file.
 * **A person removed from the actors file** keeps their account and

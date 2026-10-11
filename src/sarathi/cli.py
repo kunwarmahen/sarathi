@@ -7,7 +7,8 @@
                               for the containers (`phone pair ADDRESS CODE` once)
     sarathi smritikosh        memories found by meaning: set Smritikosh up (its
                               database, settings, tables, accounts, keys) and
-                              switch to it; --off goes back to the built-in file
+                              switch to it; --off goes back to the built-in file;
+                              --full adds Neo4j, MongoDB and Redis
     sarathi road [ROAD]       how `up` starts things: process (plain programs) or
                               podman (containers); switching stops the other road
     sarathi image             build the image the podman road runs
@@ -81,6 +82,12 @@ def build_parser() -> argparse.ArgumentParser:
     kosh.add_argument("--local", action="store_true",
                       help="a new Smritikosh on the local road (Ollama) even when "
                            "[model] is a cloud one")
+    full = kosh.add_mutually_exclusive_group()
+    full.add_argument("--full", action="store_true",
+                      help="Neo4j, MongoDB and Redis too, yours where the .env names them "
+                           "(Yantra needs PostgreSQL alone)")
+    full.add_argument("--no-full", dest="no_full", action="store_true",
+                      help="PostgreSQL alone again; the others' data is kept")
 
     door_cmd = subs.add_parser("dvara", aliases=["door"],
                                help="Dvara, for other people and your phone: "

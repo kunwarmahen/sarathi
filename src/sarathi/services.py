@@ -253,7 +253,8 @@ def memory_service(config: Config, notes: list[str]) -> Service | None:
             "POSTGRES_URL", "postgresql://smritikosh:smritikosh@localhost:5432/smritikosh"))
         said: list[str] = []
         smritikosh.start_database(kosh, db, said.append)
-        return said[0] if said else None
+        said += smritikosh.start_extras(kosh)      # with [smritikosh] full
+        return "\n".join(said) or None
 
     return Service("smritikosh", "smritikosh",
                    [str(uvicorn), "smritikosh.api.main:app", "--host", HOST,

@@ -194,7 +194,8 @@ It does every step of Yantra's SMRITIKOSH.md, each skipped when already
 done: Smritikosh's checkout (`SARATHI_SMRITIKOSH`, beside the others, or
 cloned there), its programs, its `.env` (the local road with Ollama, or
 the cloud road with OpenAI's embeddings, by `[model]`; `--local` for the
-local one on a cloud model), a PostgreSQL container with pgvector, its
+local one on a cloud model), a PostgreSQL container with pgvector (and,
+with `--full`, Neo4j, MongoDB and Redis, below), its
 tables, your account (named as Yantra knows you) with its own key, and
 an account and key for each person in Dvara's actors file. Then
 `sarathi up` starts Smritikosh before Yantra and Dvara and hands each the
@@ -221,8 +222,17 @@ in its agent.toml).
 **Going back is one command:** `sarathi smritikosh --off`, or the
 **Memory** card on the home page. Nothing is deleted either way.
 
-Neo4j, MongoDB and Redis are left out. Smritikosh says "degraded"
-without them, which is fine for everything Yantra asks of it.
+**Neo4j, MongoDB and Redis only with `--full`.** Yantra's remember,
+recall, list and forget need PostgreSQL alone, and Smritikosh says
+"degraded" without the others, which is fine. `sarathi smritikosh --full`
+adds Neo4j (linked facts), MongoDB (its audit trail) and Redis (its job
+queue) the way it adds the database: the container already serving the
+address your `.env` names is used, found by its published port, and one
+is made (on 127.0.0.1) only when none is. Your `.env` gains only the lines
+it lacks. `up` starts them first on both roads; on Podman each becomes a
+unit copied from its container, with the same image (by id, never a
+`latest` tag), the same data and the same ports. `--no-full` leaves them
+out again, and nothing is deleted.
 ([notes/13](notes/13-a-memory-by-meaning.md))
 
 ### Your phone: `sarathi phone`
@@ -411,7 +421,7 @@ would otherwise start again at your next login. It starts nothing new;
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
 | Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
 | Yantra's own `.env` | read, as in a terminal | not in the image: model settings come from `[model]` in sarathi.toml only |
-| Smritikosh (`[memory] via = "smritikosh"`) | its database container, then its server in its checkout | two units on the same database volume (`sarathi-smritikosh-db`, `sarathi-smritikosh`); Smritikosh in the image |
+| Smritikosh (`[memory] via = "smritikosh"`) | its database container, then its server in its checkout | two units on the same database volume (`sarathi-smritikosh-db`, `sarathi-smritikosh`); Smritikosh in the image; with `--full`, a unit each for Neo4j, MongoDB and Redis, copied from their containers |
 
 Your accounts, schedules and memories are the same files either way, so
 switching loses nothing. A port something else already uses stops that
@@ -462,6 +472,9 @@ What goes into the containers:
   it), and its server runs from Sarathi's image, which carries Smritikosh
   once `sarathi smritikosh` has recorded its checkout. Run `sarathi image`
   after `sarathi smritikosh`. Neither mounts anything of the others'.
+  With `--full`, Neo4j, MongoDB and Redis are a unit each
+  (`sarathi-smritikosh-neo4j`, `-mongodb`, `-redis`), copied from the
+  container that holds their data, which `up` stops first.
 * **Ollama stays on your machine.** The containers reach it at
   `host.containers.internal`, so Ollama has to listen on more than
   127.0.0.1 (`OLLAMA_HOST=0.0.0.0`).
@@ -504,7 +517,7 @@ sparsh      ~/agent/sparsh/.venv/bin/sparsh  (beside)
 smritikosh  ~/agent/smritikosh/.venv/bin/smritikosh-mcp  (sarathi.toml)
             a memory store (Yantra keeps its own without it)
 
-memory: smritikosh at http://127.0.0.1:8080 -- postgres ok, degraded; 12 remembered for asha
+memory: smritikosh at http://127.0.0.1:8080 -- postgres ok; degraded; 12 remembered for asha
 ```
 
 Each line says **where** a piece was found and **which rule** found it.

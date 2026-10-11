@@ -73,7 +73,8 @@ KNOWN: dict[str, set[str]] = {
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
     "phone": {"on", "address", "awake"},
     "memory": {"via"},
-    "smritikosh": {"checkout", "port", "database", "volume", "db_port"},
+    "smritikosh": {"checkout", "port", "database", "volume", "db_port", "full", "neo4j",
+                   "mongodb", "redis"},
 }
 #: Where Yantra (and Dvara's people) keep what they remember.
 MEMORY_ROADS = ("local", "smritikosh")
@@ -138,6 +139,17 @@ class Smritikosh:
     database: str = SMRITIKOSH_DB
     volume: str = SMRITIKOSH_VOLUME
     db_port: int = DEFAULT_DB_PORT
+    #: ``--full``: Neo4j, MongoDB and Redis too, each in the container
+    #: named here (found by its address, or made, by ``sarathi smritikosh``).
+    full: bool = False
+    neo4j: str = "smritikosh-neo4j"
+    mongodb: str = "smritikosh-mongo"
+    redis: str = "smritikosh-redis"
+
+    def extras(self) -> dict[str, str]:
+        """Store -> its container, with ``full`` on; empty without."""
+        return {"neo4j": self.neo4j, "mongodb": self.mongodb, "redis": self.redis} \
+            if self.full else {}
 
     def path(self) -> Path | None:
         return Path(self.checkout).expanduser() if self.checkout else None
@@ -350,14 +362,19 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
         raise ConfigError(f"{where}: memory.via is one of {', '.join(MEMORY_ROADS)}, "
                           f"not {via!r}")
     kosh = data.get("smritikosh", {})
-    for key in ("checkout", "database", "volume"):
+    for key in ("checkout", "database", "volume", "neo4j", "mongodb", "redis"):
         if not isinstance(kosh.get(key, ""), str):
             raise ConfigError(f"{where}: smritikosh.{key} must be text")
+    if not isinstance(kosh.get("full", False), bool):
+        raise ConfigError(f"{where}: smritikosh.full must be true or false")
     smritikosh = Smritikosh(checkout=kosh.get("checkout") or None,
                             port=_port(kosh, "port", DEFAULT_SMRITIKOSH_PORT, "smritikosh"),
                             database=kosh.get("database") or SMRITIKOSH_DB,
                             volume=kosh.get("volume") or SMRITIKOSH_VOLUME,
-                            db_port=_port(kosh, "db_port", DEFAULT_DB_PORT, "smritikosh"))
+                            db_port=_port(kosh, "db_port", DEFAULT_DB_PORT, "smritikosh"),
+                            full=kosh.get("full", False),
+                            **{k: kosh[k] for k in ("neo4j", "mongodb", "redis")
+                               if kosh.get(k)})
     if via == "smritikosh" and smritikosh.checkout is None:
         raise ConfigError(f"{where}: memory.via = \"smritikosh\" but it isn't set up "
                           "yet: run `sarathi smritikosh`")
@@ -449,10 +466,16 @@ via = "{config.memory}"
                                 ("db_port", kosh.db_port, DEFAULT_DB_PORT)):
         shown = json.dumps(value)
         lines.append(f"{key} = {shown}" if value != default else f"# {key} = {shown}")
+    lines.append(f"full = {'true' if kosh.full else 'false'}")
+    if kosh.full:
+        lines += [f"{key} = {json.dumps(getattr(kosh, key))}"
+                  for key in ("neo4j", "mongodb", "redis")]
     return head + ("""
 # Smritikosh, as `sarathi smritikosh` set it up: its checkout, the port its
 # server listens on, and its database (a PostgreSQL container, the volume
-# that holds its data, and the port it is published on here).
+# that holds its data, and the port it is published on here). full: Neo4j,
+# MongoDB and Redis too (`sarathi smritikosh --full`), each in the container
+# named below; without it, PostgreSQL alone, which is all Yantra uses.
 [smritikosh]
 """ + "\n".join(lines) + "\n")
 
