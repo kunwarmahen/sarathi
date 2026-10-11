@@ -532,7 +532,10 @@ you gave the bot:
    tries to open a page at `http://127.0.0.1:…` and **fails to load it.
    That's expected**: copy that page's whole address (it contains
    `code=…`) and send it to the bot. It answers *connected*, and
-   `/accounts` lists Gmail. `/disconnect gmail` takes it away again.
+   `/accounts` lists Gmail. `/disconnect gmail` takes it away again. If
+   Gmail stops a week later (Google's limit while your app is in
+   Testing), the bot says so when you ask about mail: send `/connect
+   gmail` again, and your next message has it back.
 4. **Amazon, through a window** (set up below). Send `/connect amazon`.
    The link shows Amazon's real sign-in page, live, at your phone's
    size. Type your email in the box at the bottom and press **Send**: it
