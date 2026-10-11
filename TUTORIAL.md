@@ -287,8 +287,10 @@ one is still running.
 links every other page: Yantra's, Samay's, Setu's (your accounts, who in
 your household has their own page open, the catalog and Setu's
 settings) and, once you turn Dvara on in Step 6,
-Dvara's (your door: who's on it, their files and schedules, and the
-questions your agents are asking you). Open that address and bookmark
+Dvara's (your door: who's on it, every turn your agents took and how
+each came in — Telegram, the web, a Samay schedule or the terminal —
+their files and schedules, and the questions your agents are asking
+you). Open that address and bookmark
 it. It shows whether each page is running and opens any of them already
 signed in. Its **Memory** card says where the helper keeps what it
 remembers about you, and once you've done Step 7 it switches between the
