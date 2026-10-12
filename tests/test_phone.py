@@ -14,6 +14,7 @@ set again; a word Sparsh doesn't know is said, not passed on.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import pytest
@@ -217,3 +218,48 @@ def test_an_agent_on_telegram_that_leaves_the_phone_out_is_said(world, settings,
     package.write_text('[agent]\nname = "minder"\n[tools]\ndeny = ["mcp__sparsh__*"]\n')
     phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
     assert "leaves out" in capsys.readouterr().out
+
+
+# -- `sarathi phone tcpip`: the cable turns Wi-Fi on ------------------------------------
+# A real Nexus 6P (Android 8, no Wireless debugging page) was switched off and
+# on: it stopped listening and its address moved from .161 to .160, so the
+# containers said "no phone yet". One step finds the new address and saves it.
+
+MOVED = "192.168.1.160:5555"
+
+
+def test_tcpip_saves_the_address_the_phone_on_the_cable_now_has(world, settings, capsys):
+    told = json.dumps({"serial": "84B7N", "address": MOVED, "connected": True,
+                       "said": f"connected to {MOVED}"})
+    sparsh = program(world / "bin", "sparsh")
+    sparsh.write_text(f"#!/bin/sh\ncase \"$1\" in\n  tcpip) echo '{told}';;\n"
+                      "  connect) echo \"connected to $2\";;\nesac\n")
+    found = Found(next(s for s in SIBLINGS if s.name == "sparsh"), program=str(sparsh))
+    assert phone.run(args("tcpip"), found) == 0
+    assert load().phone == Phone(address=MOVED)
+    assert f"over Wi-Fi at {MOVED}" in capsys.readouterr().out
+
+
+def test_tcpip_with_no_phone_on_the_cable_saves_nothing_and_says_why(world, settings, capsys):
+    found = sparsh_that(world, "sparsh: no phone is on a USB cable here. Plug it in", code=1)
+    assert phone.run(args("tcpip"), found) == 1
+    assert load().phone is None
+    assert "error: no phone is on a USB cable here" in capsys.readouterr().out
+
+
+def test_tcpip_that_could_not_connect_saves_nothing(world, settings, capsys):
+    found = sparsh_that(world, json.dumps({"serial": "84B7N", "address": MOVED,
+                                           "connected": False, "said": "Connection refused"}),
+                        code=1)
+    assert phone.run(args("tcpip"), found) == 1
+    assert load().phone is None
+    assert f"told to listen at {MOVED}" in capsys.readouterr().out
+
+
+def test_the_same_address_again_needs_no_restart(world, settings, capsys):
+    found = sparsh_that(world, f"connected to {ADDRESS}")
+    phone.run(args(ADDRESS), found)
+    assert "sarathi up" in capsys.readouterr().out
+    phone.run(args(ADDRESS), found)
+    out = capsys.readouterr().out
+    assert "nothing to restart" in out and "sarathi up" not in out

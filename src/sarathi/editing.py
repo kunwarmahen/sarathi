@@ -19,6 +19,14 @@ FORMS, AND THE WHOLE FILE AS TEXT. The page has a form for each setting
 the programs know, and an "Edit as text" view of every file for anything
 else. Text goes through the same check.
 
+THE PHONE, FROM THIS COMPUTER (``phone``). Its Wi-Fi address can be typed
+like any setting, but a phone that restarted stops listening and may
+move: the page's buttons run Sparsh's own ``tcpip``, ``connect`` and
+``pair`` here, where the USB cable is (phone.py says why), and save the
+address that answered. The containers reach it only after ``sarathi up``
+gives them a new address; the same address needs no restart, since
+Sparsh reconnects by itself.
+
 KEYS GO IN, NEVER OUT. A cloud key or the bot's token can be typed in;
 the page is only ever told whether one is set.
 
@@ -284,6 +292,51 @@ def sarathi_text(text: str) -> Config:
     tmp.write_text(text)
     os.replace(tmp, path)
     return config
+
+
+def phone_step(config: Config, body: dict) -> tuple[str, bool]:
+    """One of the phone card's buttons: ``tcpip``, ``connect`` or ``pair``
+    (module docstring). (What to say, whether `sarathi up` is needed)."""
+    from sarathi import phone as phone_cmd
+    from sarathi.siblings import SIBLINGS, find
+
+    found = find(next(s for s in SIBLINGS if s.name == "sparsh"), ask=False)
+    if found.program is None:
+        raise EditError(409, "sparsh wasn't found on this computer (see `sarathi status`)")
+    do = str(body.get("do") or "")
+    address = str(body.get("address") or "").strip()
+    if do == "pair":
+        code = str(body.get("code") or "").strip()
+        if not address or not code:
+            raise EditError(400, "pairing needs both the address and the six digits the "
+                                 "phone's 'Pair device with pairing code' screen shows")
+        status, said = phone_cmd._sparsh(found, "pair", address, code)
+        if status:
+            raise EditError(400, said.removeprefix("sparsh: "))
+        return (f"{said}. Now Connect, with the address on the Wireless debugging page "
+                "itself (not the pairing one).", False)
+    if do == "tcpip":
+        status, address, said = phone_cmd.from_cable(found)
+        if status:
+            raise EditError(400, said.removeprefix("sparsh: "))
+    elif do == "connect":
+        if not address:
+            raise EditError(400, "type the phone's address first, like 192.168.1.23:5555")
+        status, said = phone_cmd._sparsh(found, "connect", address)
+        if status:
+            raise EditError(400, f"{said.removeprefix('sparsh: ')} -- not saved. Is the "
+                                 "phone listening? Turn it on from the cable, or check its "
+                                 "Wireless debugging page")
+    else:
+        raise EditError(400, "the phone's steps are tcpip, connect and pair")
+    old = config.phone
+    moved = old is None or old.address != address
+    sarathi_apply({"phone": {"on": True, "address": address,
+                             "awake": old.awake if old else None}})
+    if moved:
+        return (f"{said}; saved. Apply, so the containers reach it at {address}.", True)
+    return (f"{said}. Same address as before: nothing to restart. Yantra's phone panel "
+            "finds it on its next look.", False)
 
 
 def set_key(name: str, value: str) -> None:

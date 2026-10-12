@@ -77,6 +77,9 @@ and writes its own file; a person signed in gets 403:
     POST /api/settings/setu/NAME           {"value"}: `setu config NAME`
     POST /api/settings/text/KIND           {"text", "name"}: a whole file as text
                                            (sarathi, actors, policy, agent, prompt, site)
+    POST /api/settings/phone               {"do": "tcpip"|"connect"|"pair",
+                                           "address", "code"}: the phone, reached
+                                           from this computer, its address saved
     POST /api/settings/apply               `sarathi up`, for what needs a restart
 
 With ``--also-host`` (the door's window address, when it is one) the page
@@ -743,6 +746,9 @@ def _handler(server: HomeServer):
                 if what == "sarathi":
                     config = editing.sarathi_apply(body)
                     restart = True
+                elif what == "phone":
+                    said, restart = editing.phone_step(config, body)
+                    config = load()
                 elif what == "key":
                     editing.set_key(name, str(body.get("value") or ""))
                     restart, said = True, f"{name} saved; it's never shown here again."
@@ -807,6 +813,9 @@ def _handler(server: HomeServer):
                 return self._json(exc.status, {"detail": str(exc)})
             except (ConfigError, PeopleError) as exc:
                 return self._json(400, {"detail": str(exc)})
+            if what == "phone":
+                with server.home._lock:
+                    server.home.config = config
             if what in ("sarathi", "text") and restart:
                 with server.home._lock:
                     server.home.config = config

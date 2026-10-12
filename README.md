@@ -288,6 +288,8 @@ another's agent. ([notes/13](notes/13-a-memory-by-meaning.md))
 
 ```bash
 sarathi phone                                  # a phone on a USB cable (process road)
+sarathi phone tcpip                            # the phone on the cable listens over Wi-Fi;
+                                               #   its address found and saved (any Android)
 sarathi phone pair 192.168.1.23:37000 123456   # once: trust this computer over Wi-Fi
 sarathi phone 192.168.1.23:41234               # then: reach it over Wi-Fi
 sarathi phone --awake always                   # its screen while an agent works it
@@ -302,8 +304,18 @@ On your phone: *Developer options → Wireless debugging*, then *Pair
 device with pairing code* for the first two numbers, and the address on
 the Wireless debugging page itself for the third. A wrong address is
 said, not saved. Android 10 and older have no such page: plug the phone
-in once, run `adb tcpip 5555`, and give `sarathi phone` its Wi-Fi
-address with `:5555` ([notes/10](notes/10-a-real-phone.md)).
+in and run `sarathi phone tcpip` ([notes/10](notes/10-a-real-phone.md)).
+
+**After the phone restarts.** A phone switched off and on stops
+listening over Wi-Fi, and its address can change, so Yantra's phone
+panel lists it as *not answering over Wi-Fi* with what to do. Plug it in
+and run `sarathi phone tcpip` again, or press **Turn on Wi-Fi from the
+cable** in **Settings → Sarathi → Your phone** on the home page. It
+finds the new address and saves it. A new address shows **Apply**
+(`sarathi up`); the same address needs nothing more. The same card has
+**Connect** for an address you type, and **Pair** for Android 11 and
+later ([notes/17](notes/17-the-phone-from-the-page.md)). A fixed address
+for the phone in your router saves the restart.
 
 **Its screen while an agent works it.** A local model can think for
 longer than the phone's screen timeout between steps, and a dark screen
@@ -706,7 +718,8 @@ anyone who messaged the bot unlisted), **Agents** (each agent's model,
 memory, tools, accounts, budget and instructions; add from an example),
 **Rules** (Dvara's standing answers), **Accounts** (Setu's settings and
 each added site's rules), **Sarathi** (this file: the model, Dvara and
-its bot, the house address, ntfy, phone, road, ports) and **Keys**
+its bot, the house address, ntfy, road, ports, and your phone, with
+buttons that reach it from this computer's USB cable) and **Keys**
 (typed in, never shown back). Each program checks a change the way it
 reads its file at start-up, and refuses one it couldn't load in its own
 words; the file before is kept as `.bak`. People, agents and rules take
@@ -770,7 +783,8 @@ src/sarathi/
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
                 through the Sparsh found  (notes/08); its screen while an
-                agent works it, --awake  (notes/10)
+                agent works it, --awake  (notes/10); `tcpip`, Wi-Fi turned
+                on from the cable and the address saved  (notes/17)
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07); the
@@ -780,7 +794,8 @@ src/sarathi/
                 Settings, routes owner-only  (notes/16)
   editing.py    every settings file from the page: each program checks
                 and writes its own (dvara settings, setu config / site
-                file), sarathi.toml and secrets.env here  (notes/16)
+                file), sarathi.toml and secrets.env here  (notes/16);
+                the phone card's steps, Sparsh's own, run here  (notes/17)
   people.py     the people in the house signing in to the home page: an
                 invite that works once, a password, a session per device,
                 each one an id in Dvara's actors file  (notes/14)
@@ -820,7 +835,9 @@ reach phones through ntfy in the house, and each person opens their own
 Setu page from the home page ([notes/15](notes/15-notices-on-a-phone.md));
 ntfy's own image was run, and the rest is written and tested, not yet
 run on Sarathi's roads. Every settings file is changed from the home page,
-each checked by its own program ([notes/16](notes/16-every-setting-from-the-page.md)).
+each checked by its own program ([notes/16](notes/16-every-setting-from-the-page.md)),
+and the phone is reached again from the page after it restarts, run on
+a real Nexus 6P ([notes/17](notes/17-the-phone-from-the-page.md)).
 
 ## Tests
 

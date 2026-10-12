@@ -4,7 +4,8 @@
     sarathi dvara             turn on Dvara, the door for other people and your
                               phone: its tokens, a Telegram bot, starter files
     sarathi phone [ADDRESS]   your phone for the door's agents, and over Wi-Fi
-                              for the containers (`phone pair ADDRESS CODE` once)
+                              for the containers (`phone pair ADDRESS CODE` once,
+                              or `phone tcpip` from the cable)
     sarathi smritikosh        memories found by meaning: set Smritikosh up (its
                               database, settings, tables, accounts, keys) and
                               switch to it; --off goes back to the built-in file;
@@ -117,8 +118,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for Dvara's "
                                 "agents and the containers: on, pair, its Wi-Fi address")
-    phone_cmd.add_argument("words", nargs="*", metavar="ADDRESS | pair ADDRESS CODE",
+    phone_cmd.add_argument("words", nargs="*", metavar="ADDRESS | tcpip | pair ADDRESS CODE",
                            help="nothing: a phone on a cable; ADDRESS: over Wi-Fi; "
+                                "tcpip: the phone on the cable listens over Wi-Fi "
+                                "(again after each restart of the phone); "
                                 "pair ADDRESS CODE: trust this computer, once")
     phone_cmd.add_argument("--off", action="store_true", help="stop giving the phone out")
     phone_cmd.add_argument("--awake", choices=AWAKE, help="its screen while an agent works "

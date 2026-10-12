@@ -1,6 +1,8 @@
 """`sarathi phone`: your phone, for the door's agents and the containers.
 
     sarathi phone                        on, for a phone on a USB cable
+    sarathi phone tcpip                  on, over Wi-Fi: the phone on the cable is
+                                         told to listen, and its address saved
     sarathi phone pair ADDRESS CODE      trust this computer over Wi-Fi, once
     sarathi phone ADDRESS                on, reached over Wi-Fi at ADDRESS
     sarathi phone --off
@@ -10,6 +12,15 @@ into sarathi.toml and runs the Sparsh that ``sarathi status`` found for
 the two things that need the phone in front of you: ``pair`` (the six
 digits on its "Pair device with pairing code" screen) and a first
 ``connect``, so a wrong address is said now rather than at ``up``.
+
+THE CABLE, FOR A PHONE WITH NO WIRELESS DEBUGGING PAGE. Android 10 and
+older (a Nexus 6P on Android 8, here) can still be reached over Wi-Fi:
+told over USB to listen (``sparsh tcpip``), trusting the key the cable
+already does. A restart of the phone turns that off, and its address
+may move, so ``tcpip`` is the one step to repeat; it runs Sparsh's, and
+saves the address it found, so nobody looks one up. The home page's
+Settings has the same button (editing.py), since it runs on this
+computer, where the cable is; the containers never see the cable.
 
 ONE KEY, THIS COMPUTER'S. Pairing runs this computer's ``adb``, so the
 phone trusts the key in ``~/.android``. The containers mount that folder
@@ -49,6 +60,25 @@ SCREEN = {"working": "kept on, then your own timeout 2 minutes after the last st
           "off": "left to its own timeout"}
 
 
+def from_cable(found: Found) -> tuple[int, str | None, str]:
+    """``sparsh tcpip``: (exit code, the address it now listens at, what
+    to say). The address comes back even when the connect after it
+    didn't: the phone was told, and the person may try it again."""
+    import json
+
+    code, said = _sparsh(found, "tcpip", "--json")
+    try:
+        done = json.loads(said.splitlines()[-1]) if said else {}
+    except ValueError:
+        return code or 1, None, said
+    if not isinstance(done, dict) or "address" not in done:
+        return code or 1, None, said
+    if not done.get("connected"):
+        return 1, done["address"], (f"the phone was told to listen at {done['address']}, "
+                                    f"but didn't answer there: {done.get('said', '')}")
+    return 0, done["address"], f"the phone listens over Wi-Fi at {done['address']}"
+
+
 def run(args, found: Found) -> int:
     try:
         config = load()
@@ -76,6 +106,12 @@ def run(args, found: Found) -> int:
             print("next: sarathi phone ADDRESS -- the address on the Wireless debugging "
                   "page itself, not the pairing one")
         return code
+    if words == ["tcpip"]:
+        code, address, said = from_cable(found)
+        print(said if code == 0 else f"error: {said.removeprefix('sparsh: ')}")
+        if code != 0:
+            return 1
+        words = [address]
     if len(words) > 1:
         print("error: sarathi phone [ADDRESS] -- one address, like 192.168.1.23:41234")
         return 2
@@ -107,6 +143,10 @@ def run(args, found: Found) -> int:
             print(f"  {config.door.telegram}, the agent on Telegram, can't use the phone: "
                   f"its [tools] in {package} leaves out \"mcp__sparsh__*\" -- add it "
                   "there (Sparsh still holds Send, Pay and Delete for your yes)")
+    if address and config.phone is not None and config.phone.address == address \
+            and not args.awake:
+        print("  the same address as before: nothing to restart, Sparsh reconnects by itself")
+        return 0
     print("next: `sarathi down && sarathi up` (or just `sarathi up`)")
     return 0
 

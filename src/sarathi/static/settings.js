@@ -445,10 +445,8 @@ function drawSarathiTab() {
     h("div.card.form", {}, h("h3", {}, "The rest"),
       h("label.inline", {}, samayOn, " Samay: things done later, on a schedule"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
-      h("label.inline", {}, phoneOn, " Your phone, through Sparsh"),
-      field("The phone's Wi-Fi address", phoneAt, "Wireless debugging's address. Empty: a cable."),
-      field("Its screen while an agent works it", awake),
       field("How it runs", road)),
+    phoneCard(phoneOn, phoneAt, awake, s.run.road),
     h("details.card", {}, h("summary", {}, "Ports"),
       field("Yantra", ports.yantra), field("Samay", ports.samay),
       field("This home page", ports.home), field("Setu's page", ports.setu),
@@ -458,6 +456,35 @@ function drawSarathiTab() {
     row(go),
     asText("sarathi", "", s.text, "~/.config/sarathi/sarathi.toml"),
   ];
+}
+
+// The phone: its settings (saved with the rest), and the steps that reach it
+// from this computer, where its USB cable is. Each step is Sparsh's own,
+// run here; the address that answered is saved (editing.py, phone_step).
+function phoneCard(phoneOn, phoneAt, awake, road) {
+  const step = (label, body) => button(label, () => save("/api/settings/phone", body()));
+  const fromCable = step("Turn on Wi-Fi from the cable", () => ({ do: "tcpip" }));
+  const connect = step("Connect", () => ({ do: "connect", address: phoneAt.value.trim() }));
+  const pairAt = text("", { placeholder: "192.168.1.23:37000" });
+  const code = text("", { inputmode: "numeric", placeholder: "123456" });
+  const pair = step("Pair", () => ({ do: "pair", address: pairAt.value.trim(),
+                                     code: code.value.trim() }));
+  return h("div.card.form", {}, h("h3", {}, "Your phone"),
+    h("label.inline", {}, phoneOn, " Your phone, through Sparsh"),
+    field("The phone's Wi-Fi address", phoneAt,
+          road === "podman" ? "The containers reach the phone only over Wi-Fi."
+                            : "Empty: a phone on a USB cable."),
+    field("Its screen while an agent works it", awake),
+    h("p.meta", {}, "Plug the phone into this computer with USB debugging on, then turn on " +
+      "Wi-Fi: it finds the phone's address and saves it. Do it again whenever the phone " +
+      "restarts: a phone stops listening over Wi-Fi when it's switched off, and its " +
+      "address can change. Any Android works this way."),
+    row(fromCable, connect),
+    h("details", {}, h("summary", {}, "No cable? Android 11 and newer: pair once"),
+      h("p.meta", {}, "On the phone: Developer options → Wireless debugging → Pair device " +
+        "with pairing code. Type the address and six digits it shows, then Pair. Then put " +
+        "the address on the Wireless debugging page itself above, and Connect."),
+      field("Pairing address", pairAt), field("Pairing code", code), row(pair)));
 }
 
 // ---- Keys --------------------------------------------------------------------------

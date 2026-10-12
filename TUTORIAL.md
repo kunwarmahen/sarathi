@@ -697,20 +697,27 @@ SETUP.md), the helper can work your Android phone: read a screen, tap,
 type, and ask you before Send, Pay or Delete. The containers can't reach
 a USB cable, so they reach the phone over your Wi-Fi.
 
-1. Plug the phone in once, with USB debugging on, and let it listen on
-   Wi-Fi. Android 11 and later: *Developer options → Wireless debugging*
-   → *Pair device with pairing code*, then `sarathi phone pair ADDRESS
-   CODE`. Android 10 and older have no such page:
+1. Plug the phone into this computer with USB debugging on (allow it
+   on the phone), and let it listen on Wi-Fi. One command finds its
+   Wi-Fi address and saves it, on any Android:
 
    ```bash
-   adb shell ip -4 addr show wlan0     # inet 192.168.1.161/24 ...: its Wi-Fi address
-   adb tcpip 5555                      # until the phone restarts
+   sarathi phone tcpip
+   #   the phone listens over Wi-Fi at 192.168.1.160:5555
+   #   the phone is on in ~/.config/sarathi/sarathi.toml, over Wi-Fi at 192.168.1.160:5555
+   #   next: `sarathi down && sarathi up` (or just `sarathi up`)
    ```
 
-2. Tell Sarathi where it is, and restart:
+   Or on the home page: **Settings → Sarathi → Your phone → Turn on
+   Wi-Fi from the cable**, then **Apply**. The cable can come out
+   afterwards. (No cable? Android 11 and later can pair instead:
+   *Developer options → Wireless debugging → Pair device with pairing
+   code*, then **Pair** on the same card, or `sarathi phone pair ADDRESS
+   CODE` and `sarathi phone ADDRESS`.)
+
+2. Restart, so the containers get the address:
 
    ```bash
-   sarathi phone 192.168.1.161:5555
    sarathi down && sarathi up
    ```
 
@@ -879,7 +886,8 @@ you're most likely to meet:
 | *"Your phone locked mid-task"* in the middle of a job | the screen went dark between two steps (a Sarathi from before `[phone] awake`) | `sarathi image`, then `sarathi up`; or `sarathi phone --awake always` |
 | a phone question comes as a long numbered list with no photo, or the bot opens Maps' rows one by one | containers from before the picture on every question | `sarathi image`, then `sarathi up` |
 | the bot says the phone tools "aren't connected" | the agent's `[tools] allow` leaves the phone out | add `"mcp__sparsh__*"` to it; `sarathi phone ADDRESS` says which file |
-| a scheduled phone run is `skipped: the phone couldn't be reached` | the phone's address changed, or it restarted (`adb tcpip` is gone) | plug in, `adb tcpip 5555`, `sarathi phone ADDRESS` |
+| a scheduled phone run is `skipped: the phone couldn't be reached` | the phone's address changed, or it restarted (it stopped listening over Wi-Fi) | plug it in, then `sarathi phone tcpip` (or **Settings → Sarathi → Your phone → Turn on Wi-Fi from the cable**); **Apply** if it says so |
+| Yantra's phone panel says *No phone yet*, or *not answering over Wi-Fi*, after the phone was switched off and on | the same: a restarted phone stops listening, and its address may move | the same: plug in, **Turn on Wi-Fi from the cable**; then **use this phone** on Yantra's panel |
 | `dvara not started: something else is listening on port 8770 (change dvara.port in sarathi.toml)` | another program on your computer uses that port | `sarathi dvara --port 8771` (any free number), then `sarathi up` |
 | `I couldn't start that sign-in: the browser did not answer Target.createTarget` | containers from an older Sarathi: the browser had nowhere to write | update Sarathi, then `sarathi up` (it restarts what changed) |
 | `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |

@@ -76,3 +76,8 @@ Along the way it found two things, both fixed where they belong:
   screen.
 * **The image carries the Sparsh and Dvara it was built with.** Both
   fixes above reach the containers at the next `sarathi image`.
+* ~~**A restart of the phone undoes `adb tcpip`.**~~ Switched off and on,
+  the phone stopped listening and moved to `.160`, and Yantra's panel
+  said *"No phone yet"*. `sarathi phone tcpip`, and **Turn on Wi-Fi from
+  the cable** on the home page, now find the new address and save it
+  ([note 17](17-the-phone-from-the-page.md)).

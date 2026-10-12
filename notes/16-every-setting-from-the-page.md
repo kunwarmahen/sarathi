@@ -88,3 +88,7 @@ comes back out; a person signed in gets none of it.
   its server's `.env` stays `sarathi smritikosh`'s.
 * **Samay's schedules** are on Samay's page, and Yantra's own page keeps
   its own settings panel.
+* ~~**The phone's address is only typed.**~~ A typed address didn't turn
+  a restarted phone's Wi-Fi back on. **Your phone** on the Sarathi tab
+  now does that from the USB cable, and connects or pairs, each step
+  Sparsh's own ([note 17](17-the-phone-from-the-page.md)).
