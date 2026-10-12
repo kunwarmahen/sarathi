@@ -53,6 +53,8 @@ KEY_NAMES = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 DEFAULT_WEB_PORT = 8321
 DEFAULT_CLOCK_PORT = 8780
 DEFAULT_DOOR_PORT = 8770
+#: ntfy, the push server Dvara's notices reach phones through (`dvara.ntfy`).
+DEFAULT_NTFY_PORT = 8793
 #: Each program's own page, and the home page linking them (`[pages]`).
 DEFAULT_HOME_PORT, DEFAULT_SETU_PAGE_PORT, DEFAULT_DOOR_PAGE_PORT = 8760, 8775, 8785
 #: Window addresses that are not one address a phone can be sent to.
@@ -69,7 +71,7 @@ KNOWN: dict[str, set[str]] = {
     "samay": {"on", "port"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
-             "window_port", "window_url", "owner"},
+             "window_port", "window_url", "owner", "ntfy", "ntfy_port"},
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
     "phone": {"on", "address", "awake"},
     "memory": {"via"},
@@ -212,6 +214,18 @@ class Config:
             return {}
         return {"SETU_WINDOW_HOST": host}
 
+    def ntfy_host(self) -> str:
+        """Where ntfy listens: the house address when there is one (a
+        phone has to reach it), else this computer alone."""
+        return self.people_host() or "127.0.0.1"
+
+    def ntfy_url(self) -> str | None:
+        """ntfy as a phone subscribes to it, or None with no ntfy."""
+        if self.door is None or self.door.ntfy_port is None:
+            return None
+        host = self.ntfy_host()
+        return f"http://{f'[{host}]' if ':' in host else host}:{self.door.ntfy_port}"
+
     def people_env(self) -> dict[str, str]:
         """The door's word for that page (``setu page-link`` reads it)."""
         host = self.people_host()
@@ -239,6 +253,9 @@ class Door:
     #: Your id in the actors file: Dvara's page shows your words and your
     #: questions, and nobody else's.
     owner: str = "owner"
+    #: ntfy's port, when the house runs one for notices on phones (dvara's
+    #: push.py); None: no ntfy, notices wait on the page and go to Telegram.
+    ntfy_port: int | None = None
 
     def window_env(self) -> dict[str, str]:
         """Setu's own names for the window settings."""
@@ -331,6 +348,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     for key in ("telegram", "root", "actors", "state", "window_host", "window_url", "owner"):
         if not isinstance(door_table.get(key, ""), str):
             raise ConfigError(f"{where}: dvara.{key} must be text")
+    if not isinstance(door_table.get("ntfy", False), bool):
+        raise ConfigError(f"{where}: dvara.ntfy must be true or false")
     door = Door(port=_port(door_table, "port", DEFAULT_DOOR_PORT, "dvara"),
                 telegram=door_table.get("telegram") or None,
                 root=door_table.get("root") or DOOR_ROOT,
@@ -340,7 +359,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                 window_port=_port(door_table, "window_port", 0, "dvara") or None
                 if "window_port" in door_table else None,
                 window_url=door_table.get("window_url") or None,
-                owner=door_table.get("owner") or "owner") \
+                owner=door_table.get("owner") or "owner",
+                ntfy_port=_port(door_table, "ntfy_port", DEFAULT_NTFY_PORT, "dvara")
+                if door_table.get("ntfy", False) else None) \
         if door_table.get("on", False) else None
     pages_table = data.get("pages", {})
     if not isinstance(pages_table.get("on", True), bool):
@@ -531,6 +552,8 @@ on = false
         f"{key} = {json.dumps(value)}\n" if value else f"# {key} = ...\n"
         for key, value in (("window_host", door.window_host), ("window_port", door.window_port),
                            ("window_url", door.window_url)))
+    ntfy = (f"ntfy = true\nntfy_port = {door.ntfy_port}\n" if door.ntfy_port
+            else "ntfy = false\n")
     return f"""# dvara: your agents for other people, and for you on your phone.
 # Its tokens are in secrets.env; who it serves is in the actors file.
 [dvara]
@@ -543,7 +566,11 @@ port = {door.port}
 # streamed to them. Where it listens (your home network's address, a
 # Tailscale address, or 127.0.0.1 behind your own HTTPS with window_url).
 # Unset: those sites are signed in to at this computer.
-{window}"""
+{window}
+# ntfy: a push server here, so a schedule's answer (or a sign-in that ran
+# out) shows on a phone with the ntfy app, while it can reach this house.
+# `sarathi dvara --ntfy` turns it on.
+{ntfy}"""
 
 
 def write_private(path: Path, text: str) -> None:

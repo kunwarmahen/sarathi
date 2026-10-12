@@ -623,6 +623,43 @@ signs them out on every device. Forgot their password? Invite them
 again: the new link lets them choose a new one. `sarathi people` lists
 who has signed in.
 
+Signed in, they also see **My accounts**: press it and tap *Open my
+accounts page* to see and connect their own accounts (Gmail, say). It
+works once, on that phone, for ten minutes, the same as `/accounts page`
+in a Telegram chat.
+
+**Notices on a phone, without Telegram.** What a schedule sends waits on
+the home page until they open it. To have it show on their phone as
+well, turn on ntfy, a small push server that runs in your house:
+
+```bash
+sarathi dvara --ntfy
+sarathi down && sarathi up
+```
+
+On plain programs, install ntfy first (<https://docs.ntfy.sh/install/>);
+the containers bring their own. Then, on each phone:
+
+1. Install the free **ntfy** app.
+2. Open the home page, signed in, and open **Notices on this phone**.
+   Tap *Open your notices in the ntfy app*. If that doesn't open it,
+   press + in the app, turn on *Use another server*, and type the
+   server and topic the page shows.
+3. Ask for something on a schedule (*"in two minutes, tell me a joke"*),
+   lock the phone, and wait. The notice arrives as *Your agents*, and
+   tapping it opens the home page.
+
+They hear notices while the phone can reach your house (home Wi-Fi).
+Keep the topic private: whoever has it can read their notices. If
+`sarathi up` prints a firewall line, it now includes ntfy's port, 8793.
+
+**Two things that now happen by themselves.** Once a day Dvara checks
+every sign-in, and if Google stopped one, the person whose account it is
+gets a message saying so, with what to send to fix it. And when a
+conversation goes quiet for half an hour, an agent that remembers sends
+what it noticed about you (*"Lives in Raleigh"*), and keeps it only if
+you answer `/remember 1`.
+
 To turn Dvara off again: `sarathi dvara --off`, then
 `sarathi down && sarathi up`.
 
@@ -832,6 +869,8 @@ you're most likely to meet:
 | `Smritikosh already has an account 'NAME' and Sarathi doesn't know its password` | an account made by hand, without its key in Sarathi | run `sarathi smritikosh` in a terminal and type its password once |
 | `memory: smritikosh, NOT ANSWERING` in `sarathi status` | Smritikosh's server is stopped | `sarathi up` |
 | `memory.via is smritikosh, but the image has no Smritikosh` | containers' road, image built before `sarathi smritikosh` | `sarathi image`, then `sarathi up` |
+| `ntfy not started: ntfy isn't installed here` | `[dvara] ntfy` on plain programs, with no ntfy | install it (<https://docs.ntfy.sh/install/>), or use the containers' road |
+| The phone gets no notices | it can't reach your house's address, the firewall drops 8793, or the topic was typed wrong | home Wi-Fi; run the firewall line `sarathi up` prints; copy the topic from **Notices on this phone** |
 | `door did not come up` or `page did not come up`, and its journal says `image platform (linux/arm64/v8) does not match` | the image was built for another machine (an older `sarathi image` after an arm64 build) | `sarathi image`, then `sarathi up` |
 
 Each program also writes down what it printed:
@@ -857,6 +896,8 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Passwords of the Smritikosh accounts Sarathi made | `~/.local/share/sarathi/smritikosh-accounts.json` (only you) |
 | Who in the house can sign in to the home page | `~/.local/share/sarathi/people.json` (only you; passwords kept as hashes) |
 | What an agent noticed about someone, waiting for their `/remember` | `~/dvara/state/offered.json` (only you) |
+| The key each person's ntfy topic is made from | `~/dvara/state/ntfy.key` (only you) |
+| Which stopped sign-ins people were already told about | `~/dvara/state/signins.json` (only you) |
 | What Sarathi started, and what each printed | `~/.local/share/sarathi/` |
 
 Sarathi doesn't move anything: each program keeps its files where it

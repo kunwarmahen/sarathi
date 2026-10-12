@@ -181,7 +181,7 @@ async function refresh() {
   if (body.memory) cards.push(memoryCard(body.memory));
   document.getElementById("pieces").replaceChildren(...cards);
   if (body.people) drawPeople();
-  if (body.chat && !chat.on) startChat();
+  if (body.chat && !chat.on) { startChat(); drawPush(); }
   document.getElementById("updated").textContent =
     `Updated ${new Date().toLocaleTimeString()}`;
 }
@@ -196,7 +196,7 @@ function drawPerson() {
     location.reload();
   });
   document.getElementById("facts").replaceChildren(
-    h("span", {}, `Signed in as ${me.name}`), out);
+    h("span", {}, `Signed in as ${me.name}`), ...(me.chat ? [accountsButton()] : []), out);
   document.getElementById("h-chat").textContent = "Talk to your agents";
   document.getElementById("foot-said").textContent =
     "Your chat goes to Dvara as you, with your own allowance and rules. " +
@@ -207,9 +207,59 @@ function drawPerson() {
       "Dvara isn't running right now, so there's no chat. Try again later.";
     return;
   }
-  if (!chat.on) startChat();
+  if (!chat.on) { startChat(); drawPush(); }
   document.getElementById("updated").textContent =
     `Updated ${new Date().toLocaleTimeString()}`;
+}
+
+// Their own Setu page, by the one-time link Dvara makes for /accounts page.
+// Fetched on the press and shown as a link to tap, since a phone blocks a
+// window opened after a wait.
+function accountsButton() {
+  const button = h("button.linkish", { type: "button" }, "My accounts");
+  const said = h("span.accounts-said", { role: "status" });
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    said.textContent = "Asking for your link…";
+    try {
+      const got = await api("/api/chat/accounts-page", {});
+      if (got.url) {
+        said.replaceChildren(
+          h("a", { href: got.url, target: "_blank", rel: "noopener" }, "Open my accounts page"),
+          " (works once, on this device, for 10 minutes)");
+      } else {
+        said.textContent = got.said;
+      }
+    } catch (err) {
+      said.textContent = `That didn't work: ${err.message}`;
+    }
+    button.disabled = false;
+  });
+  return h("span.accounts", {}, button, said);
+}
+
+// Notices on a phone: the house's ntfy server and this person's own topic.
+// Shown only when there is an ntfy server; the steps work in any ntfy app.
+async function drawPush() {
+  let got;
+  try { got = await api("/api/chat/push"); } catch (_) { return; }
+  if (!got.on) return;
+  const steps = h("ol.push-steps", {},
+    h("li", {}, "Install the free ntfy app (Google Play, F-Droid or the App Store)."),
+    h("li", {}, h("a", { href: got.link }, "Open your notices in the ntfy app"),
+      " — or in the app press +, turn on “Use another server”, and enter:"),
+    h("li.push-words", {}, h("span", {}, "Server: "), h("code", {}, got.server),
+      h("br"), h("span", {}, "Topic: "), h("code", {}, got.topic)));
+  const where = got.house
+    ? "Your phone hears them while it can reach this house (home Wi-Fi)."
+    : "ntfy here listens on this computer only, so a phone can't reach it yet: " +
+      "the person running the house sets the house address (dvara.window_host).";
+  document.getElementById("push-body").replaceChildren(
+    h("p.meta", {}, "A schedule's answer, a sign-in that stopped working, and what " +
+      "your agents noticed about you show on your phone, as well as here."),
+    steps, h("p.meta", {}, where),
+    h("p.meta", {}, "Keep the topic to yourself: whoever has it can read your notices."));
+  show("push", true);
 }
 
 function signInForm(mode, said) {

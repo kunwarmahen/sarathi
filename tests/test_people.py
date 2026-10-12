@@ -231,3 +231,33 @@ def test_a_house_address_that_cant_be_listened_on_leaves_the_owners_page(house, 
                         also_host="203.0.113.9")
     assert server.also is None and "203.0.113.9" in server.also_problem
     server.httpd.server_close()
+
+
+def test_my_accounts_asks_dvara_for_their_own_link_only(signed, kept, door):  # noqa: F811
+    session = claim(signed, invited(kept))[1]["session"]
+    status, _ = send(signed, "/api/chat/accounts-page", {"actor": "mahen"}, token=session)
+    assert status == 200
+    method, path, body = door.heard[-1]
+    assert (method, path.split("?")[0]) == ("POST", "/web/accounts-page")
+    assert body["actor"] == "priya" and "actor=priya" in path
+    assert send(signed, "/api/chat/accounts-page", {}, token="s.nobody")[0] == 401
+
+
+def test_notices_on_this_phone_name_their_own_topic_on_the_house_server(house, kept, door):  # noqa: F811
+    from dataclasses import replace
+    chat = Chat(f"http://127.0.0.1:{door.server_address[1]}", DOOR_KEY, "mahen")
+    for config, on in ((house, False), (replace(house, door=replace(house.door,
+                                                                     ntfy_port=8793)), True)):
+        server = HomeServer(Home(config, lambda: {}), GOOD, port=0, chat=chat, people=kept)
+        server.start()
+        try:
+            session = claim(server, invited(kept))[1]["session"]
+            got = ask(server, "/api/chat/push", token=session).json()
+        finally:
+            server.stop()
+        assert got["on"] is on
+        if on:
+            assert got["server"] == "http://192.168.1.44:8793"
+            assert got["topic"] == "dvara-priya-0123456789abcdef"
+            assert got["link"] == ("ntfy://192.168.1.44:8793/dvara-priya-0123456789abcdef"
+                                   "?secure=false")

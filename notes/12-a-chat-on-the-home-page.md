@@ -75,8 +75,8 @@ moving above the box on the narrow screen.
   [note 14](14-everyone-in-the-house.md): `sarathi invite NAME`, a
   password chosen once, and their own chat as their own Dvara actor, in
   front of the same channel.
-* **Push to a phone.** The page asks for new lines every few seconds
-  while it's open; nothing arrives with it closed.
+* ~~**Push to a phone.**~~ With `[dvara] ntfy`, notices also reach the
+  ntfy app through a server in the house ([note 15](15-notices-on-a-phone.md)).
 * **The Podman road, tried.** The units are written (`--web` on Dvara's,
   `SAMAY_DVARA_ACTOR` on Samay's); the live run above was plain
   programs. The image needs rebuilding (`sarathi image`) for the Dvara

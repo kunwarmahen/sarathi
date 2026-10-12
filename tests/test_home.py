@@ -225,6 +225,9 @@ def door():
 
         def do_GET(self):
             heard.append(("GET", self.path, {"auth": self.headers.get("Authorization")}))
+            if self.path.startswith("/web/push"):
+                actor = self.path.split("actor=")[1].split("&")[0]
+                return self._answer(200, {"topic": f"dvara-{actor}-0123456789abcdef"})
             self._answer(200, {"lines": [{"id": 1, "who": "notice", "text": "2 new mails"}],
                                "agents": ["greeter"], "busy": [], "asks": [], "holds": []})
 

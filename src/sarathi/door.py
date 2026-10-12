@@ -46,6 +46,7 @@ from pathlib import Path
 from sarathi.config import (
     BOT_TOKEN,
     DEFAULT_DOOR_PORT,
+    DEFAULT_NTFY_PORT,
     DOOR_TOKEN,
     ConfigError,
     Door,
@@ -134,6 +135,11 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
                    window_host=getattr(args, "window_host", None) or door.window_host,
                    window_port=getattr(args, "window_port", None) or door.window_port,
                    window_url=getattr(args, "window_url", None) or door.window_url)
+    ntfy = getattr(args, "ntfy", None)
+    if ntfy is not None or getattr(args, "ntfy_port", None):
+        door = replace(door, ntfy_port=None if ntfy is False else
+                       getattr(args, "ntfy_port", None) or door.ntfy_port
+                       or DEFAULT_NTFY_PORT)
 
     have = read_secrets()
     if DOOR_TOKEN not in have:
@@ -180,6 +186,9 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
 
     settings_path().write_text(render(replace(config, door=door)))
     bot = f", a Telegram bot answering as {door.telegram}" if door.telegram else ""
+    if door.ntfy_port:
+        said.append(f"ntfy on port {door.ntfy_port}: each person finds how to subscribe "
+                    "under Notices on this phone, on the home page")
     print(f"Dvara is on in {settings_path()}: port {door.port}{bot}")
     for line in said:
         print(f"  {line}")

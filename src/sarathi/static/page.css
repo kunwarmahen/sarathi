@@ -66,6 +66,8 @@ a { color: var(--accent); }
 .brand h1 { font-size: 22px; }
 .mark { font-family: var(--deva); color: var(--accent); font-size: 22px; line-height: 1; }
 .facts { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--ink-3); font-size: 13px; }
+.facts .accounts { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.facts .accounts-said { overflow-wrap: anywhere; }
 .facts .folder { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
 
 .badge {
@@ -248,3 +250,8 @@ button.open:disabled { opacity: .55; cursor: progress; }
 .card .buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .card .buttons .open { margin-top: 0; }
 #people-said { margin-top: 8px; }
+.push { margin: 0 0 12px; }
+.push summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
+.push-steps { margin: 8px 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.push-words { list-style: none; margin-left: -20px; }
+.push-words code { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }

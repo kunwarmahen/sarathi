@@ -195,6 +195,9 @@ MEMORY_CHECKOUT = "smritikosh"
 PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
 SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
 SMRITIKOSH_PORT = 8080
+#: ntfy's own image (not Sarathi's: nothing of ours runs in it), pinned,
+#: and its port inside.
+NTFY_IMAGE, NTFY_PORT = "docker.io/binwiederhier/ntfy:v2.11.0", 80
 #: The streamed sign-in window's port when sarathi.toml names none: a
 #: container's port has to be known to be published.
 WINDOW_PORT = 8790
@@ -206,9 +209,11 @@ UNITS = {"samay": "sarathi-samay", "dvara": "sarathi-dvara", "yantra": "sarathi-
          "smritikosh": "sarathi-smritikosh", "smritikosh-neo4j": "sarathi-smritikosh-neo4j",
          "smritikosh-mongodb": "sarathi-smritikosh-mongodb",
          "smritikosh-redis": "sarathi-smritikosh-redis",
-         "smritikosh-ui": "sarathi-smritikosh-ui"}
+         "smritikosh-ui": "sarathi-smritikosh-ui", "ntfy": "sarathi-ntfy"}
 #: Not a container: an ordinary user service (see the module docstring).
 SERVICE_UNITS = ("sarathi", "smritikosh-ui")
+#: Containers from an image of their own, so `sarathi image` doesn't restart them.
+OWN_IMAGE = ("ntfy",)
 #: The containers' names before each went by its project's name: stopped
 #: and removed by `up` and `down`, so an old one never holds a port.
 OLD_UNITS = ("sarathi-clock", "sarathi-door", "sarathi-page", "sarathi-owner")
@@ -565,6 +570,8 @@ def house_ports(config: Config) -> tuple[str, list[int]] | None:
     ports = [int(window(config)[1])]
     if config.people_host():
         ports += [config.pages.setu_port, config.pages.home_port]
+        if door.ntfy_port:
+            ports.append(door.ntfy_port)
         shown = setu_window(config)
         if shown:
             ports.append(int(shown[1]))
@@ -661,6 +668,7 @@ def units(config: Config) -> dict[str, str]:
                      + (f"--sparsh {IN_IMAGE}/sparsh " if config.phone else "")
                      + (f"--memory {memory_files(config)[1]} "
                         if config.remembers_in_smritikosh else "")
+                     + (f"--ntfy http://{UNITS['ntfy']}:{NTFY_PORT} " if door.ntfy_port else "")
                      + f"serve --host 0.0.0.0 --port {DOOR_PORT} --web"
                      + (f" --telegram {door.telegram}" if door.telegram else ""))
         if config.clock_on:
@@ -668,6 +676,12 @@ def units(config: Config) -> dict[str, str]:
         if config.remembers_in_smritikosh:
             after += (f"Wants={UNITS['smritikosh']}.service\n"
                       f"After={UNITS['smritikosh']}.service\n")
+        push = ""
+        if door.ntfy_port:
+            out[f"{UNITS['ntfy']}.container"] = ntfy_unit(config)
+            after += f"Wants={UNITS['ntfy']}.service\nAfter={UNITS['ntfy']}.service\n"
+            push = "".join(f"Environment={k}={v}\n"
+                           for k, v in services.ntfy_click(config).items())
         shown = window(config)
         streamed = "" if shown is None else (
             f"PublishPort={shown[0]}:{shown[1]}:{shown[1]}\n"
@@ -678,7 +692,7 @@ def units(config: Config) -> dict[str, str]:
             "Sarathi: Dvara", UNITS["dvara"], door_exec,
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
             extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
-                            + streamed + people_url(config) + phone_env(config),
+                            + streamed + people_url(config) + phone_env(config) + push,
             more_volumes=door_dirs(config) + phone_dirs(config)
             + ([mcp_dir()] if config.remembers_in_smritikosh else []))
         page_unit += f"After={UNITS['dvara']}.service\n"
@@ -723,6 +737,32 @@ def units(config: Config) -> dict[str, str]:
                 more_volumes=door_dirs(config))
     out[f"{NETWORK}.network"] = (f"{HEADER}\n[Network]\nNetworkName={NETWORK}\n")
     return out
+
+
+def ntfy_unit(config: Config) -> str:
+    """ntfy, for notices on phones (dvara's push.py): its own image, its
+    cache in a volume, on 127.0.0.1 and on the house address a phone reaches."""
+    assert config.door is not None and config.door.ntfy_port
+    port, phones = config.door.ntfy_port, config.people_host()
+    house = f"PublishPort={phones}:{port}:{NTFY_PORT}\n" if phones else ""
+    return f"""{HEADER}
+[Unit]
+Description=Sarathi: ntfy, for notices on phones
+
+[Container]
+Image={NTFY_IMAGE}
+ContainerName={UNITS['ntfy']}
+Network={NETWORK}.network
+Exec=serve --cache-file /var/cache/ntfy/cache.db --cache-duration 24h
+Volume=sarathi-ntfy-cache:/var/cache/ntfy
+PublishPort=127.0.0.1:{port}:{NTFY_PORT}
+{house}
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+"""
 
 
 def mcp_dir() -> Path:
@@ -1124,6 +1164,8 @@ def up(config: Config) -> tuple[list[str], bool]:
         wanted.append(("smritikosh", config.smritikosh.port))
     wanted += [("samay", config.clock_port)] if config.clock_on else []
     if config.door is not None:
+        if config.door.ntfy_port:
+            wanted.append(("ntfy", config.door.ntfy_port))
         wanted.append(("dvara", config.door.port))
     wanted.append(("yantra", config.web_port))
     if config.pages.on:
@@ -1142,7 +1184,7 @@ def up(config: Config) -> tuple[list[str], bool]:
             # rewritten unit means nothing until it starts again
             run(["systemctl", "--user", "stop", f"{unit}.service"])
             lines.append(f"{name:<{WIDTH}} restarting with the new settings  (unit {unit})")
-        elif (active(unit) and name not in SERVICE_UNITS and newest
+        elif (active(unit) and name not in SERVICE_UNITS + OWN_IMAGE and newest
               and image_id(unit) not in ("", newest)):
             # and the image it started from: `sarathi image` changes nothing
             # in a container already running
@@ -1265,7 +1307,7 @@ def down(remove: bool = False) -> list[str]:
     next login, which is what they are for -- unless ``remove``."""
     lines = retire_old()
     for name in ("smritikosh-ui", "sarathi", "dvara-page", "setu", "yantra", "dvara",
-                 "samay",
+                 "ntfy", "samay",
                  "smritikosh", "smritikosh-db", "smritikosh-neo4j", "smritikosh-mongodb",
                  "smritikosh-redis"):
         unit = UNITS[name]
@@ -1302,7 +1344,9 @@ def running(config: Config) -> list[dict]:
     pages = config.pages
     for name, port in (("smritikosh-db", config.smritikosh.db_port),
                        ("smritikosh", config.smritikosh.port),
-                       ("samay", config.clock_port), ("dvara", door_port),
+                       ("samay", config.clock_port),
+                       ("ntfy", config.door.ntfy_port if config.door else None),
+                       ("dvara", door_port),
                        ("yantra", config.web_port), ("setu", pages.setu_port),
                        ("dvara-page", pages.door_port), ("sarathi", pages.home_port),
                        ("smritikosh-ui", config.smritikosh.dashboard_port)):

@@ -340,6 +340,7 @@ everything as containers instead, after `sarathi road podman` (below).
 ```bash
 sarathi dvara                  # which agent a Telegram bot answers as; the bot's token
 sarathi dvara --telegram greeter --telegram-id 8675309
+sarathi dvara --ntfy           # notices on phones, through ntfy in the house (--no-ntfy)
 sarathi dvara --off
 ```
 
@@ -429,6 +430,27 @@ Your own phone can use the same sign-ins as this computer's page: under
 so `/connect amazon` from the chat signs in there (dvara's note 27). The
 image installs dvara with its browse extra, so an agent behind Dvara
 can read Amazon or X when its package asks for them.
+
+**Notices on a phone.** `sarathi dvara --ntfy` writes `[dvara] ntfy =
+true` (and `ntfy_port`, 8793 by default), and `up` then starts ntfy, a
+small push server, before Dvara, which gets `--ntfy <its address>` and
+`DVARA_NTFY_CLICK`, the home page. Every notice for every person (a
+schedule's answer, a sign-in that ran out, what a look back noticed) also
+goes to their own topic there, for the ntfy app on their phone. Each
+person finds their server and topic under **Notices on this phone** on
+the home page. ntfy listens on `window_host` when that is one address,
+so a phone at home reaches it, and otherwise on this computer alone. The
+words never leave the house, so a phone hears them while it can reach
+your house: home Wi-Fi, or Tailscale. On plain programs, install ntfy
+first (<https://docs.ntfy.sh/install/>, or set `SARATHI_NTFY`); on the
+Podman road it is its own container, `sarathi-ntfy`, from ntfy's own
+image (`docker.io/binwiederhier/ntfy:v2.11.0`), with its port added to
+the firewall line ([notes/15](notes/15-notices-on-a-phone.md)).
+
+Dvara also checks every Setu folder's sign-ins once a day and tells the
+person when one stopped working, and looks back over a conversation
+nobody has written in for 30 minutes (dvara's note 39). Nothing to set:
+it comes with Dvara.
 
 A door that can't start (no actors file, a bot with no token) says why,
 and Samay and Yantra start anyway. On the Podman road it's a third
@@ -670,7 +692,10 @@ everyone in the actors file with **Invite** (the link to send) and
 new link for someone already signed up resets their password. The link
 opens on a phone when `[dvara] window_host` is one address (your home
 network, or Tailscale), the same address Setu's page uses; without it,
-on this computer only, and it says so. Passwords are kept as scrypt,
+on this computer only, and it says so. Signed in, they also get **My
+accounts**, which opens their own Setu page by the same one-time link
+`/accounts page` sends in the chat, and **Notices on this phone** when
+the house runs ntfy (above). Passwords are kept as scrypt,
 links and sessions only as hashes, in `~/.local/share/sarathi/people.json`.
 ([notes/14](notes/14-everyone-in-the-house.md))
 
@@ -717,11 +742,13 @@ src/sarathi/
   first_run.py  sarathi init: which model answers, asked once  (notes/02)
   services.py   sarathi up / down: start Samay and the page, know
                 which are ours  (notes/02); and the pages  (notes/06);
-                each line by its project's name  (notes/09)
+                each line by its project's name  (notes/09); ntfy before
+                Dvara, for notices on phones  (notes/15)
   podman.py     the same on the podman road: the image, the Quadlet
                 units, systemd  (notes/03); Dvara's unit  (notes/04);
                 its streamed window, and the image's browser  (notes/05);
-                the firewall named when phones are to reach it  (notes/11)
+                the firewall named when phones are to reach it  (notes/11);
+                ntfy's own container  (notes/15)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
@@ -731,7 +758,8 @@ src/sarathi/
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07); the
                 chat, passed through to Dvara's web channel as you  (notes/12),
-                or as the person signed in  (notes/14)
+                or as the person signed in  (notes/14); My accounts and
+                Notices on this phone, for each person  (notes/15)
   people.py     the people in the house signing in to the home page: an
                 invite that works once, a password, a session per device,
                 each one an id in Dvara's actors file  (notes/14)
@@ -766,7 +794,11 @@ command and switched on and off from it or the home page, with an
 account of its own for each person behind Dvara, Neo4j, MongoDB and Redis
 with `--full`, and its own dashboard built and started beside it; run on
 plain programs, written and tested for Podman
-([notes/13](notes/13-a-memory-by-meaning.md)).
+([notes/13](notes/13-a-memory-by-meaning.md)). With `[dvara] ntfy`, notices
+reach phones through ntfy in the house, and each person opens their own
+Setu page from the home page ([notes/15](notes/15-notices-on-a-phone.md));
+ntfy's own image was run, and the rest is written and tested, not yet
+run on Sarathi's roads.
 
 ## Tests
 

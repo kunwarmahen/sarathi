@@ -149,10 +149,10 @@ found one bug: the chat's Send button was looked up as the page's first
 
 ## What is not here yet
 
-* **Push to a phone.** As in note 12: lines wait until the page asks.
-  A page installed on a phone that is woken by a notice may come later.
-* **A person's Setu page from here.** They still ask for it in the chat
-  (`/accounts page`, Dvara's note 31). A link on their side of this page
-  would be one more door through the same sign-in.
+* ~~**Push to a phone.**~~ Notices on this phone, through the house's
+  ntfy ([note 15](15-notices-on-a-phone.md)).
+* ~~**A person's Setu page from here.**~~ **My accounts** on their side
+  of the page gets the same one-time link as `/accounts page`
+  ([note 15](15-notices-on-a-phone.md)).
 * **The Podman road, tried.** The unit gets `--also-host`. It was run as
   plain programs.

@@ -45,6 +45,8 @@ reaches the browser, the way Dvara's own page keeps it:
     POST /api/chat/asks/ID        {"approve": true|false}
     POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}}
     GET  /api/chat/file?line=&n=  a file an answer carried
+    POST /api/chat/accounts-page  {}: a one-time link to your own Setu page
+    GET  /api/chat/push           your ntfy server and topic, for notices on a phone
 
 EVERYONE IN THE HOUSE, EACH THEIR OWN CHAT. The other people in
 Dvara's actors file sign in here too (people.py: an invite from the
@@ -527,6 +529,23 @@ def _handler(server: HomeServer):
             except ChatError as exc:
                 return self._json(exc.status, {"detail": str(exc)})
 
+        def _push(self, who: Who) -> None:
+            """How this person subscribes to their notices in the ntfy app:
+            the house's ntfy server and their own topic, which Dvara keeps."""
+            server_url = server.home.config.ntfy_url()
+            if server_url is None or server.chat is None:
+                return self._json(200, {"on": False})
+            try:
+                topic = server.chat.json("GET", "/web/push", actor=who.actor).get("topic")
+            except ChatError as exc:
+                return self._json(exc.status, {"detail": str(exc)})
+            if not topic:
+                return self._json(200, {"on": False})
+            hostport = urlparse(server_url).netloc
+            return self._json(200, {"on": True, "server": server_url, "topic": topic,
+                                    "link": f"ntfy://{hostport}/{topic}?secure=false",
+                                    "house": server.home.config.people_host() is not None})
+
         def do_GET(self) -> None:
             url = urlparse(self.path)
             if url.path in STATIC:
@@ -534,7 +553,7 @@ def _handler(server: HomeServer):
                 return self._send(200, files("sarathi").joinpath("static", name)
                                   .read_bytes(), kind)
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
-                                "/api/people"):
+                                "/api/people", "/api/chat/push"):
                 return self._json(404, {"detail": "not found"})
             who = self._owner() if url.path in ("/api/pieces", "/api/people") \
                 else self._who()
@@ -546,6 +565,8 @@ def _handler(server: HomeServer):
                                         "chat": server.chat is not None})
             if url.path == "/api/people":
                 return self._people_list()
+            if url.path == "/api/chat/push":
+                return self._push(who)
             if url.path == "/api/chat":
                 return self._chat(who, "GET", "/web",
                                   query={"after": query.get("after", "0")})
@@ -669,6 +690,12 @@ def _handler(server: HomeServer):
                     return None
                 code, words = server.home.switch(str(body.get("via")))
                 return self._json(code, {"detail" if code >= 400 else "said": words})
+            if parts == ["api", "chat", "accounts-page"]:
+                # their own Setu page, by the link /accounts page makes
+                who = self._who()
+                if who is None:
+                    return None
+                return self._chat(who, "POST", "/web/accounts-page", {})
             if parts[:2] != ["api", "chat"] or len(parts) not in (2, 4) or \
                     (len(parts) == 4 and parts[2] not in ("asks", "holds")):
                 return self._json(405, {"detail": "this page only links, passes your "

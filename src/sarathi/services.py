@@ -41,6 +41,10 @@ files:
                   person's key read from Dvara's memory.json (smritikosh.py)
     smritikosh-ui  next start --hostname 127.0.0.1 --port <smritikosh.dashboard_port>,
                   Smritikosh's own dashboard, in its ui/, once built
+    ntfy    ntfy serve --listen-http <dvara.window_host, else 127.0.0.1>:<dvara.ntfy_port>,
+                  with [dvara] ntfy = true: a push server for notices on phones;
+                  then Dvara gets --ntfy <its address> and DVARA_NTFY_CLICK, the
+                  home page (dvara's push.py)
 
 THE DOOR AND THE CLOCK ARE TOLD ABOUT EACH OTHER. A schedule made in a
 chat runs through the door as its person, and Samay checks every such
@@ -141,10 +145,12 @@ class Service:
     cwd: Path | None = None
     #: Run just before it starts: a line to print, or a SetupError.
     prepare: Any = None
+    #: Where it listens, when that is not this computer alone (ntfy, for phones).
+    host: str = HOST
 
     @property
     def url(self) -> str:
-        return f"http://{HOST}:{self.port}/"
+        return f"http://{f'[{self.host}]' if ':' in self.host else self.host}:{self.port}/"
 
 
 def model_env(config: Config, environ: dict[str, str] | None = None) -> dict[str, str]:
@@ -199,7 +205,10 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         dash = dashboard_service(config, notes)
         if dash is not None:
             services.append(dash)
-    door = door_service(config, found, env, clock_on, notes)
+    push = ntfy_service(config, notes)
+    if push is not None:
+        services.append(push)
+    door = door_service(config, found, env, clock_on, notes, ntfy=push is not None)
     meet = door_env(config) if door is not None else {}
     memory_env: dict[str, str] = {}
     run_yantra = [yantra.program]
@@ -301,7 +310,7 @@ PORT_SETTINGS = {"yantra": "yantra.port", "samay": "samay.port", "dvara": "dvara
                  "setu": "pages.setu_port", "dvara-page": "pages.dvara_port",
                  "sarathi": "pages.sarathi_port", "smritikosh": "smritikosh.port",
                  "smritikosh-db": "smritikosh.db_port",
-                 "smritikosh-ui": "smritikosh.dashboard_port"}
+                 "smritikosh-ui": "smritikosh.dashboard_port", "ntfy": "dvara.ntfy_port"}
 
 
 def sarathi_program() -> str:
@@ -388,8 +397,44 @@ def door_problems(config: Config, found: dict[str, Found] | None) -> list[str]:
     return problems
 
 
+def ntfy_program() -> str | None:
+    return os.environ.get("SARATHI_NTFY") or shutil.which("ntfy")
+
+
+def ntfy_service(config: Config, notes: list[str]) -> Service | None:
+    """ntfy, for notices on phones, with [dvara] ntfy = true. Its own
+    program on this road (the podman road brings its own image)."""
+    door = config.door
+    if door is None or door.ntfy_port is None:
+        return None
+    program = ntfy_program()
+    if program is None:
+        notes.append(f"{'ntfy':<{WIDTH}} not started: ntfy isn't installed here "
+                     "(https://docs.ntfy.sh/install/), or set SARATHI_NTFY; the podman "
+                     "road brings its own")
+        return None
+    cache = state_dir() / "ntfy"
+    cache.mkdir(parents=True, exist_ok=True)
+    return Service("ntfy", "ntfy",
+                   [program, "serve", "--listen-http",
+                    f"{config.ntfy_host()}:{door.ntfy_port}",
+                    "--cache-file", str(cache / "cache.db"), "--cache-duration", "24h"],
+                   door.ntfy_port, host=config.ntfy_host())
+
+
+def ntfy_click(config: Config) -> dict[str, str]:
+    """Where tapping a notice opens: the home page, on the address a phone
+    reaches; nothing when there is no such address."""
+    host = config.people_host()
+    if host is None:
+        return {}
+    shown = f"[{host}]" if ":" in host else host
+    return {"DVARA_NTFY_CLICK": f"http://{shown}:{config.pages.home_port}/"}
+
+
 def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
-                 clock_on: bool, notes: list[str]) -> Service | None:
+                 clock_on: bool, notes: list[str], *, ntfy: bool = False
+                 ) -> Service | None:
     door = config.door
     if door is None:
         return None
@@ -416,6 +461,9 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
         else:
             notes.append(f"{'dvara':<{WIDTH}} no phone: sparsh was not found "
                          "(see `sarathi status`)")
+    if ntfy and config.ntfy_url():
+        # every person's notices, also to their own topic (dvara push.py)
+        argv += ["--ntfy", config.ntfy_url()]
     # --web: the home page's chat, and every notice kept for it (dvara web.py)
     argv += ["serve", "--host", HOST, "--port", str(door.port), "--web"]
     if door.telegram:
@@ -424,7 +472,8 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     tokens = {k: secrets[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in secrets}
     return Service("dvara", "dvara", argv, door.port,
                    {**env, **tokens, **door_env(config), **door.window_env(),
-                    **config.people_env(), **phone_env(config)})
+                    **config.people_env(), **phone_env(config),
+                    **(ntfy_click(config) if ntfy else {})})
 
 
 def phone_env(config: Config) -> dict[str, str]:
@@ -488,9 +537,9 @@ def alive(pid: int) -> bool:
     return True
 
 
-def answers(port: int, timeout: float = 0.5) -> bool:
+def answers(port: int, timeout: float = 0.5, *, host: str = HOST) -> bool:
     try:
-        with socket.create_connection((HOST, port), timeout=timeout):
+        with socket.create_connection((host, port), timeout=timeout):
             return True
     except OSError:
         return False
@@ -542,7 +591,7 @@ def start(service: Service, owner: bool = False) -> str:
             tail = "\n".join(f"         | {line}" for line in log_tail(service.name))
             return (f"{service.name:<{WIDTH}} exited at once (code {proc.returncode}); "
                     f"its log, {log_path(service.name)}:\n{tail}")
-        if answers(service.port):
+        if answers(service.port, host=service.host):
             address = said_address(service) or service.url
             _remember(service.name, address=address)
             return (f"{service.name:<{WIDTH}} up {place(service.name, address, owner)}  "
@@ -610,7 +659,7 @@ def up(config: Config, found: dict[str, Found]) -> tuple[list[str], bool]:
                              "not started by "
                              "Sarathi: left alone")
                 continue
-        if answers(service.port):
+        if answers(service.port, host=service.host):
             ok = False
             setting = PORT_SETTINGS[service.name]
             lines.append(f"{service.name:<{WIDTH}} not started: something else is listening on "

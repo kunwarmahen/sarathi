@@ -108,6 +108,11 @@ def build_parser() -> argparse.ArgumentParser:
     door_cmd.add_argument("--window-port", dest="window_port", type=int, metavar="PORT")
     door_cmd.add_argument("--window-url", dest="window_url", metavar="URL",
                           help="the address in the link, when it differs from the host")
+    door_cmd.add_argument("--ntfy", action=argparse.BooleanOptionalAction, default=None,
+                          help="a push server here, so notices reach phones with the "
+                               "ntfy app (--no-ntfy: stop starting it)")
+    door_cmd.add_argument("--ntfy-port", dest="ntfy_port", type=int, metavar="PORT",
+                          help="ntfy's port (default 8793)")
     door_cmd.add_argument("--off", action="store_true", help="stop starting Dvara")
 
     phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for Dvara's "
