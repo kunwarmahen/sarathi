@@ -653,7 +653,7 @@ the dashboard is running (or what starts it when it isn't). Once Smritikosh is s
 switches between it and Yantra's own file: it writes `[memory] via` and
 runs `sarathi up`, which starts Yantra and Dvara again with it.
 
-Apart from that switch, it links, and nothing on it starts, stops or changes anything. Because
+Apart from that switch and Settings (below), it links, and nothing on it starts, stops or changes anything. Because
 its links carry the other pages' keys, it has a key of its own (after the
 `#`, kept in `~/.local/share/sarathi/home.token`, or
 `$SARATHI_HOME_TOKEN`). It listens on this computer, and on `[dvara]
@@ -698,6 +698,23 @@ accounts**, which opens their own Setu page by the same one-time link
 the house runs ntfy (above). Passwords are kept as scrypt,
 links and sessions only as hashes, in `~/.local/share/sarathi/people.json`.
 ([notes/14](notes/14-everyone-in-the-house.md))
+
+**Every setting, on the page.** Under the cards, **Settings** changes
+every file you'd otherwise edit by hand, in six tabs: **People** (Dvara's
+actors file: who, which agents, accounts, allowance, Telegram ids, and
+anyone who messaged the bot unlisted), **Agents** (each agent's model,
+memory, tools, accounts, budget and instructions; add from an example),
+**Rules** (Dvara's standing answers), **Accounts** (Setu's settings and
+each added site's rules), **Sarathi** (this file: the model, Dvara and
+its bot, the house address, ntfy, phone, road, ports) and **Keys**
+(typed in, never shown back). Each program checks a change the way it
+reads its file at start-up, and refuses one it couldn't load in its own
+words; the file before is kept as `.bak`. People, agents and rules take
+effect from the next message; Sarathi's settings and keys show
+**Apply**, which runs `sarathi up`. Every tab has **Edit as text** for the
+whole file. You're in People too, and **My accounts** at the top opens
+your own Setu page. Only your page has Settings; people signed in get
+none of it ([notes/16](notes/16-every-setting-from-the-page.md)).
 
 ### Where it looks
 
@@ -759,7 +776,11 @@ src/sarathi/
                 the phone's card, which opens Yantra's page  (notes/07); the
                 chat, passed through to Dvara's web channel as you  (notes/12),
                 or as the person signed in  (notes/14); My accounts and
-                Notices on this phone, for each person  (notes/15)
+                Notices on this phone, for each person  (notes/15);
+                Settings, routes owner-only  (notes/16)
+  editing.py    every settings file from the page: each program checks
+                and writes its own (dvara settings, setu config / site
+                file), sarathi.toml and secrets.env here  (notes/16)
   people.py     the people in the house signing in to the home page: an
                 invite that works once, a password, a session per device,
                 each one an id in Dvara's actors file  (notes/14)
@@ -798,7 +819,8 @@ plain programs, written and tested for Podman
 reach phones through ntfy in the house, and each person opens their own
 Setu page from the home page ([notes/15](notes/15-notices-on-a-phone.md));
 ntfy's own image was run, and the rest is written and tested, not yet
-run on Sarathi's roads.
+run on Sarathi's roads. Every settings file is changed from the home page,
+each checked by its own program ([notes/16](notes/16-every-setting-from-the-page.md)).
 
 ## Tests
 

@@ -30,7 +30,9 @@ the command that starts it instead.
 and this page doesn't add any. *Running* means the page's port answers.
 The line under it is the program's own `status`. **Open** is the
 program's own page. Nothing on the home page starts, stops or changes
-anything, and a POST to it is refused.
+anything, and a POST to it is refused. (Later the page gained a memory
+switch, a chat, sign-ins and Settings: notes 12-16. Each passes the change
+to the program it belongs to.)
 
 **THE LINK CARRIES THE KEY.** Samay keeps its page's token in
 `~/.samay/serve.token`, Setu in its folder's `page.token`, and Dvara in

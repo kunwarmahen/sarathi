@@ -8,6 +8,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="page.css">
 <script src="page.js" defer></script>
+<script src="settings.js" defer></script>
 </head>
 <body>
 <header class="top">
@@ -79,15 +80,27 @@
     <p class="lede">Everyone in Dvara's actors file can sign in here and talk to their
       own agents, with their own allowance and rules. They see their chat and nothing
       else on this page. Invite someone, send them the link, and they choose a password
-      the first time they open it.</p>
+      the first time they open it. Add, change or remove people under Settings below.</p>
     <div id="people-list" class="people"></div>
     <div id="people-said" class="meta" role="status"></div>
+  </section>
+  <section id="settings" aria-labelledby="h-settings" hidden>
+    <div class="section-head">
+      <h2 id="h-settings">Settings</h2>
+      <span class="count" id="settings-state" aria-live="polite"></span>
+    </div>
+    <p class="lede">Everything you'd otherwise change in a settings file. Each program
+      checks a change before it's saved, and keeps the file before as a backup.</p>
+    <div id="settings-apply" class="warn apply" hidden></div>
+    <div class="tabs" role="tablist" id="settings-tabs"></div>
+    <div id="settings-body"></div>
+    <div id="settings-said" class="meta" role="status"></div>
   </section>
 </main>
 
 <footer class="foot">
   <span id="updated"></span>
-  <span id="foot-said">This page links, passes your chat to Dvara, signs in the people in the house, and switches where your memories are kept. Nothing else here starts or changes anything.</span>
+  <span id="foot-said">This page links, passes your chat to Dvara, signs in the people in the house, and changes your settings through the program each one belongs to.</span>
 </footer>
 </body>
 </html>

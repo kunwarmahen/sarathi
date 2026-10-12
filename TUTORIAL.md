@@ -315,6 +315,27 @@ under the chat.
 
 ---
 
+**Changing a setting later.** Everything you chose here, and everything
+in the steps below, can be changed on the home page, under **Settings**:
+
+* **People**: who may use your agents, which ones, their daily
+  allowance, their accounts, their Telegram id.
+* **Agents**: each agent's model, tools, memory, accounts and
+  instructions. Add one from an example, or remove one.
+* **Rules**: standing answers for a tool (always allow, always ask,
+  never), so you're not asked the same thing twice.
+* **Accounts**: Setu's settings, and the rules of each site you added.
+* **Sarathi**: the model, Dvara and its bot, notices on phones, your
+  phone, ports.
+* **Keys**: a cloud key or the bot's token, typed in once and never
+  shown back.
+
+Each program checks a change before it's saved and keeps the file
+before as a backup, so a mistake is refused, not saved. People, agents
+and rules take effect from the next message. A change under Sarathi or
+Keys shows **Apply**, which starts everything again with it (about a
+minute). Each tab also has **Edit as text**, for the file itself.
+
 ## Step 5 (optional) · Plain programs, or containers
 
 Sarathi runs everything two ways, and you can switch back and forth.
@@ -447,9 +468,13 @@ sarathi status
          messaged the bot but not in the actors file (telegram id): 8675309
 ```
 
-That number is you. Open `~/dvara/actors.toml`, find the lines under
-"Your Telegram id", remove the `#`s and put your number in. Message the
-bot again: it answers. (No restart needed; Dvara rereads the file.)
+That number is you. Open the home page, go to **Settings → People**: the
+number is listed under *Messaged your Telegram bot, but not on the
+list*. Press **Change** on yourself (`owner`), put the number in
+*Telegram ids*, and **Save**. Message the bot again: it answers. (No
+restart needed; Dvara rereads its list. If you'd rather edit the file,
+it's `~/dvara/actors.toml`, and **Edit as text** at the bottom of the
+same tab shows it.)
 
 **No phone handy?** Open the home page (the `sarathi` line `up`
 printed). With Dvara on, it has a chat at the top: pick `greeter`, say
@@ -459,24 +484,20 @@ Telegram doesn't carry over. If it says Dvara is running without its
 web channel, run `sarathi down` and `sarathi up` (on the Podman road,
 `sarathi image` first).
 
-**Your own accounts from your phone.** Under `[actor.owner]` in the same
-file, one of:
+**Your own accounts from your phone.** In **Settings → People**, press
+**Change** on yourself and pick *Accounts their agents use*:
 
-```toml
-setu = "~/.local/state/setu"   # the accounts you already connected on this computer
-setu = true                    # a separate folder, starting empty: you connect from the chat
-```
+* *This computer's accounts (yours)*: the phone and the page share one
+  set of sign-ins. Also tick *They may connect and disconnect those from
+  the chat*, or `/connect` from the chat answers that the owner looks
+  after them, the same as it would for a guest.
+* *Their own*: a separate folder, starting empty, that you connect from
+  the chat. The safe way to try things first: nothing you do from the
+  phone touches the accounts on your computer.
 
-`setu = true` is the safe way to try things first: nothing you do from
-the phone touches the accounts on your computer.
-
-With the first, the phone and the page share one set of sign-ins, but
-`/connect` from the chat answers that the owner looks after them, the
-same as it would for a guest. You are the owner, so add:
-
-```toml
-setu_manage = true             # /connect, /disconnect and /accounts reach that folder
-```
+(In the file these are `setu = "~/.local/state/setu"` with `setu_manage =
+true`, or `setu = true`.) **My accounts**, at the top of the home page,
+opens Setu's page for your own accounts.
 
 Then when Amazon asks for its password again (it does, for its orders
 page, after a while), you send `/connect amazon` and sign in in the
@@ -485,13 +506,16 @@ sign-in without it is asked for again sooner. `/lock` still belongs to
 the computer, since a passphrase on that folder would lock the page out
 too (dvara's note 27).
 
-An agent reads Amazon only if its package asks for it. For `minder`,
-add to `~/dvara/agents/minder/agent.toml`:
+An agent reads Amazon only if its package asks for it. In **Settings →
+Agents**, press **Change** on `minder` and add a line to *Accounts it
+needs*:
 
-```toml
-[connections]
-needs = ["amazon:read"]        # open, follow, scroll, search -- never a click or a purchase
 ```
+amazon:read                    open, follow, scroll, search -- never a click or a purchase
+```
+
+(In its file, `~/dvara/agents/minder/agent.toml`, that's `needs =
+["amazon:read"]` under `[connections]`.)
 
 The need brings Amazon's tools with it; `[tools] allow` doesn't have to
 name them. Your home works the same way: `needs = ["amazon:read",
@@ -552,9 +576,10 @@ If something doesn't answer, `sarathi status` says which piece stopped,
 and the end of its log: `~/.local/share/sarathi/logs/door.log` for plain
 programs, `journalctl --user -u sarathi-dvara -n 60` for containers.
 
-**Adding someone else** is the same: they message the bot, you read
-their number in `sarathi status`, and you add them to `actors.toml`
-(the file has a commented example). Give them `setu = true` and they can
+**Adding someone else** is the same: they message the bot, their number
+shows in **Settings → People**, and you press **Add as a new person**
+(or **Add a person** for someone who'll only use the home page). Choose
+their agents and a daily allowance. Pick *Their own* accounts and they can
 connect their own Gmail from their phone by sending `/connect gmail` to
 the bot. Their sign-ins are kept on your computer, in a folder of their
 own, so you could read them. Tell them that.
@@ -690,10 +715,11 @@ a USB cable, so they reach the phone over your Wi-Fi.
    ```
 
    It says what's still missing: *"nobody in ~/dvara/actors.toml is
-   marked `phone = true` yet"* (add `phone = true` under your
-   `[actor.owner]`), or *"minder, the agent on Telegram, can't use the
-   phone: its [tools] … leaves out "mcp__sparsh__*""* (add it to that
-   agent's `allow` line). The restart matters: before it, the containers
+   marked `phone = true` yet"* (in **Settings → People**, **Change** on
+   yourself, tick *Their agents may work the phone*), or *"minder, the
+   agent on Telegram, can't use the phone: its [tools] … leaves out
+   "mcp__sparsh__*""* (in **Settings → Agents**, add `mcp__sparsh__*` to
+   minder's *Tools it may use*). The restart matters: before it, the containers
    don't have this computer's key, and the phone asks *"Allow USB
    debugging?"* for a key you don't know. Say no to that one.
 
@@ -836,12 +862,12 @@ you're most likely to meet:
 | `Ollama is not answering at http://localhost:11434` | Ollama isn't running | `ollama serve`, or start the Ollama app |
 | `qwen3.8:latest is not pulled yet` | the model isn't downloaded | `ollama pull qwen3.8:latest` |
 | `no key for anthropic: run sarathi init or set ANTHROPIC_API_KEY` | no key saved | `sarathi init --force` and paste it |
-| `yantra not started: something else is listening on port 8321` | another program uses that port | change `port` under `[yantra]` in sarathi.toml |
+| `yantra not started: something else is listening on port 8321` | another program uses that port | **Settings → Sarathi → Ports**, change Yantra's, **Save**, **Apply** (or `port` under `[yantra]` in sarathi.toml) |
 | `page exited at once (code 2)`, then a few lines | the page stopped as it started | read the lines; `--web needs the web extra` means Step 1's `uv sync --extra web` was missed |
 | `clock already running at …, not started by Sarathi: left alone` | you already run Samay's clock another way | nothing: a second clock would run every schedule twice |
 | `unknown key clock.onn` | a typo in sarathi.toml | fix the spelling; Sarathi never guesses |
-| On Telegram the agent says it has no Home Assistant (or Gmail…) and tells you to connect it, though Yantra's page uses it fine | the Telegram agent's package doesn't ask for that account | add it to `needs` under `[connections]` in `~/dvara/agents/<agent>/agent.toml` (e.g. `"homeassistant:write"`); there's nothing to reconnect |
-| `/memory` answers that the agent doesn't keep memories, and Telegram's `/` menu has no `memory` | its package has no `[memory]` | add `[memory]` with `via = "local"` to its `agent.toml`; restart Dvara for the menu (`sarathi down && sarathi up`) |
+| On Telegram the agent says it has no Home Assistant (or Gmail…) and tells you to connect it, though Yantra's page uses it fine | the Telegram agent's package doesn't ask for that account | **Settings → Agents**, **Change** on that agent, add `homeassistant:write` to *Accounts it needs*; there's nothing to reconnect |
+| `/memory` answers that the agent doesn't keep memories, and Telegram's `/` menu has no `memory` | its package doesn't remember people | **Settings → Agents**, **Change**, *Memory*: *Remembers each person*; restart Dvara for the menu (**Apply**, or `sarathi down && sarathi up`) |
 | A sign-in from the chat: after your password the page never loads | that's the expected `http://127.0.0.1…` page, and Telegram's own browser may not show its address | open the link in Chrome instead, then copy the failing page's whole address back into the chat |
 | `no image yet (localhost/sarathi:latest): run sarathi image first` | Podman road, image not built | `sarathi image` |
 | a schedule never runs | Samay isn't running | `sarathi status`; on the process road, Samay stops with your session (Step 5 fixes that) |

@@ -255,3 +255,39 @@ button.open:disabled { opacity: .55; cursor: progress; }
 .push-steps { margin: 8px 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
 .push-words { list-style: none; margin-left: -20px; }
 .push-words code { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+
+/* -- the owner's settings ----------------------------------------------------- */
+#settings-body { display: grid; gap: 12px; }
+#settings .buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+#settings .buttons .open { margin-top: 0; }
+#settings-said { margin-top: 10px; overflow-wrap: anywhere; }
+.apply { margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px;
+        border-bottom: 1px solid var(--line); }
+.tab {
+  font: inherit; font-size: 14px; color: var(--ink-2); background: none; border: 0;
+  border-bottom: 2px solid transparent; padding: 6px 10px; cursor: pointer;
+}
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.field { display: grid; gap: 3px; min-width: 0; }
+.field label, .field .label { font-size: 13px; color: var(--ink-2); }
+.field .hint, .astext .hint { font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
+#settings input[type="text"], #settings input[type="password"], #settings select,
+#settings textarea {
+  font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 8px; min-width: 0; width: 100%;
+}
+#settings textarea { resize: vertical; }
+#settings textarea.file { font-family: var(--mono); font-size: 12px; line-height: 1.45; }
+label.inline { font-size: 14px; display: flex; gap: 6px; align-items: center; }
+.checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.card.form { gap: 10px; }
+.astext summary, details.card summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.astext { display: grid; gap: 6px; }
+.rules { display: grid; gap: 10px; }
+.rule {
+  display: grid; grid-template-columns: 1fr 1.6fr .8fr 1.4fr auto; gap: 8px; align-items: end;
+  background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+}
+@media (max-width: 720px) { .rule { grid-template-columns: 1fr; } }
+h3.sub { font-size: 14px; color: var(--ink-2); margin-top: 6px; }

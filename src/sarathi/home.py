@@ -26,8 +26,9 @@ it answers and how many memories are yours. Its button is the same as
 ``sarathi smritikosh`` / ``--off`` once Smritikosh is set up: it writes
 ``[memory] via`` and runs ``sarathi up``, which starts Yantra (and Dvara)
 again with it. Setting Smritikosh up the first time stays in a terminal:
-it may need a password typed, and it can take a minute. Nothing else on
-the page starts, stops or changes anything. The card also links to
+it may need a password typed, and it can take a minute. Apart from Settings (editing.py), where each
+program checks and writes its own file, nothing else on the page
+starts, stops or changes anything. The card also links to
 Smritikosh's own dashboard, when its checkout has one: open when it
 answers as Smritikosh, else the command that starts it. Its sign-in is
 Smritikosh's own (a username and password), never a key from here.
@@ -62,6 +63,21 @@ the script in their browser draws. The owner sees and invites them:
     POST /api/claim                {"link", "password"}: an invite used
     POST /api/sign-in              {"name", "password"}: a session for this device
     POST /api/sign-out             this device signed out
+
+EVERY SETTINGS FILE, THE OWNER'S ALONE (editing.py). Each program checks
+and writes its own file; a person signed in gets 403:
+
+    GET  /api/settings                     every file's settings and text
+    POST /api/settings/sarathi             {table: {key: value}}: sarathi.toml
+    POST /api/settings/key/NAME            {"value"}: a key into secrets.env
+    POST /api/settings/person/NAME         {fields} | {"remove": true}: actors.toml
+    POST /api/settings/rules               [rules]: policy.toml
+    POST /api/settings/agent/NAME          {"tables", "prompt"} | {"remove": true}
+                                           | {"from_example": NAME}
+    POST /api/settings/setu/NAME           {"value"}: `setu config NAME`
+    POST /api/settings/text/KIND           {"text", "name"}: a whole file as text
+                                           (sarathi, actors, policy, agent, prompt, site)
+    POST /api/settings/apply               `sarathi up`, for what needs a restart
 
 With ``--also-host`` (the door's window address, when it is one) the page
 listens there too, so a phone at home can open a person's link.
@@ -116,11 +132,12 @@ ENV_TOKEN = "SARATHI_HOME_TOKEN"
 TOKEN_FILE = "home.token"
 STATUS_EVERY = 30.0
 #: The longest chat message passed on, in bytes.
-MAX_BODY = 64 * 1024
+MAX_BODY = 256 * 1024     # a whole settings file, or an agent's prompt
 
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/index.html": ("index.html", "text/html; charset=utf-8"),
           "/page.js": ("page.js", "text/javascript; charset=utf-8"),
+          "/settings.js": ("settings.js", "text/javascript; charset=utf-8"),
           "/page.css": ("page.css", "text/css; charset=utf-8"),
           "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 
@@ -461,6 +478,20 @@ class Who:
     session: str | None = None
 
 
+def _strangers(config: Config) -> list[str]:
+    """Telegram ids that messaged Dvara's bot and aren't in its actors file."""
+    from sarathi.door import strangers
+
+    try:
+        if config.road == "podman":
+            from sarathi.podman import UNITS, journal_tail
+            return strangers(journal_tail(UNITS["dvara"], 400))
+        from sarathi.services import log_tail
+        return strangers(log_tail("dvara", 400))
+    except Exception:  # noqa: BLE001 -- a list to help, never a failure
+        return []
+
+
 def _handler(server: HomeServer):
     class Handler(BaseHTTPRequestHandler):
         server_version = "sarathi"
@@ -552,6 +583,8 @@ def _handler(server: HomeServer):
                 name, kind = STATIC[url.path]
                 return self._send(200, files("sarathi").joinpath("static", name)
                                   .read_bytes(), kind)
+            if url.path == "/api/settings":
+                return self._settings_get()
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
                                 "/api/people", "/api/chat/push"):
                 return self._json(404, {"detail": "not found"})
@@ -675,9 +708,116 @@ def _handler(server: HomeServer):
             return self._json(200, {"said": f"{name} signed out on {gone} "
                                             f"device{'s' if gone != 1 else ''}"})
 
+        def _settings_get(self) -> None:
+            from sarathi import editing
+            from sarathi.config import ConfigError, load
+
+            if self._owner() is None:
+                return None
+            try:
+                config = load()
+            except ConfigError as exc:
+                return self._json(409, {"detail": str(exc)})
+            return self._json(200, editing.snapshot(config, _strangers(config)))
+
+        def _settings_post(self, parts: list[str]) -> None:
+            """/api/settings/WHAT[/NAME]: one change, checked by the program
+            whose file it is (editing.py)."""
+            from sarathi import editing
+            from sarathi.config import ConfigError, load
+
+            if self._owner() is None:
+                return None
+            body = self._body()
+            if body is None:
+                return None
+            what = parts[2] if len(parts) > 2 else ""
+            name = urllib.parse.unquote(parts[3]) if len(parts) > 3 else ""
+            restart, said = False, "Saved."
+            try:
+                config = load()
+                if what == "apply":
+                    server.home._restart()
+                    return self._json(200, {"said": "Starting everything again with the "
+                                                    "new settings: about a minute."})
+                if what == "sarathi":
+                    config = editing.sarathi_apply(body)
+                    restart = True
+                elif what == "key":
+                    editing.set_key(name, str(body.get("value") or ""))
+                    restart, said = True, f"{name} saved; it's never shown here again."
+                elif what == "person":
+                    if body.get("remove"):
+                        if config.door and name == config.door.owner:
+                            raise editing.EditError(400, "you can't remove yourself")
+                        editing.dvara(config, ["person", name, "--remove"])
+                        if server.people is not None:
+                            try:
+                                server.people.remove(name)
+                            except PeopleError:
+                                pass            # never signed in here
+                        said = f"{name} removed, and signed out everywhere."
+                    else:
+                        fields = {k: v for k, v in body.items() if k != "remove"}
+                        editing.dvara(config, ["person", name], fields)
+                        said = f"{name} saved. Dvara uses it from their next message."
+                elif what == "rules":
+                    rules = body.get("rules") if isinstance(body.get("rules"), list) else []
+                    editing.dvara(config, ["rules"], rules)
+                    said = "Rules saved. Dvara uses them from the next tool call."
+                elif what == "agent":
+                    if body.get("remove"):
+                        out = editing.dvara(config, ["agent", name, "--remove"])
+                        said = f"{name} removed (kept aside in {out.get('moved_to')})."
+                    elif body.get("from_example"):
+                        examples = editing.dvara_examples(config)
+                        if examples is None:
+                            raise editing.EditError(409, "dvara's example agents weren't "
+                                                         "found")
+                        editing.dvara(config, ["agent", name, "--from-example",
+                                               str(body["from_example"]), "--examples",
+                                               examples])
+                        said = f"{name} added. Give people it under People."
+                    else:
+                        editing.dvara(config, ["agent", name],
+                                      {"tables": body.get("tables") or {},
+                                       "prompt": body.get("prompt")})
+                        said = f"{name} saved. It's used from the next message."
+                elif what == "setu":
+                    said = editing.setu_set(name, body.get("value"))
+                elif what == "text":
+                    text = body.get("text")
+                    if not isinstance(text, str):
+                        raise editing.EditError(400, "send the file as text")
+                    if name == "sarathi":
+                        config = editing.sarathi_text(text)
+                        restart = True
+                    elif name in ("actors", "policy"):
+                        editing.dvara(config, ["text", name], text)
+                    elif name in ("agent", "prompt"):
+                        editing.dvara(config, ["text", name, "--agent",
+                                               str(body.get("name") or "")], text)
+                    elif name == "site":
+                        editing.setu_site(str(body.get("name") or ""), text)
+                    else:
+                        raise editing.EditError(400, f"no file called {name!r} here")
+                else:
+                    return self._json(404, {"detail": "no such setting"})
+            except editing.EditError as exc:
+                return self._json(exc.status, {"detail": str(exc)})
+            except (ConfigError, PeopleError) as exc:
+                return self._json(400, {"detail": str(exc)})
+            if what in ("sarathi", "text") and restart:
+                with server.home._lock:
+                    server.home.config = config
+                said = "Saved. Press Apply to start everything again with it."
+            return self._json(200, {"said": said, "restart": restart})
+
         def do_POST(self) -> None:
             url = urlparse(self.path)
             parts = url.path.strip("/").split("/")
+            if parts[:2] == ["api", "settings"]:
+                return self._settings_post(parts)
             if parts in (["api", "sign-in"], ["api", "claim"], ["api", "sign-out"]) or \
                     (len(parts) == 4 and parts[:2] == ["api", "people"]
                      and parts[3] in ("invite", "sign-out")):

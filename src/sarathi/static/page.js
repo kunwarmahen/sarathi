@@ -175,13 +175,21 @@ async function refresh() {
   }
   show("pages", true);
   const up = body.pieces.filter((p) => p.up).length;
+  const setu = body.pieces.find((p) => p.name === "setu" && p.up);
   document.getElementById("facts").replaceChildren(
-    h("span", {}, `${up} of ${body.pieces.length} running`));
+    h("span", {}, `${up} of ${body.pieces.length} running`),
+    // your own accounts: Setu's page for your own folder, already signed in
+    setu ? h("a", { href: setu.open, target: "_blank", rel: "noopener noreferrer" },
+             "My accounts") : null);
   const cards = body.pieces.map(card);
   if (body.memory) cards.push(memoryCard(body.memory));
   document.getElementById("pieces").replaceChildren(...cards);
   if (body.people) drawPeople();
   if (body.chat && !chat.on) { startChat(); drawPush(); }
+  if (!sets.data && !document.getElementById("settings").dataset.asked) {
+    document.getElementById("settings").dataset.asked = "1";
+    drawSettings();
+  }
   document.getElementById("updated").textContent =
     `Updated ${new Date().toLocaleTimeString()}`;
 }
