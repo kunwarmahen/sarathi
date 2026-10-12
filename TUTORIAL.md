@@ -897,7 +897,8 @@ you're most likely to meet:
 | `mcp server 'gmail-…' exited unexpectedly (code 2)` | an older Yantra hiding the reason (usually the line above) | `setu list` shows the reason; `sarathi image`, then `sarathi up`, for the newer Yantra |
 | `dashboard  not built: no npm here` | Node.js isn't installed | install Node.js 20 or newer, then `sarathi smritikosh` again |
 | the dashboard signs you in, then shows the login page again | it was opened as `127.0.0.1:3000` | open `http://localhost:3000/dashboard/memories` instead |
-| `smritikosh-ui not started: not built yet` | the dashboard wasn't built (or `ui/` changed since) | `sarathi smritikosh`, then `sarathi up` |
+| `smritikosh-ui not started: not built yet` | the dashboard was never built | `sarathi smritikosh`, then `sarathi up` |
+| `smritikosh-ui not started: its build is older than the last commit to ui/` | a commit or pull changed Smritikosh's dashboard after it was built; `sarathi up` won't serve the old build, so the dashboard stops and the home page says it isn't running | `sarathi smritikosh` (or `npm run build` in Smritikosh's `ui/`), then `sarathi up` |
 | `memory.via = "smritikosh" but it isn't set up yet` | sarathi.toml was edited by hand | `sarathi smritikosh` |
 | `the cloud road turns memories into numbers with OpenAI, and there is no OPENAI_API_KEY` | a cloud model, and no OpenAI key for Smritikosh's meanings | paste one when asked, or `sarathi smritikosh --local` (Ollama's `nomic-embed-text`) |
 | `Smritikosh already has an account 'NAME' and Sarathi doesn't know its password` | an account made by hand, without its key in Sarathi | run `sarathi smritikosh` in a terminal and type its password once |

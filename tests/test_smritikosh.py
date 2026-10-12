@@ -609,3 +609,20 @@ def test_a_build_older_than_the_ui_s_last_commit_is_built_again(world, tmp_path,
     assert smritikosh.built(tmp_path) is False
     os.utime(ui / ".next" / "BUILD_ID")                  # built now
     assert smritikosh.built(tmp_path) is True
+
+
+def test_a_dashboard_not_started_says_whether_it_was_never_built_or_is_stale(
+        world, tmp_path, monkeypatch):
+    import shutil as sh
+    monkeypatch.setenv("PATH", str(Path(sh.which("git", path="/usr/bin:/bin")).parent))
+    ui = a_ui(tmp_path, built=False)
+    assert smritikosh.unbuilt(tmp_path) == "not built yet"
+    (ui / ".next" / "BUILD_ID").write_text("b1")
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (ui / "page.tsx").write_text("x")
+    import os
+    os.utime(ui / ".next" / "BUILD_ID", (1, 1))
+    subprocess.run(["git", "-C", str(tmp_path), "add", "ui/page.tsx"], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "-c", "user.name=t", "-c",
+                    "user.email=t@t", "commit", "-qm", "ui"], check=True)
+    assert smritikosh.unbuilt(tmp_path) == "its build is older than the last commit to ui/"

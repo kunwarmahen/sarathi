@@ -292,7 +292,8 @@ def dashboard_service(config: Config, notes: list[str]) -> Service | None:
     argv = smritikosh.dashboard_argv(kosh)
     if argv is None:
         if kosh.dashboard and smritikosh.dashboard(config) is not None:
-            notes.append(f"{'smritikosh-ui':<{WIDTH}} not started: not built yet "
+            notes.append(f"{'smritikosh-ui':<{WIDTH}} not started: "
+                         f"{smritikosh.unbuilt(kosh.path())} "
                          "(`sarathi smritikosh` builds it)")
         return None
     return Service("smritikosh-ui", "smritikosh", argv, kosh.dashboard_port,

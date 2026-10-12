@@ -1104,6 +1104,14 @@ def built(checkout: Path) -> bool:
     return not last.isdigit() or int(last) <= stamp.stat().st_mtime
 
 
+def unbuilt(checkout: Path) -> str:
+    """Why built() said no, in words: never built, or a commit to ui/ came
+    after the build (pulling or committing there is enough to stop it)."""
+    if not (ui_dir(checkout) / ".next" / "BUILD_ID").is_file():
+        return "not built yet"
+    return "its build is older than the last commit to ui/"
+
+
 def build_dashboard(kosh: Smritikosh, checkout: Path, say: Callable[[str], None]) -> None:
     ui = ui_dir(checkout)
     if not kosh.dashboard or not (ui / "package.json").is_file():
@@ -1180,7 +1188,7 @@ def dashboard(config: Config) -> dict[str, Any] | None:
     if not kosh.dashboard:
         start = "set dashboard = true under [smritikosh] in sarathi.toml, then `sarathi up`"
     elif not built(checkout):
-        start = "`sarathi smritikosh` builds it, then `sarathi up`"
+        start = f"{unbuilt(checkout)}: `sarathi smritikosh` builds it, then `sarathi up`"
     else:
         start = "`sarathi up`"
     return {"url": url, "up": up, "start": start}

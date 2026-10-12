@@ -245,7 +245,10 @@ out again, and nothing is deleted.
 
 **Smritikosh's own dashboard** (its `ui/`, a Next.js app) is built by
 `sarathi smritikosh` (`npm install`, `next build`, again whenever its
-`ui/` has a newer commit than the build) and started by `sarathi up`
+`ui/` has a newer commit than the build) and started by `sarathi up`.
+A build older than `ui/`'s last commit is not served: `sarathi up` stops
+the dashboard and says `its build is older than the last commit to ui/`
+until `sarathi smritikosh` builds it again. It is started
 after Smritikosh, at **http://localhost:3000/dashboard/memories**, on this computer only (the home page
 links there: the bare address can open blank in a browser).
 On the Podman road it's a user service (`sarathi-smritikosh-ui.service`)

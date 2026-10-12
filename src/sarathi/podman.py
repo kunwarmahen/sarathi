@@ -949,6 +949,22 @@ WantedBy=default.target
 """
 
 
+def dashboard_note(config: Config, unit: str | None) -> list[str]:
+    """Why the dashboard is not among the units, when it is wanted: a
+    rebuild of Smritikosh's ui/ is the usual cause, and without this line
+    it simply vanished from the list."""
+    from sarathi import smritikosh
+
+    kosh = config.smritikosh
+    if unit is not None or not config.remembers_in_smritikosh or not kosh.dashboard:
+        return []
+    checkout = kosh.path()
+    if checkout is None or smritikosh.dashboard(config) is None:
+        return []
+    return [f"{'smritikosh-ui':<{WIDTH}} not started: {smritikosh.unbuilt(checkout)} "
+            "(`sarathi smritikosh` builds it, then `sarathi up`)"]
+
+
 def install_home(text: str | None, name: str = "sarathi") -> bool:
     """Write, or remove, a user service (the home page's, or the
     dashboard's); True when it changed. It is enabled, so it starts at
@@ -1139,9 +1155,11 @@ def up(config: Config) -> tuple[list[str], bool]:
     changed = install(units(config))
     if install_home(home_unit(config)):
         changed.add(unit_file("sarathi").name)
-    if install_home(dashboard_unit(config), "smritikosh-ui"):
+    dash = dashboard_unit(config)
+    if install_home(dash, "smritikosh-ui"):
         changed.add(unit_file("smritikosh-ui").name)
     lines = retired + (["units rewritten from sarathi.toml"] if changed else [])
+    lines += dashboard_note(config, dash)
     newest = image_id(IMAGE)
     note = browser_note()
     if note:
