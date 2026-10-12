@@ -489,12 +489,14 @@ An agent reads Amazon only if its package asks for it. For `minder`,
 add to `~/dvara/agents/minder/agent.toml`:
 
 ```toml
-[tools]
-allow = ["web_fetch", "read_file", "write_file", "mcp__samay__*", "amazon_*"]
-
 [connections]
 needs = ["amazon:read"]        # open, follow, scroll, search -- never a click or a purchase
 ```
+
+The need brings Amazon's tools with it; `[tools] allow` doesn't have to
+name them. Your home works the same way: `needs = ["amazon:read",
+"homeassistant:write"]` lets minder see your lights and switch one, and
+switching asks you on Telegram first.
 
 Then ask *"What were my last three Amazon orders? Just the titles and
 the dates."*
@@ -801,6 +803,9 @@ you're most likely to meet:
 | `page exited at once (code 2)`, then a few lines | the page stopped as it started | read the lines; `--web needs the web extra` means Step 1's `uv sync --extra web` was missed |
 | `clock already running at …, not started by Sarathi: left alone` | you already run Samay's clock another way | nothing: a second clock would run every schedule twice |
 | `unknown key clock.onn` | a typo in sarathi.toml | fix the spelling; Sarathi never guesses |
+| On Telegram the agent says it has no Home Assistant (or Gmail…) and tells you to connect it, though Yantra's page uses it fine | the Telegram agent's package doesn't ask for that account | add it to `needs` under `[connections]` in `~/dvara/agents/<agent>/agent.toml` (e.g. `"homeassistant:write"`); there's nothing to reconnect |
+| `/memory` answers that the agent doesn't keep memories, and Telegram's `/` menu has no `memory` | its package has no `[memory]` | add `[memory]` with `via = "local"` to its `agent.toml`; restart Dvara for the menu (`sarathi down && sarathi up`) |
+| A sign-in from the chat: after your password the page never loads | that's the expected `http://127.0.0.1…` page, and Telegram's own browser may not show its address | open the link in Chrome instead, then copy the failing page's whole address back into the chat |
 | `no image yet (localhost/sarathi:latest): run sarathi image first` | Podman road, image not built | `sarathi image` |
 | a schedule never runs | Samay isn't running | `sarathi status`; on the process road, Samay stops with your session (Step 5 fixes that) |
 | `dvara not started: dvara.telegram is set but there is no TELEGRAM_TOKEN` | the bot's token wasn't saved | `sarathi dvara` again, and paste it |
