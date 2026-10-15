@@ -7,6 +7,7 @@
 <title>Sarathi</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="page.css">
+<script src="md.js" defer></script>
 <script src="page.js" defer></script>
 <script src="settings.js" defer></script>
 </head>
@@ -42,6 +43,7 @@
     <div class="section-head">
       <h2 id="h-chat">Talk to your agents</h2>
       <span class="count" id="chat-state" aria-live="polite"></span>
+      <button type="button" id="chat-full" class="quiet" aria-pressed="false">Full screen</button>
     </div>
     <p class="lede">Through Dvara, as on Telegram: the same rules and allowance. What a
       schedule sends you waits here too. This chat is its own conversation; one on
@@ -53,6 +55,13 @@
     <div class="chat">
       <div id="lines" class="lines" role="log" aria-live="polite" tabindex="0"></div>
       <div id="waiting" class="waiting"></div>
+      <div class="words" role="group" aria-label="Ask your agent">
+        <button type="button" data-word="/skills">Skills</button>
+        <button type="button" data-word="/tools">Tools</button>
+        <button type="button" data-word="/schedules">Schedules</button>
+        <button type="button" data-word="/memory">Memory</button>
+        <button type="button" data-word="/new">New chat</button>
+      </div>
       <form id="say" class="say">
         <label class="sr" for="agent">Agent</label>
         <select id="agent"></select>

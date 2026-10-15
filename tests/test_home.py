@@ -91,7 +91,7 @@ def get(server, path, token=GOOD):
 def test_the_keys_are_only_behind_the_home_token(served):
     assert get(served, "/api/pieces", token=None).status_code == 401
     assert get(served, "/api/pieces", token="wrong-token-of-some-length").status_code == 401
-    for path in ("/", "/page.js", "/page.css", "/favicon.svg"):
+    for path in ("/", "/page.js", "/md.js", "/page.css", "/favicon.svg"):
         assert "key-1234567890" not in get(served, path, token=None).text
 
 
@@ -172,6 +172,23 @@ def test_the_pages_script_parses():
     script = files("sarathi").joinpath("static", "page.js")
     done = subprocess.run([node, "--check", str(script)], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
+
+
+def test_an_answer_is_drawn_as_markdown_and_never_as_its_own_markup():
+    # The chat draws an agent's answer as markdown with md.js; anything the
+    # model wrote as HTML must arrive as text.
+    import shutil
+    import subprocess
+    from importlib.resources import files
+    node = shutil.which("node", path="/usr/bin:/usr/local/bin:/bin")
+    if node is None:
+        pytest.skip("node is not installed")
+    script = files("sarathi").joinpath("static", "md.js")
+    probe = (f"const {{renderMarkdown}} = require({str(script)!r});"
+             "process.stdout.write(renderMarkdown('**Done**\\n\\n<script>x</script>'))")
+    done = subprocess.run([node, "-e", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert "<strong>Done</strong>" in done.stdout and "<script>" not in done.stdout
 
 
 def test_a_phone_card_opens_yantras_page_when_sparsh_is_here(world, keys):

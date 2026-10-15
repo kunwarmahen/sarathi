@@ -393,9 +393,15 @@ async function drawPeople() {
 // came after the last one it has. A turn runs in Dvara behind the request, so
 // the answer is simply a later line. Questions and held turns are redrawn
 // whole on every look: an answer given on Telegram makes them go away here.
+// While a turn runs, Dvara's look carries it live (the answer so far and each
+// step as a line), and the page looks more often until it is answered.
+// Answers are drawn as markdown (md.js, escaped first, the same file Yantra's
+// page uses). Every button here sends words Dvara answers on every channel:
+// /skills, /tools, /schedules, /memory, /new, /skills keep N.
 
 const CHAT_EVERY = 3000;
-const chat = { on: false, last: 0, timer: null, agents: [], sending: false };
+const CHAT_BUSY_EVERY = 700;
+const chat = { on: false, last: 0, timer: null, agents: [], sending: false, busy: false };
 
 function api(path, body) {
   const init = { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" };
@@ -441,14 +447,31 @@ async function download(line, n, name) {
   }
 }
 
+function bubble(text, who) {
+  // Your own words stay as you wrote them; an agent's and a notice's are markdown.
+  if (who === "you" || typeof renderMarkdown !== "function") return h("div.bubble", {}, text);
+  const el = h("div.bubble.md");
+  el.innerHTML = renderMarkdown(text);
+  return el;
+}
+
+function offerView(offer) {
+  const keep = (word) => () => api("/api/chat", { agent: offer.agent, text: `/skills ${word} ${offer.id}` });
+  return h("div.offer", {},
+    h("div.what", {}, `${offer.name} — test: ${offer.test}`),
+    buttons(keep("keep"), keep("drop"), "Keep", "Not now"));
+}
+
 function lineView(ln) {
-  const failed = ln.who === "agent" && ln.stop_reason && ln.stop_reason !== "held";
+  const failed = ln.who === "agent" && ln.stop_reason
+    && !["held", "skills", "seen", "memory", "new", "files", "accounts"].includes(ln.stop_reason);
   const label = ln.who === "you" ? `You${chat.agents.length > 1 ? " → " + ln.agent : ""}`
     : ln.who === "notice" ? "Sent to you"
     : (ln.agent || "Agent");
   return h(`div.line.${ln.who}${failed ? ".failed" : ""}`, {},
     h("span.tag", {}, `${label} · ${when(ln.at)}`),
-    h("div.bubble", {}, ln.text),
+    bubble(ln.text, ln.who),
+    ln.offer ? offerView(ln.offer) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
     (ln.files || []).map((name, n) => {
@@ -490,6 +513,17 @@ function holdView(hd) {
     buttons(() => post(true), () => post(false), "Yes, carry on", "No"));
 }
 
+function liveView(lv) {
+  // A turn while it runs: each step as a line, and the answer as it is written.
+  const items = lv.items.map((it) => it.step !== undefined
+    ? h(`div.step${it.ok ? "" : ".bad"}`, {},
+        `${it.ok ? "✓" : "✗"} ${it.step}${it.ok ? "" : it.refused ? " — refused" : " — didn't work"}`)
+    : bubble(it.text, "agent"));
+  if (lv.using) items.push(h("div.step.now", {}, `… ${lv.using}`));
+  if (!items.length) items.push(h("div.step.now", {}, "… thinking"));
+  return h("div.line.agent.live", {}, h("span.tag", {}, `${lv.agent} · working`), ...items);
+}
+
 function draw(data) {
   const picker = document.getElementById("agent");
   if (data.agents.join() !== chat.agents.join()) {
@@ -501,18 +535,23 @@ function draw(data) {
   }
   const box = document.getElementById("lines");
   const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  if (!chat.last && !data.lines.length) {
-    box.replaceChildren(h("div.empty", {}, "Nothing yet. Say hello."));
+  const live = document.getElementById("live") || h("div", { id: "live" });
+  const running = data.live || [];
+  if (!chat.last && !data.lines.length && !running.length) {
+    box.replaceChildren(h("div.empty", {}, "Nothing yet. Say hello."), live);
   } else if (data.lines.length) {
-    if (!chat.last) box.replaceChildren();
-    box.append(...data.lines.map(lineView));
+    if (!chat.last) box.replaceChildren(live);
+    for (const ln of data.lines) box.insertBefore(lineView(ln), live);
     chat.last = data.lines[data.lines.length - 1].id;
-    if (atEnd || data.lines.some((l) => l.who === "you")) box.scrollTop = box.scrollHeight;
   }
+  if (!live.isConnected) box.append(live);
+  live.replaceChildren(...running.map(liveView));
+  if (atEnd || data.lines.some((l) => l.who === "you")) box.scrollTop = box.scrollHeight;
   document.getElementById("waiting").replaceChildren(
     ...data.asks.map(askView), ...data.holds.map(holdView));
   document.getElementById("chat-state").textContent =
     data.busy.length ? `${data.busy.join(", ")} is working…` : "";
+  chat.busy = data.busy.length > 0;
 }
 
 async function look() {
@@ -524,25 +563,49 @@ async function look() {
   }
 }
 
+function lookAgain() {
+  // Often while a turn runs, so its steps and words show as they come.
+  clearTimeout(chat.timer);
+  chat.timer = setTimeout(async () => {
+    if (!document.hidden) await look();
+    lookAgain();
+  }, chat.busy ? CHAT_BUSY_EVERY : CHAT_EVERY);
+}
+
+async function send(text) {
+  const agent = document.getElementById("agent").value;
+  if (!text.trim() || !agent || chat.sending) return false;
+  chat.sending = true;
+  const button = document.querySelector("#say .send");
+  button.disabled = true;
+  try {
+    await api("/api/chat", { agent, text });
+    problem("");
+    chat.busy = true;
+    return true;
+  } catch (err) {
+    problem(err.message);
+    return false;
+  } finally {
+    chat.sending = false;
+    button.disabled = false;
+    await look();
+    lookAgain();
+  }
+}
+
 async function say(event) {
   event.preventDefault();
   const text = document.getElementById("text");
-  const agent = document.getElementById("agent").value;
-  if (!text.value.trim() || !agent || chat.sending) return;
-  chat.sending = true;
-  const send = document.querySelector("#say .send");
-  send.disabled = true;
-  try {
-    await api("/api/chat", { agent, text: text.value });
-    text.value = "";
-    problem("");
-  } catch (err) {
-    problem(err.message);
-  } finally {
-    chat.sending = false;
-    send.disabled = false;
-    look();
-  }
+  if (await send(text.value)) text.value = "";
+}
+
+function fullScreen(on) {
+  document.body.classList.toggle("chat-full", on);
+  document.getElementById("chat-full").setAttribute("aria-pressed", String(on));
+  document.getElementById("chat-full").textContent = on ? "Close full screen" : "Full screen";
+  const box = document.getElementById("lines");
+  box.scrollTop = box.scrollHeight;
 }
 
 function startChat() {
@@ -552,8 +615,15 @@ function startChat() {
   document.getElementById("text").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) say(e);
   });
-  look();
-  chat.timer = setInterval(() => { if (!document.hidden) look(); }, CHAT_EVERY);
+  for (const b of document.querySelectorAll(".words [data-word]")) {
+    b.addEventListener("click", () => send(b.dataset.word));
+  }
+  document.getElementById("chat-full").addEventListener("click", () =>
+    fullScreen(!document.body.classList.contains("chat-full")));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.classList.contains("chat-full")) fullScreen(false);
+  });
+  look().then(lookAgain);
 }
 
 document.addEventListener("DOMContentLoaded", () => {

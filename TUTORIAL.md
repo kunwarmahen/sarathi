@@ -313,6 +313,15 @@ Telegram needed. What a schedule sends you waits there as a line marked
 page. When an agent wants a yes, a card with **Yes** and **No** appears
 under the chat.
 
+Give it a job of a few steps and watch: each step shows as a line while
+it runs, then the answer appears as it's written. The buttons under the
+chat ask without typing: **Skills** (what your agent has learned, and
+anything it offers to keep), **Tools** (what it could use on your last
+message), **Schedules**, **Memory**, **New chat**. After a job of four
+steps or more, an agent whose package has skills may offer to keep how
+it was done. Press **Keep** and next time it's one step, for you only.
+On a phone, **Full screen** gives the chat the whole window.
+
 ---
 
 **Changing a setting later.** Everything you chose here, and everything

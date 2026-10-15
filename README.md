@@ -686,6 +686,14 @@ Dvara's token stays in the home page's process, never in the browser.
 The chat is its own conversation: one on Telegram doesn't continue
 there. ([notes/12](notes/12-a-chat-on-the-home-page.md))
 
+It shows the work as it happens, as Yantra's page does: each step as a
+line under the agent's name, then the answer as it is written, drawn as
+formatted text. After a job of several steps it may offer to keep how
+it was done, with **Keep** and **Not now**, saved for you alone. A row
+of buttons sends **Skills**, **Tools**, **Schedules**, **Memory** and
+**New chat** to Dvara as the words they are, and **Full screen** gives a
+phone the whole window. ([notes/18](notes/18-a-chat-that-shows-its-work.md))
+
 **Everyone in the house.** The other people in Dvara's actors file can
 sign in to the same page and get their own chat, as themselves:
 
@@ -792,6 +800,8 @@ src/sarathi/
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07); the
                 chat, passed through to Dvara's web channel as you  (notes/12),
+                showing each step and the answer as it comes, md.js for
+                the answers, skills to keep  (notes/18),
                 or as the person signed in  (notes/14); My accounts and
                 Notices on this phone, for each person  (notes/15);
                 Settings, routes owner-only  (notes/16)
