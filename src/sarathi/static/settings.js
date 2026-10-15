@@ -299,7 +299,7 @@ function agentForm(a) {
     field("Provider", provider), field("Model", model, "Empty: the one Sarathi uses."),
     field("Memory", memory),
     field("Tools it may use", allow, "One per line, e.g. web_fetch, mcp__gmail*, ask_user."),
-    field("Accounts it needs", needs, "One per line, connector:level, e.g. gmail:read."),
+    field("Accounts it needs", needs, "One per line, connector:level, e.g. gmail:read; *:read is every account."),
     field("Most per message (US dollars)", budget),
     field("Asking before changes", mode),
     field("Its instructions (" + a.prompt_file + ")", prompt),

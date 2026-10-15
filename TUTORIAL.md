@@ -522,6 +522,20 @@ name them. Your home works the same way: `needs = ["amazon:read",
 "homeassistant:write"]` lets minder see your lights and switch one, and
 switching asks you on Telegram first.
 
+To let minder read **every** account you connect, now and later, put
+`*:read` there instead of naming each one: `needs = ["*:read",
+"homeassistant:write"]` reads Amazon, X, Gmail, Yahoo and whatever you
+add next, and still switches lights. Without it, an account you didn't
+name isn't minder's. minder is told so, and says so, rather than trying
+your phone instead.
+
+A webmail inbox like Yahoo's opens each message with a script, so
+reading it takes one more line, in Setu's file for the site
+(`~/.local/state/setu/sites/yahoo.toml`): `script_links = true` under
+`[browser]`. With it, minder opens a message the way you would, and
+still never presses a button that deletes, sends or moves one (Yantra's
+note 128).
+
 Then ask *"What were my last three Amazon orders? Just the titles and
 the dates."*
 
