@@ -76,7 +76,8 @@ and writes its own file; a person signed in gets 403:
                                            | {"from_example": NAME}
     POST /api/settings/setu/NAME           {"value"}: `setu config NAME`
     POST /api/settings/text/KIND           {"text", "name"}: a whole file as text
-    POST /api/settings/tool/AGENT          {"person", "skill"}: a learned skill made a tool
+    POST /api/settings/tool/AGENT          {"person", "skill", "remove"?}: a learned skill
+                                           made a tool, or the tool taken back
                                            (sarathi, actors, policy, agent, prompt, site)
     POST /api/settings/phone               {"do": "tcpip"|"connect"|"pair",
                                            "address", "code"}: the phone, reached
@@ -796,6 +797,11 @@ def _handler(server: HomeServer):
                                       {"tables": body.get("tables") or {},
                                        "prompt": body.get("prompt")})
                         said = f"{name} saved. It's used from the next message."
+                elif what == "tool" and body.get("remove"):
+                    gone = editing.unmake_tool(config, name, str(body.get("person") or ""),
+                                               str(body.get("skill") or ""))
+                    said = (f"{gone} is no longer a tool; {body.get('skill')} is a recipe "
+                            "again, its record kept.")
                 elif what == "tool":
                     made = editing.make_tool(config, name, str(body.get("person") or ""),
                                              str(body.get("skill") or ""))

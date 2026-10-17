@@ -350,7 +350,8 @@ in the steps below, can be changed on the home page, under **Settings**:
   people kept* lists what each person's agent learned and how often it
   worked. One with a script has **Make it a tool**: its script runs once
   as a test, and it's kept (for that person only) if the test passes.
-  Then the agent does that job in one step.
+  Then the agent does that job in one step. **Stop using as a tool**
+  takes it back: the skill stays, as steps the agent reads.
 * **Rules**: standing answers for a tool (always allow, always ask,
   never), so you're not asked the same thing twice.
 * **Accounts**: Setu's settings, and the rules of each site you added.

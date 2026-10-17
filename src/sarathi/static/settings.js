@@ -333,11 +333,17 @@ function learnedList(a) {
           save(`/api/settings/tool/${encodeURIComponent(a.name)}`,
                { person: r.person, skill: r.name });
         }, r.suggest ? "open" : "linkish") : null;
+      const undo = r.tool ? button("Stop using as a tool", () => {
+        if (!confirm(`Stop using ${r.tool} as a tool? ${r.name} stays, as written steps ` +
+                     "the agent reads, and keeps its record.")) return;
+        save(`/api/settings/tool/${encodeURIComponent(a.name)}`,
+             { person: r.person, skill: r.name, remove: true });
+      }, "linkish") : null;
       return h("div.learned-row", {},
         h("span", {}, h("b", {}, r.name), ` — ${r.person} · ${how}` +
           (r.tool ? ` · a tool: ${r.tool}` : "") + (r.stale ? " · set aside after failing" : "") +
           (!r.script && !r.tool ? " · written steps, no script" : "")),
-        make);
+        make, undo);
     }));
 }
 

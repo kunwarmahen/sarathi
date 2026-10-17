@@ -99,5 +99,5 @@ comes back out; a person signed in gets none of it.
   (Dvara, its notes/43).
 * ~~**A learned skill made a tool only at Yantra's page.**~~ Under each
   agent, the skills its people kept, and **Make it a tool** for one with
-  a script; the press is the yes for its one test run (Dvara, its
-  notes/46).
+  a script; the press is the yes for its one test run, and **Stop using
+  as a tool** takes it back (Dvara, its notes/46).

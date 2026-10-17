@@ -136,6 +136,14 @@ def make_tool(config: Config, agent: str, person: str, skill: str) -> dict:
                  within=TOOL_WITHIN, model=True).get("tool") or {}
 
 
+def unmake_tool(config: Config, agent: str, person: str, skill: str) -> str:
+    """The tool taken back; the skill stays a recipe."""
+    if not person or not skill:
+        raise EditError(400, "say whose skill, and which")
+    return dvara(config, ["tool", agent, "--person", person, "--skill", skill,
+                          "--remove"]).get("untool") or skill
+
+
 def dvara_examples(config: Config) -> str | None:
     from sarathi.door import dvara_examples as find_examples
     from sarathi.siblings import SIBLINGS, find

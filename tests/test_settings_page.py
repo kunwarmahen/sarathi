@@ -97,6 +97,14 @@ def test_a_skill_made_a_tool_asks_dvara_with_this_houses_model(owner_page):
                                              "priya", "--skill", "greet-someone"]
 
 
+def test_a_tool_taken_back_is_asked_of_dvara_with_remove(owner_page):
+    status, got = send(owner_page, "/api/settings/tool/helper",
+                       {"person": "priya", "skill": "greet-someone", "remove": True})
+    assert status == 200 and "a recipe again" in got["said"]
+    argv = heard(owner_page)[-1]["argv"]
+    assert argv[-1] == "--remove" and "--provider" not in argv     # no model asked
+
+
 def test_a_tool_needs_whose_and_which(owner_page):
     status, got = send(owner_page, "/api/settings/tool/helper", {"person": "priya"})
     assert status == 400 and "whose skill" in got["detail"]
