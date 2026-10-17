@@ -34,6 +34,11 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   **New chat**. Each sends the word to Dvara (`/skills`, `/tools`,
   `/schedules`, `/memory`, `/new`), exactly as typing it would, so it
   answers the same here, on Telegram and over HTTP.
+* **A sign-in you tap.** When an answer tells you to send
+  `/connect gmail` or `/unlock`, the word is a button under it
+  (**Connect gmail**); pressing it sends the word, as typing it would.
+  Only those words, and only where the answer says them (Dvara, its
+  notes/20).
 * **Full screen.** A button above the chat gives it the whole window,
   which is what a phone wants; Escape or the button closes it.
 

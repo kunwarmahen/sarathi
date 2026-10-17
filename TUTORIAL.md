@@ -580,7 +580,9 @@ you gave the bot:
    allowed comes to you here as a Yes/No and waits 30 minutes; it never
    just fails quietly. A run that was refused something says so, with
    how to allow it next time.
-3. **Gmail, connected from the chat.** Send `/connect gmail`. Open the
+3. **Gmail, connected from the chat.** Send `/connect gmail` (or, if
+   you asked about mail first, press the **Connect gmail** button under
+   the answer: it sends the same word). Open the
    link on your phone, sign in to Google and allow it. Your phone then
    tries to open a page at `http://127.0.0.1:…` and **fails to load it.
    That's expected**: copy that page's whole address (it contains

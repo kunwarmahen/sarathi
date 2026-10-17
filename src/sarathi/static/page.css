@@ -331,6 +331,7 @@ h3.sub { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
 }
 .offer .what { font-size: 13px; }
 .offer .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.buttons.taps { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .words { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px 0; }
 .words button, button.quiet {
   font: inherit; font-size: 13px; color: var(--ink-2); background: var(--sheet);

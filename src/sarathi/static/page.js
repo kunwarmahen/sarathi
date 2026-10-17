@@ -462,6 +462,22 @@ function offerView(offer) {
     buttons(keep("keep"), keep("drop"), "Keep", "Not now"));
 }
 
+// A sign-in word the answer told you to send (Dvara's accounts.taps): the
+// button sends that word as if you'd typed it, to the agent that said it.
+function tapsView(ln) {
+  return h("div.buttons.taps", {}, ln.taps.map((t) => {
+    const b = h("button.yes", { type: "button" }, t.label);
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { await api("/api/chat", { agent: ln.agent, text: t.word }); problem(""); }
+      catch (err) { problem(err.message); b.disabled = false; }
+      chat.busy = true;
+      look();
+    });
+    return b;
+  }));
+}
+
 function lineView(ln) {
   const failed = ln.who === "agent" && ln.stop_reason
     && !["held", "skills", "seen", "memory", "new", "files", "accounts"].includes(ln.stop_reason);
@@ -472,6 +488,7 @@ function lineView(ln) {
     h("span.tag", {}, `${label} · ${when(ln.at)}`),
     bubble(ln.text, ln.who),
     ln.offer ? offerView(ln.offer) : null,
+    ln.taps ? tapsView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
     (ln.files || []).map((name, n) => {
