@@ -868,8 +868,8 @@ against the emulator and a real Nexus 6P on Android 8.1, a schedule's
 locked phone asked about on Telegram and worked once unlocked
 ([notes/10](notes/10-a-real-phone.md)). An iPhone is given out the same
 way, through its WebDriverAgent, and read from inside a container on a
-real iPhone 17 ([notes/19](notes/19-an-iphone-too.md)); a task through
-Dvara on it is not yet run. Smritikosh is set up by one
+real iPhone 17, where a task asked of Yantra and the same from Telegram
+through Dvara both worked ([notes/19](notes/19-an-iphone-too.md)). Smritikosh is set up by one
 command and switched on and off from it or the home page, with an
 account of its own for each person behind Dvara, Neo4j, MongoDB and Redis
 with `--full`, and its own dashboard built and started beside it; run on

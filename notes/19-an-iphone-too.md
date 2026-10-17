@@ -105,10 +105,13 @@ it doesn't.
 
 ## What is not here yet
 
-* An agent's task on the iPhone through Dvara on Telegram, and a
-  schedule on it. An iPhone says only whether it's locked; Dvara's
-  checks before a scheduled step take that as the answer (Dvara's
-  notes/33).
+* ~~An agent's task on the iPhone through Dvara on Telegram.~~ Run:
+  `sarathi phone iphone` on the real sarathi.toml, the image rebuilt,
+  `sarathi up`; a task asked of Yantra in its container and the same
+  from Telegram both worked, with qwen3.8-64k:latest on Ollama.
+* A schedule on the iPhone. An iPhone says only whether it's locked;
+  Dvara's checks before a scheduled step take that as the answer
+  (Dvara's notes/33).
 * WebDriverAgent started by `up`. Its tunnel needs root, so it stays
   Sparsh's script, in a terminal.
 * `[phone] awake` on an iPhone. Sparsh can't change an iPhone's
