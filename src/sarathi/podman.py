@@ -659,8 +659,11 @@ def units(config: Config) -> dict[str, str]:
                                f"{DOOR_PORT}\n"
                                # a schedule made on Yantra's page is told to you
                                f"Environment=SAMAY_DVARA_ACTOR={config.door.owner}\n"
-                               if config.door else "") + memory_env,
-            more_volumes=memory_dirs or None)
+                               if config.door else "") + memory_env
+                            # one made there that works the phone gets it, after
+                            # Dvara's check: the phone's address, your rules
+                            + phone_env(config),
+            more_volumes=(memory_dirs + phone_dirs(config)) or None)
         page_exec += f"--samay {IN_IMAGE}/samay"
         page_unit = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"
     else:

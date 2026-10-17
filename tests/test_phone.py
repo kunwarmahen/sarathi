@@ -349,3 +349,24 @@ def test_status_asks_sparsh_about_the_iphone_sarathi_gives_out(world, settings):
     (world / "config" / "sarathi.toml").write_text(render(Config("ollama", phone=IPHONE)))
     iphone_sparsh(world)
     assert "http://127.0.0.1:8100 (iPhone) ready" in _said()["sparsh"]
+
+
+def test_samay_gets_the_phone_too_so_a_schedule_made_on_yantras_page_can_work_it(host):
+    # Made on Yantra's page, a phone schedule ran in Samay's container with
+    # no phone and read the battery from Home Assistant instead.
+    units = podman.units(podman_config(phone=IPHONE, door=Door()))
+    samay = units["sarathi-samay.container"]
+    assert "Environment=SPARSH_WDA=http://host.containers.internal:8100\n" in samay
+    assert f"Volume={host / '.sparsh'}:{host / '.sparsh'}:z" in samay
+    assert "SPARSH" not in podman.units(podman_config(door=Door()))["sarathi-samay.container"]
+
+
+def test_on_the_process_road_samays_yantra_is_handed_sparsh(world, monkeypatch):
+    import shlex
+
+    found = {s.name: Found(s, program=f"/bin/{s.program}") for s in SIBLINGS}
+    config = Config("ollama", phone=IPHONE, pages=Pages(on=False))
+    planned, _ = services.plan(config, found)
+    samay = next(s for s in planned if s.name == "samay")
+    assert samay.env["SPARSH_WDA"] == WDA
+    assert "--sparsh" in shlex.split(samay.env["SAMAY_YANTRA"])

@@ -890,10 +890,10 @@ an Android if you had one.
      time. The text arrives on your own phone, and `sparsh log` (in
      Sparsh's folder) lists the send with your yes.
 
-   * **A schedule.** Ask this one **on Telegram** (or the home page
-     chat), not on Yantra's page or with `podman exec … yantra`: a
-     schedule runs later with nobody watching, and only Dvara gives such a
-     run the phone (asked of Yantra, Samay says so and doesn't save it). *"Every morning
+   * **A schedule.** Ask this one on Telegram, the home page chat, or
+     Yantra's page. A schedule runs later with nobody watching, so it gets
+     the phone only because you can still be asked: Dvara checks the phone
+     is free first, and asks you in your chat to unlock it if it's locked. *"Every morning
      at 8, open Settings on my iPhone and tell me what the Battery row
      says."* Accept the card the bot sends.
      Then run it now instead of waiting for 8 (the id is in the bot's

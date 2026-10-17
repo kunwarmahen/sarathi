@@ -219,12 +219,19 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         run_yantra += ["--mcp-config", str(memory_files(config)[0])]
     if clock_on:
         # a schedule made at this computer runs as you, so it remembers as
-        # Yantra's page does: your Smritikosh account, with your key
+        # Yantra's page does: your Smritikosh account, with your key. And
+        # one made there that works the phone gets it (after Dvara's check):
+        # the phone's settings, and the Sparsh the page was handed.
+        run_scheduled = list(run_yantra)
+        if config.phone is not None and found.get("sparsh") is not None \
+                and found["sparsh"].program is not None:
+            run_scheduled += ["--sparsh", f"auto:{found['sparsh'].program}"]
         services.append(Service(
             "samay", "samay", [samay.program, "serve", "--port", str(config.clock_port)],
             config.clock_port,
-            {**env, "SAMAY_YANTRA": shlex.join(run_yantra),
-             "SAMAY_YANTRA_HOME": str(work_dir()), **meet, **memory_env},
+            {**env, "SAMAY_YANTRA": shlex.join(run_scheduled),
+             "SAMAY_YANTRA_HOME": str(work_dir()), **meet, **memory_env,
+             **phone_env(config)},
             says_address="page: "))
     if door is not None:
         services.append(door)
