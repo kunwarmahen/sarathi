@@ -501,6 +501,7 @@ would otherwise start again at your next login. It starts nothing new;
 | after `git pull` in a checkout | nothing: it runs the checkout | `sarathi image` again, then `sarathi up` |
 | Amazon and X | your own Chrome | Chrome in the image |
 | connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
+| voice notes heard | your ffmpeg (`sudo apt install ffmpeg`) and an Ollama model listing "audio" | ffmpeg in the image; the model in your Ollama |
 | Dvara's streamed window | listens on `window_host` itself | published from Dvara's container |
 | Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |
 | Setu's page for people's phones | `setu serve --also-host <window_host>` | published on `window_host` too; only the people's folders mounted |
@@ -542,8 +543,9 @@ What goes into the containers:
 * **A browser, and the wall around a connector.** Google Chrome at
   `/usr/bin/google-chrome`, where a desktop has it, so the Amazon and X
   profiles Setu already recorded open with the browser that wrote them;
-  Xvfb for a site that wants a real window; and bubblewrap, so Setu's
-  connectors are walled off here as on your desktop. Chrome refuses a
+  Xvfb for a site that wants a real window; bubblewrap, so Setu's
+  connectors are walled off here as on your desktop; and ffmpeg, so a
+  voice note can be heard. Chrome refuses a
   profile a newer Chrome wrote, so `up` says when your computer's Chrome
   has got ahead of the image's (`sarathi image` catches up: it tells the
   build which Chrome is here, so that step isn't taken from the cache;
@@ -693,7 +695,9 @@ it was done, with **Keep** and **Not now**, saved for you alone. A row
 of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory**, **Phone** (its
 screen and last steps, for the phone's person),
 **New chat** and **Past chats** to Dvara as the words they are, and **Full screen** gives a
-phone the whole window. The paperclip beside **Send** adds pictures or
+phone the whole window. 🎤 records a voice note (on this computer, or a
+page served over https), heard into words by a local model that can
+hear, and shown back as *I heard: "…"*. The paperclip beside **Send** adds pictures or
 files to your next message (up to 20 MB together): Dvara keeps them in
 your folder with that agent, and shows a picture to a model that can
 see. When an answer tells you to send `/connect gmail`, it's a button

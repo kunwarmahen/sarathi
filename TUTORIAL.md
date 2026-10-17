@@ -335,6 +335,15 @@ that can see (most new local ones can; `ollama show MODEL` lists
 "vision"). Otherwise the agent says it can't look. On Telegram, just send
 the photo or file to the bot, with your question as its caption.
 
+Voice notes work too: on Telegram, hold the microphone and talk; on the
+home page, press 🎤, talk, press it again, then **Send**. A local model
+that can hear turns it into words first (Dvara picks the smallest one in
+Ollama that lists "audio", such as `gemma4:e4b`; `ollama pull gemma4:e4b`
+if you have none). The answer starts with *I heard: "…"*, so you can see
+if a name was misheard. Your phone's browser can't record from the home
+page over plain `http://` (browsers allow the microphone only on this
+computer or over https); Telegram has no such limit.
+
 ---
 
 **Changing a setting later.** Everything you chose here, and everything

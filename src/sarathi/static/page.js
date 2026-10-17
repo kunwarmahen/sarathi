@@ -525,6 +525,7 @@ function lineView(ln) {
     ln.text ? bubble(ln.transcript ? ln.text.split("\n")[0] : ln.text, ln.who) : null,
     ln.sent ? h("div.sent", {}, `📎 ${ln.sent.join(", ")}`) : null,
     ln.offer ? offerView(ln.offer) : null,
+    ln.heard ? h("div.heard", {}, `I heard: "${ln.heard}"`) : null,
     ln.taps ? tapsView(ln) : null,
     ln.transcript ? transcriptView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
@@ -643,6 +644,42 @@ function drawChosen() {
   }));
 }
 
+// A voice note: tap to record, tap again to stop; it joins the files for
+// the next message, and Dvara turns it into words (its heard.py).
+let recorder = null;
+
+async function recordToggle() {
+  const button = document.getElementById("record");
+  if (recorder) { recorder.stop(); return; }
+  if (!navigator.mediaDevices || typeof MediaRecorder === "undefined") {
+    problem("This browser can't record here (a page on http:// that isn't this " +
+            "computer can't use the microphone).");
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    problem(`The microphone wasn't allowed: ${err.message}`);
+    return;
+  }
+  const parts = [];
+  recorder = new MediaRecorder(stream);
+  recorder.addEventListener("dataavailable", (e) => parts.push(e.data));
+  recorder.addEventListener("stop", () => {
+    stream.getTracks().forEach((t) => t.stop());
+    const type = recorder.mimeType || "audio/webm";
+    const ext = type.includes("ogg") ? "ogg" : type.includes("mp4") ? "m4a" : "webm";
+    chosen.push(new File(parts, `voice-note.${ext}`, { type }));
+    recorder = null;
+    button.setAttribute("aria-pressed", "false");
+    drawChosen();
+  });
+  recorder.start();
+  button.setAttribute("aria-pressed", "true");
+  problem("");
+}
+
 function asBase64(file) {
   return new Promise((ok, fail) => {
     const reader = new FileReader();
@@ -701,6 +738,7 @@ function startChat() {
   chat.on = true;
   document.getElementById("chat").hidden = false;
   document.getElementById("say").addEventListener("submit", say);
+  document.getElementById("record").addEventListener("click", recordToggle);
   document.getElementById("files").addEventListener("change", (event) => {
     chosen.push(...event.target.files);
     event.target.value = "";

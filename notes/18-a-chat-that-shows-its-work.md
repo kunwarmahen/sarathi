@@ -46,6 +46,10 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   your next message, shown as chips you can take off. They go to Dvara
   with your words (in base64; this page passes them on, up to 20 MB
   together, and checks nothing about them).
+* **A voice note.** 🎤 records one (MediaRecorder), added like a file.
+  Dvara hears it into words and the answer shows *I heard: "…"*. A
+  browser allows the microphone only on this computer or over https, so
+  a phone on the house address uses Telegram for it.
 * **Full screen.** A button above the chat gives it the whole window,
   which is what a phone wants; Escape or the button closes it.
 
