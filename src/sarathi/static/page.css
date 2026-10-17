@@ -220,10 +220,19 @@ button.open:disabled { opacity: .55; cursor: progress; }
   border-radius: 8px; padding: 6px 8px; min-width: 0;
 }
 .say textarea { resize: vertical; }
+.say { grid-template-columns: auto 1fr auto auto; }
+.attach { cursor: pointer; font-size: 20px; padding: 4px 6px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--paper); line-height: 1.2; }
+.attached { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+.attached .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px 2px 10px;
+  background: var(--paper); display: inline-flex; align-items: center; gap: 4px; }
+.attached .chip button { font: inherit; border: 0; background: none; cursor: pointer;
+  color: var(--ink-3); padding: 0 4px; }
+.sent { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
 .send:disabled { opacity: .5; cursor: default; }
 #chat-problem { padding: 0 16px 12px; }
 @media (max-width: 560px) {
-  .say { grid-template-columns: 1fr auto; }
+  .say { grid-template-columns: 1fr auto auto; }
   .say select { grid-column: 1 / -1; }
   .line { max-width: 100%; }
 }

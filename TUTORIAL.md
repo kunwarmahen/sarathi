@@ -322,6 +322,14 @@ steps or more, an agent whose package has skills may offer to keep how
 it was done. Press **Keep** and next time it's one step, for you only.
 On a phone, **Full screen** gives the chat the whole window.
 
+To show it something, press the paperclip beside **Send** and pick a
+photo or a file (a receipt, a letter from school), then ask about it.
+It's kept in your folder with that agent, under `from-you/`, and the
+agent can read it again later. A picture is looked at only by a model
+that can see (most new local ones can; `ollama show MODEL` lists
+"vision"). Otherwise the agent says it can't look. On Telegram, just send
+the photo or file to the bot, with your question as its caption.
+
 ---
 
 **Changing a setting later.** Everything you chose here, and everything

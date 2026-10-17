@@ -486,7 +486,8 @@ function lineView(ln) {
     : (ln.agent || "Agent");
   return h(`div.line.${ln.who}${failed ? ".failed" : ""}`, {},
     h("span.tag", {}, `${label} · ${when(ln.at)}`),
-    bubble(ln.text, ln.who),
+    ln.text ? bubble(ln.text, ln.who) : null,
+    ln.sent ? h("div.sent", {}, `📎 ${ln.sent.join(", ")}`) : null,
     ln.offer ? offerView(ln.offer) : null,
     ln.taps ? tapsView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
@@ -589,14 +590,47 @@ function lookAgain() {
   }, chat.busy ? CHAT_BUSY_EVERY : CHAT_EVERY);
 }
 
+// Files chosen with the paperclip, sent with the next message (Dvara keeps
+// them in your folder with that agent, under from-you/).
+const chosen = [];
+const SEND_AT_MOST = 20 * 1024 * 1024;
+
+function drawChosen() {
+  const box = document.getElementById("attached");
+  box.hidden = !chosen.length;
+  box.replaceChildren(...chosen.map((f, i) => {
+    const x = h("button", { type: "button", "aria-label": `Remove ${f.name}` }, "×");
+    x.addEventListener("click", () => { chosen.splice(i, 1); drawChosen(); });
+    return h("span.chip", {}, f.name, x);
+  }));
+}
+
+function asBase64(file) {
+  return new Promise((ok, fail) => {
+    const reader = new FileReader();
+    reader.onload = () => ok(String(reader.result).split(",", 2)[1] || "");
+    reader.onerror = () => fail(new Error(`couldn't read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function send(text) {
   const agent = document.getElementById("agent").value;
-  if (!text.trim() || !agent || chat.sending) return false;
+  if ((!text.trim() && !chosen.length) || !agent || chat.sending) return false;
+  const total = chosen.reduce((n, f) => n + f.size, 0);
+  if (total > SEND_AT_MOST) {
+    problem("Those files are over 20 MB together; send fewer at once.");
+    return false;
+  }
   chat.sending = true;
   const button = document.querySelector("#say .send");
   button.disabled = true;
   try {
-    await api("/api/chat", { agent, text });
+    const files = await Promise.all(chosen.map(async (f) => ({ name: f.name,
+                                                               data: await asBase64(f) })));
+    await api("/api/chat", files.length ? { agent, text, files } : { agent, text });
+    chosen.length = 0;
+    drawChosen();
     problem("");
     chat.busy = true;
     return true;
@@ -629,6 +663,11 @@ function startChat() {
   chat.on = true;
   document.getElementById("chat").hidden = false;
   document.getElementById("say").addEventListener("submit", say);
+  document.getElementById("files").addEventListener("change", (event) => {
+    chosen.push(...event.target.files);
+    event.target.value = "";
+    drawChosen();
+  });
   document.getElementById("text").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) say(e);
   });

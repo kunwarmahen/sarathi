@@ -39,6 +39,10 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   (**Connect gmail**); pressing it sends the word, as typing it would.
   Only those words, and only where the answer says them (Dvara, its
   notes/20).
+* **Pictures and files.** The paperclip beside **Send** adds them to
+  your next message, shown as chips you can take off. They go to Dvara
+  with your words (in base64; this page passes them on, up to 20 MB
+  together, and checks nothing about them).
 * **Full screen.** A button above the chat gives it the whole window,
   which is what a phone wants; Escape or the button closes it.
 
@@ -72,4 +76,6 @@ the agent picker, and the box to write in.
 
 * **Past conversations.** One per channel, and **New chat**, as Dvara
   has it.
-* **Sending a file from the page.**
+* ~~**Sending a file from the page.**~~ The paperclip beside **Send**:
+  pictures and files go with your next message, kept in your folder,
+  a picture shown to a model that can see (Dvara, its notes/44).

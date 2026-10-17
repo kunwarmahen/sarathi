@@ -42,7 +42,7 @@ doesn't continue here. Dvara's token stays in this process and never
 reaches the browser, the way Dvara's own page keeps it:
 
     GET  /api/chat?after=N        your lines since N, agents, questions
-    POST /api/chat                {"agent", "text"}
+    POST /api/chat                {"agent", "text", "files"?: [{"name", "data"}]}
     POST /api/chat/asks/ID        {"approve": true|false}
     POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}}
     GET  /api/chat/file?line=&n=  a file an answer carried
@@ -136,6 +136,9 @@ TOKEN_FILE = "home.token"
 STATUS_EVERY = 30.0
 #: The longest chat message passed on, in bytes.
 MAX_BODY = 256 * 1024     # a whole settings file, or an agent's prompt
+#: A chat message with files in it (base64: a third bigger than the files;
+#: Dvara keeps up to 20 MB of them, its attached.py).
+CHAT_BODY = 28 * 1024 * 1024
 
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/index.html": ("index.html", "text/html; charset=utf-8"),
@@ -538,11 +541,13 @@ def _handler(server: HomeServer):
                 return None
             return who
 
-        def _body(self) -> dict | None:
+        def _body(self, limit: int = MAX_BODY) -> dict | None:
             try:
                 size = int(self.headers.get("Content-Length") or 0)
-                if size > MAX_BODY:
-                    self._json(413, {"detail": "that message is too long"})
+                if size > limit:
+                    self._json(413, {"detail": "that message is too long"
+                                     if limit == MAX_BODY else
+                                     "those files are too big to send at once"})
                     return None
                 body = json.loads(self.rfile.read(size) or b"{}")
             except ValueError:
@@ -854,13 +859,15 @@ def _handler(server: HomeServer):
             who = self._who()
             if who is None:
                 return None
-            body = self._body()
+            body = self._body(CHAT_BODY if len(parts) == 2 else MAX_BODY)
             if body is None:
                 return None
             # only what Dvara's web channel takes, and never who: that's set here
             if len(parts) == 2:
-                return self._chat(who, "POST", "/web/message", {
-                    "agent": body.get("agent"), "text": body.get("text")})
+                said = {"agent": body.get("agent"), "text": body.get("text")}
+                if body.get("files"):
+                    said["files"] = body.get("files")    # Dvara checks them
+                return self._chat(who, "POST", "/web/message", said)
             if parts[2] == "asks":
                 return self._chat(who, "POST",
                                   f"/web/asks/{urllib.parse.quote(parts[3])}",

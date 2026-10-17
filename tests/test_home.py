@@ -293,6 +293,14 @@ def test_a_message_goes_to_dvara_as_the_owner_whoever_the_browser_says(chatting,
     assert body == {"agent": "greeter", "text": "hi", "actor": "mahen"}
 
 
+def test_files_go_to_dvara_with_the_message_and_dvara_checks_them(chatting, door):
+    files = [{"name": "receipt.png", "data": "aGVsbG8="}]
+    status, _ = send(chatting, "/api/chat", {"agent": "greeter", "text": "", "files": files})
+    assert status == 200
+    assert door.heard[-1][2] == {"agent": "greeter", "text": "", "files": files,
+                                 "actor": "mahen"}
+
+
 def test_the_chat_reads_the_owners_lines_with_the_doors_token(chatting, door):
     seen = ask(chatting, "/api/chat?after=0").json()
     assert seen["lines"][0]["text"] == "2 new mails"

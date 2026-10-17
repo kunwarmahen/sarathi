@@ -692,7 +692,11 @@ formatted text. After a job of several steps it may offer to keep how
 it was done, with **Keep** and **Not now**, saved for you alone. A row
 of buttons sends **Skills**, **Tools**, **Schedules**, **Memory** and
 **New chat** to Dvara as the words they are, and **Full screen** gives a
-phone the whole window. ([notes/18](notes/18-a-chat-that-shows-its-work.md))
+phone the whole window. The paperclip beside **Send** adds pictures or
+files to your next message (up to 20 MB together): Dvara keeps them in
+your folder with that agent, and shows a picture to a model that can
+see. When an answer tells you to send `/connect gmail`, it's a button
+under the answer. ([notes/18](notes/18-a-chat-that-shows-its-work.md))
 
 **Everyone in the house.** The other people in Dvara's actors file can
 sign in to the same page and get their own chat, as themselves:

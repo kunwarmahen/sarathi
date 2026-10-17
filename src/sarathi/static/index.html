@@ -67,7 +67,10 @@
         <select id="agent"></select>
         <label class="sr" for="text">Message</label>
         <textarea id="text" rows="2" placeholder="Write to your agent. Enter sends; Shift+Enter for a new line."></textarea>
+        <label class="attach" title="Add a picture or file">📎<span class="sr">Add a picture or file</span>
+          <input type="file" id="files" multiple hidden></label>
         <button type="submit" class="send">Send</button>
+        <div id="attached" class="attached" hidden></div>
       </form>
       <div id="chat-problem" class="warn" hidden></div>
     </div>
