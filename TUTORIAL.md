@@ -861,6 +861,45 @@ an Android if you had one.
    locked iPhone is said as locked. To go back to the Android:
    `sarathi phone tcpip` (or its address), then `sarathi up`.
 
+4. **Try these on your iPhone.** Asking a question has been run on a
+   real iPhone; these four haven't yet, so tell us what you see. Send
+   each to your bot on Telegram (or ask Yantra with `podman exec
+   sarathi-yantra yantra --prompt "…"`), with the iPhone unlocked.
+
+   * **Typing.** *"On my iPhone, open Notes, start a new note and type:
+     Milk, eggs, bread."* A new note with those words appears in Notes.
+     Typing goes to whatever field has the keyboard, so the helper taps
+     the note first.
+
+   * **Scrolling a long list.** *"On my iPhone, open Settings and tell
+     me the last item at the very bottom of the list."* Settings is
+     longer than one screen, so the helper scrolls until the list stops
+     moving, then answers with the bottom row's name. Scroll to the bottom
+     yourself to check it.
+
+   * **Saying yes to a held step.** *"Text <your own number> from my
+     iPhone: hello from the agent."* The helper writes the message, then
+     stops before Send: you get the iPhone's screen with Send ringed in
+     red and **approve** / **refuse** under it. Press **approve** this
+     time. The text arrives on your own phone, and `sparsh log` (in
+     Sparsh's folder) lists the send with your yes.
+
+   * **A schedule.** *"Every morning at 8, open Settings on my iPhone and
+     tell me what the Battery row says."* Accept the card the bot sends.
+     Then run it now instead of waiting for 8 (the id is in the bot's
+     answer, or in `podman exec sarathi-samay samay list`):
+
+     ```bash
+     podman exec sarathi-samay samay run-now <id>
+     ```
+
+     The answer comes to your chat. To see the locked-phone question,
+     lock the iPhone with its side button first, then run it again: the
+     bot asks you to unlock it, and the run goes once you do. An iPhone
+     only says *locked* (it can't be woken or swiped from here), so a
+     locked iPhone is always asked about. `podman exec sarathi-samay
+     samay rm <id>` when you're done, or it runs every morning.
+
 ---
 
 ## Step 7 (optional) · A memory that finds things by meaning
