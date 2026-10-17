@@ -281,6 +281,14 @@ button.open:disabled { opacity: .55; cursor: progress; }
 #settings textarea.file { font-family: var(--mono); font-size: 12px; line-height: 1.45; }
 label.inline { font-size: 14px; display: flex; gap: 6px; align-items: center; }
 .checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.tools { display: grid; gap: 10px; margin: 6px 0; }
+.toolgroup { display: grid; gap: 4px; }
+.toolgroup > .label { font-size: 12px; color: var(--ink-3); text-transform: uppercase;
+  letter-spacing: .04em; }
+label.tool { font-size: 14px; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px;
+  align-items: baseline; }
+label.tool .hint { grid-column: 2; }
+.asks { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
 .card.form { gap: 10px; }
 .astext summary, details.card summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
 .astext { display: grid; gap: 6px; }

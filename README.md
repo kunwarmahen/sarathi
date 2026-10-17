@@ -726,7 +726,9 @@ links and sessions only as hashes, in `~/.local/share/sarathi/people.json`.
 every file you'd otherwise edit by hand, in six tabs: **People** (Dvara's
 actors file: who, which agents, accounts, allowance, Telegram ids, and
 anyone who messaged the bot unlisted), **Agents** (each agent's model,
-memory, tools, accounts, budget and instructions; add from an example),
+memory, tools as checkboxes in plain words, each marked *asks you first*
+or *runs unasked*, accounts, budget and instructions; add from an
+example),
 **Rules** (Dvara's standing answers), **Accounts** (Setu's settings and
 each added site's rules), **Sarathi** (this file: the model, Dvara and
 its bot, the house address, ntfy, road, ports, and your phone, with

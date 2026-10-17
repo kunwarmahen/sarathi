@@ -275,7 +275,7 @@ function agentForm(a) {
   const model = text(t.model?.model || "", { placeholder: "Sarathi's model" });
   const memory = pick([["", "Doesn't remember people"], ["local", "Remembers each person"]],
                       t.memory?.via && t.memory.via !== "off" ? "local" : "");
-  const allow = lines(t.tools?.allow);
+  const picker = toolPicker(a);
   const needs = lines(t.connections?.needs);
   const budget = text(t.budget?.max_usd_per_turn ?? "", { inputmode: "decimal",
                                                          placeholder: "no limit" });
@@ -283,28 +283,72 @@ function agentForm(a) {
                      ["ask", RUNGS.ask], ["yolo", RUNGS.yolo]], t.permissions?.mode || "");
   const prompt = h("textarea", { rows: "8" });
   prompt.value = a.prompt || "";
-  const go = button("Save", () => save(`/api/settings/agent/${encodeURIComponent(a.name)}`, {
+  const go = button("Save", () => {
+    const allow = picker.allow();
+    if (allow && !allow.length) {
+      return said("Tick at least one tool, or \"Every tool it has\".", true);
+    }
+    save(`/api/settings/agent/${encodeURIComponent(a.name)}`, {
     tables: {
       agent: { description: desc.value.trim() || null },
       model: { provider: provider.value || null, model: model.value.trim() || null },
       memory: { via: memory.value || null },
-      tools: { allow: listOf(allow).length ? listOf(allow) : null },
+      tools: { allow },
       connections: { needs: listOf(needs).length ? listOf(needs) : null },
       budget: { max_usd_per_turn: numOr(budget) },
       permissions: { mode: mode.value || null },
     },
-    prompt: prompt.value }));
+    prompt: prompt.value });
+  });
   return h("article.card.form", {}, h("h3", {}, a.name),
     field("What it does", desc),
     field("Provider", provider), field("Model", model, "Empty: the one Sarathi uses."),
     field("Memory", memory),
-    field("Tools it may use", allow, "One per line, e.g. web_fetch, mcp__gmail*, ask_user."),
+    picker.el,
     field("Accounts it needs", needs, "One per line, connector:level, e.g. gmail:read; *:read is every account."),
     field("Most per message (US dollars)", budget),
     field("Asking before changes", mode),
     field("Its instructions (" + a.prompt_file + ")", prompt),
     row(go, button("Cancel", () => { sets.editing = null; drawTabs(); }, "linkish")),
     asText("agent", a.name, a.text, a.path));
+}
+
+// The boxes come from Dvara (its toolbox.py): Yantra's own tools, Dvara's,
+// and the families Samay and Sparsh bring, each saying whether it asks.
+// What no box stands for stays as written, under Advanced.
+function toolPicker(a) {
+  const rows = sets.data.dvara.toolbox || [];
+  const has = a.tools || { every: true, ticked: [], advanced: [], seen: [] };
+  const every = check(has.every);
+  const boxes = [];
+  const groups = new Map();
+  for (const r of rows) {
+    const c = check(has.every || has.ticked.includes(r.name));
+    c.dataset.tool = r.name;
+    boxes.push(c);
+    const members = (r.members || []).map((m) => m.name.split("__").pop());
+    const line = h("label.tool", { title: r.name }, c,
+      h("span", {}, r.said, " ",
+        h("span.asks", {}, r.asks ? "asks you first" : "runs unasked")),
+      members.length ? h("div.hint", {}, members.join(", ")) : null);
+    if (!groups.has(r.group)) groups.set(r.group, []);
+    groups.get(r.group).push(line);
+  }
+  const advanced = lines(has.advanced);
+  const list = h("div.tools", {}, ...[...groups].map(([g, kids]) =>
+    h("div.toolgroup", {}, h("div.label", {}, g), ...kids)));
+  const sync = () => { list.hidden = every.checked; };
+  every.addEventListener("change", sync);
+  sync();
+  const el = h("div.field", {}, h("span.label", {}, "Tools it may use"),
+    h("label.inline", {}, every, " Every tool it has (no list)"), list,
+    h("details", {}, h("summary", {}, "Advanced: other names"),
+      advanced, h("div.hint", {}, "One per line, for tools no box stands for, e.g. " +
+                  "amazon_*. Accounts come with \"Accounts it needs\" below, not here.")),
+    h("div.hint", {}, "\"Asks you first\" is a question on the person's chat unless a " +
+      "standing answer on the Rules tab says otherwise."));
+  return { el, allow: () => every.checked ? null
+    : [...boxes.filter((c) => c.checked).map((c) => c.dataset.tool), ...listOf(advanced)] };
 }
 
 // ---- Rules -------------------------------------------------------------------------

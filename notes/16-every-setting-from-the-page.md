@@ -92,3 +92,8 @@ comes back out; a person signed in gets none of it.
   a restarted phone's Wi-Fi back on. **Your phone** on the Sarathi tab
   now does that from the USB cable, and connects or pairs, each step
   Sparsh's own ([note 17](17-the-phone-from-the-page.md)).
+* ~~**An agent's tools are a text box.**~~ They're checkboxes now, from
+  Dvara's list of every tool an agent could have, each in plain words and
+  marked *asks you first* or *runs unasked*; names no box stands for wait
+  under **Advanced**, and no box ticked is refused before it's sent
+  (Dvara, its notes/43).

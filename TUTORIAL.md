@@ -330,7 +330,11 @@ in the steps below, can be changed on the home page, under **Settings**:
 * **People**: who may use your agents, which ones, their daily
   allowance, their accounts, their Telegram id.
 * **Agents**: each agent's model, tools, memory, accounts and
-  instructions. Add one from an example, or remove one.
+  instructions. Add one from an example, or remove one. Tools are
+  checkboxes: each says what it does and whether it *asks you first* or
+  *runs unasked* (open a page in its own browser, remember things about
+  you, your schedules, your phone...). Names no box stands for, like
+  `amazon_*`, wait under **Advanced**.
 * **Rules**: standing answers for a tool (always allow, always ask,
   never), so you're not asked the same thing twice.
 * **Accounts**: Setu's settings, and the rules of each site you added.
@@ -748,8 +752,8 @@ a USB cable, so they reach the phone over your Wi-Fi.
    marked `phone = true` yet"* (in **Settings → People**, **Change** on
    yourself, tick *Their agents may work the phone*), or *"minder, the
    agent on Telegram, can't use the phone: its [tools] … leaves out
-   "mcp__sparsh__*""* (in **Settings → Agents**, add `mcp__sparsh__*` to
-   minder's *Tools it may use*). The restart matters: before it, the containers
+   "mcp__sparsh__*""* (in **Settings → Agents**, **Change** on
+   minder, tick *Your phone (Sparsh)* under *Tools it may use*). The restart matters: before it, the containers
    don't have this computer's key, and the phone asks *"Allow USB
    debugging?"* for a key you don't know. Say no to that one.
 
