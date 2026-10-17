@@ -891,9 +891,9 @@ an Android if you had one.
      Sparsh's folder) lists the send with your yes.
 
    * **A schedule.** Ask this one **on Telegram** (or the home page
-     chat), not with `podman exec … yantra`: a schedule runs later with
-     nobody watching, and only Dvara gives such a run the phone (asked of
-     Yantra directly, Samay says so and doesn't save it). *"Every morning
+     chat), not on Yantra's page or with `podman exec … yantra`: a
+     schedule runs later with nobody watching, and only Dvara gives such a
+     run the phone (asked of Yantra, Samay says so and doesn't save it). *"Every morning
      at 8, open Settings on my iPhone and tell me what the Battery row
      says."* Accept the card the bot sends.
      Then run it now instead of waiting for 8 (the id is in the bot's
