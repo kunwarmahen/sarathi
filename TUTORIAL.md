@@ -319,7 +319,8 @@ chat ask without typing: **Skills** (what your agent has learned, and
 anything it offers to keep), **Tools** (what it could use on your last
 message), **Schedules**, **Memory**, **Phone** (if the phone is yours:
 its screen now, and what was last done on it), **New chat**, **Past chats** (what
-New chat ended, kept; write `/chats 2` to go back into the second). After a job of four
+New chat ended, kept; write `/chats 2` to go back into the second, and
+its messages show again under the answer). After a job of four
 steps or more, an agent whose package has skills may offer to keep how
 it was done. Press **Keep** and next time it's one step, for you only.
 For a shorter job, press **Learn this** after it to ask for the same

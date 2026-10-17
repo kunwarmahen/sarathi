@@ -501,6 +501,17 @@ function tapsView(ln) {
   }));
 }
 
+// A conversation opened again (/chats N): its own words, folded under the
+// answer that says you're back in it -- open by default, so it reads as
+// the conversation you're now in.
+function transcriptView(ln) {
+  const rows = ln.transcript.map((t) => h(`div.tline.${t.who}`, {},
+    h("span.tag", {}, t.who === "you" ? "You" : (ln.agent || "Agent")),
+    bubble(t.text, t.who)));
+  return h("details.transcript", { open: "" },
+    h("summary", {}, `The conversation (${ln.transcript.length} messages)`), ...rows);
+}
+
 function lineView(ln) {
   const failed = ln.who === "agent" && ln.stop_reason
     && !["held", "skills", "seen", "memory", "new", "files", "accounts", "phone"]
@@ -510,10 +521,12 @@ function lineView(ln) {
     : (ln.agent || "Agent");
   return h(`div.line.${ln.who}${failed ? ".failed" : ""}`, {},
     h("span.tag", {}, `${label} · ${when(ln.at)}`),
-    ln.text ? bubble(ln.text, ln.who) : null,
+    // a reopened conversation shows itself below: only "Back in: …" here
+    ln.text ? bubble(ln.transcript ? ln.text.split("\n")[0] : ln.text, ln.who) : null,
     ln.sent ? h("div.sent", {}, `📎 ${ln.sent.join(", ")}`) : null,
     ln.offer ? offerView(ln.offer) : null,
     ln.taps ? tapsView(ln) : null,
+    ln.transcript ? transcriptView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
     (ln.files || []).map((name, n) => {

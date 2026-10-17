@@ -363,3 +363,7 @@ body.chat-full { overflow: hidden; }
 .learned > .label { font-size: 12px; color: var(--ink-3); text-transform: uppercase;
   letter-spacing: .04em; }
 .learned-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.transcript { margin-top: 8px; border-left: 2px solid var(--line); padding-left: 10px; }
+.transcript summary { font-size: 13px; color: var(--ink-3); cursor: pointer; }
+.transcript .tline { margin-top: 6px; }
+.transcript .tline.you .bubble { opacity: .85; }
