@@ -5,7 +5,8 @@
                               phone: its tokens, a Telegram bot, starter files
     sarathi phone [ADDRESS]   your phone for the door's agents, and over Wi-Fi
                               for the containers (`phone pair ADDRESS CODE` once,
-                              or `phone tcpip` from the cable)
+                              or `phone tcpip` from the cable; `phone iphone`
+                              for an iPhone's WebDriverAgent)
     sarathi smritikosh        memories found by meaning: set Smritikosh up (its
                               database, settings, tables, accounts, keys) and
                               switch to it; --off goes back to the built-in file;
@@ -118,11 +119,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for Dvara's "
                                 "agents and the containers: on, pair, its Wi-Fi address")
-    phone_cmd.add_argument("words", nargs="*", metavar="ADDRESS | tcpip | pair ADDRESS CODE",
+    phone_cmd.add_argument("words", nargs="*",
+                           metavar="ADDRESS | tcpip | pair ADDRESS CODE | iphone [URL]",
                            help="nothing: a phone on a cable; ADDRESS: over Wi-Fi; "
                                 "tcpip: the phone on the cable listens over Wi-Fi "
                                 "(again after each restart of the phone); "
-                                "pair ADDRESS CODE: trust this computer, once")
+                                "pair ADDRESS CODE: trust this computer, once; "
+                                "iphone [URL]: an iPhone, its WebDriverAgent at URL "
+                                "(default http://127.0.0.1:8100)")
     phone_cmd.add_argument("--off", action="store_true", help="stop giving the phone out")
     phone_cmd.add_argument("--awake", choices=AWAKE, help="its screen while an agent works "
                            "it: working (default: kept on, then yours back), always, off")
@@ -298,7 +302,8 @@ def _said() -> dict[str, str]:
     """Each sibling's one line, asked as `sarathi status` asks it."""
     config = _settings_or_none()
     found = find_all(before={"dvara": door_folders(config)} if config else None,
-                     asked_with={"yantra": _yantra_env(config)} if config else None,
+                     asked_with={"yantra": _yantra_env(config),
+                                 "sparsh": services.phone_env(config)} if config else None,
                      kept=_kept(config))
     return {f.sibling.name: f.said or f.error or ("not found" if f.program is None else "")
             for f in found}
@@ -443,7 +448,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         config = _settings_or_none()
         found = find_all(before={"dvara": door_folders(config)} if config else None,
-                         asked_with={"yantra": _yantra_env(config)} if config else None,
+                         asked_with={"yantra": _yantra_env(config),
+                                 "sparsh": services.phone_env(config)} if config else None,
                          kept=_kept(config))
         if args.command == "up":
             config = load()

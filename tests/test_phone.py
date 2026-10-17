@@ -8,7 +8,11 @@ the address (never a USB device), the key folder this computer paired
 with, and the person's Sparsh rules, at the same paths. A wrong address
 is said when it is set, not saved to fail at `up`. The screen's word
 (`awake`) reaches Sparsh on both roads, and survives the address being
-set again; a word Sparsh doesn't know is said, not passed on.
+set again; a word Sparsh doesn't know is said, not passed on. An iPhone
+is ONE PHONE, NOT A SECOND: its WebDriverAgent address replaces the
+Android's (Sparsh would take the iPhone over it anyway), is saved only
+once Sparsh says it answers, and reaches a container at the host's name,
+never the container's own 127.0.0.1.
 """
 
 from __future__ import annotations
@@ -263,3 +267,85 @@ def test_the_same_address_again_needs_no_restart(world, settings, capsys):
     phone.run(args(ADDRESS), found)
     out = capsys.readouterr().out
     assert "nothing to restart" in out and "sarathi up" not in out
+
+
+# -- an iPhone: WebDriverAgent's address, one phone at a time --------------------------
+# A real iPhone 17 (iOS 26) was driven by Sparsh from Linux through WebDriverAgent,
+# forwarded to http://127.0.0.1:8100 by go-ios. Sarathi gives it out like the
+# Android: saved once it answers, handed to both roads, in place of the Android.
+
+WDA = "http://127.0.0.1:8100"
+IPHONE = Phone(wda=WDA)
+
+
+def iphone_sparsh(world, state: str = "device") -> Found:
+    """A Sparsh whose status lists the iPhone at $SPARSH_WDA as ``state``."""
+    sparsh = program(world / "bin", "sparsh")
+    sparsh.write_text(
+        "#!/bin/sh\n"
+        'printf \'{"format": "sparsh.status.v1", "phones": [{"serial": "%s", '
+        f'"state": "{state}", "model": "iPhone"}}], '
+        '"wda": {"note": "signed for 6 more days"}}\\n\' "$SPARSH_WDA"\n')
+    return Found(next(s for s in SIBLINGS if s.name == "sparsh"), program=str(sparsh))
+
+
+def test_an_iphone_reads_back_as_written_and_is_one_phone_not_two():
+    for chosen in (Config("ollama", phone=IPHONE),
+                   Config("ollama", phone=Phone(wda=WDA, awake="always"))):
+        assert parse(render(chosen)) == chosen
+    assert '# wda = "http://127.0.0.1:8100"' in render(Config("ollama", phone=WIFI))
+    with pytest.raises(ConfigError, match="two phones; Sarathi gives its agents one"):
+        parse(f'[model]\nprovider = "ollama"\n[phone]\non = true\naddress = "{ADDRESS}"\n'
+              f'wda = "{WDA}"\n')
+    with pytest.raises(ConfigError, match="phone.wda must be WebDriverAgent's address"):
+        parse('[model]\nprovider = "ollama"\n[phone]\non = true\nwda = "my iphone"\n')
+
+
+def test_the_iphone_reaches_sparsh_here_as_itself_and_in_a_container_at_the_host(host):
+    assert services.phone_env(Config("ollama", phone=IPHONE)) == {"SPARSH_WDA": WDA}
+    units = podman.units(podman_config(phone=IPHONE, door=Door()))
+    for unit in ("sarathi-yantra.container", "sarathi-dvara.container"):
+        assert ("Environment=SPARSH_WDA=http://host.containers.internal:8100\n"
+                in units[unit]), unit
+        assert "127.0.0.1:8100" not in units[unit]
+        assert "SPARSH_CONNECT" not in units[unit]
+
+
+def test_the_home_card_shows_for_an_iphone_on_the_podman_road(host, world):
+    program(world / "bin", "sparsh")
+    assert "sparsh" in [p.name for p in pages(podman_config(phone=IPHONE))]
+
+
+def test_an_iphone_that_answers_is_saved_in_place_of_the_android(world, settings, capsys):
+    phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
+    capsys.readouterr()
+    assert phone.run(args("iphone"), iphone_sparsh(world)) == 0
+    assert load().phone == IPHONE
+    out = capsys.readouterr().out
+    assert f"the iPhone answers at {WDA} (signed for 6 more days)" in out
+    assert f"in place of the Android at {ADDRESS}" in out
+    assert "host.containers.internal:8100" in out          # the podman road
+
+
+def test_an_iphone_that_does_not_answer_is_not_saved_and_says_how_to_start_it(
+        world, settings, capsys):
+    assert phone.run(args("iphone", "http://127.0.0.1:8101"),
+                     iphone_sparsh(world, "offline")) == 1
+    assert load().phone is None
+    out = capsys.readouterr().out
+    assert "nothing answers at http://127.0.0.1:8101" in out
+    assert "start-wda-from-linux.sh" in out and "not saved" in out
+
+
+def test_an_android_address_afterwards_takes_the_iphones_place(world, settings):
+    phone.run(args("iphone"), iphone_sparsh(world))
+    phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
+    assert load().phone == WIFI
+
+
+def test_status_asks_sparsh_about_the_iphone_sarathi_gives_out(world, settings):
+    from sarathi.cli import _said
+
+    (world / "config" / "sarathi.toml").write_text(render(Config("ollama", phone=IPHONE)))
+    iphone_sparsh(world)
+    assert "http://127.0.0.1:8100 (iPhone) ready" in _said()["sparsh"]

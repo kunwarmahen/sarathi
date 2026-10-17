@@ -167,6 +167,9 @@ case "$1" in
   connect) case "$2" in 192.168.1.160:*) echo "connected to $2";;
              *) echo "failed to connect to '$2': Connection refused"; exit 1;; esac;;
   pair) echo "Successfully paired to $2 [guid=adb-1]";;
+  status) case "$SPARSH_WDA" in *:8100) state=device;; *) state=offline;; esac
+          printf '{{"format": "sparsh.status.v1", '
+          printf '"phones": [{{"serial": "%s", "state": "%s"}}]}}\n' "$SPARSH_WDA" "$state";;
 esac
 """
 
@@ -215,3 +218,24 @@ def test_a_person_signed_in_cannot_touch_the_phone(with_sparsh):
                    token="")[1]["session"]
     assert send(with_sparsh, "/api/settings/phone", {"do": "tcpip"}, token=session)[0] == 403
     assert not with_sparsh.sparsh_log.exists()
+
+
+def test_use_the_iphone_saves_it_in_place_of_the_android_once_it_answers(with_sparsh):
+    send(with_sparsh, "/api/settings/phone", {"do": "tcpip"})
+    status, got = send(with_sparsh, "/api/settings/phone", {"do": "iphone", "wda": ""})
+    assert status == 200 and got["restart"] is True, got
+    assert "the iPhone answers at http://127.0.0.1:8100" in got["said"]
+    assert settings_mod.load().phone == settings_mod.Phone(wda="http://127.0.0.1:8100")
+    # back to the Android: the iPhone gives way, and Apply is asked
+    status, got = send(with_sparsh, "/api/settings/phone",
+                       {"do": "connect", "address": "192.168.1.160:5555"})
+    assert status == 200 and got["restart"] is True
+    assert settings_mod.load().phone.wda is None
+
+
+def test_an_iphone_that_does_not_answer_is_said_and_not_saved(with_sparsh):
+    status, got = send(with_sparsh, "/api/settings/phone",
+                       {"do": "iphone", "wda": "http://127.0.0.1:8101"})
+    assert status == 400 and "not saved" in got["detail"]
+    assert "start-wda-from-linux.sh" in got["detail"]
+    assert settings_mod.load().phone is None

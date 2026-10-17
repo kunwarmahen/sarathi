@@ -203,12 +203,12 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     sparsh = next(s for s in SIBLINGS if s.name == "sparsh")
     on_cable = config.road != "podman" and locate(sparsh, dict(env)) is not None
     over_wifi = config.road == "podman" and config.phone is not None \
-        and config.phone.address is not None
+        and (config.phone.address is not None or config.phone.wda is not None)
     if on_cable or over_wifi:
         # Sparsh has no page of its own: the phone is watched from the
         # panel on Yantra's page, so the card opens that page. On the
-        # podman road only with a Wi-Fi address: a container can't reach
-        # a phone on a USB cable.
+        # podman road only with a Wi-Fi address or an iPhone's
+        # WebDriverAgent: a container can't reach a phone on a USB cable.
         found.append(Page(
             "sparsh", "Your phone", "Your phone and what the agent did on it: the phone "
             "panel on Yantra's page.", config.web_port))

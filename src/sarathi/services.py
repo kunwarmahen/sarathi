@@ -479,12 +479,14 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
 
 def phone_env(config: Config) -> dict[str, str]:
     """Sparsh's name for the phone's Wi-Fi address: it reconnects to it
-    whenever it looks for phones, so a restart finds the phone again. And
-    ``[phone] awake``, its screen while an agent works it."""
+    whenever it looks for phones, so a restart finds the phone again. An
+    iPhone's WebDriverAgent, as ``SPARSH_WDA``. And ``[phone] awake``, its
+    screen while an agent works it."""
     phone = config.phone
     if phone is None:
         return {}
-    pairs = (("SPARSH_CONNECT", phone.address), ("SPARSH_AWAKE", phone.awake))
+    pairs = (("SPARSH_CONNECT", phone.address), ("SPARSH_WDA", phone.wda),
+             ("SPARSH_AWAKE", phone.awake))
     return {k: v for k, v in pairs if v}
 
 

@@ -485,6 +485,7 @@ function drawSarathiTab() {
   const ntfy = check(dv.ntfy);
   const phoneOn = check(!!s.phone);
   const phoneAt = text(s.phone?.address || "", { placeholder: "192.168.1.23:41234" });
+  const wdaAt = text(s.phone?.wda || "", { placeholder: "http://127.0.0.1:8100" });
   const awake = pick([["", "Kept on while working"], ...s.awake.map((a) => [a, a])],
                      s.phone?.awake || "");
   const ports = {
@@ -504,7 +505,8 @@ function drawSarathiTab() {
                                window_host: house.value.trim(), ntfy: ntfy.checked,
                                port: ports.dvara.value, ntfy_port: ports.ntfy.value }
                            : { on: false },
-    phone: phoneOn.checked ? { on: true, address: phoneAt.value.trim(), awake: awake.value }
+    phone: phoneOn.checked ? { on: true, address: phoneAt.value.trim(),
+                               wda: wdaAt.value.trim(), awake: awake.value }
                            : { on: false },
   }));
   return [
@@ -524,7 +526,7 @@ function drawSarathiTab() {
       h("label.inline", {}, samayOn, " Samay: things done later, on a schedule"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
       field("How it runs", road)),
-    phoneCard(phoneOn, phoneAt, awake, s.run.road),
+    phoneCard(phoneOn, phoneAt, wdaAt, awake, s.run.road),
     h("details.card", {}, h("summary", {}, "Ports"),
       field("Yantra", ports.yantra), field("Samay", ports.samay),
       field("This home page", ports.home), field("Setu's page", ports.setu),
@@ -539,7 +541,7 @@ function drawSarathiTab() {
 // The phone: its settings (saved with the rest), and the steps that reach it
 // from this computer, where its USB cable is. Each step is Sparsh's own,
 // run here; the address that answered is saved (editing.py, phone_step).
-function phoneCard(phoneOn, phoneAt, awake, road) {
+function phoneCard(phoneOn, phoneAt, wdaAt, awake, road) {
   const step = (label, body) => button(label, () => save("/api/settings/phone", body()));
   const fromCable = step("Turn on Wi-Fi from the cable", () => ({ do: "tcpip" }));
   const connect = step("Connect", () => ({ do: "connect", address: phoneAt.value.trim() }));
@@ -562,7 +564,22 @@ function phoneCard(phoneOn, phoneAt, awake, road) {
       h("p.meta", {}, "On the phone: Developer options → Wireless debugging → Pair device " +
         "with pairing code. Type the address and six digits it shows, then Pair. Then put " +
         "the address on the Wireless debugging page itself above, and Connect."),
-      field("Pairing address", pairAt), field("Pairing code", code), row(pair)));
+      field("Pairing address", pairAt), field("Pairing code", code), row(pair)),
+    iphoneSteps(wdaAt, step));
+}
+
+// An iPhone instead: WebDriverAgent's address, checked by Sparsh before it's
+// saved. Sarathi gives its agents one phone, so this replaces the Android.
+function iphoneSteps(wdaAt, step) {
+  const useIt = step("Use the iPhone", () => ({ do: "iphone", wda: wdaAt.value.trim() }));
+  return h("details", {}, h("summary", {}, "An iPhone instead"),
+    h("p.meta", {}, "Start WebDriverAgent first, with the iPhone on this computer's cable: " +
+      "in Sparsh's folder, PREFIX=com.you.sparsh scripts/start-wda-from-linux.sh, and leave " +
+      "it running (Sparsh's SETUP.md, Part C, builds it on a Mac once a week). Then Use the " +
+      "iPhone: it's checked, saved in place of the Android, and Apply hands it to Yantra and " +
+      "Dvara. Keep the iPhone unlocked while an agent works it."),
+    field("WebDriverAgent's address", wdaAt, "Empty: http://127.0.0.1:8100."),
+    row(useIt));
 }
 
 // ---- Keys --------------------------------------------------------------------------

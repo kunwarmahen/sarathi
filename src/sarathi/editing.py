@@ -25,7 +25,9 @@ move: the page's buttons run Sparsh's own ``tcpip``, ``connect`` and
 ``pair`` here, where the USB cable is (phone.py says why), and save the
 address that answered. The containers reach it only after ``sarathi up``
 gives them a new address; the same address needs no restart, since
-Sparsh reconnects by itself.
+Sparsh reconnects by itself. An iPhone is one more button, ``iphone``:
+Sparsh is asked whether WebDriverAgent answers at the address, and only
+then is it saved, in place of any Android (Sarathi gives out one phone).
 
 KEYS GO IN, NEVER OUT. A cloud key or the bot's token can be typed in;
 the page is only ever told whether one is set.
@@ -228,7 +230,7 @@ def sarathi_view(config: Config) -> dict:
             "window_host": door.window_host, "window_port": door.window_port,
             "window_url": door.window_url, "ntfy": door.ntfy_port is not None,
             "ntfy_port": door.ntfy_port or DEFAULT_NTFY_PORT},
-        "phone": None if phone is None else {"address": phone.address,
+        "phone": None if phone is None else {"address": phone.address, "wda": phone.wda,
                                              "awake": phone.awake},
         "memory": {"via": config.memory},
         "keys": {k: k in have for k in KEYS},
@@ -298,6 +300,7 @@ def sarathi_apply(changes: dict) -> Config:
         ph = changes["phone"]
         config = replace(config, phone=None if ph is None or ph.get("on") is False else
                          Phone(address=ph.get("address") or None,
+                               wda=ph.get("wda") or None,
                                awake=ph.get("awake") or None))
     if "memory" in changes:
         config = replace(config, memory=changes["memory"].get("via", config.memory))
@@ -320,8 +323,9 @@ def sarathi_text(text: str) -> Config:
 
 
 def phone_step(config: Config, body: dict) -> tuple[str, bool]:
-    """One of the phone card's buttons: ``tcpip``, ``connect`` or ``pair``
-    (module docstring). (What to say, whether `sarathi up` is needed)."""
+    """One of the phone card's buttons: ``tcpip``, ``connect``, ``pair``
+    or ``iphone`` (module docstring). (What to say, whether `sarathi up`
+    is needed)."""
     from sarathi import phone as phone_cmd
     from sarathi.siblings import SIBLINGS, find
 
@@ -340,6 +344,18 @@ def phone_step(config: Config, body: dict) -> tuple[str, bool]:
             raise EditError(400, said.removeprefix("sparsh: "))
         return (f"{said}. Now Connect, with the address on the Wireless debugging page "
                 "itself (not the pairing one).", False)
+    if do == "iphone":
+        url = str(body.get("wda") or "").strip() or phone_cmd.WDA_HERE
+        ok, said = phone_cmd.iphone_answers(found, url)
+        if not ok:
+            raise EditError(400, f"{said} -- not saved")
+        old = config.phone
+        sarathi_apply({"phone": {"on": True, "wda": url,
+                                 "awake": old.awake if old else None}})
+        if old is not None and old.wda == url:
+            return f"{said}. Same address as before: nothing to restart.", False
+        return (f"{said}; saved, in place of any Android. Apply, so Yantra and Dvara "
+                "use the iPhone.", True)
     if do == "tcpip":
         status, address, said = phone_cmd.from_cable(found)
         if status:
@@ -353,11 +369,12 @@ def phone_step(config: Config, body: dict) -> tuple[str, bool]:
                                  "phone listening? Turn it on from the cable, or check its "
                                  "Wireless debugging page")
     else:
-        raise EditError(400, "the phone's steps are tcpip, connect and pair")
+        raise EditError(400, "the phone's steps are tcpip, connect, pair and iphone")
     old = config.phone
     moved = old is None or old.address != address
     sarathi_apply({"phone": {"on": True, "address": address,
                              "awake": old.awake if old else None}})
+    moved = moved or (old is not None and old.wda is not None)
     if moved:
         return (f"{said}; saved. Apply, so the containers reach it at {address}.", True)
     return (f"{said}. Same address as before: nothing to restart. Yantra's phone panel "

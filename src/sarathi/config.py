@@ -73,7 +73,7 @@ KNOWN: dict[str, set[str]] = {
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner", "ntfy", "ntfy_port"},
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
-    "phone": {"on", "address", "awake"},
+    "phone": {"on", "address", "wda", "awake"},
     "memory": {"via"},
     "smritikosh": {"checkout", "port", "database", "volume", "db_port", "full", "neo4j",
                    "mongodb", "redis", "dashboard", "dashboard_port"},
@@ -121,11 +121,19 @@ class Phone:
     """Your phone, through Sparsh: ``[phone]``. On, the door's agents may
     work it for the person marked ``phone = true`` in its actors file,
     and on the podman road the containers reach it -- over Wi-Fi, at
-    ``address``, since a container can't reach a cable."""
+    ``address``, since a container can't reach a cable.
+
+    ONE PHONE. An Android phone is ``address`` (or its cable); an iPhone
+    is ``wda``, the address WebDriverAgent answers at. Sparsh takes an
+    iPhone it is told about ahead of any Android it finds, so both at
+    once would quietly mean the iPhone; the file holds one or the other."""
 
     #: ``192.168.1.23:41234``: the phone's wireless debugging address.
     #: None: a phone on a USB cable (the process road only).
     address: str | None = None
+    #: ``http://127.0.0.1:8100``: an iPhone's WebDriverAgent, as Sparsh's
+    #: ``SPARSH_WDA`` (started by Sparsh's scripts/start-wda-from-linux.sh).
+    wda: str | None = None
     #: The screen while an agent works it, as Sparsh's ``SPARSH_AWAKE``
     #: (one of AWAKE). None: Sparsh's own default, kept on while working.
     awake: str | None = None
@@ -379,11 +387,21 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                                                     address)):
         raise ConfigError(f"{where}: phone.address must be an address and port, like "
                           f"\"192.168.1.23:41234\", not {address!r}")
+    wda = phone_table.get("wda") or None
+    if wda is not None and (not isinstance(wda, str)
+                            or not re.fullmatch(r"https?://[A-Za-z0-9.\-\[\]:]{1,80}:\d{1,5}/?",
+                                                wda)):
+        raise ConfigError(f"{where}: phone.wda must be WebDriverAgent's address, like "
+                          f"\"http://127.0.0.1:8100\", not {wda!r}")
+    if wda and address:
+        raise ConfigError(f"{where}: phone.address (an Android) and phone.wda (an iPhone) "
+                          "are two phones; Sarathi gives its agents one -- keep one of them")
     awake = phone_table.get("awake") or None
     if awake is not None and awake not in AWAKE:
         raise ConfigError(f"{where}: phone.awake is one of {', '.join(AWAKE)}, "
                           f"not {awake!r}")
-    phone = Phone(address=address, awake=awake) if phone_table.get("on", False) else None
+    phone = Phone(address=address, wda=wda, awake=awake) \
+        if phone_table.get("on", False) else None
     via = data.get("memory", {}).get("via", "local")
     if via not in MEMORY_ROADS:
         raise ConfigError(f"{where}: memory.via is one of {', '.join(MEMORY_ROADS)}, "
@@ -522,15 +540,18 @@ def _render_phone(phone: Phone | None) -> str:
 # person marked `phone = true` in its actors file. On the podman road the
 # containers reach it over Wi-Fi at `address` (a container can't reach a
 # cable): `sarathi phone pair ADDRESS CODE` once, then `sarathi phone ADDRESS`.
+# An iPhone instead: `wda`, WebDriverAgent's address (`sarathi phone iphone`).
 [phone]
 """
     if phone is None:
         return head + "on = false\n"
     address = f'address = "{phone.address}"' if phone.address else \
         '# address = "192.168.1.23:41234"   # its Wireless debugging address'
+    wda = f'wda = "{phone.wda}"' if phone.wda else \
+        '# wda = "http://127.0.0.1:8100"   # an iPhone instead: its WebDriverAgent'
     awake = f'awake = "{phone.awake}"' if phone.awake else \
         '# awake = "working"   # its screen while an agent works it: working, always, off'
-    return head + f"on = true\n{address}\n{awake}\n"
+    return head + f"on = true\n{address}\n{wda}\n{awake}\n"
 
 
 def _render_door(door: Door | None) -> str:

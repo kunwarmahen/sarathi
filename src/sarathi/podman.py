@@ -426,9 +426,16 @@ def phone_dirs(config: Config) -> list[Path]:
 
 
 def phone_env(config: Config) -> str:
-    """The phone's Wi-Fi address, as Sparsh's ``SPARSH_CONNECT``, and its
-    screen while an agent works it, as ``SPARSH_AWAKE``."""
-    return "".join(f"Environment={k}={v}\n" for k, v in services.phone_env(config).items())
+    """The phone's Wi-Fi address, as Sparsh's ``SPARSH_CONNECT``, an
+    iPhone's WebDriverAgent as ``SPARSH_WDA``, and its screen while an
+    agent works it, as ``SPARSH_AWAKE``. WebDriverAgent forwarded to this
+    computer (``http://127.0.0.1:8100``) is reached from a container at
+    ``host.containers.internal``; go-ios's forward listens on every
+    address, so that answers."""
+    env = services.phone_env(config)
+    if "SPARSH_WDA" in env:
+        env["SPARSH_WDA"] = from_container(env["SPARSH_WDA"])
+    return "".join(f"Environment={k}={v}\n" for k, v in env.items())
 
 
 def people_dir(config: Config) -> Path | None:

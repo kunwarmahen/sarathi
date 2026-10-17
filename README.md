@@ -295,6 +295,8 @@ sarathi phone tcpip                            # the phone on the cable listens 
                                                #   its address found and saved (any Android)
 sarathi phone pair 192.168.1.23:37000 123456   # once: trust this computer over Wi-Fi
 sarathi phone 192.168.1.23:41234               # then: reach it over Wi-Fi
+sarathi phone iphone                           # an iPhone instead: its WebDriverAgent
+                                               #   at http://127.0.0.1:8100
 sarathi phone --awake always                   # its screen while an agent works it
 sarathi phone --off
 ```
@@ -308,6 +310,18 @@ device with pairing code* for the first two numbers, and the address on
 the Wireless debugging page itself for the third. A wrong address is
 said, not saved. Android 10 and older have no such page: plug the phone
 in and run `sarathi phone tcpip` ([notes/10](notes/10-a-real-phone.md)).
+
+**An iPhone instead.** Sparsh drives an iPhone through WebDriverAgent,
+an app on the phone that Sparsh's own scripts build (on a Mac, once a
+week with a free Apple ID) and start (`scripts/start-wda-from-linux.sh`,
+with the iPhone on this computer's cable, left running in a terminal;
+Sparsh's SETUP.md, Part C). Then `sarathi phone iphone` asks Sparsh
+whether it answers and saves `[phone] wda`, in place of any Android:
+Sarathi gives its agents one phone, and a sarathi.toml with both is
+refused. The containers reach it at `host.containers.internal:8100`.
+Keep the iPhone unlocked while an agent works it; `--awake` can't change
+an iPhone's Auto-Lock. The same step is **Use the iPhone** on the
+**Your phone** card ([notes/19](notes/19-an-iphone-too.md)).
 
 **After the phone restarts.** A phone switched off and on stops
 listening over Wi-Fi, and its address can change, so Yantra's phone
@@ -642,7 +656,7 @@ your home page:
 
 One page that links to each program's own page: Yantra's, Samay's,
 Setu's (`setu serve`) and, with Dvara on, Dvara's (`dvara page`).
-With Sparsh found (on the Podman road, once `[phone] address` is set), a **Your phone** card
+With Sparsh found (on the Podman road, once `[phone] address` or `wda` is set), a **Your phone** card
 opens Yantra's page, where the phone panel shows the phone and what the
 agent did on it; Sparsh has no page of its own. Each
 card says whether that page is running, shows the program's own status
@@ -807,7 +821,9 @@ src/sarathi/
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
                 through the Sparsh found  (notes/08); its screen while an
                 agent works it, --awake  (notes/10); `tcpip`, Wi-Fi turned
-                on from the cable and the address saved  (notes/17)
+                on from the cable and the address saved  (notes/17); an
+                iPhone's WebDriverAgent, `iphone`, in the Android's place
+                (notes/19)
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07); the
@@ -850,7 +866,10 @@ phones are said, and Yantra's page and Dvara are handed it; inside
 the containers the phone is reached over Wi-Fi (`sarathi phone`), tried
 against the emulator and a real Nexus 6P on Android 8.1, a schedule's
 locked phone asked about on Telegram and worked once unlocked
-([notes/10](notes/10-a-real-phone.md)). Smritikosh is set up by one
+([notes/10](notes/10-a-real-phone.md)). An iPhone is given out the same
+way, through its WebDriverAgent, and read from inside a container on a
+real iPhone 17 ([notes/19](notes/19-an-iphone-too.md)); a task through
+Dvara on it is not yet run. Smritikosh is set up by one
 command and switched on and off from it or the home page, with an
 account of its own for each person behind Dvara, Neo4j, MongoDB and Redis
 with `--full`, and its own dashboard built and started beside it; run on

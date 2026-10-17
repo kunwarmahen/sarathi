@@ -5,6 +5,8 @@
                                          told to listen, and its address saved
     sarathi phone pair ADDRESS CODE      trust this computer over Wi-Fi, once
     sarathi phone ADDRESS                on, reached over Wi-Fi at ADDRESS
+    sarathi phone iphone [URL]           on, an iPhone: its WebDriverAgent at URL
+                                         (http://127.0.0.1:8100 when not given)
     sarathi phone --off
 
 WIRING, NOT A PHONE. Sparsh knows phones; this only writes ``[phone]``
@@ -21,6 +23,16 @@ may move, so ``tcpip`` is the one step to repeat; it runs Sparsh's, and
 saves the address it found, so nobody looks one up. The home page's
 Settings has the same button (editing.py), since it runs on this
 computer, where the cable is; the containers never see the cable.
+
+AN IPHONE IS AN ADDRESS TOO. Sparsh drives an iPhone through
+WebDriverAgent, an app on the phone that Sparsh's own scripts build (on a
+Mac, once a week) and start (``scripts/start-wda-from-linux.sh``, here,
+with the iPhone on this computer's cable). That script stays running and
+needs ``sudo`` for iOS 17's tunnel, so it is the person's to start, not
+``up``'s. ``iphone`` asks Sparsh whether WebDriverAgent answers, saves its
+address as ``[phone] wda``, and drops an Android address: Sarathi gives
+its agents one phone. The containers reach it at
+``host.containers.internal`` (podman.py).
 
 ONE KEY, THIS COMPUTER'S. Pairing runs this computer's ``adb``, so the
 phone trusts the key in ``~/.android``. The containers mount that folder
@@ -79,6 +91,28 @@ def from_cable(found: Found) -> tuple[int, str | None, str]:
     return 0, done["address"], f"the phone listens over Wi-Fi at {done['address']}"
 
 
+#: Where start-wda-from-linux.sh forwards WebDriverAgent to.
+WDA_HERE = "http://127.0.0.1:8100"
+
+
+def iphone_answers(found: Found, url: str) -> tuple[bool, str]:
+    """(whether WebDriverAgent at ``url`` answers, what to say): Sparsh's
+    own status, asked with ``SPARSH_WDA`` set, so the check is Sparsh's."""
+    from sarathi.siblings import read_status
+
+    try:
+        status = read_status(found.program, "sparsh.status.v1", env={"SPARSH_WDA": url})
+    except ValueError as exc:
+        return False, f"sparsh couldn't be asked: {exc}"
+    mine = [p for p in status.get("phones") or [] if p.get("serial") == url]
+    note = ((status.get("wda") or {}).get("note") or "").strip()
+    if mine and mine[0].get("state") == "device":
+        return True, f"the iPhone answers at {url}" + (f" ({note})" if note else "")
+    return False, (f"nothing answers at {url}: start WebDriverAgent with the iPhone on "
+                   "this computer's cable (in Sparsh's folder: PREFIX=com.you.sparsh "
+                   "scripts/start-wda-from-linux.sh), leave it running, and try again")
+
+
 def run(args, found: Found) -> int:
     try:
         config = load()
@@ -95,6 +129,34 @@ def run(args, found: Found) -> int:
               "SARATHI_SPARSH=/path/to/sparsh (see `sarathi status`)")
         return 2
     words = list(args.words)
+    if words[:1] == ["iphone"]:
+        if len(words) > 2:
+            print("error: sarathi phone iphone [URL] -- one address, like " + WDA_HERE)
+            return 2
+        url = (words[1] if len(words) == 2 else
+               (config.phone.wda if config.phone and config.phone.wda else WDA_HERE))
+        ok, said = iphone_answers(found, url)
+        if not ok:
+            print(f"error: {said} -- not saved")
+            return 1
+        print(said)
+        awake = args.awake or (config.phone.awake if config.phone else None)
+        old = config.phone
+        settings_path().write_text(render(replace(config, phone=Phone(wda=url, awake=awake))))
+        print(f"the iPhone is on in {settings_path()}"
+              + (f", in place of the Android at {old.address}" if old and old.address else ""))
+        if config.road == "podman":
+            print("  the containers reach it at "
+                  + url.replace("127.0.0.1", "host.containers.internal")
+                       .replace("localhost", "host.containers.internal"))
+        print("  keep the iPhone unlocked while an agent works it, and WebDriverAgent "
+              "running; it is signed for 7 days with a free Apple ID")
+        _mention_door(config)
+        if old is not None and old.wda == url and not args.awake:
+            print("  the same address as before: nothing to restart")
+            return 0
+        print("next: `sarathi down && sarathi up` (or just `sarathi up`)")
+        return 0
     if words[:1] == ["pair"]:
         if len(words) != 3:
             print("error: sarathi phone pair ADDRESS CODE -- both as the phone's "
@@ -134,6 +196,18 @@ def run(args, found: Found) -> int:
     print(f"the phone is on in {settings_path()}, {where}")
     if args.awake:
         print(f"  its screen while an agent works it: {SCREEN[args.awake]}")
+    _mention_door(config)
+    if address and config.phone is not None and config.phone.address == address \
+            and not args.awake:
+        print("  the same address as before: nothing to restart, Sparsh reconnects by itself")
+        return 0
+    print("next: `sarathi down && sarathi up` (or just `sarathi up`)")
+    return 0
+
+
+def _mention_door(config) -> None:
+    """What would still keep the phone from Dvara's agents: nobody marked
+    for it, or the Telegram agent's [tools] leaving Sparsh out."""
     if config.door is not None and not _anyone_marked(config.door.path("actors")):
         print(f"  nobody in {config.door.actors} is marked `phone = true` yet: add it "
               "under your own [actor.…] so Dvara's agents may work the phone for you")
@@ -143,12 +217,6 @@ def run(args, found: Found) -> int:
             print(f"  {config.door.telegram}, the agent on Telegram, can't use the phone: "
                   f"its [tools] in {package} leaves out \"mcp__sparsh__*\" -- add it "
                   "there (Sparsh still holds Send, Pay and Delete for your yes)")
-    if address and config.phone is not None and config.phone.address == address \
-            and not args.awake:
-        print("  the same address as before: nothing to restart, Sparsh reconnects by itself")
-        return 0
-    print("next: `sarathi down && sarathi up` (or just `sarathi up`)")
-    return 0
 
 
 def _anyone_marked(actors) -> bool:

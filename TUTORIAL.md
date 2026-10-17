@@ -823,6 +823,44 @@ a USB cable, so they reach the phone over your Wi-Fi.
    If it asks *"shall I send it?"* in plain words instead, say yes and
    it does the step again and asks with the buttons.
 
+**An iPhone instead of an Android.** The helper can work an iPhone
+too. It needs a Mac once a week, to sign a small helper app that runs
+on the iPhone (WebDriverAgent); Sparsh's SETUP.md, Part C, goes through
+it step by step. Sarathi gives its agents one phone, so this replaces
+an Android if you had one.
+
+1. Start WebDriverAgent with the iPhone plugged into this computer,
+   unlocked, and leave the terminal open:
+
+   ```bash
+   cd ~/sparsh
+   PREFIX=com.you.sparsh scripts/start-wda-from-linux.sh
+   ```
+
+2. Tell Sarathi, and restart:
+
+   ```bash
+   sarathi phone iphone
+   #   the iPhone answers at http://127.0.0.1:8100
+   #   the iPhone is on in ~/.config/sarathi/sarathi.toml, in place of the Android at 192.168.1.160:5555
+   #     the containers reach it at http://host.containers.internal:8100
+   sarathi down && sarathi up
+   ```
+
+   Or on the home page: **Settings → Sarathi → Your phone → An iPhone
+   instead → Use the iPhone**, then **Apply**. If it says *"nothing
+   answers"*, step 1 isn't running.
+
+3. Try it the same way as step 3 above: the **Your phone** card's
+   phone panel shows the iPhone's screen, and
+   `podman exec sarathi-yantra yantra --prompt "On my iPhone, open
+   Settings and tell me what the Battery row says."` asks the helper.
+
+   Keep the iPhone unlocked while the helper works: Sarathi can't change
+   an iPhone's Auto-Lock the way it can an Android's screen timeout. A
+   locked iPhone is said as locked. To go back to the Android:
+   `sarathi phone tcpip` (or its address), then `sarathi up`.
+
 ---
 
 ## Step 7 (optional) · A memory that finds things by meaning
