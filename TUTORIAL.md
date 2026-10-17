@@ -320,6 +320,8 @@ anything it offers to keep), **Tools** (what it could use on your last
 message), **Schedules**, **Memory**, **New chat**. After a job of four
 steps or more, an agent whose package has skills may offer to keep how
 it was done. Press **Keep** and next time it's one step, for you only.
+For a shorter job, press **Learn this** after it to ask for the same
+offer.
 On a phone, **Full screen** gives the chat the whole window.
 
 To show it something, press the paperclip beside **Send** and pick a

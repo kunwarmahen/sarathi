@@ -30,9 +30,9 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   offer to keep how it was done, with **Keep** and **Not now**. A kept
   skill is yours: saved in your own folder for that agent, so nobody
   else's agent changes.
-* **A row of words.** **Skills**, **Tools**, **Schedules**, **Memory**,
-  **New chat**. Each sends the word to Dvara (`/skills`, `/tools`,
-  `/schedules`, `/memory`, `/new`), exactly as typing it would, so it
+* **A row of words.** **Skills**, **Learn this**, **Tools**,
+  **Schedules**, **Memory**, **New chat**. Each sends the word to Dvara
+  (`/skills`, `/learn`, `/tools`, `/schedules`, `/memory`, `/new`), exactly as typing it would, so it
   answers the same here, on Telegram and over HTTP.
 * **A sign-in you tap.** When an answer tells you to send
   `/connect gmail` or `/unlock`, the word is a button under it
