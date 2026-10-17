@@ -690,7 +690,8 @@ It shows the work as it happens, as Yantra's page does: each step as a
 line under the agent's name, then the answer as it is written, drawn as
 formatted text. After a job of several steps it may offer to keep how
 it was done, with **Keep** and **Not now**, saved for you alone. A row
-of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory**,
+of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory**, **Phone** (its
+screen and last steps, for the phone's person),
 **New chat** and **Past chats** to Dvara as the words they are, and **Full screen** gives a
 phone the whole window. The paperclip beside **Send** adds pictures or
 files to your next message (up to 20 MB together): Dvara keeps them in

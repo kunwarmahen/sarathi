@@ -447,6 +447,29 @@ async function download(line, n, name) {
   }
 }
 
+// A picture an answer carries (/phone's screen) is shown, not only offered:
+// fetched once per line and kept as an object URL while the page is open.
+const pictures = new Map();
+const PICTURE = /\.(png|jpe?g|gif|webp)$/i;
+
+function picture(line, n, name) {
+  const img = h("img.picture", { alt: name });
+  const key = `${line}:${n}`;
+  const show = (url) => { img.src = url; };
+  if (pictures.has(key)) {
+    pictures.get(key).then(show, () => img.remove());
+  } else {
+    const got = fetch(`/api/chat/file?line=${line}&n=${n}`,
+                      { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(res.status))))
+      .then((blob) => URL.createObjectURL(blob));
+    pictures.set(key, got);
+    got.then(show, () => img.remove());
+  }
+  img.addEventListener("click", () => download(line, n, name));
+  return img;
+}
+
 function bubble(text, who) {
   // Your own words stay as you wrote them; an agent's and a notice's are markdown.
   if (who === "you" || typeof renderMarkdown !== "function") return h("div.bubble", {}, text);
@@ -480,7 +503,8 @@ function tapsView(ln) {
 
 function lineView(ln) {
   const failed = ln.who === "agent" && ln.stop_reason
-    && !["held", "skills", "seen", "memory", "new", "files", "accounts"].includes(ln.stop_reason);
+    && !["held", "skills", "seen", "memory", "new", "files", "accounts", "phone"]
+      .includes(ln.stop_reason);
   const label = ln.who === "you" ? `You${chat.agents.length > 1 ? " → " + ln.agent : ""}`
     : ln.who === "notice" ? "Sent to you"
     : (ln.agent || "Agent");
@@ -493,6 +517,7 @@ function lineView(ln) {
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
     (ln.files || []).map((name, n) => {
+      if (PICTURE.test(name)) return picture(ln.id, n, name);
       const b = h("button.file", { type: "button" }, `⤓ ${name}`);
       b.addEventListener("click", () => download(ln.id, n, name));
       return b;

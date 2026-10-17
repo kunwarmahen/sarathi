@@ -356,3 +356,6 @@ body.chat-full #chat .lede, body.chat-full #push { display: none; }
 body.chat-full #chat .chat { flex: 1; min-height: 0; }
 body.chat-full #chat .lines { max-height: none; flex: 1; }
 body.chat-full { overflow: hidden; }
+
+.line img.picture { display: block; max-width: min(100%, 280px); margin-top: 6px;
+  border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; }
