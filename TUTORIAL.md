@@ -837,6 +837,12 @@ an Android if you had one.
    PREFIX=com.you.sparsh scripts/start-wda-from-linux.sh
    ```
 
+   It also tells Sparsh which apps are on the iPhone (an iPhone won't
+   say on its own), and again every 5 minutes while it runs, so *"send
+   a WhatsApp message"* finds WhatsApp, and an app you install later is
+   found within 5 minutes. After updating Sparsh, `sarathi image` puts
+   the new one in the containers.
+
 2. Tell Sarathi, and restart:
 
    ```bash
