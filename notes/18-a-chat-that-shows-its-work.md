@@ -31,8 +31,9 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   skill is yours: saved in your own folder for that agent, so nobody
   else's agent changes.
 * **A row of words.** **Skills**, **Learn this**, **Tools**,
-  **Schedules**, **Memory**, **New chat**. Each sends the word to Dvara
-  (`/skills`, `/learn`, `/tools`, `/schedules`, `/memory`, `/new`), exactly as typing it would, so it
+  **Schedules**, **Memory**, **New chat**, **Past chats**. Each sends the
+  word to Dvara (`/skills`, `/learn`, `/tools`, `/schedules`, `/memory`,
+  `/new`, `/chats`), exactly as typing it would, so it
   answers the same here, on Telegram and over HTTP.
 * **A sign-in you tap.** When an answer tells you to send
   `/connect gmail` or `/unlock`, the word is a button under it
@@ -74,8 +75,8 @@ the agent picker, and the box to write in.
 
 ## What is not here yet
 
-* **Past conversations.** One per channel, and **New chat**, as Dvara
-  has it.
+* ~~**Past conversations.**~~ **Past chats** lists what **New chat**
+  ended, and one can be opened again (Dvara, its notes/45).
 * ~~**Sending a file from the page.**~~ The paperclip beside **Send**:
   pictures and files go with your next message, kept in your folder,
   a picture shown to a model that can see (Dvara, its notes/44).
