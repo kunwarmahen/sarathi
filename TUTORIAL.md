@@ -346,7 +346,11 @@ in the steps below, can be changed on the home page, under **Settings**:
   checkboxes: each says what it does and whether it *asks you first* or
   *runs unasked* (open a page in its own browser, remember things about
   you, your schedules, your phone...). Names no box stands for, like
-  `amazon_*`, wait under **Advanced**.
+  `amazon_*`, wait under **Advanced**. Under each agent, *Skills its
+  people kept* lists what each person's agent learned and how often it
+  worked. One with a script has **Make it a tool**: its script runs once
+  as a test, and it's kept (for that person only) if the test passes.
+  Then the agent does that job in one step.
 * **Rules**: standing answers for a tool (always allow, always ask,
   never), so you're not asked the same thing twice.
 * **Accounts**: Setu's settings, and the rules of each site you added.

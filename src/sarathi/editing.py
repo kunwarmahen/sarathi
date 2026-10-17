@@ -83,11 +83,11 @@ def program(name: str) -> str | None:
     return find(sibling, ask=False).program
 
 
-def _run(argv: list[str], stdin: str = "", env: dict | None = None
-         ) -> subprocess.CompletedProcess:
+def _run(argv: list[str], stdin: str = "", env: dict | None = None,
+         within: float = WITHIN) -> subprocess.CompletedProcess:
     try:
         return subprocess.run(argv, input=stdin, capture_output=True, text=True,
-                              timeout=WITHIN, env={**os.environ, **(env or {})})
+                              timeout=within, env={**os.environ, **(env or {})})
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise EditError(502, f"{Path(argv[0]).name} didn't answer: {exc}") from None
 
@@ -105,10 +105,14 @@ def _dvara(config: Config) -> list[str]:
             "--state", str(door.path("state"))]
 
 
-def dvara(config: Config, args: list[str], body: Any = None) -> dict:
-    """``dvara settings ARGS`` with ``body`` (JSON, or text as is) on stdin."""
+def dvara(config: Config, args: list[str], body: Any = None, *,
+          within: float = WITHIN, model: bool = False) -> dict:
+    """``dvara settings ARGS`` with ``body`` (JSON, or text as is) on stdin.
+    ``model``: the call asks a model, so it gets this house's own."""
     stdin = body if isinstance(body, str) else (json.dumps(body) if body is not None else "")
-    done = _run(_dvara(config) + ["settings", *args], stdin)
+    which = (["--provider", config.provider] + (["--model", config.model]
+                                                if config.model else [])) if model else []
+    done = _run(_dvara(config) + which + ["settings", *args], stdin, within=within)
     try:
         out = json.loads(done.stdout)
     except ValueError:
@@ -117,6 +121,19 @@ def dvara(config: Config, args: list[str], body: Any = None) -> dict:
     if not out.get("ok"):
         raise EditError(400, out.get("error") or "dvara refused it")
     return out
+
+
+#: A skill made a tool: one model call, maybe a retry, and its test.
+TOOL_WITHIN = 300.0
+
+
+def make_tool(config: Config, agent: str, person: str, skill: str) -> dict:
+    """A person's learned skill made a tool (Dvara's promoting.py): its
+    script runs once as a test, and it is kept only if that passes."""
+    if not person or not skill:
+        raise EditError(400, "say whose skill, and which")
+    return dvara(config, ["tool", agent, "--person", person, "--skill", skill],
+                 within=TOOL_WITHIN, model=True).get("tool") or {}
 
 
 def dvara_examples(config: Config) -> str | None:

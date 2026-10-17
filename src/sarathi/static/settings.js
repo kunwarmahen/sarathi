@@ -257,6 +257,7 @@ function drawAgentsTab() {
       .filter(Boolean);
     out.push(h("article.card", {}, h("div.card-head", {}, h("h3", {}, a.name)),
       warnBox(a.problem), h("div.meta", {}, bits.join(" · ")),
+      learnedList(a),
       row(button("Change", () => { sets.editing = a; drawTabs(); }),
               button("Remove", () => {
                 if (confirm(`Remove ${a.name}? Its folder is moved aside, not deleted.`)) {
@@ -311,6 +312,33 @@ function agentForm(a) {
     field("Its instructions (" + a.prompt_file + ")", prompt),
     row(go, button("Cancel", () => { sets.editing = null; drawTabs(); }, "linkish")),
     asText("agent", a.name, a.text, a.path));
+}
+
+// What this agent's people kept as skills (Dvara's promoting.py). A skill
+// with one script can become a tool: its script runs once as a test, and
+// it's kept, for that person only, if the test passes.
+function learnedList(a) {
+  const rows = a.learned || [];
+  if (!rows.length) return null;
+  return h("div.learned", {}, h("div.label", {}, "Skills its people kept"),
+    ...rows.map((r) => {
+      const how = `worked ${r.worked}, failed ${r.failed}` +
+        (r.in_a_row ? `, ${r.in_a_row} in a row` : "");
+      const can = r.script && !r.tool && !r.stale;
+      const make = can ? button(r.suggest ? "Make it a tool (it's earned it)" : "Make it a tool",
+        () => {
+          if (!confirm(`Make ${r.name} a tool for ${r.person}? Its script runs once now as ` +
+                       "a test, and it's kept only if the test passes. This takes up to a " +
+                       "few minutes.")) return;
+          save(`/api/settings/tool/${encodeURIComponent(a.name)}`,
+               { person: r.person, skill: r.name });
+        }, r.suggest ? "open" : "linkish") : null;
+      return h("div.learned-row", {},
+        h("span", {}, h("b", {}, r.name), ` — ${r.person} · ${how}` +
+          (r.tool ? ` · a tool: ${r.tool}` : "") + (r.stale ? " · set aside after failing" : "") +
+          (!r.script && !r.tool ? " · written steps, no script" : "")),
+        make);
+    }));
 }
 
 // The boxes come from Dvara (its toolbox.py): Yantra's own tools, Dvara's,

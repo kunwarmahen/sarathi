@@ -87,6 +87,21 @@ def test_a_person_is_sent_to_dvara_with_what_the_form_said(owner_page):
                                          "telegram": ["8675309"]}
 
 
+def test_a_skill_made_a_tool_asks_dvara_with_this_houses_model(owner_page):
+    status, got = send(owner_page, "/api/settings/tool/helper",
+                       {"person": "priya", "skill": "greet-someone"})
+    assert status == 200
+    argv = heard(owner_page)[-1]["argv"]
+    assert argv[argv.index("--provider") + 1] == "ollama"
+    assert argv[argv.index("settings"):] == ["settings", "tool", "helper", "--person",
+                                             "priya", "--skill", "greet-someone"]
+
+
+def test_a_tool_needs_whose_and_which(owner_page):
+    status, got = send(owner_page, "/api/settings/tool/helper", {"person": "priya"})
+    assert status == 400 and "whose skill" in got["detail"]
+
+
 def test_dvaras_refusal_is_the_pages_answer(owner_page):
     owner_page.log.write_text(json.dumps({"argv": ["refuse"], "stdin": ""}) + "\n")
     status, got = send(owner_page, "/api/settings/person/x", {"permissions": "all"})

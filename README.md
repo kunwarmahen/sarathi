@@ -733,7 +733,8 @@ actors file: who, which agents, accounts, allowance, Telegram ids, and
 anyone who messaged the bot unlisted), **Agents** (each agent's model,
 memory, tools as checkboxes in plain words, each marked *asks you first*
 or *runs unasked*, accounts, budget and instructions; add from an
-example),
+example; the skills its people kept, and **Make it a tool** for one with
+a script),
 **Rules** (Dvara's standing answers), **Accounts** (Setu's settings and
 each added site's rules), **Sarathi** (this file: the model, Dvara and
 its bot, the house address, ntfy, road, ports, and your phone, with

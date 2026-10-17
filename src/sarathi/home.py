@@ -76,6 +76,7 @@ and writes its own file; a person signed in gets 403:
                                            | {"from_example": NAME}
     POST /api/settings/setu/NAME           {"value"}: `setu config NAME`
     POST /api/settings/text/KIND           {"text", "name"}: a whole file as text
+    POST /api/settings/tool/AGENT          {"person", "skill"}: a learned skill made a tool
                                            (sarathi, actors, policy, agent, prompt, site)
     POST /api/settings/phone               {"do": "tcpip"|"connect"|"pair",
                                            "address", "code"}: the phone, reached
@@ -795,6 +796,15 @@ def _handler(server: HomeServer):
                                       {"tables": body.get("tables") or {},
                                        "prompt": body.get("prompt")})
                         said = f"{name} saved. It's used from the next message."
+                elif what == "tool":
+                    made = editing.make_tool(config, name, str(body.get("person") or ""),
+                                             str(body.get("skill") or ""))
+                    test = made.get("test") or {}
+                    said = (f"{made.get('name')} is a tool now, for "
+                            f"{body.get('person')} only. Its test passed."
+                            if made.get("kept") else
+                            f"Not made: its test didn't pass.\n{test.get('output', '')}")
+                    return self._json(200, {"said": said, "made": made})
                 elif what == "setu":
                     said = editing.setu_set(name, body.get("value"))
                 elif what == "text":

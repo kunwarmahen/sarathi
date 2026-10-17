@@ -97,3 +97,7 @@ comes back out; a person signed in gets none of it.
   marked *asks you first* or *runs unasked*; names no box stands for wait
   under **Advanced**, and no box ticked is refused before it's sent
   (Dvara, its notes/43).
+* ~~**A learned skill made a tool only at Yantra's page.**~~ Under each
+  agent, the skills its people kept, and **Make it a tool** for one with
+  a script; the press is the yes for its one test run (Dvara, its
+  notes/46).
