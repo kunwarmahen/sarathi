@@ -42,6 +42,9 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   notes/20).
 * **A picture in an answer is shown.** `/phone`'s screen appears in the
   chat (tap it to save it); other files stay a button to download.
+  The page fetches it with your token and shows it from a `blob:`
+  address, so the page's policy allows `img-src blob:` — without it the
+  browser drew a broken picture with only its name.
 * **Pictures and files.** The paperclip beside **Send** adds them to
   your next message, shown as chips you can take off. They go to Dvara
   with your words (in base64; this page passes them on, up to 20 MB

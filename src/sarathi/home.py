@@ -151,7 +151,7 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 
 POLICY = ("default-src 'none'; script-src 'self'; style-src 'self'; "
-          "connect-src 'self'; img-src 'self' data:; base-uri 'none'; "
+          "connect-src 'self'; img-src 'self' data: blob:; base-uri 'none'; "
           "form-action 'none'; frame-ancestors 'none'")
 
 

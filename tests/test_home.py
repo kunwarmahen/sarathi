@@ -152,6 +152,12 @@ def test_nothing_may_frame_it_and_its_links_send_no_referrer(served):
     assert headers["referrer-policy"] == "no-referrer"
 
 
+def test_a_picture_an_answer_carries_may_be_shown(served):
+    # /phone's screen is fetched with the token and shown as a blob: URL
+    policy = get(served, "/", token=None).headers["content-security-policy"]
+    assert "img-src 'self' data: blob:;" in policy
+
+
 def test_the_home_token_is_made_once_and_kept_for_you_alone(world, monkeypatch, tmp_path):
     monkeypatch.delenv(ENV_TOKEN, raising=False)
     first = home_token()
