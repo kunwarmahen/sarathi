@@ -283,7 +283,8 @@ button.open:disabled { opacity: .55; cursor: progress; }
 .field { display: grid; gap: 3px; min-width: 0; }
 .field label, .field .label { font-size: 13px; color: var(--ink-2); }
 .field .hint, .astext .hint { font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
-#settings input[type="text"], #settings input[type="password"], #settings select,
+#settings input[type="text"], #settings input[type="password"], #settings input[type="search"],
+#settings select,
 #settings textarea {
   font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line);
   border-radius: 8px; padding: 6px 8px; min-width: 0; width: 100%;
@@ -293,6 +294,9 @@ button.open:disabled { opacity: .55; cursor: progress; }
 label.inline { font-size: 14px; display: flex; gap: 6px; align-items: center; }
 .checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .tools { display: grid; gap: 10px; margin: 6px 0; }
+.list-filter { display: flex; gap: 10px; align-items: center; }
+.list-filter .count { flex: none; font-variant-numeric: tabular-nums; }
+.filtered-out { display: none !important; }
 .toolgroup { display: grid; gap: 4px; }
 .toolgroup > .label { font-size: 12px; color: var(--ink-3); text-transform: uppercase;
   letter-spacing: .04em; }

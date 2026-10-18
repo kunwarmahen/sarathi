@@ -314,13 +314,44 @@ function agentForm(a) {
     asText("agent", a.name, a.text, a.path));
 }
 
+// Type to filter a long list, the same box as on Yantra's page: only the
+// rows holding every typed word stay, any case, and "3 of 51" says rows
+// are hidden. Rows are only hidden, never redrawn, so a ticked box that's
+// filtered out stays ticked and is saved. Short lists get no box.
+const FILTER_MIN = 6;
+
+function filterBox(list, rowSel, what, groupSel) {
+  const rows = [...list.querySelectorAll(rowSel)];
+  if (rows.length < FILTER_MIN) return null;
+  const input = h("input", { type: "search", placeholder: `Type to filter ${what}`,
+                             "aria-label": `Filter ${what}`, spellcheck: "false" });
+  const count = h("span.count", { "aria-live": "polite" }, String(rows.length));
+  input.addEventListener("input", () => {
+    const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+    let shown = 0;
+    for (const r of rows) {
+      const text = (r.textContent + " " + (r.title || "")).toLowerCase();
+      const hit = words.every((w) => text.includes(w));
+      r.classList.toggle("filtered-out", !hit);
+      if (hit) shown++;
+    }
+    // a group whose every row is hidden goes too, heading and all
+    for (const g of groupSel ? list.querySelectorAll(groupSel) : []) {
+      g.classList.toggle("filtered-out",
+        ![...g.querySelectorAll(rowSel)].some((r) => !r.classList.contains("filtered-out")));
+    }
+    count.textContent = words.length ? `${shown} of ${rows.length}` : String(rows.length);
+  });
+  return h("div.list-filter", {}, input, count);
+}
+
 // What this agent's people kept as skills (Dvara's promoting.py). A skill
 // with one script can become a tool: its script runs once as a test, and
 // it's kept, for that person only, if the test passes.
 function learnedList(a) {
   const rows = a.learned || [];
   if (!rows.length) return null;
-  return h("div.learned", {}, h("div.label", {}, "Skills its people kept"),
+  const list = h("div.learned", {}, h("div.label", {}, "Skills its people kept"),
     ...rows.map((r) => {
       const how = `worked ${r.worked}, failed ${r.failed}` +
         (r.in_a_row ? `, ${r.in_a_row} in a row` : "");
@@ -345,6 +376,9 @@ function learnedList(a) {
           (!r.script && !r.tool ? " · written steps, no script" : "")),
         make, undo);
     }));
+  const box = filterBox(list, ".learned-row", "skills");
+  if (box) list.children[0].after(box);
+  return list;
 }
 
 // The boxes come from Dvara (its toolbox.py): Yantra's own tools, Dvara's,
@@ -371,6 +405,8 @@ function toolPicker(a) {
   const advanced = lines(has.advanced);
   const list = h("div.tools", {}, ...[...groups].map(([g, kids]) =>
     h("div.toolgroup", {}, h("div.label", {}, g), ...kids)));
+  const box = filterBox(list, "label.tool", "tools", ".toolgroup");
+  if (box) list.prepend(box);
   const sync = () => { list.hidden = every.checked; };
   every.addEventListener("change", sync);
   sync();

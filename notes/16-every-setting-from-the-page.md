@@ -101,3 +101,8 @@ comes back out; a person signed in gets none of it.
   agent, the skills its people kept, and **Make it a tool** for one with
   a script; the press is the yes for its one test run, and **Stop using
   as a tool** takes it back (Dvara, its notes/46).
+* A long list of tool boxes (28 on a real setup) or kept skills has a
+  box above it: only the rows holding every typed word stay, a group
+  with none left goes too, and `1 of 28` says rows are hidden. Rows are
+  only hidden, never redrawn, so a ticked box that's filtered out stays
+  ticked and is saved. The same box as on Yantra's page.

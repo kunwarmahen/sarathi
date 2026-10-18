@@ -791,7 +791,9 @@ anyone who messaged the bot unlisted), **Agents** (each agent's model,
 memory, tools as checkboxes in plain words, each marked *asks you first*
 or *runs unasked*, accounts, budget and instructions; add from an
 example; the skills its people kept, and **Make it a tool** for one with
-a script),
+a script; a long list of boxes or skills gets a box above it that keeps
+only what matches what you type, and a ticked tool stays ticked while
+hidden),
 **Rules** (Dvara's standing answers), **Accounts** (Setu's settings,
 each added site's rules, and which tools of each MCP server of your own
 only read), **Sarathi** (this file: the model, Dvara and
