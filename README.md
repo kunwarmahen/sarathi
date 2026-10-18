@@ -429,7 +429,11 @@ What a person would otherwise wire by hand in two places:
 **An MCP server of your own.** A server nobody wrote a Setu connector for
 (a notes server at home, a docs server at work) is added on Setu's page,
 under **Add your own server**: its address, and its token if it needs
-one. From then on every road has it: Yantra's page, the home page's chat
+one. Or in a terminal, once, on this computer: `setu connect --server
+URL --id docs`, plus `--ask-token` for one that wants a key (Setu asks
+for it, hidden). One with its own sign-in page (Linear, Notion) opens it
+in a browser instead. The containers never need the token; Setu adds it
+([TUTORIAL, Step 2](TUTORIAL.md#step-2--connect-an-account)). From then on every road has it: Yantra's page, the home page's chat
 and Telegram. A person adds one to their own folder from their page, or
 from the chat with `/connect server URL` when it needs no token
 ([Dvara's notes/48](https://github.com/kunwarmahen/dvara/blob/main/notes/48-a-server-of-their-own.md)). On

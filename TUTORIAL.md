@@ -175,6 +175,43 @@ command, and the helper has Gmail again on your next message; nothing
 needs restarting, containers included. To stop it happening, publish your
 Google app once (Setu's README, *Testing mode signs you out weekly*).
 
+**An MCP server of your own** (optional). If you have a server that
+speaks MCP (a docs or notes server, a tool someone gave you an address
+for), add it to Setu once. Every road then has it: Yantra's page,
+Telegram and the home page's chat, containers included. The server
+needs one of three things, and it tells Setu which:
+
+* **Nothing.** Give the address:
+
+  ```bash
+  $setu connect --server https://example.com/mcp --id docs
+  #   connected docs:personal (example.com/mcp) -- All its tools, 6 tools
+  ```
+
+* **A token** (an API key from the server's own settings). If you leave
+  it out, the server answers *"asks for a token (HTTP 401); add one with
+  --ask-token"*. Add `--ask-token`, and Setu asks for it:
+
+  ```bash
+  $setu connect --server https://example.com/mcp --id docs --ask-token
+  #   the server's token (not shown):        <- paste it and press Enter
+  ```
+
+  You paste it once, here, at your own computer. It's hidden as you
+  paste, never goes on the command line, and is kept in Setu's vault.
+  The helper in the containers never needs it: Setu adds it to each
+  request on its way to the server. If the server wants the token in
+  some other header, add `--header X-API-Key` (or the name its docs give).
+
+* **Its own sign-in page** (Linear, Notion and other online services).
+  Give the address with no token. A browser opens on the service's
+  sign-in, as it did for Gmail. Sign in there, and Setu keeps the
+  sign-in and renews it.
+
+Or do any of these on Setu's page instead: **My accounts** on the home
+page, then **Add your own server**, with the address and (if it needs
+one) the token in its box.
+
 ---
 
 ## Step 3 · Tell Sarathi which model answers
@@ -1035,6 +1072,7 @@ you're most likely to meet:
 | `clock already running at …, not started by Sarathi: left alone` | you already run Samay's clock another way | nothing: a second clock would run every schedule twice |
 | `unknown key clock.onn` | a typo in sarathi.toml | fix the spelling; Sarathi never guesses |
 | On Telegram the agent says it has no Home Assistant (or Gmail…) and tells you to connect it, though Yantra's page uses it fine | the Telegram agent's package doesn't ask for that account | **Settings → Agents**, **Change** on that agent, add `homeassistant:write` to *Accounts it needs*; there's nothing to reconnect |
+| `setu connect --server …` says `asks for a token (HTTP 401); add one with --ask-token` | the server wants an API key, and has no sign-in page of its own | run it again with `--ask-token` and paste the key when asked (Step 2, *An MCP server of your own*), or put it in the token box on Setu's page |
 | An MCP server you added in Setu isn't among the boxes under *Tools it may use* | those boxes are Yantra's own tools, Samay and the phone; accounts come another way | nothing to tick: its *Accounts it needs* decides. `*:read` gives the server's reading tools; add `yourid:write` for the rest |
 | The agent knows your own server is connected but uses none of its tools | the server marked none of them read-only, so all are `write`, and the agent's need is `:read` | mark the reading ones read in `setu site file yourid` (the server's file; `--set` replaces it), or add `yourid:write` to *Accounts it needs* |
 | `/memory` answers that the agent doesn't keep memories, and Telegram's `/` menu has no `memory` | its package doesn't remember people | **Settings → Agents**, **Change**, *Memory*: *Remembers each person*; restart Dvara for the menu (**Apply**, or `sarathi down && sarathi up`) |
