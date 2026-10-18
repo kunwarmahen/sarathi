@@ -461,7 +461,9 @@ in the steps below, can be changed on the home page, under **Settings**:
   checkboxes: each says what it does and whether it *asks you first* or
   *runs unasked* (open a page in its own browser, remember things about
   you, your schedules, your phone...). Names no box stands for, like
-  `amazon_*`, wait under **Advanced**. Under each agent, *Skills its
+  `amazon_*`, wait under **Advanced**. When the list is long, type in the
+box above it (`phone`, say) and only the matching boxes stay. A box you
+ticked stays ticked while it's hidden. Under each agent, *Skills its
   people kept* lists what each person's agent learned and how often it
   worked. One with a script has **Make it a tool**: its script runs once
   as a test, and it's kept (for that person only) if the test passes.
