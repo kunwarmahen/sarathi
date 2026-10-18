@@ -366,15 +366,31 @@ its messages show again under the answer). After a job of four
 steps or more, an agent whose package has skills may offer to keep how
 it was done. Press **Keep** and next time it's one step, for you only.
 For a shorter job, press **Learn this** after it to ask for the same
-offer. To teach it a job one step at a time (a WhatsApp message on your
-phone, say), write `/learn start send a WhatsApp message`, then each
-step ("open WhatsApp", "tap Mom"); it does only that step and asks
-what's next. `/learn done` keeps the whole walk as one skill. `/learn
-start` learns only the steps you *write*. To do the steps on the phone
-yourself, write `/learn watch` instead (`/learn watch check my Coinbase
-portfolio value`), then `next` after each step; the agent says what it
-thinks you did, and you correct it if it's wrong. `/learn stop` drops a
-lesson, and so does New chat. Telegram takes the same words.
+offer.
+
+**Teaching it a job, one step at a time.** There are two ways. Pick the
+one you'll actually do:
+
+| | `/learn start …`: you **tell** | `/learn watch …`: you **show** |
+|---|---|---|
+| Who touches the phone | **the agent**; you don't | **you**; the agent doesn't |
+| What you send | each step, as a message ("open Coinbase", "tap Portfolio") | **next**, after you've done each step yourself |
+| What the agent does | carries out that one step, says what's on the screen, asks what's next | looks at what changed and says what it thinks you did ("I think you opened Coinbase"); you correct it if it's wrong |
+| Good for | jobs you can describe in words | jobs easier to do than to describe |
+
+```text
+/learn start send a WhatsApp message           /learn watch check my Coinbase portfolio value
+open WhatsApp                                  (you open Coinbase)              next
+tap Mom                                        (you tap to your portfolio)      next
+/learn done      then Keep                     /learn done      then Keep
+```
+
+Don't mix them up: a `start` lesson learns only the steps you *write*,
+so steps you do on the phone by hand during it aren't seen and `/learn
+done` finds nothing. If you'll touch the phone, use `watch`. `/learn
+stop` drops a lesson, and so does New chat. Telegram takes the same
+words.
+
 On a phone, **Full screen** gives the chat the whole window.
 
 To show it something, press the paperclip beside **Send** and pick a
