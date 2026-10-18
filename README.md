@@ -427,6 +427,14 @@ from the chat with `/connect server URL` when it needs no token
 the Podman road, Setu runs inside the containers, so a server on this
 computer is `http://host.containers.internal:PORT/mcp`, not `127.0.0.1`.
 
+It won't appear among an agent's boxes under *Tools it may use*. Those
+are Yantra's own tools, Samay and the phone. A Setu account, your own
+server included, reaches a Telegram agent through *Accounts it needs*
+(**Settings → Agents → Change**): `"*:read"` already gives it every
+account's reading tools, and a line like `docs:write` adds that server's
+writing ones. Which tools count as reading is in Setu's file for the
+server: `setu site file docs` shows it, and `--set` replaces it.
+
 **Amazon or X from someone's phone.** Those sites are signed in to in a
 browser window on this computer. Give Dvara a window address and Setu
 streams that window to their phone when they send `/connect amazon`
