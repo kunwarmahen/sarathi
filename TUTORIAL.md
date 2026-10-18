@@ -823,11 +823,13 @@ a USB cable, so they reach the phone over your Wi-Fi.
    If it asks *"shall I send it?"* in plain words instead, say yes and
    it does the step again and asks with the buttons.
 
-**An iPhone instead of an Android.** The helper can work an iPhone
-too. It needs a Mac once a week, to sign a small helper app that runs
-on the iPhone (WebDriverAgent); Sparsh's SETUP.md, Part C, goes through
-it step by step. Sarathi gives its agents one phone, so this replaces
-an Android if you had one.
+**An iPhone, or both.** The helper can work an iPhone too. It needs a
+Mac once a week, to sign a small helper app that runs on the iPhone
+(WebDriverAgent); Sparsh's SETUP.md, Part C, goes through it step by
+step. Your Android stays set up beside it: whichever phone is plugged
+into this computer is the one the helper uses. Put the iPhone away and
+plug the Android in, and the next thing you ask goes to the Android,
+with nothing to change.
 
 1. Plug the iPhone into this computer and unlock it. Step 2 starts
    WebDriverAgent on it for you. To start it yourself in a terminal
@@ -850,13 +852,13 @@ an Android if you had one.
    sarathi phone iphone
    #   starting the iPhone, if it isn't running (sparsh iphone)...
    #   the iPhone answers at http://127.0.0.1:8100
-   #   the iPhone is on in ~/.config/sarathi/sarathi.toml, in place of the Android at 192.168.1.160:5555
+   #   the iPhone is on in ~/.config/sarathi/sarathi.toml, beside the Android at 192.168.1.160:5555 (the one that answers is used)
    #     the containers reach it at http://host.containers.internal:8100
    sarathi down && sarathi up
    ```
 
    Or on the home page: **Settings → Sarathi → Your phone → An iPhone
-   instead → Use the iPhone**, then **Apply**. The first time after an
+   → Use the iPhone**, then **Apply**. The first time after an
    iOS update it takes a minute longer: Sparsh fetches the developer
    image that the new iOS needs.
 

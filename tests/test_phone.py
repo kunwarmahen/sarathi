@@ -4,15 +4,18 @@ the person it is for.
 The bias these tests encode: THE PHONE IS GIVEN OUT ONLY WHERE IT WAS
 TURNED ON, AND REACHED THE WAY ANOTHER COMPUTER WOULD. With no [phone],
 no unit, no door and no page mentions it. With it, the containers get
-the address (never a USB device), the key folder this computer paired
-with, and the person's Sparsh rules, at the same paths. A wrong address
+the address (never a USB device), this computer's adb through a socket
+file (never a port), the key folder this computer paired with, and the
+person's Sparsh rules, at the same paths. A wrong address
 is said when it is set, not saved to fail at `up`. The screen's word
 (`awake`) reaches Sparsh on both roads, and survives the address being
 set again; a word Sparsh doesn't know is said, not passed on. An iPhone
-is ONE PHONE, NOT A SECOND: its WebDriverAgent address replaces the
-Android's (Sparsh would take the iPhone over it anyway), is saved only
+is SAVED BESIDE THE ANDROID, NOT IN ITS PLACE: a person swapped one for
+the other on the same cable and the saved iPhone hid the Android, so
+both stay written and Sparsh uses the one that answers. It is saved only
 once Sparsh says it answers, and reaches a container at the host's name,
-never the container's own 127.0.0.1.
+never the container's own 127.0.0.1. While an Android answers, `up`
+doesn't wait on an iPhone that isn't there.
 """
 
 from __future__ import annotations
@@ -174,9 +177,23 @@ def test_pair_runs_sparsh_and_says_what_comes_next(world, settings, capsys):
     assert load().phone is None                  # pairing alone turns nothing on
 
 
-def test_a_cable_on_the_podman_road_is_warned_about(world, settings, capsys):
+def test_a_cable_on_the_podman_road_is_lent_to_the_containers(world, settings, capsys):
     assert phone.run(args(), sparsh_that(world, "")) == 0
-    assert "can't reach a phone on a cable" in capsys.readouterr().out
+    assert "through its adb (sarathi-adb" in capsys.readouterr().out
+
+
+def test_the_containers_get_this_computers_adb_through_a_file_not_a_port(host, world):
+    program(world / "bin", "sparsh")
+    config = podman_config(phone=Phone(), door=Door())
+    sock = podman.adb_socket()
+    for unit in ("sarathi-yantra.container", "sarathi-dvara.container",
+                 "sarathi-samay.container"):
+        assert f"Environment=ADB_SERVER_SOCKET=localfilesystem:{sock}\n" in \
+            podman.units(config)[unit], unit
+    lend = podman.adb_unit(config)
+    assert f"adb-share --socket {sock}" in lend and "PublishPort" not in lend
+    assert podman.unit_file("adb").name == "sarathi-adb.service"
+    assert podman.adb_unit(podman_config()) is None   # no [phone]: nothing lent
 
 
 def test_awake_is_saved_and_kept_when_the_address_is_set_again(world, settings, capsys):
@@ -270,10 +287,10 @@ def test_the_same_address_again_needs_no_restart(world, settings, capsys):
     assert "nothing to restart" in out and "sarathi up" not in out
 
 
-# -- an iPhone: WebDriverAgent's address, one phone at a time --------------------------
+# -- an iPhone: WebDriverAgent's address, beside the Android ---------------------------
 # A real iPhone 17 (iOS 26) was driven by Sparsh from Linux through WebDriverAgent,
 # forwarded to http://127.0.0.1:8100 by go-ios. Sarathi gives it out like the
-# Android: saved once it answers, handed to both roads, in place of the Android.
+# Android: saved once it answers, handed to both roads, beside the Android.
 
 WDA = "http://127.0.0.1:8100"
 IPHONE = Phone(wda=WDA)
@@ -290,14 +307,12 @@ def iphone_sparsh(world, state: str = "device") -> Found:
     return Found(next(s for s in SIBLINGS if s.name == "sparsh"), program=str(sparsh))
 
 
-def test_an_iphone_reads_back_as_written_and_is_one_phone_not_two():
+def test_an_iphone_reads_back_as_written_beside_an_android():
     for chosen in (Config("ollama", phone=IPHONE),
-                   Config("ollama", phone=Phone(wda=WDA, awake="always"))):
+                   Config("ollama", phone=Phone(wda=WDA, awake="always")),
+                   Config("ollama", phone=Phone(address=ADDRESS, wda=WDA))):
         assert parse(render(chosen)) == chosen
     assert '# wda = "http://127.0.0.1:8100"' in render(Config("ollama", phone=WIFI))
-    with pytest.raises(ConfigError, match="two phones; Sarathi gives its agents one"):
-        parse(f'[model]\nprovider = "ollama"\n[phone]\non = true\naddress = "{ADDRESS}"\n'
-              f'wda = "{WDA}"\n')
     with pytest.raises(ConfigError, match="phone.wda must be WebDriverAgent's address"):
         parse('[model]\nprovider = "ollama"\n[phone]\non = true\nwda = "my iphone"\n')
 
@@ -317,14 +332,14 @@ def test_the_home_card_shows_for_an_iphone_on_the_podman_road(host, world):
     assert "sparsh" in [p.name for p in pages(podman_config(phone=IPHONE))]
 
 
-def test_an_iphone_that_answers_is_saved_in_place_of_the_android(world, settings, capsys):
+def test_an_iphone_that_answers_is_saved_beside_the_android(world, settings, capsys):
     phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
     capsys.readouterr()
     assert phone.run(args("iphone"), iphone_sparsh(world)) == 0
-    assert load().phone == IPHONE
+    assert load().phone == Phone(address=ADDRESS, wda=WDA)
     out = capsys.readouterr().out
     assert f"the iPhone answers at {WDA} (signed for 6 more days)" in out
-    assert f"in place of the Android at {ADDRESS}" in out
+    assert f"beside the Android at {ADDRESS}" in out
     assert "host.containers.internal:8100" in out          # the podman road
 
 
@@ -391,10 +406,26 @@ def test_only_an_iphone_on_this_computers_8100_is_started():
     assert not phone.is_here("http://127.0.0.1:8101")
 
 
-def test_an_android_address_afterwards_takes_the_iphones_place(world, settings):
+def test_an_android_address_afterwards_keeps_the_iphone(world, settings):
     phone.run(args("iphone"), iphone_sparsh(world))
     phone.run(args(ADDRESS), sparsh_that(world, f"connected to {ADDRESS}"))
-    assert load().phone == WIFI
+    assert load().phone == Phone(address=ADDRESS, wda=WDA)
+
+
+def test_up_does_not_wait_for_an_iphone_while_an_android_answers(world, monkeypatch):
+    from sarathi import cli
+
+    started, waited = [], []
+    monkeypatch.setattr(phone, "android_answers", lambda found: "Nexus_6P")
+    monkeypatch.setattr(phone, "start_behind", lambda found: started.append(1))
+    monkeypatch.setattr(phone, "iphone_ready", lambda *a: waited.append(1) or (True, ""))
+    found = [iphone_sparsh(world)]
+    said = cli._iphone_up(Config("ollama", phone=Phone(wda=WDA)), found)
+    assert started and not waited
+    assert "the Android on the cable (Nexus_6P) is the phone now" in said[0]
+    monkeypatch.setattr(phone, "android_answers", lambda found: None)
+    cli._iphone_up(Config("ollama", phone=Phone(wda=WDA)), found)
+    assert waited   # no Android: the iPhone is waited for, as before
 
 
 def test_status_asks_sparsh_about_the_iphone_sarathi_gives_out(world, settings):

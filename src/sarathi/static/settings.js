@@ -568,14 +568,15 @@ function phoneCard(phoneOn, phoneAt, wdaAt, awake, road) {
     iphoneSteps(wdaAt, step));
 }
 
-// An iPhone instead: WebDriverAgent's address, checked by Sparsh before it's
-// saved. Sarathi gives its agents one phone, so this replaces the Android.
+// An iPhone too: WebDriverAgent's address, checked by Sparsh before it's
+// saved, beside any Android. The one plugged in is the one used.
 function iphoneSteps(wdaAt, step) {
   const useIt = step("Use the iPhone", () => ({ do: "iphone", wda: wdaAt.value.trim() }));
-  return h("details", {}, h("summary", {}, "An iPhone instead"),
+  return h("details", {}, h("summary", {}, "An iPhone"),
     h("p.meta", {}, "Plug the iPhone into this computer and unlock it, then Use the " +
       "iPhone: Sparsh starts WebDriverAgent on it (a minute; longer the first time after " +
-      "an iOS update), checks it answers, and it's saved in place of the Android. Apply " +
+      "an iOS update), checks it answers, and it's saved beside any Android: whichever " +
+      "phone is plugged in is the one used, so swapping them needs nothing here. Apply " +
       "hands it to Yantra and Dvara. Unplugged, restarted or updated, press it again: it " +
       "comes back by itself when plugged in while it runs. WebDriverAgent is built on a " +
       "Mac once a week (Sparsh's SETUP.md, Part C). Keep the iPhone unlocked while an " +

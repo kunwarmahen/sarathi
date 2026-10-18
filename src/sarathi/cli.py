@@ -298,6 +298,13 @@ def _iphone_up(config, found) -> list[str]:
     sparsh = next((f for f in found if f.sibling.name == "sparsh"), None)
     if not wda or not phone.is_here(wda) or sparsh is None or sparsh.program is None:
         return []
+    android = phone.android_answers(sparsh)
+    if android:
+        # the Android is the phone today: nothing to wait for, but the
+        # iPhone's unit waits behind, so plugging it in is all it takes
+        phone.start_behind(sparsh)
+        return [f"{'iphone':<{services.WIDTH}} waiting behind; the Android on the cable "
+                f"({android}) is the phone now"]
     ok, said = phone.iphone_ready(sparsh, wda)
     return [f"{'iphone':<{services.WIDTH}} {said if ok else 'not ready: ' + said}"]
 

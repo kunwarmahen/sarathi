@@ -18,20 +18,15 @@ An iPhone is an address too: the one WebDriverAgent answers at. It is
 saved as `[phone] wda`, and handed to Sparsh as `SPARSH_WDA`, on both
 roads and in `sarathi status`.
 
-ONE PHONE. Sparsh takes an iPhone it is told about ahead of any Android
-it finds. A `[phone]` with both an Android address and an iPhone would
-quietly mean the iPhone, and whoever wrote the Android address would
-wonder why it's ignored. So the file holds one or the other, and says so
-when it holds both:
-
-```
-sarathi.toml: phone.address (an Android) and phone.wda (an iPhone) are
-two phones; Sarathi gives its agents one -- keep one of them
-```
-
-`sarathi phone iphone` replaces the Android; `sarathi phone ADDRESS` or
-`tcpip` replaces the iPhone. The Settings page's **Your phone** card has
-the same step under *An iPhone instead*: **Use the iPhone**.
+~~ONE PHONE.~~ This note first held one phone or the other: Sparsh took
+an iPhone it was told about ahead of any Android, so a `[phone]` with
+both was refused. Then the iPhone was put away and an Android plugged
+into the same cable, and the saved iPhone hid it: every list said
+"iPhone, not answering". Now both stay written, and Sparsh uses the one
+that answers ([note 20](20-whichever-phone-is-plugged-in.md)). `sarathi
+phone iphone` saves the iPhone beside the Android, and the Settings
+page's **Your phone** card has the same step under *An iPhone*: **Use
+the iPhone**.
 
 ASKED BEFORE IT'S SAVED. As with an Android address, a wrong one is said
 now rather than at `up`. Sarathi asks Sparsh's own status with
@@ -40,7 +35,7 @@ now rather than at `up`. Sarathi asks Sparsh's own status with
 ```
 $ sarathi phone iphone
 the iPhone answers at http://127.0.0.1:8100
-the iPhone is on in ~/.config/sarathi/sarathi.toml, in place of the Android at 192.168.1.160:5555
+the iPhone is on in ~/.config/sarathi/sarathi.toml, beside the Android at 192.168.1.160:5555 (the one that answers is used)
   the containers reach it at http://host.containers.internal:8100
   keep the iPhone unlocked while an agent works it, and WebDriverAgent running; it is signed for 7 days with a free Apple ID
 next: `sarathi down && sarathi up` (or just `sarathi up`)
@@ -110,7 +105,7 @@ reaches the plain programs as written and both containers at
 `host.containers.internal`, with no Android address beside it; the home
 page's **Your phone** card shows for an iPhone on the Podman road;
 `sarathi phone iphone` saves only what answers, in place of the
-Android, and an Android address afterwards takes the iPhone's place;
+Android, and an Android address afterwards keeps the iPhone beside it (note 20);
 `sarathi status` asks Sparsh about the iPhone it gives out; an iPhone
 at this computer's 8100 that doesn't answer is started (`sparsh iphone
 --background`) and then saved, one that won't start says Sparsh's reason
@@ -121,6 +116,9 @@ answers and asks for Apply, and says how to start WebDriverAgent when
 it doesn't.
 
 ## What is not here yet
+
+* ~~One phone or the other.~~ Both written, the one plugged in used
+  ([note 20](20-whichever-phone-is-plugged-in.md)).
 
 * ~~An agent's task on the iPhone through Dvara on Telegram.~~ Run:
   `sarathi phone iphone` on the real sarathi.toml, the image rebuilt,

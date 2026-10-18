@@ -34,8 +34,9 @@ phone in front of you:
 * `sarathi phone ADDRESS`: the address on the Wireless debugging page
   itself. It's connected to first, and **a wrong address is said, not
   saved**, so `up` never starts containers pointed at nothing.
-* `sarathi phone` alone: a phone on a cable (the process road). On the
-  podman road it says a container can't reach that.
+* `sarathi phone` alone: a phone on a cable. ~~On the podman road it
+  says a container can't reach that.~~ The containers reach it now,
+  through this computer's adb lent by a file ([note 20](20-whichever-phone-is-plugged-in.md)).
 
 **WIRING, NOT A PHONE.** Pairing and connecting run the Sparsh `sarathi
 status` found (`sparsh pair`, `sparsh connect`). Sarathi only writes the

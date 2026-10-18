@@ -295,7 +295,7 @@ sarathi phone tcpip                            # the phone on the cable listens 
                                                #   its address found and saved (any Android)
 sarathi phone pair 192.168.1.23:37000 123456   # once: trust this computer over Wi-Fi
 sarathi phone 192.168.1.23:41234               # then: reach it over Wi-Fi
-sarathi phone iphone                           # an iPhone instead: its WebDriverAgent
+sarathi phone iphone                           # an iPhone too: its WebDriverAgent
                                                #   at http://127.0.0.1:8100, started first
                                                #   when it isn't answering
 sarathi phone --awake always                   # its screen while an agent works it
@@ -306,23 +306,32 @@ turns on `[phone]`. Dvara's agents may then work the phone for the
 one person marked `phone = true` in its actors file (dvara's
 `--sparsh`), through a package whose `[tools] allow` names
 `mcp__sparsh__*` (it says when the agent on Telegram doesn't), and Yantra's page reconnects to a Wi-Fi phone by itself.
+On the Podman road an Android on this computer's cable reaches the
+containers too: `up` starts `sarathi-adb`, which lends this computer's
+adb to them through a file in `~/.sparsh` (Sparsh's `adb-share`), not a
+port ([notes/20](notes/20-whichever-phone-is-plugged-in.md)).
 On your phone: *Developer options → Wireless debugging*, then *Pair
 device with pairing code* for the first two numbers, and the address on
 the Wireless debugging page itself for the third. A wrong address is
 said, not saved. Android 10 and older have no such page: plug the phone
 in and run `sarathi phone tcpip` ([notes/10](notes/10-a-real-phone.md)).
 
-**An iPhone instead.** Sparsh drives an iPhone through WebDriverAgent,
+**An iPhone too.** Sparsh drives an iPhone through WebDriverAgent,
 an app on the phone that Sparsh's own scripts build (on a Mac, once a
 week with a free Apple ID) and start (`sparsh iphone`, with the iPhone
 on this computer's cable; Sparsh's SETUP.md, Part C). `sarathi phone
 iphone` starts it when it isn't answering (`sparsh iphone --background`:
 tunnel, developer image, port 8100, no `sudo`), checks that it answers,
-and saves `[phone] wda`, in place of any Android. `sarathi up` starts a
+and saves `[phone] wda`, beside any Android. `sarathi up` starts a
 saved one again, after an unplug, a restart or an iOS update. `sparsh
-iphone --stop` stops it, and `down` leaves it running:
-Sarathi gives its agents one phone, and a sarathi.toml with both is
-refused. The containers reach it at `host.containers.internal:8100`.
+iphone --stop` stops it, and `down` leaves it running. **Whichever
+phone is plugged in is the one used**: Sparsh asks the iPhone and the
+Androids alike and takes the one that answers, so swapping the iPhone
+for an Android on the cable, or back, needs no setting changed. While an
+Android answers, `up` starts the iPhone's unit without waiting for it.
+Two phones that answer at once are said, not guessed
+([notes/20](notes/20-whichever-phone-is-plugged-in.md)). The containers
+reach the iPhone at `host.containers.internal:8100`.
 Keep the iPhone unlocked while an agent works it; `--awake` can't change
 an iPhone's Auto-Lock. The same step is **Use the iPhone** on the
 **Your phone** card ([notes/19](notes/19-an-iphone-too.md)).
@@ -838,15 +847,16 @@ src/sarathi/
                 units, systemd  (notes/03); Dvara's unit  (notes/04);
                 its streamed window, and the image's browser  (notes/05);
                 the firewall named when phones are to reach it  (notes/11);
-                ntfy's own container  (notes/15)
+                ntfy's own container  (notes/15); sarathi-adb, this
+                computer's adb lent to the containers by a file  (notes/20)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
                 through the Sparsh found  (notes/08); its screen while an
                 agent works it, --awake  (notes/10); `tcpip`, Wi-Fi turned
                 on from the cable and the address saved  (notes/17); an
-                iPhone's WebDriverAgent, `iphone`, in the Android's place
-                (notes/19)
+                iPhone's WebDriverAgent, `iphone`, beside the Android, the
+                plugged-in one used  (notes/19, notes/20)
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07); the

@@ -220,17 +220,16 @@ def test_a_person_signed_in_cannot_touch_the_phone(with_sparsh):
     assert not with_sparsh.sparsh_log.exists()
 
 
-def test_use_the_iphone_saves_it_in_place_of_the_android_once_it_answers(with_sparsh):
+def test_use_the_iphone_saves_it_beside_the_android_once_it_answers(with_sparsh):
     send(with_sparsh, "/api/settings/phone", {"do": "tcpip"})
     status, got = send(with_sparsh, "/api/settings/phone", {"do": "iphone", "wda": ""})
     assert status == 200 and got["restart"] is True, got
     assert "the iPhone answers at http://127.0.0.1:8100" in got["said"]
-    assert settings_mod.load().phone == settings_mod.Phone(wda="http://127.0.0.1:8100")
-    # back to the Android: the iPhone gives way, and Apply is asked
-    status, got = send(with_sparsh, "/api/settings/phone",
-                       {"do": "connect", "address": "192.168.1.160:5555"})
-    assert status == 200 and got["restart"] is True
-    assert settings_mod.load().phone.wda is None
+    saved = settings_mod.load().phone
+    assert saved.wda == "http://127.0.0.1:8100" and saved.address == "192.168.1.160:5555"
+    # the Android's address again: the iPhone stays written beside it
+    send(with_sparsh, "/api/settings/phone", {"do": "connect", "address": "192.168.1.160:5555"})
+    assert settings_mod.load().phone.wda == "http://127.0.0.1:8100"
 
 
 def test_an_iphone_that_does_not_answer_is_said_and_not_saved(with_sparsh):

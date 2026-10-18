@@ -33,9 +33,12 @@ sudo, and again by itself whenever the phone is plugged back in.
 computer's own address and not answering, it is started first, behind
 (``sparsh iphone``, in a user unit of its own, ``sarathi-iphone``, so a
 restart of the home page doesn't take it down), and ``up`` does the same
-for a saved one. Its address is saved as ``[phone] wda``, and an Android address
-dropped: Sarathi gives its agents one phone. The containers reach it at
-``host.containers.internal`` (podman.py). ``sparsh iphone --stop`` stops
+for a saved one. Its address is saved as ``[phone] wda``, beside any Android
+address: Sparsh uses whichever phone answers, so an iPhone swapped for an
+Android on the cable, or back, needs nothing run here. While an Android
+answers, ``up`` starts the iPhone's unit without waiting for it, so it
+is ready the moment the iPhone is plugged back in. The containers reach
+it at ``host.containers.internal`` (podman.py). ``sparsh iphone --stop`` stops
 it; ``down`` leaves it, since ``down && up`` is how settings are applied.
 
 ONE KEY, THIS COMPUTER'S. Pairing runs this computer's ``adb``, so the
@@ -131,6 +134,31 @@ def iphone_answers(found: Found, url: str) -> tuple[bool, str]:
                    f"nothing answers at {url}: is WebDriverAgent running on that iPhone?")
 
 
+def start_behind(found: Found) -> None:
+    """``sparsh iphone`` in its own unit, not waited for: it waits for the
+    iPhone itself, and starts WebDriverAgent whenever it is plugged in."""
+    if shutil.which("systemd-run"):
+        # its own unit, so it outlives whatever asked: the home page is a
+        # user service, and what it starts would stop when it restarts.
+        # A unit already running is left as it is.
+        subprocess.run(["systemd-run", "--user", "--quiet", "--collect", f"--unit={IPHONE_UNIT}",
+                        found.program, "iphone"], capture_output=True, check=False, timeout=30)
+
+
+def android_answers(found: Found) -> str | None:
+    """The Android Sparsh can use now (its model, or its serial), or None:
+    asked with no iPhone named, so only adb's phones are counted."""
+    from sarathi.siblings import read_status
+
+    try:
+        status = read_status(found.program, "sparsh.status.v1", env={"SPARSH_WDA": ""})
+    except ValueError:
+        return None
+    ready = [p for p in status.get("phones") or []
+             if p.get("state") == "device" and not str(p.get("serial", "")).startswith("http")]
+    return (ready[0].get("model") or ready[0].get("serial")) if ready else None
+
+
 def iphone_ready(found: Found, url: str) -> tuple[bool, str]:
     """:func:`iphone_answers`, after starting WebDriverAgent behind when it is
     this computer's and doesn't answer yet. ``sparsh iphone`` does every
@@ -139,12 +167,7 @@ def iphone_ready(found: Found, url: str) -> tuple[bool, str]:
     ok, said = iphone_answers(found, url)
     if ok or not is_here(url):
         return ok, said
-    if shutil.which("systemd-run"):
-        # its own unit, so it outlives whatever asked: the home page is a
-        # user service, and what it starts would stop when it restarts.
-        # A unit already running is left as it is; --background then waits.
-        subprocess.run(["systemd-run", "--user", "--quiet", "--collect", f"--unit={IPHONE_UNIT}",
-                        found.program, "iphone"], capture_output=True, check=False, timeout=30)
+    start_behind(found)
     try:
         done = subprocess.run([found.program, "iphone", "--background"], capture_output=True,
                               text=True, timeout=IPHONE_TIMEOUT, check=False)
@@ -189,9 +212,11 @@ def run(args, found: Found) -> int:
         print(said)
         awake = args.awake or (config.phone.awake if config.phone else None)
         old = config.phone
-        settings_path().write_text(render(replace(config, phone=Phone(wda=url, awake=awake))))
+        settings_path().write_text(render(replace(config, phone=Phone(
+            wda=url, address=old.address if old else None, awake=awake))))
         print(f"the iPhone is on in {settings_path()}"
-              + (f", in place of the Android at {old.address}" if old and old.address else ""))
+              + (f", beside the Android at {old.address} (the one that answers is used)"
+                 if old and old.address else ""))
         if config.road == "podman":
             print("  the containers reach it at "
                   + url.replace("127.0.0.1", "host.containers.internal")
@@ -235,10 +260,11 @@ def run(args, found: Found) -> int:
                   "(sarathi phone pair ADDRESS CODE)")
             return 1
     elif config.road == "podman":
-        print("note: on the podman road the containers can't reach a phone on a cable: "
-              "give its Wi-Fi address (sarathi phone ADDRESS)")
+        print("  the containers reach the phone on this computer's cable through its "
+              "adb (sarathi-adb, started by `up`)")
     awake = args.awake or (config.phone.awake if config.phone else None)
-    settings_path().write_text(render(replace(config, phone=Phone(address=address,
+    wda = config.phone.wda if config.phone else None
+    settings_path().write_text(render(replace(config, phone=Phone(address=address, wda=wda,
                                                                   awake=awake))))
     where = f"over Wi-Fi at {address}" if address else "on a USB cable"
     print(f"the phone is on in {settings_path()}, {where}")

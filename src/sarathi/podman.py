@@ -83,14 +83,21 @@ refuses a profile written by a newer version of
 itself, so ``up`` says when this machine's Chrome is newer than the
 image's: a rebuild picks up the newer one.
 
-THE PHONE OVER WI-FI, with ``[phone] on``. A container can't reach a
-phone on a USB cable without being handed the host's whole USB bus, so
-it reaches it the way another computer would: over the network, at
-``[phone] address`` (wireless debugging), with adb in the image. The
-page and the door mount ``~/.android``, so the key this computer paired
-with is theirs too (nothing is paired twice), and ``~/.sparsh``, so the
-person's rules hold inside. ``SPARSH_CONNECT`` tells Sparsh the address,
-and it reconnects whenever it looks for phones. The page gets ``--sparsh
+THE PHONE, with ``[phone] on``. A container can't reach a phone on a
+USB cable without being handed the host's whole USB bus, and the cable
+belongs to one adb server anyway: this computer's. So that server is
+lent to the containers through a file. ``sarathi-adb``, a user service
+here, runs Sparsh's ``adb-share``, which listens on ``~/.sparsh/adb.sock``
+(mode 0600) and passes each connection to this computer's adb. The
+containers get ``ADB_SERVER_SOCKET`` naming that file, so their adb
+asks this computer's, and an Android on the cable is there inside too.
+A file, not a port, because whoever reaches adb can work the phone, and
+a port the containers reach is one the house could reach. An Android
+over Wi-Fi works as before, at ``[phone] address``:
+``SPARSH_CONNECT`` tells Sparsh the address, and it reconnects whenever
+it looks for phones. The page and the door mount ``~/.android``, so the
+key this computer paired with is theirs too (nothing is paired twice),
+and ``~/.sparsh``, so the person's rules hold inside. The page gets ``--sparsh
 auto:…`` (no phone answering at the start means no tools until the
 person says to use one); the door gets ``--sparsh`` for the one person
 its actors file marks ``phone = true``.
@@ -209,9 +216,10 @@ UNITS = {"samay": "sarathi-samay", "dvara": "sarathi-dvara", "yantra": "sarathi-
          "smritikosh": "sarathi-smritikosh", "smritikosh-neo4j": "sarathi-smritikosh-neo4j",
          "smritikosh-mongodb": "sarathi-smritikosh-mongodb",
          "smritikosh-redis": "sarathi-smritikosh-redis",
-         "smritikosh-ui": "sarathi-smritikosh-ui", "ntfy": "sarathi-ntfy"}
+         "smritikosh-ui": "sarathi-smritikosh-ui", "ntfy": "sarathi-ntfy",
+         "adb": "sarathi-adb"}
 #: Not a container: an ordinary user service (see the module docstring).
-SERVICE_UNITS = ("sarathi", "smritikosh-ui")
+SERVICE_UNITS = ("sarathi", "smritikosh-ui", "adb")
 #: Containers from an image of their own, so `sarathi image` doesn't restart them.
 OWN_IMAGE = ("ntfy",)
 #: The containers' names before each went by its project's name: stopped
@@ -435,7 +443,40 @@ def phone_env(config: Config) -> str:
     env = services.phone_env(config)
     if "SPARSH_WDA" in env:
         env["SPARSH_WDA"] = from_container(env["SPARSH_WDA"])
+    if config.phone is not None:
+        # this computer's adb, lent through a file (module docstring)
+        env["ADB_SERVER_SOCKET"] = f"localfilesystem:{adb_socket()}"
     return "".join(f"Environment={k}={v}\n" for k, v in env.items())
+
+
+def adb_socket() -> Path:
+    """Where ``sarathi-adb`` lends this computer's adb: Sparsh's own
+    folder, which the containers that work the phone already mount."""
+    sparsh = os.environ.get("SPARSH_STATE", "").strip()
+    return (Path(sparsh).expanduser() if sparsh else Path.home() / ".sparsh") / "adb.sock"
+
+
+def adb_unit(config: Config) -> str | None:
+    """``sparsh adb-share`` as a user service, with [phone] on and Sparsh
+    on this computer; None otherwise."""
+    from sarathi.siblings import SIBLINGS, locate
+
+    if config.phone is None:
+        return None
+    hit = locate(next(s for s in SIBLINGS if s.name == "sparsh"))
+    if hit is None:
+        return None
+    return f"""{HEADER}
+[Unit]
+Description=Sarathi: this computer's adb, lent to the containers (the phone on the cable)
+
+[Service]
+ExecStart={hit[0]} adb-share --socket {adb_socket()}
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+"""
 
 
 def people_dir(config: Config) -> Path | None:
@@ -1168,7 +1209,15 @@ def up(config: Config) -> tuple[list[str], bool]:
     dash = dashboard_unit(config)
     if install_home(dash, "smritikosh-ui"):
         changed.add(unit_file("smritikosh-ui").name)
+    lend = adb_unit(config)
+    lent = install_home(lend, "adb")
+    if lent:
+        changed.add(unit_file("adb").name)
     lines = retired + (["units rewritten from sarathi.toml"] if changed else [])
+    if lend is not None:
+        run(["systemctl", "--user", "restart" if lent else "start", f"{UNITS['adb']}.service"])
+        lines.append(f"{'adb':<{WIDTH}} the phone on this computer's cable, lent to the "
+                     f"containers  (unit {UNITS['adb']})")
     lines += dashboard_note(config, dash)
     newest = image_id(IMAGE)
     note = browser_note()
@@ -1356,6 +1405,9 @@ def down(remove: bool = False) -> list[str]:
         install({})
         install_home(None)
         install_home(None, "smritikosh-ui")
+        if unit_file("adb").exists():
+            run(["systemctl", "--user", "stop", f"{UNITS['adb']}.service"])
+        install_home(None, "adb")
         run(["podman", "network", "rm", NETWORK])    # quadlet made it; nothing uses it now
         lines.append("units removed: nothing starts at login until the next `sarathi up`")
     else:

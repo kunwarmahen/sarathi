@@ -351,11 +351,12 @@ def phone_step(config: Config, body: dict) -> tuple[str, bool]:
             raise EditError(400, f"{said} -- not saved")
         old = config.phone
         sarathi_apply({"phone": {"on": True, "wda": url,
+                                 "address": old.address if old else None,
                                  "awake": old.awake if old else None}})
         if old is not None and old.wda == url:
             return f"{said}. Same address as before: nothing to restart.", False
-        return (f"{said}; saved, in place of any Android. Apply, so Yantra and Dvara "
-                "use the iPhone.", True)
+        return (f"{said}; saved, beside any Android (the one plugged in is used). Apply, "
+                "so Yantra and Dvara can use the iPhone.", True)
     if do == "tcpip":
         status, address, said = phone_cmd.from_cable(found)
         if status:
@@ -373,8 +374,8 @@ def phone_step(config: Config, body: dict) -> tuple[str, bool]:
     old = config.phone
     moved = old is None or old.address != address
     sarathi_apply({"phone": {"on": True, "address": address,
+                             "wda": old.wda if old else None,
                              "awake": old.awake if old else None}})
-    moved = moved or (old is not None and old.wda is not None)
     if moved:
         return (f"{said}; saved. Apply, so the containers reach it at {address}.", True)
     return (f"{said}. Same address as before: nothing to restart. Yantra's phone panel "

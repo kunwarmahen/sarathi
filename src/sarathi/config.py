@@ -120,13 +120,15 @@ class Pages:
 class Phone:
     """Your phone, through Sparsh: ``[phone]``. On, the door's agents may
     work it for the person marked ``phone = true`` in its actors file,
-    and on the podman road the containers reach it -- over Wi-Fi, at
-    ``address``, since a container can't reach a cable.
+    and on the podman road the containers reach it: an Android on this
+    computer's cable through this computer's adb (``sarathi-adb``,
+    podman.py), or over Wi-Fi at ``address``.
 
-    ONE PHONE. An Android phone is ``address`` (or its cable); an iPhone
-    is ``wda``, the address WebDriverAgent answers at. Sparsh takes an
-    iPhone it is told about ahead of any Android it finds, so both at
-    once would quietly mean the iPhone; the file holds one or the other."""
+    WHICHEVER IS PLUGGED IN. An Android phone is its cable or ``address``;
+    an iPhone is ``wda``, the address WebDriverAgent answers at. Both may
+    be written down: Sparsh uses the one that answers (its device.pick),
+    so an iPhone swapped for an Android on the same cable, or back, needs
+    no setting changed. Two that answer at once are said, not guessed."""
 
     #: ``192.168.1.23:41234``: the phone's wireless debugging address.
     #: None: a phone on a USB cable (the process road only).
@@ -393,9 +395,6 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                                                 wda)):
         raise ConfigError(f"{where}: phone.wda must be WebDriverAgent's address, like "
                           f"\"http://127.0.0.1:8100\", not {wda!r}")
-    if wda and address:
-        raise ConfigError(f"{where}: phone.address (an Android) and phone.wda (an iPhone) "
-                          "are two phones; Sarathi gives its agents one -- keep one of them")
     awake = phone_table.get("awake") or None
     if awake is not None and awake not in AWAKE:
         raise ConfigError(f"{where}: phone.awake is one of {', '.join(AWAKE)}, "
@@ -537,10 +536,11 @@ via = "{config.memory}"
 
 def _render_phone(phone: Phone | None) -> str:
     head = """# Your phone, through Sparsh: Dvara's agents may work it for the one
-# person marked `phone = true` in its actors file. On the podman road the
-# containers reach it over Wi-Fi at `address` (a container can't reach a
-# cable): `sarathi phone pair ADDRESS CODE` once, then `sarathi phone ADDRESS`.
-# An iPhone instead: `wda`, WebDriverAgent's address (`sarathi phone iphone`).
+# person marked `phone = true` in its actors file. An Android on this
+# computer's cable just works (the containers get this computer's adb);
+# over Wi-Fi, `address` (`sarathi phone ADDRESS`). An iPhone: `wda`,
+# WebDriverAgent's address (`sarathi phone iphone`). Both may be set: the
+# one plugged in, the one that answers, is used.
 [phone]
 """
     if phone is None:
@@ -548,7 +548,7 @@ def _render_phone(phone: Phone | None) -> str:
     address = f'address = "{phone.address}"' if phone.address else \
         '# address = "192.168.1.23:41234"   # its Wireless debugging address'
     wda = f'wda = "{phone.wda}"' if phone.wda else \
-        '# wda = "http://127.0.0.1:8100"   # an iPhone instead: its WebDriverAgent'
+        '# wda = "http://127.0.0.1:8100"   # an iPhone: its WebDriverAgent'
     awake = f'awake = "{phone.awake}"' if phone.awake else \
         '# awake = "working"   # its screen while an agent works it: working, always, off'
     return head + f"on = true\n{address}\n{wda}\n{awake}\n"

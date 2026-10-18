@@ -59,6 +59,8 @@ told about Sparsh. A container can't reach a phone on a USB cable
 without passing the host's USB bus through, which hands the container
 every device on it. The way in is wireless debugging: `adb pair` over
 the network, with no cable and no USB passthrough. That is [note 08](08-the-phone-over-wifi.md).
+The cable came back later without the USB bus: the containers borrow
+this computer's adb through a socket file ([note 20](20-whichever-phone-is-plugged-in.md)).
 
 ## What the tests hold
 
