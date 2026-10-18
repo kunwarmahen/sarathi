@@ -734,6 +734,164 @@ function fullScreen(on) {
   box.scrollTop = box.scrollHeight;
 }
 
+/* -- history: every conversation, kept by Dvara as it goes (past.py) ----------
+   Searched by any words in it (Dvara's full-text index, every conversation
+   and not only the rows drawn), read the way it looked, carried on in this
+   chat, or deleted for good. */
+
+const past = { q: "", timer: null };
+
+function marked(text, q) {
+  // the words searched for, marked in what is drawn; text nodes only
+  const span = h("span", {}, text);
+  const words = (q.toLowerCase().match(/[\p{L}\p{N}_]+/gu) || []);
+  if (!words.length) return span;
+  const re = new RegExp(`(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "giu");
+  span.textContent = "";
+  for (const part of text.split(re)) {
+    span.append(re.test(part) ? h("mark.hit", {}, part) : document.createTextNode(part));
+    re.lastIndex = 0;
+  }
+  return span;
+}
+
+function snippetView(snip) {
+  // Dvara marks each match between \u0002 and \u0003
+  const out = h("div.snip");
+  snip.split(/(\u0002[^\u0003]*\u0003)/).forEach((part) => {
+    out.append(part.startsWith("\u0002")
+      ? h("mark.hit", {}, part.slice(1, -1)) : document.createTextNode(part));
+  });
+  return out;
+}
+
+function historySaid(text) {
+  const el = document.getElementById("history-said");
+  el.hidden = !text;
+  el.textContent = text || "";
+}
+
+function historyList(on) {
+  document.getElementById("history-rows").hidden = !on;
+  document.getElementById("history-q").hidden = !on;
+  document.getElementById("history-lede").hidden = !on;
+  document.getElementById("history-read").hidden = on;
+  document.getElementById("history-back").hidden = on;
+}
+
+async function openHistory() {
+  const box = document.getElementById("history");
+  if (!box.open) box.showModal();
+  historyList(true);
+  historySaid("");
+  await drawHistory();
+  document.getElementById("history-q").focus();
+}
+
+async function drawHistory() {
+  const rows = document.getElementById("history-rows");
+  let data;
+  try {
+    data = await api(`/api/chat/chats?q=${encodeURIComponent(past.q)}`);
+  } catch (err) {
+    rows.replaceChildren(h("p.meta", {}, err.message));
+    return;
+  }
+  if (!data.rows.length) {
+    rows.replaceChildren(h("p.meta", {}, past.q
+      ? `None of your conversations say “${past.q}”.`
+      : "Nothing yet. Each conversation is kept here as you talk."));
+    return;
+  }
+  rows.replaceChildren(...data.rows.map((r) => {
+    const row = h("div.hrow", { tabindex: "0", role: "button" },
+      h("div", {},
+        h("div.title", {}, r.title, r.open ? h("span.now", {}, "open in a chat") : null),
+        h("div.meta", {}, `${when(r.updated_at)} · ${r.agent} · on ${r.road} · `
+          + `${r.turns} message${r.turns === 1 ? "" : "s"}`)),
+      deleteButton(r),
+      r.snippet ? snippetView(r.snippet) : null);
+    row.addEventListener("click", (e) => { if (!e.target.closest("button")) readHistory(r.id); });
+    row.addEventListener("keydown", (e) => { if (e.key === "Enter") readHistory(r.id); });
+    return row;
+  }));
+}
+
+function deleteButton(r) {
+  const b = h("button.quiet.danger", { type: "button" }, "Delete");
+  if (r.open) {
+    b.disabled = true;
+    b.title = "It's open in a chat now. Start a new chat there first.";
+  }
+  b.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!confirm(`Delete “${r.title}” for good? It can't be brought back.`)) return;
+    try {
+      await api(`/api/chat/chats/${encodeURIComponent(r.id)}/delete`, {});
+      historyList(true);
+      historySaid("");
+      await drawHistory();
+    } catch (err) { historySaid(err.message); }
+  });
+  return b;
+}
+
+async function readHistory(id) {
+  let d;
+  try { d = await api(`/api/chat/chats/${encodeURIComponent(id)}`); }
+  catch (err) { historySaid(err.message); return; }
+  historyList(false);
+  historySaid("");
+  const carry = h("button.quiet", { type: "button" }, d.open ? "Open in a chat now" : "Carry on in the chat");
+  carry.disabled = d.open;
+  carry.addEventListener("click", async () => {
+    const pick = document.getElementById("agent");
+    if ([...pick.options].some((o) => o.value === d.agent)) pick.value = d.agent;
+    document.getElementById("history").close();
+    try { await api("/api/chat", { agent: d.agent, text: `/chats open ${d.id}` }); problem(""); }
+    catch (err) { problem(err.message); }
+    chat.busy = true;
+    look();
+  });
+  const lines = d.entries.map((e) => {
+    if (e.who === "tool") {
+      return h("details.tool", {},
+        h("summary", {}, `· ${e.name}${e.error ? " (failed)" : ""}`),
+        h("pre", {}, e.args), e.result ? h("pre", {}, `→ ${e.result}`) : null);
+    }
+    const said = e.who === "you" ? h("div.bubble", {}, marked(e.text, past.q)) : bubble(e.text, "agent");
+    if (e.who !== "you" && past.q) {
+      // markdown drawn first, then the words marked inside it
+      const walk = document.createTreeWalker(said, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walk.nextNode()) nodes.push(walk.currentNode);
+      for (const n of nodes) n.replaceWith(marked(n.nodeValue, past.q));
+    }
+    return h(`div.tline.${e.who}`, {}, h("span.tag", {}, e.who === "you" ? "You" : d.agent), said);
+  });
+  document.getElementById("history-read").replaceChildren(
+    h("div", {}, h("div.title", {}, h("strong", {}, d.title)),
+      h("div.meta", {}, `${when(d.started_at)} · ${d.agent} · on ${d.road}`
+        + (d.model ? ` · ${d.model}` : ""))),
+    h("div.acts", {}, carry, deleteButton(d)),
+    ...lines);
+  document.querySelector("#history-read mark.hit")?.scrollIntoView({ block: "center" });
+}
+
+function startHistory() {
+  document.getElementById("history-open").addEventListener("click", openHistory);
+  document.getElementById("history-close").addEventListener("click",
+    () => document.getElementById("history").close());
+  document.getElementById("history-back").addEventListener("click", () => {
+    historyList(true);
+    drawHistory();
+  });
+  document.getElementById("history-q").addEventListener("input", (e) => {
+    clearTimeout(past.timer);
+    past.timer = setTimeout(() => { past.q = e.target.value; drawHistory(); }, 200);
+  });
+}
+
 function startChat() {
   chat.on = true;
   document.getElementById("chat").hidden = false;
@@ -750,6 +908,7 @@ function startChat() {
   for (const b of document.querySelectorAll(".words [data-word]")) {
     b.addEventListener("click", () => send(b.dataset.word));
   }
+  startHistory();
   document.getElementById("chat-full").addEventListener("click", () =>
     fullScreen(!document.body.classList.contains("chat-full")));
   document.addEventListener("keydown", (e) => {

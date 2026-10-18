@@ -360,13 +360,31 @@ it runs, then the answer appears as it's written. The buttons under the
 chat ask without typing: **Skills** (what your agent has learned, and
 anything it offers to keep), **Tools** (what it could use on your last
 message), **Schedules**, **Memory**, **Phone** (if the phone is yours:
-its screen now, and what was last done on it), **New chat**, **Past chats** (what
-New chat ended, kept; write `/chats 2` to go back into the second, and
-its messages show again under the answer). After a job of four
+its screen now, and what was last done on it), **New chat**, and
+**History**. After a job of four
 steps or more, an agent whose package has skills may offer to keep how
 it was done. Press **Keep** and next time it's one step, for you only.
 For a shorter job, press **Learn this** after it to ask for the same
 offer.
+
+**Finding an old conversation.** Every conversation you have with your
+agents is kept by itself as you talk. You don't have to save anything,
+and nobody else in the house can see yours. Press **History** under the
+chat: a list of them, newest first. Type a word you remember, like
+*boiler*, into the box at the top and the list shrinks to the
+conversations that say it, with the word marked. Tap one to read it,
+then:
+
+- **Carry on in the chat** puts it back in the chat, and you go on from
+  where it stopped.
+- **Delete** removes it for good, after asking once. The one you're in
+  now can't be deleted: press **New chat** first.
+
+The same works by typing: `/chats boiler` finds, `/chats 2` goes back
+into the second, `/chats delete 2` deletes it. Deleting clears your
+history. Your chat window here keeps its own recent lines until they age
+out, and the owner's record of what each message cost (`dvara runs`)
+keeps them too.
 
 **Teaching it a job, one step at a time.** There are two ways. Pick the
 one you'll actually do:

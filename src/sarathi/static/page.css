@@ -363,6 +363,50 @@ body.chat-full #chat .chat { flex: 1; min-height: 0; }
 body.chat-full #chat .lines { max-height: none; flex: 1; }
 body.chat-full { overflow: hidden; }
 
+/* -- history: every conversation, kept (Dvara's past.py) -------------------- */
+dialog.history {
+  width: min(760px, calc(100vw - 32px)); max-height: min(86vh, 900px); padding: 16px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--sheet); color: var(--ink);
+}
+dialog.history::backdrop { background: rgba(0, 0, 0, .35); }
+dialog.history[open] { display: flex; flex-direction: column; gap: 10px; }
+.history-head { display: flex; align-items: center; gap: 10px; }
+.history-head h2 { flex: 1; }
+#history-q {
+  font: inherit; padding: 7px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--paper); color: var(--ink); width: 100%;
+}
+dialog.history [hidden] { display: none; }
+.history-rows, .history-read { overflow-y: auto; min-height: 0; display: grid; gap: 8px; align-content: start; }
+.hrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: start;
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer;
+  background: var(--paper);
+}
+.hrow:hover, .hrow:focus-visible { border-color: var(--accent); }
+.hrow .title { font-weight: 600; overflow-wrap: anywhere; }
+.hrow .meta, .history-read .meta { color: var(--ink-3); font-size: 12.5px; }
+.hrow .snip { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; overflow-wrap: anywhere; }
+.hrow .now { color: var(--ok); font-size: 12px; margin-left: 6px; font-weight: 500; }
+mark.hit { background: var(--accent-soft); color: inherit; border-radius: 3px; padding: 0 1px;
+  box-shadow: inset 0 -2px 0 var(--accent); }
+button.danger { color: var(--clay); }
+button.quiet:disabled { opacity: .45; cursor: default; }
+button.danger:hover { color: var(--clay); border-color: var(--clay); }
+.history-read .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.history-read .tline { display: grid; gap: 3px; }
+.history-read .tline .tag { color: var(--ink-3); font-size: 12px; }
+.history-read .tline .bubble { padding: 8px 12px; border-radius: 12px; background: var(--sunk);
+  white-space: pre-wrap; overflow-wrap: anywhere; }
+.history-read .tline .bubble.md { white-space: normal; }
+.history-read .tline.you .bubble { background: var(--accent-soft); }
+.history-read .tool { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+.history-read .tool pre { white-space: pre-wrap; margin: 4px 0 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .hrow { grid-template-columns: minmax(0, 1fr); }
+  .hrow > button { justify-self: start; }
+}
+
 .line img.picture { display: block; max-width: min(100%, 280px); margin-top: 6px;
   border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; }
 .learned { display: grid; gap: 6px; margin-top: 10px; font-size: 14px; }

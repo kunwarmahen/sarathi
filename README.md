@@ -743,8 +743,11 @@ formatted text. After a job of several steps it may offer to keep how
 it was done, with **Keep** and **Not now**, saved for you alone. A row
 of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory**, **Phone** (its
 screen and last steps, for the phone's person),
-**New chat** and **Past chats** to Dvara as the words they are, and **Full screen** gives a
-phone the whole window. A job can also be taught one step at a time:
+**New chat** to Dvara as the words they are, **History** opens every
+conversation the person has had, searched by its words, read again,
+carried on or deleted for good (Dvara's
+[notes/50](https://github.com/kunwarmahen/dvara/blob/main/notes/50-every-conversation-kept.md);
+[notes/21](notes/21-history.md)), and **Full screen** gives a phone the whole window. A job can also be taught one step at a time:
 `/learn start <what it's for>` and each step (the agent does only what
 you say), or `/learn watch` and do each step on your phone yourself,
 saying `next`; `/learn done` keeps it as one skill (Dvara's

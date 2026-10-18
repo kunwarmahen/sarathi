@@ -254,6 +254,12 @@ def door():
             self._answer(200, {"lines": [{"id": 1, "who": "notice", "text": "2 new mails"}],
                                "agents": ["greeter"], "busy": [], "asks": [], "holds": []})
 
+        def do_DELETE(self):
+            heard.append(("DELETE", self.path, {}))
+            if "/open-now" in self.path:
+                return self._answer(409, {"detail": "that conversation is open in a chat now"})
+            self._answer(200, {"deleted": self.path.split("/")[-1].split("?")[0]})
+
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             heard.append(("POST", self.path, body))
@@ -331,6 +337,29 @@ def test_the_chat_needs_the_home_token_and_takes_no_other_post(chatting, door):
     assert ask(chatting, "/api/chat", token="wrong").status_code == 401
     assert send(chatting, "/api/chat/other/x", {})[0] == 405
     assert door.heard == []
+
+
+def test_history_lists_searches_and_reads_only_the_owners_own(chatting, door):
+    ask(chatting, "/api/chat/chats?q=boiler+pressure&actor=guest")
+    method, path, _ = door.heard[-1]
+    assert (method, path.split("?")[0]) == ("GET", "/web/chats")
+    assert "actor=mahen" in path and "guest" not in path
+    assert "q=boiler+pressure" in path
+    ask(chatting, "/api/chat/chats/abc123")
+    assert door.heard[-1][1].split("?")[0] == "/web/chats/abc123"
+    # an id is one segment on Dvara's side whatever it holds: never a step up
+    ask(chatting, "/api/chat/chats/..%2Fweb")
+    assert door.heard[-1][1].split("?")[0] == "/web/chats/..%252Fweb"
+
+
+def test_history_deletes_through_dvara_and_its_refusal_comes_back(chatting, door):
+    status, said = send(chatting, "/api/chat/chats/abc123/delete", {"actor": "guest"})
+    assert status == 200 and said == {"deleted": "abc123"}
+    method, path, _ = door.heard[-1]
+    assert method == "DELETE" and "actor=mahen" in path
+    status, said = send(chatting, "/api/chat/chats/open-now/delete", {})
+    assert status == 409 and "open in a chat" in said["detail"]
+    assert send(chatting, "/api/chat/chats/abc123/delete", {}, token="wrong")[0] == 401
 
 
 def test_dvara_down_is_said_not_hung(keys):

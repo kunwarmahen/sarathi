@@ -588,6 +588,18 @@ def _handler(server: HomeServer):
                                     "link": f"ntfy://{hostport}/{topic}?secure=false",
                                     "house": server.home.config.people_host() is not None})
 
+        def _past(self, url) -> None:
+            """The person's own past conversations, from Dvara (its past.py):
+            the list (``?q=`` searches), and one by its id to read."""
+            who = self._who()
+            if who is None:
+                return None
+            rest = url.path[len("/api/chat/chats"):].strip("/")
+            if not rest:
+                q = parse_qs(url.query).get("q", [""])[-1]
+                return self._chat(who, "GET", "/web/chats", query={"q": q})
+            return self._chat(who, "GET", f"/web/chats/{urllib.parse.quote(rest, safe='')}")
+
         def do_GET(self) -> None:
             url = urlparse(self.path)
             if url.path in STATIC:
@@ -596,6 +608,8 @@ def _handler(server: HomeServer):
                                   .read_bytes(), kind)
             if url.path == "/api/settings":
                 return self._settings_get()
+            if url.path.startswith("/api/chat/chats"):
+                return self._past(url)
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
                                 "/api/people", "/api/chat/push"):
                 return self._json(404, {"detail": "not found"})
@@ -867,6 +881,14 @@ def _handler(server: HomeServer):
                 if who is None:
                     return None
                 return self._chat(who, "POST", "/web/accounts-page", {})
+            if parts[:3] == ["api", "chat", "chats"] and len(parts) == 5 \
+                    and parts[4] == "delete":
+                # deleted for good, by Dvara; only ever the person's own
+                who = self._who()
+                if who is None:
+                    return None
+                return self._chat(who, "DELETE",
+                                  f"/web/chats/{urllib.parse.quote(parts[3], safe='')}")
             if parts[:2] != ["api", "chat"] or len(parts) not in (2, 4) or \
                     (len(parts) == 4 and parts[2] not in ("asks", "holds")):
                 return self._json(405, {"detail": "this page only links, passes your "
