@@ -59,7 +59,7 @@ a { color: var(--accent); }
 }
 .top {
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
-  gap: 8px 24px; padding-top: 28px; padding-bottom: 18px;
+  gap: 8px 24px; padding-top: 16px; padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: baseline; gap: 10px; }
@@ -353,15 +353,53 @@ h3.sub { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
   border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; cursor: pointer;
 }
 .words button:hover, button.quiet:hover { color: var(--accent); border-color: var(--accent); }
-#chat-full { margin-left: auto; }
-body.chat-full #chat {
-  position: fixed; inset: 0; z-index: 50; margin: 0; padding: 12px 16px;
-  background: var(--paper); display: flex; flex-direction: column; gap: 8px;
+
+/* -- three views: the chat is the page; Your pages and Settings behind icons - */
+/* Which one is on is body[data-view]; a section's own `hidden` still says
+   whether it has anything to show at all. */
+body[data-view="chat"] :is(#pages, #people, #settings),
+body[data-view="pages"] :is(#chat, #people, #settings),
+body[data-view="settings"] :is(#chat, #pages),
+body[data-view="signin"] .back-row { display: none !important; }
+
+.views { display: flex; gap: 4px; margin-left: auto; align-self: center; }
+.view-icon {
+  display: inline-grid; place-items: center; width: 38px; height: 38px;
+  border-radius: 10px; color: var(--ink-2); border: 1px solid transparent;
 }
-body.chat-full #chat .lede, body.chat-full #push { display: none; }
-body.chat-full #chat .chat { flex: 1; min-height: 0; }
-body.chat-full #chat .lines { max-height: none; flex: 1; }
-body.chat-full { overflow: hidden; }
+.view-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor;
+  stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.view-icon:hover { color: var(--accent); border-color: var(--line); }
+.view-icon[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+.views[hidden], .view-icon[hidden] { display: none; }
+.back-row { margin-top: 14px; }
+.back-row[hidden] { display: none; }
+.back { font-size: 14px; font-weight: 600; text-decoration: none; }
+.back:hover { text-decoration: underline; }
+body[data-view="settings"] #people { margin-top: 36px; }
+
+/* the chat fills the window under the header, as Yantra's page does */
+body[data-view="chat"] { height: 100vh; height: 100dvh; display: flex;
+  flex-direction: column; overflow: hidden; }
+body[data-view="chat"] :is(.top, .foot) { width: 100%; }
+body[data-view="chat"] main { flex: 1; min-height: 0; width: 100%;
+  display: flex; flex-direction: column; padding-bottom: 10px; }
+body[data-view="chat"] #chat { flex: 1; min-height: 0; margin-top: 12px;
+  display: flex; flex-direction: column; }
+body[data-view="chat"] #chat .chat { flex: 1; min-height: 0; }
+body[data-view="chat"] #chat .lines { max-height: none; flex: 1; }
+body[data-view="chat"] .chat-lede { font-size: 13px; color: var(--ink-3); margin: 2px 0 8px; }
+body[data-view="chat"] .foot { padding-top: 6px; padding-bottom: 8px; }
+body[data-view="chat"] #foot-said { display: none; }
+@media (max-width: 560px) {
+  body[data-view="chat"] .chat-lede, body[data-view="chat"] #h-chat { display: none; }
+  body[data-view="chat"] #chat { margin-top: 6px; }
+  body[data-view="chat"] #push { margin-bottom: 6px; }
+  .top { align-items: center; }
+  .views { order: 2; }
+  .facts { order: 3; width: 100%; }
+  .brand h1 { font-size: 19px; }
+}
 
 /* -- history: every conversation, kept (Dvara's past.py) -------------------- */
 dialog.history {

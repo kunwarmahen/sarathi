@@ -348,9 +348,12 @@ signed in. Its **Memory** card says where the helper keeps what it
 remembers about you, and once you've done Step 7 it switches between the
 two.
 
-Once Dvara is on (Step 6), the same page also has **Talk to your
-agents** at the top: a chat with the agents behind Dvara, with no
-Telegram needed. What a schedule sends you waits there as a line marked
+Once Dvara is on (Step 6), the page opens on **Talk to your agents**:
+a chat with the agents behind Dvara, filling the window, with no
+Telegram needed. The cards are then one click away: the four squares at
+the top right open **Your pages**, the gear opens **Settings**, and
+**← Back to the chat** (or Escape) brings you back. A reload stays on
+the one you were on. What a schedule sends you waits there as a line marked
 *Sent to you*, including the answers of schedules you make on Yantra's
 page. When an agent wants a yes, a card with **Yes** and **No** appears
 under the chat.
@@ -453,7 +456,7 @@ flowchart TD
 * A Send, a Pay or a password still waits for your yes every time the skill runs.
 
 
-On a phone, **Full screen** gives the chat the whole window.
+On a phone, the chat takes the whole screen; the icons sit at the top.
 
 To show it something, press the paperclip beside **Send** and pick a
 photo or a file (a receipt, a letter from school), then ask about it.
@@ -475,7 +478,8 @@ computer or over https); Telegram has no such limit.
 ---
 
 **Changing a setting later.** Everything you chose here, and everything
-in the steps below, can be changed on the home page, under **Settings**:
+in the steps below, can be changed on the home page, under **Settings**
+(the gear at the top right):
 
 * **People**: who may use your agents, which ones, their daily
   allowance, their accounts, their Telegram id.
@@ -828,7 +832,8 @@ once: the phone that opens it first chooses a password, and from then
 on they sign in with their name and that password. They see their own
 chat and nothing else on the page. It runs with their allowance and
 their agents, and you see on Dvara's page what they spent, not what they
-said. The home page has a **People in the house** list that does the
+said. The home page has a **People in the house** list (behind the gear,
+under the Settings tabs) that does the
 same with buttons: **Invite** shows the link, **Sign out everywhere**
 signs them out on every device. Forgot their password? Invite them
 again: the new link lets them choose a new one. `sarathi people` lists
@@ -1117,7 +1122,8 @@ seat, though the two share no word.
 **See everything it remembers.** Smritikosh has a page of its own, its
 dashboard, and `sarathi up` starts it: open **http://localhost:3000/dashboard/memories**
 (the bare `localhost:3000` can open blank),
-or **Open Smritikosh's dashboard** on the home page's Memory card. Sign
+or **Open Smritikosh's dashboard** on the home page's Memory card
+(under **Your pages**, the four squares at the top). Sign
 in with your Smritikosh username and password. That's not a key: if you
 set Smritikosh up by hand, it's the password you chose then; if Sarathi
 made your account, the password is in

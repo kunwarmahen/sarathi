@@ -27,7 +27,8 @@ whether you do or not.
 
 Dvara now has a web channel (dvara's note 34), and `sarathi up` starts
 Dvara with it (`serve --web`). The home page draws it: **Talk to your
-agents**, above the cards. Pick an agent, write, and the answer comes
+agents**, now the page itself, with the cards one icon away
+([note 22](22-the-chat-is-the-page.md)). Pick an agent, write, and the answer comes
 back a few seconds later. What a schedule sent you is there too, marked
 *Sent to you*. A question an agent asks shows up as a card with **Yes**
 and **No**, and it goes to Telegram too; whichever you answer first

@@ -54,8 +54,9 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   Dvara hears it into words and the answer shows *I heard: "…"*. A
   browser allows the microphone only on this computer or over https, so
   a phone on the house address uses Telegram for it.
-* **Full screen.** A button above the chat gives it the whole window,
-  which is what a phone wants; Escape or the button closes it.
+* ~~**Full screen.**~~ A button above the chat gave it the whole window,
+  which is what a phone wants. Gone now that the chat is the page and
+  has the whole window already ([note 22](22-the-chat-is-the-page.md)).
 
 **IT STILL HOLDS NO LOGIC.** No new route on this page's server: the
 look it already passed through (`GET /api/chat`) now carries `live`, and

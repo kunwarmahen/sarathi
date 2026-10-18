@@ -17,7 +17,8 @@ syntax you have to get right.
 
 ## Settings, on your own page
 
-Under the cards, **Settings** has six tabs:
+Behind the gear at the top of the page
+([note 22](22-the-chat-is-the-page.md)), **Settings** has six tabs:
 
 | Tab | What | Whose file | Written by |
 |---|---|---|---|

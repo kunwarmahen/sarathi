@@ -69,8 +69,9 @@ sits at the row's start.
 
 ## What is not here yet
 
-* **Its own view.** The home page redesign (chat first, everything else
-  behind icons) is still to come; History will be one of those icons.
+* ~~**Its own view.**~~ The chat is now the page, with Your pages and
+  Settings behind icons ([note 22](22-the-chat-is-the-page.md)). History
+  stayed a button under the chat, since it is about the chat.
 * **The chat scroll above, by choice.** Deleting a conversation clears
   the person's history; the lines it left in this page's chat window
   stay until they age out, and the run ledger keeps its own. Blanking

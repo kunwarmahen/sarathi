@@ -689,7 +689,15 @@ your home page:
   http://127.0.0.1:8760/#token=…
 ```
 
-One page that links to each program's own page: Yantra's, Samay's,
+One page for all of it, in three views. With Dvara on, it opens on the
+chat (below), which fills the window. Two icons at the top right open
+the rest: **Your pages** (four squares) and **Settings** (a gear). Each
+view has its own address (`#pages`, `#settings`), so a reload stays put,
+and **← Back to the chat** or Escape goes back
+([notes/22](notes/22-the-chat-is-the-page.md)). With Dvara off there is
+no chat, and the page opens on Your pages.
+
+**Your pages** links to each program's own page: Yantra's, Samay's,
 Setu's (`setu serve`) and, with Dvara on, Dvara's (`dvara page`).
 With Sparsh found (on the Podman road, once `[phone] address` or `wda` is set), a **Your phone** card
 opens Yantra's page, where the phone panel shows the phone and what the
@@ -726,8 +734,7 @@ its links carry the other pages' keys, it has a key of its own (after the
 window_host` when that is one address, for the people in the house
 (below). ([notes/06](notes/06-one-bookmark.md))
 
-**Talk to your agents.** With Dvara on, the page also has a chat, above
-the cards: pick an agent, write, and the answer comes back a few seconds
+**Talk to your agents.** With Dvara on, the page opens on a chat: pick an agent, write, and the answer comes back a few seconds
 later. What a schedule sends you waits there too, even with no Telegram.
 A question an agent asks shows as a card with **Yes** and **No** (and
 goes to Telegram as well; the first answer counts). The chat holds no
@@ -747,7 +754,7 @@ screen and last steps, for the phone's person),
 conversation the person has had, searched by its words, read again,
 carried on or deleted for good (Dvara's
 [notes/50](https://github.com/kunwarmahen/dvara/blob/main/notes/50-every-conversation-kept.md);
-[notes/21](notes/21-history.md)), and **Full screen** gives a phone the whole window. A job can also be taught one step at a time:
+[notes/21](notes/21-history.md)). On a phone the chat takes the whole screen too. A job can also be taught one step at a time:
 `/learn start <what it's for>` and each step (the agent does only what
 you say), or `/learn watch` and do each step on your phone yourself,
 saying `next`; `/learn done` keeps it as one skill (Dvara's
@@ -773,7 +780,8 @@ then on sign in with their name and that password. They see their chat
 and nothing else: no cards, no keys, no memory switch. Each turn is
 theirs in Dvara, with their own allowance, rules, folder, memories and
 sign-ins. Dvara's page shows you who used which agent and what it cost,
-never their words. **People in the house**, below the cards, lists
+never their words. **People in the house**, under the gear below the
+Settings tabs, lists
 everyone in the actors file with **Invite** (the link to send) and
 **Sign out everywhere**. `sarathi people` lists them in a terminal;
 `--sign-out NAME` ends their devices, `--remove NAME` their sign-in. A
@@ -787,7 +795,7 @@ the house runs ntfy (above). Passwords are kept as scrypt,
 links and sessions only as hashes, in `~/.local/share/sarathi/people.json`.
 ([notes/14](notes/14-everyone-in-the-house.md))
 
-**Every setting, on the page.** Under the cards, **Settings** changes
+**Every setting, on the page.** Behind the gear, **Settings** changes
 every file you'd otherwise edit by hand, in six tabs: **People** (Dvara's
 actors file: who, which agents, accounts, allowance, Telegram ids, and
 anyone who messaged the bot unlisted), **Agents** (each agent's model,
@@ -878,7 +886,8 @@ src/sarathi/
                 the answers, skills to keep  (notes/18),
                 or as the person signed in  (notes/14); My accounts and
                 Notices on this phone, for each person  (notes/15);
-                Settings, routes owner-only  (notes/16)
+                Settings, routes owner-only  (notes/16); the chat as
+                the page, Your pages and Settings behind icons  (notes/22)
   editing.py    every settings file from the page: each program checks
                 and writes its own (dvara settings, setu config / site
                 file), sarathi.toml and secrets.env here  (notes/16);

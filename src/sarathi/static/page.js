@@ -6,11 +6,15 @@
 // referrer. Someone else in the house signs in instead (an invite link,
 // "#invite=", once; then their name and password) and gets their own chat,
 // nothing else: the server holds that line, this script only draws it.
+// The chat is the page; Your pages and Settings are views of their own,
+// behind the icons at the top, each at its own address (#pages, #settings)
+// so a reload stays put.
 "use strict";
 
 const KEY = "sarathi.home.token";
 const SESSION = "sarathi.home.session";
 const EVERY = 20000;
+const VIEWS = ["chat", "pages", "settings"];
 
 function keep(name, value) {
   try {
@@ -27,7 +31,11 @@ function takeHash() {
   const hash = new URLSearchParams(location.hash.slice(1));
   const fresh = hash.get("token");
   const invite = hash.get("invite") || "";
-  if (fresh || invite) history.replaceState(null, "", location.pathname + location.search);
+  if (fresh || invite) {
+    // a view asked for alongside the key ("#settings&token=…") is kept
+    const view = VIEWS.find((v) => hash.has(v));
+    history.replaceState(null, "", location.pathname + location.search + (view ? `#${view}` : ""));
+  }
   if (fresh) keep(KEY, fresh);
   return invite;
 }
@@ -120,6 +128,42 @@ async function switchMemory(via) {
 
 function show(id, on) { document.getElementById(id).hidden = !on; }
 
+// ---- the three views -----------------------------------------------------------
+// Each section keeps its own `hidden` (whether there is anything to show);
+// which view is on is body[data-view], read by the stylesheet. Someone in
+// the house has only the chat; the owner with Dvara off has no chat, so
+// their page opens on Your pages instead.
+
+function wantedView() {
+  const asked = location.hash.slice(1);
+  return VIEWS.includes(asked) ? asked : "chat";
+}
+
+function drawView() {
+  if (!me) {
+    document.body.dataset.view = "signin";
+    show("views", false);
+    return;
+  }
+  let view = me.owner ? wantedView() : "chat";
+  if (view === "chat" && me.owner && !chat.on) view = "pages";
+  const was = document.body.dataset.view;
+  document.body.dataset.view = view;
+  show("views", me.owner);
+  for (const a of document.querySelectorAll(".view-icon")) {
+    if (a.dataset.view === view) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
+    a.hidden = a.dataset.view === "chat" && !chat.on;
+  }
+  // with no chat there is nothing to go back to
+  show("back-row", view !== "chat" && chat.on);
+  if (view === "chat" && was !== "chat") {
+    const box = document.getElementById("lines");
+    box.scrollTop = box.scrollHeight;
+  }
+  if (view !== was && was) window.scrollTo(0, 0);
+}
+
 function signedOut(said) {
   // a session that stopped working is forgotten; the owner's key is kept
   if (token && token === kept(SESSION)) keep(SESSION, "");
@@ -127,6 +171,7 @@ function signedOut(said) {
   token = kept(KEY) || kept(SESSION);
   me = null;
   for (const id of ["chat", "pages", "people"]) show(id, false);
+  drawView();
   document.getElementById("facts").replaceChildren();
   signInForm(invite && !said ? "invite" : "sign-in", said);
 }
@@ -190,6 +235,7 @@ async function refresh() {
     document.getElementById("settings").dataset.asked = "1";
     drawSettings();
   }
+  drawView();
   document.getElementById("updated").textContent =
     `Updated ${new Date().toLocaleTimeString()}`;
 }
@@ -210,6 +256,7 @@ function drawPerson() {
     "Your chat goes to Dvara as you, with your own allowance and rules. " +
     "The person running this house sees which agent you used and what it cost, " +
     "never what you said.";
+  drawView();
   if (!me.chat) {
     document.getElementById("updated").textContent =
       "Dvara isn't running right now, so there's no chat. Try again later.";
@@ -726,14 +773,6 @@ async function say(event) {
   if (await send(text.value)) text.value = "";
 }
 
-function fullScreen(on) {
-  document.body.classList.toggle("chat-full", on);
-  document.getElementById("chat-full").setAttribute("aria-pressed", String(on));
-  document.getElementById("chat-full").textContent = on ? "Close full screen" : "Full screen";
-  const box = document.getElementById("lines");
-  box.scrollTop = box.scrollHeight;
-}
-
 /* -- history: every conversation, kept by Dvara as it goes (past.py) ----------
    Searched by any words in it (Dvara's full-text index, every conversation
    and not only the rows drawn), read the way it looked, carried on in this
@@ -909,15 +948,18 @@ function startChat() {
     b.addEventListener("click", () => send(b.dataset.word));
   }
   startHistory();
-  document.getElementById("chat-full").addEventListener("click", () =>
-    fullScreen(!document.body.classList.contains("chat-full")));
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && document.body.classList.contains("chat-full")) fullScreen(false);
-  });
+  drawView();
   look().then(lookAgain);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  drawView();
+  window.addEventListener("hashchange", drawView);
+  // Escape leaves Your pages or Settings for the chat (a dialog takes it first)
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || document.querySelector("dialog[open]")) return;
+    if (chat.on && document.body.dataset.view !== "chat") location.hash = "chat";
+  });
   refresh();
   setInterval(() => { if (!document.hidden) refresh(); }, EVERY);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });

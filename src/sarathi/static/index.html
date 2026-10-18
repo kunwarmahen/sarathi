@@ -18,9 +18,23 @@
     <h1>Sarathi</h1>
   </div>
   <div class="facts" id="facts" aria-live="polite"></div>
+  <nav class="views" id="views" aria-label="Views" hidden>
+    <a href="#chat" class="view-icon" data-view="chat" title="Chat" aria-label="Chat">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></a>
+    <a href="#pages" class="view-icon" data-view="pages" title="Your pages" aria-label="Your pages">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/>
+        <rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/>
+        <rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></a>
+    <a href="#settings" class="view-icon" data-view="settings" title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+  </nav>
 </header>
 
 <main>
+  <div class="back-row" id="back-row">
+    <a href="#chat" class="back" id="back">← Back to the chat</a>
+  </div>
   <section id="signin" class="signin" aria-labelledby="h-signin" hidden>
     <h2 id="h-signin">Sign in</h2>
     <p class="lede" id="signin-lede">To talk to your agents. The person who runs this
@@ -43,9 +57,8 @@
     <div class="section-head">
       <h2 id="h-chat">Talk to your agents</h2>
       <span class="count" id="chat-state" aria-live="polite"></span>
-      <button type="button" id="chat-full" class="quiet" aria-pressed="false">Full screen</button>
     </div>
-    <p class="lede">Through Dvara, as on Telegram: the same rules and allowance. What a
+    <p class="lede chat-lede">Through Dvara, as on Telegram: the same rules and allowance. What a
       schedule sends you waits here too. This chat is its own conversation; one on
       Telegram doesn't continue here.</p>
     <details id="push" class="push" hidden>
@@ -105,17 +118,6 @@
     <div id="pieces" class="cards"></div>
   </section>
 
-  <section id="people" aria-labelledby="h-people" hidden>
-    <div class="section-head">
-      <h2 id="h-people">People in the house</h2>
-    </div>
-    <p class="lede">Everyone in Dvara's actors file can sign in here and talk to their
-      own agents, with their own allowance and rules. They see their chat and nothing
-      else on this page. Invite someone, send them the link, and they choose a password
-      the first time they open it. Add, change or remove people under Settings below.</p>
-    <div id="people-list" class="people"></div>
-    <div id="people-said" class="meta" role="status"></div>
-  </section>
   <section id="settings" aria-labelledby="h-settings" hidden>
     <div class="section-head">
       <h2 id="h-settings">Settings</h2>
@@ -127,6 +129,17 @@
     <div class="tabs" role="tablist" id="settings-tabs"></div>
     <div id="settings-body"></div>
     <div id="settings-said" class="meta" role="status"></div>
+  </section>
+  <section id="people" aria-labelledby="h-people" hidden>
+    <div class="section-head">
+      <h2 id="h-people">People in the house</h2>
+    </div>
+    <p class="lede">Everyone in Dvara's actors file can sign in here and talk to their
+      own agents, with their own allowance and rules. They see their chat and nothing
+      else on this page. Invite someone, send them the link, and they choose a password
+      the first time they open it. Add, change or remove people in Settings → People, above.</p>
+    <div id="people-list" class="people"></div>
+    <div id="people-said" class="meta" role="status"></div>
   </section>
 </main>
 

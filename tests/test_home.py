@@ -180,6 +180,20 @@ def test_the_pages_script_parses():
     assert done.returncode == 0, done.stderr
 
 
+def test_the_chat_is_the_page_and_pages_and_settings_are_one_icon_away():
+    # Each view has an icon at its own address (so a reload stays put), and
+    # the stylesheet hides every section but the view's own: a section left
+    # out of a rule would pile up under the chat again.
+    from importlib.resources import files
+    static = files("sarathi").joinpath("static")
+    page = static.joinpath("index.html").read_text()
+    css = static.joinpath("page.css").read_text()
+    for view in ("chat", "pages", "settings"):
+        assert f'href="#{view}"' in page and f'data-view="{view}"' in page
+        assert f'body[data-view="{view}"]' in css
+    assert 'id="chat-full"' not in page   # the chat already has the window
+
+
 def test_an_answer_is_drawn_as_markdown_and_never_as_its_own_markup():
     # The chat draws an agent's answer as markdown with md.js; anything the
     # model wrote as HTML must arrive as text.

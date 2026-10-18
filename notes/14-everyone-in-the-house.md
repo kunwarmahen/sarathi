@@ -28,7 +28,8 @@ They open it and choose a password; after that they sign in with 'priya' and tha
 
 She opens it on her phone, chooses a password, and the page is her
 chat. Next time she signs in with her name and that password. The
-home page has **People in the house** for you as well: everyone in the
+home page has **People in the house** for you as well (behind the gear,
+under Settings, [note 22](22-the-chat-is-the-page.md)): everyone in the
 actors file, whether they have signed in and on how many devices, an
 **Invite** button that shows the link to send, and **Sign out
 everywhere**.
