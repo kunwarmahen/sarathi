@@ -417,6 +417,16 @@ What a person would otherwise wire by hand in two places:
            messaged the bot but not in the actors file (telegram id): 8675309
   ```
 
+**An MCP server of your own.** A server nobody wrote a Setu connector for
+(a notes server at home, a docs server at work) is added on Setu's page,
+under **Add your own server**: its address, and its token if it needs
+one. From then on every road has it: Yantra's page, the home page's chat
+and Telegram. A person adds one to their own folder from their page, or
+from the chat with `/connect server URL` when it needs no token
+([Dvara's notes/48](https://github.com/kunwarmahen/dvara/blob/main/notes/48-a-server-of-their-own.md)). On
+the Podman road, Setu runs inside the containers, so a server on this
+computer is `http://host.containers.internal:PORT/mcp`, not `127.0.0.1`.
+
 **Amazon or X from someone's phone.** Those sites are signed in to in a
 browser window on this computer. Give Dvara a window address and Setu
 streams that window to their phone when they send `/connect amazon`
@@ -757,8 +767,9 @@ memory, tools as checkboxes in plain words, each marked *asks you first*
 or *runs unasked*, accounts, budget and instructions; add from an
 example; the skills its people kept, and **Make it a tool** for one with
 a script),
-**Rules** (Dvara's standing answers), **Accounts** (Setu's settings and
-each added site's rules), **Sarathi** (this file: the model, Dvara and
+**Rules** (Dvara's standing answers), **Accounts** (Setu's settings,
+each added site's rules, and which tools of each MCP server of your own
+only read), **Sarathi** (this file: the model, Dvara and
 its bot, the house address, ntfy, road, ports, and your phone, with
 buttons that reach it from this computer's USB cable) and **Keys**
 (typed in, never shown back). Each program checks a change the way it
