@@ -103,7 +103,7 @@ Android, and the Android's address again keeps it.
 
 ## What is not here yet
 
-* The iPhone back on the cable after this, end to end: plugged in,
-  `sarathi-iphone` starting WebDriverAgent by itself, and the next task
-  going to the iPhone.
+* ~~The iPhone back on the cable after this, end to end.~~ Run: the
+  Nexus swapped for the iPhone, and the next task went to the iPhone,
+  with nothing changed in Sarathi.
 * Both phones on at once, each owned by a person (the several-phones plan).
