@@ -369,9 +369,12 @@ For a shorter job, press **Learn this** after it to ask for the same
 offer. To teach it a job one step at a time (a WhatsApp message on your
 phone, say), write `/learn start send a WhatsApp message`, then each
 step ("open WhatsApp", "tap Mom"); it does only that step and asks
-what's next. `/learn done` keeps the whole walk as one skill. To do the
-steps on the phone yourself, write `/learn watch` instead, and `next`
-after each step. `/learn stop` drops it. Telegram takes the same words.
+what's next. `/learn done` keeps the whole walk as one skill. `/learn
+start` learns only the steps you *write*. To do the steps on the phone
+yourself, write `/learn watch` instead (`/learn watch check my Coinbase
+portfolio value`), then `next` after each step; the agent says what it
+thinks you did, and you correct it if it's wrong. `/learn stop` drops a
+lesson, and so does New chat. Telegram takes the same words.
 On a phone, **Full screen** gives the chat the whole window.
 
 To show it something, press the paperclip beside **Send** and pick a
