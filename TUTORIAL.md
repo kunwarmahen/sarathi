@@ -883,8 +883,8 @@ an Android if you had one.
    locked iPhone is said as locked. To go back to the Android:
    `sarathi phone tcpip` (or its address), then `sarathi up`.
 
-4. **Try these on your iPhone.** Asking a question has been run on a
-   real iPhone; these four haven't yet, so tell us what you see. Send
+4. **Try these on your iPhone.** Asking a question and all four below
+   have been run on a real iPhone 17; tell us if yours differs. Send
    each to your bot on Telegram (or ask Yantra with `podman exec
    sarathi-yantra yantra --prompt "…"`), with the iPhone unlocked.
 

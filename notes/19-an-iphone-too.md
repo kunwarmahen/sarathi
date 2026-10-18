@@ -131,7 +131,8 @@ it doesn't.
   (Dvara's notes/33).
 * ~~WebDriverAgent started by `up`.~~ Built. Sparsh's `sparsh iphone`
   needs no root now (a userspace tunnel), so `sarathi phone iphone`, **Use
-  the iPhone** and `up` start it behind when it isn't answering. See
+  the iPhone** and `up` start it behind when it isn't answering; the
+  button was pressed for real, and the phone came back after a replug. See
   [What stays the person's](#what-stays-the-persons) and Sparsh's
   notes/14.
 * `[phone] awake` on an iPhone. Sparsh can't change an iPhone's
