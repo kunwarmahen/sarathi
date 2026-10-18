@@ -829,12 +829,13 @@ on the iPhone (WebDriverAgent); Sparsh's SETUP.md, Part C, goes through
 it step by step. Sarathi gives its agents one phone, so this replaces
 an Android if you had one.
 
-1. Start WebDriverAgent with the iPhone plugged into this computer,
-   unlocked, and leave the terminal open:
+1. Plug the iPhone into this computer and unlock it. Step 2 starts
+   WebDriverAgent on it for you. To start it yourself in a terminal
+   instead, and watch what it says:
 
    ```bash
    cd ~/sparsh
-   PREFIX=com.you.sparsh scripts/start-wda-from-linux.sh
+   uv run sparsh iphone
    ```
 
    It also tells Sparsh which apps are on the iPhone (an iPhone won't
@@ -847,6 +848,7 @@ an Android if you had one.
 
    ```bash
    sarathi phone iphone
+   #   starting the iPhone, if it isn't running (sparsh iphone)...
    #   the iPhone answers at http://127.0.0.1:8100
    #   the iPhone is on in ~/.config/sarathi/sarathi.toml, in place of the Android at 192.168.1.160:5555
    #     the containers reach it at http://host.containers.internal:8100
@@ -854,8 +856,17 @@ an Android if you had one.
    ```
 
    Or on the home page: **Settings → Sarathi → Your phone → An iPhone
-   instead → Use the iPhone**, then **Apply**. If it says *"nothing
-   answers"*, step 1 isn't running.
+   instead → Use the iPhone**, then **Apply**. The first time after an
+   iOS update it takes a minute longer: Sparsh fetches the developer
+   image that the new iOS needs.
+
+   **Unplugged it, restarted it, or updated iOS?** Plug it back in and
+   unlock it. While Sparsh is running, that's all: WebDriverAgent comes
+   back by itself. Otherwise press **Use the iPhone** again, or run
+   `sarathi phone iphone` or `sarathi up`. Each one starts it again.
+   If it says *"couldn't be started"*, the reason follows. The usual
+   one, the first time: on the iPhone, Settings → General → VPN &
+   Device Management → your Apple ID → Trust.
 
 3. Try it the same way as step 3 above: the **Your phone** card's
    phone panel shows the iPhone's screen, and

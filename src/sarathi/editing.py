@@ -346,7 +346,7 @@ def phone_step(config: Config, body: dict) -> tuple[str, bool]:
                 "itself (not the pairing one).", False)
     if do == "iphone":
         url = str(body.get("wda") or "").strip() or phone_cmd.WDA_HERE
-        ok, said = phone_cmd.iphone_answers(found, url)
+        ok, said = phone_cmd.iphone_ready(found, url)
         if not ok:
             raise EditError(400, f"{said} -- not saved")
         old = config.phone

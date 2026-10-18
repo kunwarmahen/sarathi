@@ -25,14 +25,18 @@ Settings has the same button (editing.py), since it runs on this
 computer, where the cable is; the containers never see the cable.
 
 AN IPHONE IS AN ADDRESS TOO. Sparsh drives an iPhone through
-WebDriverAgent, an app on the phone that Sparsh's own scripts build (on a
-Mac, once a week) and start (``scripts/start-wda-from-linux.sh``, here,
-with the iPhone on this computer's cable). That script stays running and
-needs ``sudo`` for iOS 17's tunnel, so it is the person's to start, not
-``up``'s. ``iphone`` asks Sparsh whether WebDriverAgent answers, saves its
-address as ``[phone] wda``, and drops an Android address: Sarathi gives
-its agents one phone. The containers reach it at
-``host.containers.internal`` (podman.py).
+WebDriverAgent, an app on the phone that Sparsh's own script builds (on a
+Mac, once a week) and ``sparsh iphone`` starts, here, with the iPhone on
+this computer's cable: tunnel, developer image, port 8100, all without
+sudo, and again by itself whenever the phone is plugged back in.
+``iphone`` asks Sparsh whether WebDriverAgent answers; at this
+computer's own address and not answering, it is started first, behind
+(``sparsh iphone``, in a user unit of its own, ``sarathi-iphone``, so a
+restart of the home page doesn't take it down), and ``up`` does the same
+for a saved one. Its address is saved as ``[phone] wda``, and an Android address
+dropped: Sarathi gives its agents one phone. The containers reach it at
+``host.containers.internal`` (podman.py). ``sparsh iphone --stop`` stops
+it; ``down`` leaves it, since ``down && up`` is how settings are applied.
 
 ONE KEY, THIS COMPUTER'S. Pairing runs this computer's ``adb``, so the
 phone trusts the key in ``~/.android``. The containers mount that folder
@@ -47,6 +51,7 @@ or when the agent on Telegram leaves the phone out.
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from dataclasses import replace
 
@@ -91,8 +96,21 @@ def from_cable(found: Found) -> tuple[int, str | None, str]:
     return 0, done["address"], f"the phone listens over Wi-Fi at {done['address']}"
 
 
-#: Where start-wda-from-linux.sh forwards WebDriverAgent to.
+#: Where `sparsh iphone` forwards WebDriverAgent to.
 WDA_HERE = "http://127.0.0.1:8100"
+#: How long `sparsh iphone --background` may take (a first developer
+#: image is a download).
+IPHONE_TIMEOUT = 300.0
+#: The user unit `sparsh iphone` runs in, when systemd is there.
+IPHONE_UNIT = "sarathi-iphone"
+
+
+def is_here(url: str) -> bool:
+    """WebDriverAgent forwarded to this computer: `sparsh iphone` can start it."""
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url)
+    return parts.hostname in ("127.0.0.1", "localhost") and parts.port in (8100, None)
 
 
 def iphone_answers(found: Found, url: str) -> tuple[bool, str]:
@@ -108,9 +126,36 @@ def iphone_answers(found: Found, url: str) -> tuple[bool, str]:
     note = ((status.get("wda") or {}).get("note") or "").strip()
     if mine and mine[0].get("state") == "device":
         return True, f"the iPhone answers at {url}" + (f" ({note})" if note else "")
-    return False, (f"nothing answers at {url}: start WebDriverAgent with the iPhone on "
-                   "this computer's cable (in Sparsh's folder: PREFIX=com.you.sparsh "
-                   "scripts/start-wda-from-linux.sh), leave it running, and try again")
+    return False, (f"nothing answers at {url}: plug the iPhone into this computer, "
+                   "unlock it, and run `sparsh iphone`" if is_here(url) else
+                   f"nothing answers at {url}: is WebDriverAgent running on that iPhone?")
+
+
+def iphone_ready(found: Found, url: str) -> tuple[bool, str]:
+    """:func:`iphone_answers`, after starting WebDriverAgent behind when it is
+    this computer's and doesn't answer yet. ``sparsh iphone`` does every
+    step, and keeps at it while the phone is away, so a phone that was
+    unplugged, restarted or updated comes back by itself."""
+    ok, said = iphone_answers(found, url)
+    if ok or not is_here(url):
+        return ok, said
+    if shutil.which("systemd-run"):
+        # its own unit, so it outlives whatever asked: the home page is a
+        # user service, and what it starts would stop when it restarts.
+        # A unit already running is left as it is; --background then waits.
+        subprocess.run(["systemd-run", "--user", "--quiet", "--collect", f"--unit={IPHONE_UNIT}",
+                        found.program, "iphone"], capture_output=True, check=False, timeout=30)
+    try:
+        done = subprocess.run([found.program, "iphone", "--background"], capture_output=True,
+                              text=True, timeout=IPHONE_TIMEOUT, check=False)
+    except subprocess.TimeoutExpired:
+        return False, (f"the iPhone didn't answer in {IPHONE_TIMEOUT:.0f}s; Sparsh keeps "
+                       "trying behind (~/.sparsh/iphone.log)")
+    if done.returncode != 0:
+        words = [ln for ln in (done.stdout + done.stderr).splitlines() if ln.strip()]
+        why = words[-1].removeprefix("sparsh: ") if words else "it said nothing"
+        return False, f"the iPhone couldn't be started: {why}"
+    return iphone_answers(found, url)
 
 
 def run(args, found: Found) -> int:
@@ -135,7 +180,9 @@ def run(args, found: Found) -> int:
             return 2
         url = (words[1] if len(words) == 2 else
                (config.phone.wda if config.phone and config.phone.wda else WDA_HERE))
-        ok, said = iphone_answers(found, url)
+        if is_here(url):
+            print("starting the iPhone, if it isn't running (sparsh iphone)...", flush=True)
+        ok, said = iphone_ready(found, url)
         if not ok:
             print(f"error: {said} -- not saved")
             return 1
@@ -149,8 +196,9 @@ def run(args, found: Found) -> int:
             print("  the containers reach it at "
                   + url.replace("127.0.0.1", "host.containers.internal")
                        .replace("localhost", "host.containers.internal"))
-        print("  keep the iPhone unlocked while an agent works it, and WebDriverAgent "
-              "running; it is signed for 7 days with a free Apple ID")
+        print("  keep the iPhone unlocked while an agent works it; WebDriverAgent comes "
+              "back by itself when it is plugged in again (`sparsh iphone --stop` stops "
+              "it), and is signed for 7 days with a free Apple ID")
         _mention_door(config)
         if old is not None and old.wda == url and not args.awake:
             print("  the same address as before: nothing to restart")

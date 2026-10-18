@@ -313,10 +313,13 @@ in and run `sarathi phone tcpip` ([notes/10](notes/10-a-real-phone.md)).
 
 **An iPhone instead.** Sparsh drives an iPhone through WebDriverAgent,
 an app on the phone that Sparsh's own scripts build (on a Mac, once a
-week with a free Apple ID) and start (`scripts/start-wda-from-linux.sh`,
-with the iPhone on this computer's cable, left running in a terminal;
-Sparsh's SETUP.md, Part C). Then `sarathi phone iphone` asks Sparsh
-whether it answers and saves `[phone] wda`, in place of any Android:
+week with a free Apple ID) and start (`sparsh iphone`, with the iPhone
+on this computer's cable; Sparsh's SETUP.md, Part C). `sarathi phone
+iphone` starts it when it isn't answering (`sparsh iphone --background`:
+tunnel, developer image, port 8100, no `sudo`), checks that it answers,
+and saves `[phone] wda`, in place of any Android. `sarathi up` starts a
+saved one again, after an unplug, a restart or an iOS update. `sparsh
+iphone --stop` stops it, and `down` leaves it running:
 Sarathi gives its agents one phone, and a sarathi.toml with both is
 refused. The containers reach it at `host.containers.internal:8100`.
 Keep the iPhone unlocked while an agent works it; `--awake` can't change

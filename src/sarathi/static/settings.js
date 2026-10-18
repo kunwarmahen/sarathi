@@ -573,11 +573,13 @@ function phoneCard(phoneOn, phoneAt, wdaAt, awake, road) {
 function iphoneSteps(wdaAt, step) {
   const useIt = step("Use the iPhone", () => ({ do: "iphone", wda: wdaAt.value.trim() }));
   return h("details", {}, h("summary", {}, "An iPhone instead"),
-    h("p.meta", {}, "Start WebDriverAgent first, with the iPhone on this computer's cable: " +
-      "in Sparsh's folder, PREFIX=com.you.sparsh scripts/start-wda-from-linux.sh, and leave " +
-      "it running (Sparsh's SETUP.md, Part C, builds it on a Mac once a week). Then Use the " +
-      "iPhone: it's checked, saved in place of the Android, and Apply hands it to Yantra and " +
-      "Dvara. Keep the iPhone unlocked while an agent works it."),
+    h("p.meta", {}, "Plug the iPhone into this computer and unlock it, then Use the " +
+      "iPhone: Sparsh starts WebDriverAgent on it (a minute; longer the first time after " +
+      "an iOS update), checks it answers, and it's saved in place of the Android. Apply " +
+      "hands it to Yantra and Dvara. Unplugged, restarted or updated, press it again: it " +
+      "comes back by itself when plugged in while it runs. WebDriverAgent is built on a " +
+      "Mac once a week (Sparsh's SETUP.md, Part C). Keep the iPhone unlocked while an " +
+      "agent works it."),
     field("WebDriverAgent's address", wdaAt, "Empty: http://127.0.0.1:8100."),
     row(useIt));
 }

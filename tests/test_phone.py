@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 from pathlib import Path
 
 import pytest
@@ -334,7 +335,60 @@ def test_an_iphone_that_does_not_answer_is_not_saved_and_says_how_to_start_it(
     assert load().phone is None
     out = capsys.readouterr().out
     assert "nothing answers at http://127.0.0.1:8101" in out
-    assert "start-wda-from-linux.sh" in out and "not saved" in out
+    assert "is WebDriverAgent running on that iPhone?" in out and "not saved" in out
+
+
+def starting_sparsh(world, started: str = "the iPhone is ready") -> Found:
+    """A Sparsh whose iPhone answers only after `sparsh iphone --background`,
+    which says ``started`` (and fails, unless it says it's ready)."""
+    sparsh = program(world / "bin", "sparsh")
+    up, told, says = world / "wda-up", world / "told", shlex.quote(started)
+    ready = "ready" in started
+    sparsh.write_text(
+        "#!/bin/sh\n"
+        f'if [ "$1" = iphone ]; then echo "$@" >> {told}; '
+        + (f": > {up}; echo {says}; exit 0; fi\n" if ready else
+           f"echo {says} >&2; exit 1; fi\n")
+        + f"[ -e {up} ] && state=device || state=offline\n"
+        + 'printf \'{"format": "sparsh.status.v1", "phones": [{"serial": "%s", '
+        + '"state": "%s", "model": "iPhone"}], "wda": {}}\\n\' "$SPARSH_WDA" "$state"\n')
+    return Found(next(s for s in SIBLINGS if s.name == "sparsh"), program=str(sparsh))
+
+
+def test_an_iphone_here_that_does_not_answer_is_started_then_saved(world, settings, capsys):
+    """Unplugged, restarted or updated: one `sarathi phone iphone` brings it
+    back, because Sparsh's own `iphone` does every step."""
+    assert phone.run(args("iphone"), starting_sparsh(world)) == 0
+    assert (world / "told").read_text().split() == ["iphone", "--background"]
+    assert load().phone == IPHONE
+    assert "the iPhone answers at http://127.0.0.1:8100" in capsys.readouterr().out
+
+
+def test_with_systemd_it_runs_in_its_own_unit_so_a_page_restart_leaves_it(
+        world, settings):
+    found = starting_sparsh(world)
+    ran = world / "systemd-run.args"
+    systemd = world / "bin" / "systemd-run"
+    systemd.write_text(f'#!/bin/sh\necho "$@" > {ran}\n')
+    systemd.chmod(0o755)
+    assert phone.run(args("iphone"), found) == 0
+    assert ran.read_text().split() == ["--user", "--quiet", "--collect",
+                                       "--unit=sarathi-iphone", found.program, "iphone"]
+    assert load().phone == IPHONE
+
+
+def test_an_iphone_that_wont_start_says_why_and_is_not_saved(world, settings, capsys):
+    found = starting_sparsh(world, "WebDriverAgent isn't on the iPhone: install it once")
+    assert phone.run(args("iphone"), found) == 1
+    assert load().phone is None
+    out = capsys.readouterr().out
+    assert "couldn't be started: WebDriverAgent isn't on the iPhone" in out
+
+
+def test_only_an_iphone_on_this_computers_8100_is_started():
+    assert phone.is_here("http://127.0.0.1:8100") and phone.is_here("http://localhost:8100")
+    assert not phone.is_here("http://192.168.1.40:8100")
+    assert not phone.is_here("http://127.0.0.1:8101")
 
 
 def test_an_android_address_afterwards_takes_the_iphones_place(world, settings):

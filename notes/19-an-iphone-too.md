@@ -89,6 +89,19 @@ not a thing `up` can do quietly, so it isn't one: Sarathi checks that
 WebDriverAgent answers, says how to start it when it doesn't, and
 `sarathi status` names the signature's last days (Sparsh's `wda` note).
 
+That changed when the phone was unplugged and updated (Sparsh's
+notes/14). Its one command, `sparsh iphone`, starts the tunnel without
+root, mounts the developer image for the phone's iOS, and waits for the
+phone to come back. So Sarathi starts WebDriverAgent itself when it
+isn't answering at this computer's 8100: `sarathi phone iphone`, **Use
+the iPhone**, and `up` for a saved one. Each starts `sparsh iphone` in
+a user unit of its own, `sarathi-iphone`. The home page is itself a user
+service, and anything it started directly would stop when it restarts.
+Then `sparsh iphone --background` waits until the phone answers or says
+why it can't. What stays the person's is the cable, the unlocked phone, the
+weekly build on the Mac, and the phone's Trust. `down` leaves it
+running, because `down && up` is how settings are applied.
+
 ## What the tests hold
 
 `tests/test_phone.py`: an iPhone reads back as written; both phones at
@@ -98,7 +111,11 @@ reaches the plain programs as written and both containers at
 page's **Your phone** card shows for an iPhone on the Podman road;
 `sarathi phone iphone` saves only what answers, in place of the
 Android, and an Android address afterwards takes the iPhone's place;
-`sarathi status` asks Sparsh about the iPhone it gives out.
+`sarathi status` asks Sparsh about the iPhone it gives out; an iPhone
+at this computer's 8100 that doesn't answer is started (`sparsh iphone
+--background`) and then saved, one that won't start says Sparsh's reason
+and isn't saved, it runs in its own `sarathi-iphone` unit when systemd
+is there, and only this computer's 8100 is ever started.
 `tests/test_settings_page.py`: **Use the iPhone** saves it once it
 answers and asks for Apply, and says how to start WebDriverAgent when
 it doesn't.
@@ -112,7 +129,10 @@ it doesn't.
 * A schedule on the iPhone. An iPhone says only whether it's locked;
   Dvara's checks before a scheduled step take that as the answer
   (Dvara's notes/33).
-* WebDriverAgent started by `up`. Its tunnel needs root, so it stays
-  Sparsh's script, in a terminal.
+* ~~WebDriverAgent started by `up`.~~ Built. Sparsh's `sparsh iphone`
+  needs no root now (a userspace tunnel), so `sarathi phone iphone`, **Use
+  the iPhone** and `up` start it behind when it isn't answering. See
+  [What stays the person's](#what-stays-the-persons) and Sparsh's
+  notes/14.
 * `[phone] awake` on an iPhone. Sparsh can't change an iPhone's
   Auto-Lock, so the phone has to be kept unlocked by its person.

@@ -288,6 +288,19 @@ def _yantra_env(config) -> dict[str, str]:
     return env
 
 
+def _iphone_up(config, found) -> list[str]:
+    """A saved iPhone on this computer's cable, started when it isn't
+    answering (phone.py): after a restart, `up` brings it back too."""
+    from sarathi import phone
+
+    wda = config.phone.wda if config.phone else None
+    sparsh = next((f for f in found if f.sibling.name == "sparsh"), None)
+    if not wda or not phone.is_here(wda) or sparsh is None or sparsh.program is None:
+        return []
+    ok, said = phone.iphone_ready(sparsh, wda)
+    return [f"{'iphone':<{services.WIDTH}} {said if ok else 'not ready: ' + said}"]
+
+
 def _kept(config) -> dict[str, str] | None:
     """Programs where sarathi.toml records them: Smritikosh's, once set up."""
     checkout = config.smritikosh.path() if config else None
@@ -457,6 +470,7 @@ def main(argv: list[str] | None = None) -> int:
                 lines, ok = podman.up(config)
             else:
                 lines, ok = services.up(config, {f.sibling.name: f for f in found})
+            lines += _iphone_up(config, found)
             print("\n".join(lines))
             return 0 if ok else 1
     except ConfigError as exc:

@@ -237,5 +237,5 @@ def test_an_iphone_that_does_not_answer_is_said_and_not_saved(with_sparsh):
     status, got = send(with_sparsh, "/api/settings/phone",
                        {"do": "iphone", "wda": "http://127.0.0.1:8101"})
     assert status == 400 and "not saved" in got["detail"]
-    assert "start-wda-from-linux.sh" in got["detail"]
+    assert "is WebDriverAgent running on that iPhone?" in got["detail"]
     assert settings_mod.load().phone is None

@@ -132,7 +132,7 @@ class Phone:
     #: None: a phone on a USB cable (the process road only).
     address: str | None = None
     #: ``http://127.0.0.1:8100``: an iPhone's WebDriverAgent, as Sparsh's
-    #: ``SPARSH_WDA`` (started by Sparsh's scripts/start-wda-from-linux.sh).
+    #: ``SPARSH_WDA`` (started by ``sparsh iphone``: phone.py).
     wda: str | None = None
     #: The screen while an agent works it, as Sparsh's ``SPARSH_AWAKE``
     #: (one of AWAKE). None: Sparsh's own default, kept on while working.
