@@ -71,6 +71,8 @@ sits at the row's start.
 
 * **Its own view.** The home page redesign (chat first, everything else
   behind icons) is still to come; History will be one of those icons.
-* **The chat scroll above.** Deleting a conversation clears the person's
-  history, but the lines it left in this page's chat window stay until
-  they age out. Dvara doesn't know which conversation a line was.
+* **The chat scroll above, by choice.** Deleting a conversation clears
+  the person's history; the lines it left in this page's chat window
+  stay until they age out, and the run ledger keeps its own. Blanking
+  them too was offered and turned down: the owner's record of each run
+  stays whole.

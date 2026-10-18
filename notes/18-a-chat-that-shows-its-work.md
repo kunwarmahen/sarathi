@@ -31,7 +31,8 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   skill is yours: saved in your own folder for that agent, so nobody
   else's agent changes.
 * **A row of words.** **Skills**, **Learn this**, **Tools**,
-  **Schedules**, **Memory**, **Phone**, **New chat**, **Past chats**.
+  **Schedules**, **Memory**, **Phone**, **New chat**, **Past chats**
+  (since replaced by **History**, [note 21](21-history.md)).
   Each sends the word to Dvara (`/skills`, `/learn`, `/tools`,
   `/schedules`, `/memory`, `/phone`, `/new`, `/chats`), exactly as typing it would, so it
   answers the same here, on Telegram and over HTTP.
