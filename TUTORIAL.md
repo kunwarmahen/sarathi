@@ -188,6 +188,10 @@ needs one of three things, and it tells Setu which:
   #   connected docs:personal (example.com/mcp) -- All its tools, 6 tools
   ```
 
+  `--id docs` is the name the helper uses for it. Pages and cards show
+  the server's own name for itself; to show your own instead, add
+  `--name "Team docs"`.
+
 * **A token** (an API key from the server's own settings). If you leave
   it out, the server answers *"asks for a token (HTTP 401); add one with
   --ask-token"*. Add `--ask-token`, and Setu asks for it:
@@ -210,7 +214,8 @@ needs one of three things, and it tells Setu which:
 
 Or do any of these on Setu's page instead: **My accounts** on the home
 page, then **Add your own server**, with the address and (if it needs
-one) the token in its box.
+one) the token in its box. *id* and *shown as* there are `--id` and
+`--name`.
 
 ---
 
