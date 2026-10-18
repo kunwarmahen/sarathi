@@ -126,7 +126,8 @@ def build_parser() -> argparse.ArgumentParser:
                                 "(again after each restart of the phone); "
                                 "pair ADDRESS CODE: trust this computer, once; "
                                 "iphone [URL]: an iPhone, its WebDriverAgent at URL "
-                                "(default http://127.0.0.1:8100)")
+                                "(default http://127.0.0.1:8100, started first when it "
+                                "isn't answering)")
     phone_cmd.add_argument("--off", action="store_true", help="stop giving the phone out")
     phone_cmd.add_argument("--awake", choices=AWAKE, help="its screen while an agent works "
                            "it: working (default: kept on, then yours back), always, off")

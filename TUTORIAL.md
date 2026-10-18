@@ -866,7 +866,12 @@ an Android if you had one.
    `sarathi phone iphone` or `sarathi up`. Each one starts it again.
    If it says *"couldn't be started"*, the reason follows. The usual
    one, the first time: on the iPhone, Settings → General → VPN &
-   Device Management → your Apple ID → Trust.
+   Device Management → your Apple ID → Trust. Sparsh's SETUP.md, C6,
+   has a table of every message and what to do.
+
+   Started this way, WebDriverAgent runs in the background as its own
+   service, `sarathi-iphone` (`systemctl --user status sarathi-iphone`).
+   `sarathi down` leaves it running. To stop it: `sparsh iphone --stop`.
 
 3. Try it the same way as step 3 above: the **Your phone** card's
    phone panel shows the iPhone's screen, and

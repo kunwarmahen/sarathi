@@ -296,7 +296,8 @@ sarathi phone tcpip                            # the phone on the cable listens 
 sarathi phone pair 192.168.1.23:37000 123456   # once: trust this computer over Wi-Fi
 sarathi phone 192.168.1.23:41234               # then: reach it over Wi-Fi
 sarathi phone iphone                           # an iPhone instead: its WebDriverAgent
-                                               #   at http://127.0.0.1:8100
+                                               #   at http://127.0.0.1:8100, started first
+                                               #   when it isn't answering
 sarathi phone --awake always                   # its screen while an agent works it
 sarathi phone --off
 ```
