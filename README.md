@@ -744,7 +744,11 @@ it was done, with **Keep** and **Not now**, saved for you alone. A row
 of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory**, **Phone** (its
 screen and last steps, for the phone's person),
 **New chat** and **Past chats** to Dvara as the words they are, and **Full screen** gives a
-phone the whole window. 🎤 records a voice note (on this computer, or a
+phone the whole window. A job can also be taught one step at a time:
+`/learn start <what it's for>` and each step (the agent does only what
+you say), or `/learn watch` and do each step on your phone yourself,
+saying `next`; `/learn done` keeps it as one skill (Dvara's
+[notes/49](https://github.com/kunwarmahen/dvara/blob/main/notes/49-a-job-taught-step-by-step.md)). 🎤 records a voice note (on this computer, or a
 page served over https), heard into words by a local model that can
 hear, and shown back as *I heard: "…"*. The paperclip beside **Send** adds pictures or
 files to your next message (up to 20 MB together): Dvara keeps them in
