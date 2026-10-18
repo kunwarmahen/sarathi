@@ -366,7 +366,12 @@ its messages show again under the answer). After a job of four
 steps or more, an agent whose package has skills may offer to keep how
 it was done. Press **Keep** and next time it's one step, for you only.
 For a shorter job, press **Learn this** after it to ask for the same
-offer.
+offer. To teach it a job one step at a time (a WhatsApp message on your
+phone, say), write `/learn start send a WhatsApp message`, then each
+step ("open WhatsApp", "tap Mom"); it does only that step and asks
+what's next. `/learn done` keeps the whole walk as one skill. To do the
+steps on the phone yourself, write `/learn watch` instead, and `next`
+after each step. `/learn stop` drops it. Telegram takes the same words.
 On a phone, **Full screen** gives the chat the whole window.
 
 To show it something, press the paperclip beside **Send** and pick a
