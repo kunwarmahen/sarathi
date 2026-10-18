@@ -384,7 +384,7 @@ The same works by typing: `/chats boiler` finds, `/chats 2` goes back
 into the second, `/chats delete 2` deletes it. Deleting clears your
 history. Your chat window here keeps its own recent lines until they age
 out, and the owner's record of what each message cost (`dvara runs`)
-keeps them too.
+keeps them too; that is on purpose, so the owner's record stays whole.
 
 **Teaching it a job, one step at a time.** There are two ways. Pick the
 one you'll actually do:
@@ -402,6 +402,11 @@ open WhatsApp                                  (you open Coinbase)              
 tap Mom                                        (you tap to your portfolio)      next
 /learn done      then Keep                     /learn done      then Keep
 ```
+
+A skill taught on your iPhone is for the iPhone (and one taught on an
+Android phone for that phone): they name apps and home screens
+differently, so teach it on each phone you'll use it on. There's no
+Teach button yet; write the words.
 
 Don't mix them up: a `start` lesson learns only the steps you *write*,
 so steps you do on the phone by hand during it aren't seen and `/learn
@@ -1212,10 +1217,11 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Sarathi's settings | `~/.config/sarathi/sarathi.toml` |
 | A cloud key, and Dvara's and bot's tokens | `~/.config/sarathi/secrets.env` (only you can read it) |
 | Who may use the bot, and the helpers it offers | `~/dvara/actors.toml`, `~/dvara/agents/` |
-| Their conversations, and their own sign-ins | `~/dvara/state/` |
+| Their conversations, and their own sign-ins | `~/dvara/state/` (each person's past conversations, for **History** and `/chats`: `~/dvara/state/past/<name>.sqlite`) |
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
 | Your schedules and their history | Samay's folder, `~/.samay/` |
 | What the helper remembers about you | `~/.local/state/yantra/`, or with Smritikosh on, its database (the `smritikosh-pgdata` volume) |
+| Your conversations on Yantra's page, for its **history** button | `~/.local/state/yantra/conversations.sqlite` |
 | Your Smritikosh key, for the helper | `~/.config/sarathi/secrets.env`, as `SMRITIKOSH_API_KEY` |
 | Each person's Smritikosh key, for Dvara | `~/dvara/state/memory.json` (only you can read it) |
 | Passwords of the Smritikosh accounts Sarathi made | `~/.local/share/sarathi/smritikosh-accounts.json` (only you) |
