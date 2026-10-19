@@ -417,15 +417,22 @@ tap Mom                                        (you tap to your portfolio)      
 /learn done      then Keep                     /learn done      then Keep
 ```
 
-A skill taught on your iPhone is for the iPhone (and one taught on an
-Android phone for that phone): they name apps and home screens
-differently, so teach it on each phone you'll use it on. There's no
-Teach button yet; write the words.
+Or press **Teach** in the row of words under the chat: pick *Tell it*
+or *Show it*, write what the job is for, and press Start. It sends the
+same words for you. While the lesson is open, a bar above the row
+shows how far it got, with **Done** and **Stop**. It shows a lesson you
+started on Telegram too.
+
+A skill taught on one phone is written for both. It opens the app by
+its name, not through the folder you tapped, and it says which phone
+it was taught on, so a screen that looks different on the other phone
+isn't a surprise.
 
 Don't mix them up: a `start` lesson learns only the steps you *write*,
 so steps you do on the phone by hand during it aren't seen and `/learn
 done` finds nothing. If you'll touch the phone, use `watch`. `/learn
-stop` drops a lesson, and so does New chat. Telegram takes the same
+stop` (or `/learn clear`, or the bar's **Stop**) drops a lesson, and so
+does New chat. Telegram takes the same
 words.
 
 **Fixing its mistakes.** The agent will sometimes get a step wrong.

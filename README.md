@@ -802,10 +802,13 @@ carried on, shared (Save as PDF, Download, or the phone's Send…) or
 deleted for good (Dvara's
 [notes/50](https://github.com/kunwarmahen/dvara/blob/main/notes/50-every-conversation-kept.md);
 [notes/21](notes/21-history.md)). On a phone the chat takes the whole screen too. A job can also be taught one step at a time:
-`/learn start <what it's for>` and each step (the agent does only what
+**Teach** in the row of words, or `/learn start <what it's for>` and each step (the agent does only what
 you say), or `/learn watch` and do each step on your phone yourself,
-saying `next`; `/learn done` keeps it as one skill (Dvara's
-[notes/49](https://github.com/kunwarmahen/dvara/blob/main/notes/49-a-job-taught-step-by-step.md)). 🎤 records a voice note (on this computer, or a
+saying `next`; while it's open a bar shows how far it got, with
+**Done** (keeps it as one skill) and **Stop** (`/learn clear` does the
+same) (Dvara's
+[notes/49](https://github.com/kunwarmahen/dvara/blob/main/notes/49-a-job-taught-step-by-step.md);
+[notes/24](notes/24-teach-from-the-chat.md)). 🎤 records a voice note (on this computer, or a
 page served over https), heard into words by a local model that can
 hear, and shown back as *I heard: "…"*. The paperclip beside **Send** adds pictures or
 files to your next message (up to 20 MB together): Dvara keeps them in

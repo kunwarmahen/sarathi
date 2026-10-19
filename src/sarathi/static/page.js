@@ -448,7 +448,8 @@ async function drawPeople() {
 
 const CHAT_EVERY = 3000;
 const CHAT_BUSY_EVERY = 700;
-const chat = { on: false, last: 0, timer: null, agents: [], sending: false, busy: false };
+const chat = { on: false, last: 0, timer: null, agents: [], sending: false, busy: false,
+               lessons: [] };
 
 function api(path, body) {
   const init = { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" };
@@ -653,6 +654,8 @@ function draw(data) {
   if (atEnd || data.lines.some((l) => l.who === "you")) box.scrollTop = box.scrollHeight;
   document.getElementById("waiting").replaceChildren(
     ...data.asks.map(askView), ...data.holds.map(holdView));
+  chat.lessons = data.lessons || [];
+  drawLesson();
   document.getElementById("chat-state").textContent =
     data.busy.length ? `${data.busy.join(", ")} is working…` : "";
   chat.busy = data.busy.length > 0;
@@ -765,6 +768,48 @@ async function send(text) {
     await look();
     lookAgain();
   }
+}
+
+/* -- a lesson: a job taught one step at a time (Yantra's skills/lesson.py) ---
+   Teach sends what a person would type -- /learn start or /learn watch and
+   what it's for -- to the agent picked below; the bar shows the open
+   lesson with that agent, from Dvara's look, until Done or Stop. */
+
+function drawLesson() {
+  const agent = document.getElementById("agent").value;
+  const lesson = (chat.lessons || []).find((l) => l.agent === agent);
+  const bar = document.getElementById("lesson");
+  bar.hidden = !lesson;
+  if (!lesson) return;
+  const how = lesson.watching ? "Showing" : "Teaching";
+  const next = lesson.watching ? "do the next step on the phone, then send next"
+    : "write the next step";
+  document.getElementById("lesson-words").textContent =
+    `${how} ${agent}: ${lesson.task}. ${lesson.told} step(s) so far; ${next}.`;
+}
+
+function startTeach() {
+  const box = document.getElementById("teach");
+  const what = document.getElementById("teach-what");
+  document.getElementById("teach-open").addEventListener("click", () => {
+    if ((chat.lessons || []).some((l) => l.agent === document.getElementById("agent").value)) {
+      problem("A lesson is open with this agent: press Done or Stop first.");
+      return;
+    }
+    what.value = "";
+    box.returnValue = "";        // Escape leaves the last open's answer otherwise
+    box.showModal();
+    what.focus();
+  });
+  box.addEventListener("close", () => {
+    const how = document.querySelector('input[name="teach-how"]:checked')?.value;
+    const task = what.value.trim();
+    if (box.returnValue !== "start" || !task) return;
+    send(`/learn ${how === "watch" ? "watch" : "start"} ${task}`);
+  });
+  document.getElementById("lesson-done").addEventListener("click", () => send("/learn done"));
+  document.getElementById("lesson-stop").addEventListener("click", () => send("/learn stop"));
+  document.getElementById("agent").addEventListener("change", drawLesson);
 }
 
 async function say(event) {
@@ -1022,6 +1067,7 @@ function startChat() {
     b.addEventListener("click", () => send(b.dataset.word));
   }
   startHistory();
+  startTeach();
   drawView();
   look().then(lookAgain);
 }

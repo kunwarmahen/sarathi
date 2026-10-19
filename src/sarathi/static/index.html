@@ -68,9 +68,17 @@
     <div class="chat">
       <div id="lines" class="lines" role="log" aria-live="polite" tabindex="0"></div>
       <div id="waiting" class="waiting"></div>
+      <div id="lesson" class="lesson" role="status" hidden>
+        <span id="lesson-words"></span>
+        <span class="lesson-acts">
+          <button type="button" class="yes" id="lesson-done" title="Keep the whole lesson as one skill (/learn done)">Done</button>
+          <button type="button" class="no" id="lesson-stop" title="Drop the lesson; nothing is kept (/learn stop)">Stop</button>
+        </span>
+      </div>
       <div class="words" role="group" aria-label="Ask your agent">
         <button type="button" data-word="/skills">Skills</button>
         <button type="button" data-word="/learn" title="Keep what it just did as a skill">Learn this</button>
+        <button type="button" id="teach-open" title="Teach it a job one step at a time">Teach</button>
         <button type="button" data-word="/tools">Tools</button>
         <button type="button" data-word="/schedules">Schedules</button>
         <button type="button" data-word="/memory">Memory</button>
@@ -93,6 +101,24 @@
       <div id="chat-problem" class="warn" hidden></div>
     </div>
   </section>
+
+  <dialog id="teach" class="teach" aria-labelledby="h-teach">
+    <form method="dialog" id="teach-form">
+      <h2 id="h-teach">Teach a job</h2>
+      <p class="lede">One step at a time, kept as one skill when you press Done.</p>
+      <label class="way"><input type="radio" name="teach-how" value="start" checked>
+        <span><b>Tell it</b>: you write each step and it does it.</span></label>
+      <label class="way"><input type="radio" name="teach-how" value="watch">
+        <span><b>Show it</b>: you do each step on the phone and send next.</span></label>
+      <label for="teach-what">What it's for</label>
+      <input id="teach-what" spellcheck="false" autocomplete="off"
+             placeholder="e.g. check my Coinbase portfolio value">
+      <div class="buttons">
+        <button type="submit" class="yes" value="start">Start</button>
+        <button type="submit" class="no" value="cancel" formnovalidate>Cancel</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="history" class="history" aria-labelledby="h-history">
     <div class="history-head">
