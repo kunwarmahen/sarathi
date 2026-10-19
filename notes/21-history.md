@@ -80,6 +80,8 @@ Sharing, on the same scratch Dvara: **Download** saved
 **Save as PDF** printed a one-page A4 file holding the title, the date,
 YOU and GREETER and the answer, at 1280 px and at 390 px. Send… only
 shows where the browser has a share sheet, so not in headless Chrome.
+On a real phone it showed, and handed the Markdown file to the phone's
+share sheet.
 
 ## What is not here yet
 
