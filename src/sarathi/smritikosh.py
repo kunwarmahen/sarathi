@@ -1145,23 +1145,27 @@ def build_dashboard(kosh: Smritikosh, checkout: Path, say: Callable[[str], None]
     say(f"dashboard  built; `sarathi up` starts it on 127.0.0.1:{kosh.dashboard_port}")
 
 
-def dashboard_argv(kosh: Smritikosh) -> list[str] | None:
-    """How `up` starts it, or None when it won't (off, or not built)."""
+def dashboard_argv(kosh: Smritikosh, house: bool = False) -> list[str] | None:
+    """How `up` starts it, or None when it won't (off, or not built).
+    ``house``: on every address, so the house's other devices reach it too
+    (Next listens on one address, and 127.0.0.1 must still answer)."""
     checkout = kosh.path()
     if not kosh.dashboard or checkout is None or not built(checkout):
         return None
     return [str(ui_dir(checkout) / "node_modules" / ".bin" / "next"), "start",
-            "--hostname", "127.0.0.1", "--port", str(kosh.dashboard_port)]
+            "--hostname", "0.0.0.0" if house else "127.0.0.1",
+            "--port", str(kosh.dashboard_port)]
 
 
-def dashboard_env(kosh: Smritikosh) -> dict[str, str]:
+def dashboard_env(kosh: Smritikosh, name: str = "localhost") -> dict[str, str]:
     """Where it finds Smritikosh, and the address it answers on. LOCALHOST,
-    NOT 127.0.0.1: its sign-in sends the browser to localhost whatever it
-    is told, and a cookie set for one name is not sent to the other, so
-    every link says localhost (it still listens on 127.0.0.1 alone).
-    AUTH_SECRET stays in its .env.local."""
+    NOT 127.0.0.1: its sign-in sends the browser to the name it is given
+    (AUTH_URL) whatever address the page was opened at, and a cookie set
+    for one name is not sent to the other, so every link says that one
+    name -- localhost, or the house's name (``[house]``) when it is on the
+    home network. AUTH_SECRET stays in its .env.local."""
     return {"SMRITIKOSH_API_URL": kosh.url,
-            "AUTH_URL": f"http://localhost:{kosh.dashboard_port}",
+            "AUTH_URL": f"http://{name}:{kosh.dashboard_port}",
             "AUTH_TRUST_HOST": "true"}
 
 
@@ -1178,8 +1182,10 @@ def dashboard(config: Config) -> dict[str, Any] | None:
     kosh = config.smritikosh
     port = kosh.dashboard_port
     base = f"http://localhost:{port}/"
+    # its links say the name it signs in at (dashboard_env); it is asked here
+    shown = f"http://{config.house.name}:{port}/" if config.house else base
     # straight to the memories: the bare address can open blank in a browser
-    url = f"{base}{DASHBOARD_PAGE}"
+    url = f"{shown}{DASHBOARD_PAGE}"
     try:
         with urllib.request.urlopen(f"{base}login", timeout=2.0) as answer:
             up = b"Smritikosh" in answer.read(200_000)

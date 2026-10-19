@@ -174,6 +174,37 @@ attached and you say to use it (the phone panel's **use this phone**).
 No phone at the start means no phone tools, the same as a Yantra you
 start by hand ([notes/07](notes/07-the-phone-stays-on-the-cable.md)).
 
+### Every server on your home network: `[house]`
+
+Each piece listens on this computer alone unless you say otherwise. To
+open them all from your phone or another computer at home, name this
+computer in sarathi.toml (or under **Settings** on the home page):
+
+```toml
+[house]
+name = "linux-al-ml-beast.local"   # what your other devices call it
+address = "192.168.1.44"           # optional: what the name finds
+```
+
+`sarathi up` then publishes every piece on that address too: Yantra's
+page, Samay, Dvara and its page, Setu's page and its window, the home
+page, ntfy, and Smritikosh's server, database, dashboard and stores.
+Every link the pieces hand out says the name: a person's `/accounts
+page` link, a sign-in window, an invite, ntfy, Samay's address.
+`<hostname>.local` works on most home networks (Avahi answers it), and so
+does your router's name for the computer. On the plain-programs road the
+pieces listen on every address, and the firewall line below narrows
+that. **Yantra's page then wants its token** (it runs a shell): Sarathi
+keeps one in secrets.env (`YANTRA_WEB_TOKEN`), and the home page's
+Yantra card carries it. Open the card once on each device, and that
+device stays in. The home page's cards link by whatever name you opened
+it at, so on your phone they say `linux-al-ml-beast.local` and here they
+say `127.0.0.1`. With Dvara on, `[house]` also opens the sign-in window
+on that address, and `/connect gmail` from Telegram streams Google's
+page to your phone, so nothing has to be copied back. `sarathi up`
+names every port and the `ufw` line that opens them to your network
+([notes/23](notes/23-every-server-by-one-name.md)).
+
 ### A memory by meaning: `sarathi smritikosh`
 
 Yantra remembers you in a file of its own, which matches words: *"find
@@ -861,7 +892,9 @@ src/sarathi/
                 status --json says, read by format  (notes/01); Sparsh,
                 the phone  (notes/07)
   config.py     sarathi.toml and secrets.env: read, checked, written  (notes/02);
-                each table by its project's name, old names still read  (notes/09)
+                each table by its project's name, old names still read  (notes/09);
+                [house], every server on the home network, links by its
+                name; Yantra's page's token, made once  (notes/23)
   first_run.py  sarathi init: which model answers, asked once  (notes/02)
   services.py   sarathi up / down: start Samay and the page, know
                 which are ours  (notes/02); and the pages  (notes/06);
@@ -872,7 +905,9 @@ src/sarathi/
                 its streamed window, and the image's browser  (notes/05);
                 the firewall named when phones are to reach it  (notes/11);
                 ntfy's own container  (notes/15); sarathi-adb, this
-                computer's adb lent to the containers by a file  (notes/20)
+                computer's adb lent to the containers by a file  (notes/20);
+                a second PublishPort on the house address for every
+                unit, and the firewall line naming them all  (notes/23)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
@@ -890,7 +925,9 @@ src/sarathi/
                 or as the person signed in  (notes/14); My accounts and
                 Notices on this phone, for each person  (notes/15);
                 Settings, routes owner-only  (notes/16); the chat as
-                the page, Your pages and Settings behind icons  (notes/22)
+                the page, Your pages and Settings behind icons  (notes/22);
+                each card linked by the name the page was opened at, and
+                Yantra's with its token  (notes/23)
   editing.py    every settings file from the page: each program checks
                 and writes its own (dvara settings, setu config / site
                 file), sarathi.toml and secrets.env here  (notes/16);
@@ -908,6 +945,7 @@ src/sarathi/
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
   test_pages_up.py  test_phone.py  test_names.py  test_smritikosh.py  test_people.py
+  test_house.py
 ```
 
 ## Status

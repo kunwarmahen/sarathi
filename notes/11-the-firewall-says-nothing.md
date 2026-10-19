@@ -86,3 +86,6 @@ free port, so there is no fixed list to name.
 * **A check from outside.** Sarathi could ask the phone (it has adb) to
   open each port and report which time out. That would answer the "if",
   but only for a house with a phone on the cable or the Wi-Fi.
+* ~~**Only the pages a phone needs.**~~ With `[house]`, every piece is
+  published on the house address, and the firewall line names every
+  port: [note 23](23-every-server-by-one-name.md).

@@ -178,6 +178,7 @@ from sarathi.config import (
     DOOR_TOKEN,
     KEY_NAMES,
     NOT_ONE_ADDRESS,
+    YANTRA_TOKEN,
     Config,
     ConfigError,
     config_dir,
@@ -185,6 +186,7 @@ from sarathi.config import (
     secrets_path,
     state_dir,
     write_private,
+    yantra_token,
 )
 from sarathi.services import (OLD_NAMES, WIDTH, alive, answers, door_problems, place,
                               records, sarathi_program, work_dir)
@@ -505,7 +507,10 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
     model = {key: held[key]} if key and key in held else {}
     door = {} if config.door is None or DOOR_TOKEN not in held else \
         {"SAMAY_DVARA_TOKEN": held[DOOR_TOKEN]}
-    out = {UNITS["yantra"]: dict(model), UNITS["samay"]: {**model, **door}}
+    # Yantra's page wants its token in the container, where it listens on
+    # every address (Yantra's gate.py); the home page's link carries it
+    out = {UNITS["yantra"]: {**model, YANTRA_TOKEN: yantra_token()},
+           UNITS["samay"]: {**model, **door}}
     if config.remembers_in_smritikosh:
         from sarathi import smritikosh
 
@@ -584,11 +589,13 @@ def window(config: Config) -> tuple[str, str, str] | None:
     """(host it is published on, port, the link's base) for the door's
     streamed window, or None when sarathi.toml asks for none."""
     door = config.door
-    if door is None or not door.window_env():
+    if door is None or not (door.window_env() or config.house and config.people_host()):
         return None
-    host = door.window_host or "127.0.0.1"
+    host = (config.people_host() if config.house else None) or door.window_host \
+        or "127.0.0.1"
     port = door.window_port or WINDOW_PORT
-    return host, str(port), door.window_url or f"http://{host}:{port}"
+    return host, str(port), door.window_url or (config.link(port, "") if config.house
+                                                else f"http://{host}:{port}")
 
 
 def setu_window(config: Config) -> tuple[str, str, str] | None:
@@ -604,14 +611,16 @@ def setu_window(config: Config) -> tuple[str, str, str] | None:
         return None
     host = config.people_host() or "127.0.0.1"
     port = str(((door.window_port if door else None) or WINDOW_PORT) + 1)
-    shown = f"[{host}]" if ":" in host else host
-    return host, port, f"http://{shown}:{port}"
+    return host, port, config.link(int(port), "")
 
 
 def house_ports(config: Config) -> tuple[str, list[int]] | None:
     """(the house address, the ports published on it) for the door's
-    window, Setu's page and its window; None when nothing is published
-    beyond this computer."""
+    window, Setu's page and its window -- and with ``[house]``, every
+    piece's; None when nothing is published beyond this computer."""
+    if config.house is not None:
+        address = config.people_host()
+        return (address, sorted(set(lan_ports(config)))) if address else None
     door = config.door
     if door is None or not door.window_host or door.window_host in NOT_ONE_ADDRESS:
         return None
@@ -624,6 +633,36 @@ def house_ports(config: Config) -> tuple[str, list[int]] | None:
         if shown:
             ports.append(int(shown[1]))
     return door.window_host, sorted(ports)
+
+
+def lan_ports(config: Config) -> list[int]:
+    """Every port ``[house]`` publishes on the house address."""
+    kosh, door, pages = config.smritikosh, config.door, config.pages
+    ports = [config.web_port]
+    ports += [config.clock_port] if config.clock_on else []
+    if door is not None:
+        ports.append(door.port)
+        shown = window(config)
+        ports += [int(shown[1])] if shown else []
+        ports += [door.ntfy_port] if door.ntfy_port else []
+    if pages.on:
+        ports += [pages.setu_port, pages.home_port]
+        ports += [pages.door_port] if door is not None else []
+        shown = setu_window(config)
+        ports += [int(shown[1])] if shown else []
+    if config.remembers_in_smritikosh:
+        ports += [kosh.port, kosh.db_port]
+        ports += [kosh.dashboard_port] if kosh.dashboard else []
+        for text in extra_units(config).values():
+            ports += [int(line.split(":")[1]) for line in text.splitlines()
+                      if line.startswith("PublishPort=127.0.0.1:")]
+    return ports
+
+
+def lan(config: Config, port: int, inner: int) -> str:
+    """A second PublishPort, on the house address, with ``[house]``."""
+    address = config.people_host() if config.house else None
+    return f"PublishPort={address}:{port}:{inner}\n" if address else ""
 
 
 def firewall() -> str | None:
@@ -694,8 +733,8 @@ def units(config: Config) -> dict[str, str]:
             f"127.0.0.1:{config.clock_port}:{CLOCK_PORT}", config, memory_after,
             # where a browser here reaches it, so Samay prints and reports
             # that, not the container's own bind (an older image ignores it)
-            extra_container=f"Environment=SAMAY_PUBLIC_URL=http://127.0.0.1:"
-                            f"{config.clock_port}/\n"
+            extra_container=lan(config, config.clock_port, CLOCK_PORT)
+                            + f"Environment=SAMAY_PUBLIC_URL={config.link(config.clock_port)}\n"
                             + (f"Environment=SAMAY_DVARA_URL=http://{UNITS['dvara']}:"
                                f"{DOOR_PORT}\n"
                                # a schedule made on Yantra's page is told to you
@@ -742,7 +781,8 @@ def units(config: Config) -> dict[str, str]:
         out[f"{UNITS['dvara']}.container"] = _unit(
             "Sarathi: Dvara", UNITS["dvara"], door_exec,
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
-            extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
+            extra_container=lan(config, door.port, DOOR_PORT)
+                            + f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
                             + streamed + people_url(config) + phone_env(config) + push,
             more_volumes=door_dirs(config) + phone_dirs(config)
             + ([mcp_dir()] if config.remembers_in_smritikosh else []))
@@ -759,7 +799,8 @@ def units(config: Config) -> dict[str, str]:
     out[f"{UNITS['yantra']}.container"] = _unit(
         "Sarathi: Yantra's page", UNITS["yantra"], page_exec,
         f"127.0.0.1:{config.web_port}:{PAGE_PORT}", config, page_unit,
-        extra_container=phone_env(config) + memory_env,
+        extra_container=lan(config, config.web_port, PAGE_PORT) + phone_env(config)
+        + memory_env,
         more_volumes=phone_dirs(config) + memory_dirs)
     if config.pages.on:
         pages = config.pages
@@ -769,7 +810,8 @@ def units(config: Config) -> dict[str, str]:
         out[f"{UNITS['setu']}.container"] = _unit(
             "Sarathi: Setu's page", UNITS["setu"],
             f"{IN_IMAGE}/setu serve --host 0.0.0.0 --port {SETU_PAGE_PORT} "
-            f"--public-url http://127.0.0.1:{pages.setu_port}/{people}",
+            f"--public-url {config.link(pages.setu_port) if config.house else
+                            f'http://127.0.0.1:{pages.setu_port}/'}{people}",
             f"127.0.0.1:{pages.setu_port}:{SETU_PAGE_PORT}", config,
             # people's links open on their phones (config.people_host)
             extra_container=(f"PublishPort={phones}:{pages.setu_port}:{SETU_PAGE_PORT}\n"
@@ -784,7 +826,8 @@ def units(config: Config) -> dict[str, str]:
                 f"--host 0.0.0.0 --port {OWNER_PAGE_PORT}",
                 f"127.0.0.1:{pages.door_port}:{OWNER_PAGE_PORT}", config,
                 f"Wants={UNITS['dvara']}.service\nAfter={UNITS['dvara']}.service\n",
-                extra_container=f"Environment=DVARA_URL=http://{UNITS['dvara']}:{DOOR_PORT}\n",
+                extra_container=lan(config, pages.door_port, OWNER_PAGE_PORT)
+                + f"Environment=DVARA_URL=http://{UNITS['dvara']}:{DOOR_PORT}\n",
                 more_volumes=door_dirs(config))
     out[f"{NETWORK}.network"] = (f"{HEADER}\n[Network]\nNetworkName={NETWORK}\n")
     return out
@@ -854,7 +897,7 @@ Image={DB_IMAGE}
 ContainerName={db}
 Network={NETWORK}.network
 PublishPort=127.0.0.1:{kosh.db_port}:5432
-Volume={kosh.volume}:/var/lib/postgresql/data:Z
+{lan(config, kosh.db_port, 5432)}Volume={kosh.volume}:/var/lib/postgresql/data:Z
 EnvironmentFile={env_file(db)}
 
 [Service]
@@ -873,7 +916,7 @@ ContainerName={api}
 Network={NETWORK}.network
 Exec={serve}
 PublishPort=127.0.0.1:{kosh.port}:{SMRITIKOSH_PORT}
-RunInit=true
+{lan(config, kosh.port, SMRITIKOSH_PORT)}RunInit=true
 EnvironmentFile={env_file(api)}
 
 [Service]
@@ -909,11 +952,12 @@ def extra_units(config: Config) -> dict[str, str]:
         mounts = "".join(
             f"Volume={m.get('Name') if m.get('Type') == 'volume' else m.get('Source')}:"
             f"{m.get('Destination')}\n" for m in found.get("Mounts") or [])
-        ports = "".join(
-            f"PublishPort=127.0.0.1:{b['HostPort']}:{inner.split('/')[0]}\n"
-            for inner, bound in ((found.get("HostConfig") or {}).get("PortBindings")
-                                 or {}).items()
-            for b in bound or [] if str(b.get("HostPort", "")).isdigit())
+        bindings = [(int(b["HostPort"]), int(inner.split("/")[0]))
+                    for inner, bound in ((found.get("HostConfig") or {}).get("PortBindings")
+                                         or {}).items()
+                    for b in bound or [] if str(b.get("HostPort", "")).isdigit()]
+        ports = "".join(f"PublishPort=127.0.0.1:{port}:{inner}\n" + lan(config, port, inner)
+                        for port, inner in bindings)
         out[f"{unit}.container"] = f"""{HEADER}
 [Unit]
 Description=Sarathi: Smritikosh's {store}, from the container {name}
@@ -981,10 +1025,12 @@ def dashboard_unit(config: Config) -> str | None:
     from sarathi import smritikosh
 
     kosh = config.smritikosh
-    argv = smritikosh.dashboard_argv(kosh) if config.remembers_in_smritikosh else None
+    argv = smritikosh.dashboard_argv(kosh, house=config.house is not None) \
+        if config.remembers_in_smritikosh else None
     if argv is None:
         return None
-    env = "".join(f"Environment={k}={v}\n" for k, v in smritikosh.dashboard_env(kosh).items())
+    env = "".join(f"Environment={k}={v}\n" for k, v in smritikosh.dashboard_env(
+        kosh, config.house.name if config.house else "localhost").items())
     return f"""{HEADER}
 [Unit]
 Description=Sarathi: Smritikosh's own dashboard

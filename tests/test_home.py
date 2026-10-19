@@ -103,6 +103,52 @@ def test_each_link_opens_its_page_signed_in(served):
     assert by["yantra"]["open"] == "http://127.0.0.1:8321/" and by["yantra"]["keyed"]
 
 
+def test_yantras_link_carries_the_token_sarathi_made_for_its_page(keys):
+    from sarathi.config import YANTRA_TOKEN, save_secret
+
+    save_secret(YANTRA_TOKEN, "yantra-key-1234567890")
+    by = {p["name"]: p for p in Home(config(keys), lambda: {}).pieces()}
+    assert by["yantra"]["open"] == "http://127.0.0.1:8321/?token=yantra-key-1234567890"
+
+
+def test_with_a_house_each_card_links_by_the_name_the_page_was_opened_at(keys):
+    from dataclasses import replace
+
+    from sarathi.config import House
+
+    home = Home(replace(config(keys), house=House("beast.local", "192.168.1.44")),
+                lambda: {})
+    by = {p["name"]: p for p in home.pieces("beast.local")}
+    assert by["samay"]["open"] == "http://beast.local:8780/#token=samay-key-1234567890"
+    assert by["yantra"]["url"] == "http://beast.local:8321/"
+    # here, at the computer, the same page links to 127.0.0.1
+    assert home.pieces("127.0.0.1")[0]["url"] == "http://127.0.0.1:8321/"
+    # with no house the other pages are this computer's alone, so 127.0.0.1
+    plain = Home(config(keys), lambda: {})
+    assert plain.pieces("beast.local")[0]["url"] == "http://127.0.0.1:8321/"
+
+
+def test_a_host_header_no_link_could_hold_is_not_put_in_one(keys):
+    from dataclasses import replace
+
+    from sarathi.config import House
+
+    home = Home(replace(config(keys), house=House("beast.local", "192.168.1.44")),
+                lambda: {})
+    server = HomeServer(home, GOOD, port=0)
+    server.start()
+    try:
+        url = server.url + "api/pieces"
+        for host, wanted in (("beast.local:8760", "http://beast.local:8321/"),
+                             ("evil\"><script>", "http://127.0.0.1:8321/")):
+            request = urllib.request.Request(url, headers={
+                "Authorization": f"Bearer {GOOD}", "Host": host})
+            with urllib.request.urlopen(request) as answer:
+                assert json.loads(answer.read())["pieces"][0]["url"] == wanted
+    finally:
+        server.stop()
+
+
 def test_a_page_that_is_down_says_how_to_start_it_and_nothing_starts_it(served):
     dvara = next(p for p in get(served, "/api/pieces").json()["pieces"]
                  if p["name"] == "dvara")

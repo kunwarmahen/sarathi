@@ -112,6 +112,7 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import re
 import secrets
 import subprocess
 import threading
@@ -127,7 +128,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from sarathi.config import DOOR_TOKEN, Config, read_secrets, render, settings_path, state_dir
+from sarathi.config import (
+    DOOR_TOKEN,
+    YANTRA_TOKEN,
+    Config,
+    read_secrets,
+    render,
+    settings_path,
+    state_dir,
+)
 from sarathi.people import INVITE_HOURS, People, PeopleError, actor_ids
 from sarathi.services import HOST, answers
 from sarathi.siblings import SIBLINGS, locate
@@ -166,10 +175,17 @@ class Page:
     token_env: str | None = None
     token_file: Path | None = None
     start: str = "sarathi up"
+    #: How the link carries the token: after ``#`` (the page reads it), or
+    #: as ``?token=`` (Yantra's: the server sets a cookie from it).
+    token_in: str = "/#token="
+    #: The token is Sarathi's own, kept in secrets.env under token_env.
+    in_secrets: bool = False
 
     def token(self) -> str | None:
         if self.token_env and os.environ.get(self.token_env, "").strip():
             return os.environ[self.token_env].strip()
+        if self.in_secrets and self.token_env:
+            return read_secrets().get(self.token_env) or None
         if self.token_file is None:
             return None
         try:
@@ -187,7 +203,9 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     xdg_state = Path(env.get("XDG_STATE_HOME") or home / ".local" / "state")
     setu_home = Path(env.get("SETU_HOME") or xdg_state / "setu").expanduser()
     samay_state = Path(env.get("SAMAY_STATE", "").strip() or home / ".samay").expanduser()
-    found = [Page("yantra", "Yantra", "Talk to your agent.", config.web_port)]
+    # Yantra's page wants the token Sarathi made for it (Yantra's gate.py)
+    yantra = {"token_env": YANTRA_TOKEN, "token_in": "/?token=", "in_secrets": True}
+    found = [Page("yantra", "Yantra", "Talk to your agent.", config.web_port, **yantra)]
     if config.clock_on:
         found.append(Page("samay", "Samay", "What runs later, and what each run said.",
                           config.clock_port, "SAMAY_TOKEN", samay_state / "serve.token"))
@@ -211,7 +229,7 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
         # WebDriverAgent: a container can't reach a phone on a USB cable.
         found.append(Page(
             "sparsh", "Your phone", "Your phone and what the agent did on it: the phone "
-            "panel on Yantra's page.", config.web_port))
+            "panel on Yantra's page.", config.web_port, **yantra))
     if door is not None:
         found.append(Page(
             "dvara", "Dvara", "Your door: the people on it, what they've spent, what "
@@ -327,15 +345,23 @@ class Home:
                 self._cache = (now, self._said())
             return self._cache[1]
 
-    def pieces(self) -> list[dict[str, Any]]:
+    def pieces(self, opened_at: str | None = None) -> list[dict[str, Any]]:
+        """Each page's card. ``opened_at``: the name this page was opened
+        by (its Host). With ``[house]`` every page is published on the
+        house address too, so each card links by that same name -- the
+        house's name on a phone, 127.0.0.1 here -- and a phone never gets
+        a link to itself."""
         lines = self.said()
         out = []
+        host = opened_at if self.config.house is not None and opened_at else HOST
+        shown = f"[{host}]" if ":" in host else host
         for page in pages(self.config):
             token = page.token()
-            url = f"http://{HOST}:{page.port}/"
+            url = f"http://{shown}:{page.port}/"
             out.append({"name": page.name, "title": page.title, "purpose": page.purpose,
                         "up": self._up(page.port), "url": url,
-                        "open": f"{url}#token={token}" if token else url,
+                        "open": f"{url.rstrip('/')}{page.token_in}{token}" if token
+                        else url,
                         "keyed": token is not None or page.token_file is None,
                         "said": lines.get(page.name, ""), "start": page.start})
         return out
@@ -410,12 +436,12 @@ class Chat:
 
 def invite_address(config: Config, link: str) -> tuple[str, bool]:
     """(the address a person opens, whether a phone can reach it): the
-    house address the door's window uses, when it is one; else this
-    computer, and the owner is told so."""
-    host = config.people_host()
-    shown = f"[{host}]" if host and ":" in host else host
-    base = f"http://{shown or HOST}:{config.pages.home_port}/"
-    return f"{base}#invite={link}", host is not None
+    house's name (``[house]``), or the address the door's window uses,
+    when there is one; else this computer, and the owner is told so."""
+    reachable = config.people_host() is not None
+    base = config.link(config.pages.home_port) if reachable else \
+        f"http://{HOST}:{config.pages.home_port}/"
+    return f"{base}#invite={link}", reachable
 
 
 class HomeServer:
@@ -671,13 +697,21 @@ def _handler(server: HomeServer):
                 self.wfile.write(raw)
                 return None
             try:
-                return self._json(200, {"pieces": server.home.pieces(),
+                return self._json(200, {"pieces": server.home.pieces(self._opened_at()),
                                         "memory": server.home.memory(),
                                         "chat": server.chat is not None,
                                         "people": server.people is not None
                                         and server.home.config.door is not None})
             except Exception as exc:     # a bug is a 500 that says what, not a hang
                 return self._json(500, {"detail": f"{type(exc).__name__}: {exc}"})
+
+        def _opened_at(self) -> str | None:
+            """The name in this request's Host, when it is a plain name or
+            address (never anything a link could not hold)."""
+            raw = (self.headers.get("Host") or "").strip()
+            name = raw[1:raw.index("]")] if raw.startswith("[") and "]" in raw \
+                else raw.rsplit(":", 1)[0] if raw.count(":") == 1 else raw
+            return name if re.fullmatch(r"[A-Za-z0-9.\-:]{1,253}", name or "") else None
 
         # ---- people (people.py): the owner adds them, they sign in --------------
 

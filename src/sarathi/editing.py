@@ -57,6 +57,7 @@ from sarathi.config import (
     Config,
     ConfigError,
     Door,
+    House,
     Phone,
     load,
     parse,
@@ -233,6 +234,8 @@ def sarathi_view(config: Config) -> dict:
         "phone": None if phone is None else {"address": phone.address, "wda": phone.wda,
                                              "awake": phone.awake},
         "memory": {"via": config.memory},
+        "house": None if config.house is None else {"name": config.house.name,
+                                                    "address": config.house.address},
         "keys": {k: k in have for k in KEYS},
     }
 
@@ -304,6 +307,11 @@ def sarathi_apply(changes: dict) -> Config:
                                awake=ph.get("awake") or None))
     if "memory" in changes:
         config = replace(config, memory=changes["memory"].get("via", config.memory))
+    if "house" in changes:
+        h = changes["house"]
+        config = replace(config, house=None if not h or not h.get("name") else
+                         House(name=str(h["name"]).strip(),
+                               address=str(h.get("address") or "").strip() or None))
     return sarathi_text(render(config))
 
 

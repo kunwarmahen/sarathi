@@ -754,11 +754,17 @@ you gave the bot:
    how to allow it next time.
 3. **Gmail, connected from the chat.** Send `/connect gmail` (or, if
    you asked about mail first, press the **Connect gmail** button under
-   the answer: it sends the same word). Open the
-   link on your phone, sign in to Google and allow it. Your phone then
-   tries to open a page at `http://127.0.0.1:…` and **fails to load it.
-   That's expected**: copy that page's whole address (it contains
-   `code=…`) and send it to the bot. It answers *connected*, and
+   the answer: it sends the same word). With `[house]` or a window
+   address set (below), the link shows **Google's own sign-in page**,
+   running in a browser on your computer, at your phone's size. Sign in
+   there as with Amazon below: type in the box at the bottom, then Go.
+   When you allow it, the page says *Signed in* and the bot says
+   *connected*. Without either, the link is Google's own: sign in on
+   your phone, and your phone then tries to open a page at
+   `http://127.0.0.1:…` and **fails to load it. That's expected**: copy
+   that page's whole address (it contains `code=…`) and send it to the
+   bot. Telegram's own browser hides that address, so set `[house]`
+   first if you use Telegram. It answers *connected*, and
    `/accounts` lists Gmail. `/disconnect gmail` takes it away again. If
    Gmail stops a week later (Google's limit while your app is in
    Testing), the bot says so when you ask about mail: send `/connect
@@ -823,6 +829,31 @@ them again: `sudo ufw delete allow from 192.168.1.0/24 to any port
 Your computer runs
 that browser, so it handles what they type, their password included:
 offer it to people who already trust you with their agent.
+
+**Everything, from any device at home.** The window address opens only
+what a phone *needs*. To open every page from your phone or laptop
+(Yantra's, Samay's, Dvara's, Smritikosh's dashboard), name your computer
+in `~/.config/sarathi/sarathi.toml`:
+
+```toml
+[house]
+name = "linux-al-ml-beast.local"   # your computer's name + ".local"
+```
+
+(`hostname` prints the first part. Or set it under **Settings → Every
+server on your home network** on the home page.) Then:
+
+```bash
+sarathi down && sarathi up
+```
+
+Open `http://linux-al-ml-beast.local:8760/` on your phone, with the
+home page's token: the `sarathi home` line's `#token=…`, once. Every
+card on it now opens on your phone. The **Yantra** card carries Yantra's
+own token, so open Yantra from there the first time on each device.
+`sarathi up` prints a longer `ufw` line naming every port; run it. If
+your Android phone can't open `.local` names, use the computer's
+address in place of the name, in the link and in `name`.
 
 **A chat of their own, without Telegram.** Someone in the actors file
 who doesn't use Telegram can talk to their agents on the home page, as

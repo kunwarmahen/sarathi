@@ -23,6 +23,18 @@ switches to it, ``sarathi smritikosh --off`` switches back, and nothing
 is deleted either way. Its key, and each Dvara person's, are Sarathi's
 to hand out, never written here.
 
+EVERY SERVER ON THE HOME NETWORK, BY ONE NAME: ``[house]``. Unset, each
+piece listens on this computer alone (127.0.0.1), and only the few a
+phone must reach -- the home page, Setu's page, the sign-in windows,
+ntfy -- also on Dvara's ``window_host``. With ``[house] name`` (the name
+the house knows this computer by: ``beast.local`` from Avahi, a router's
+DNS name, a Tailscale name), every piece is ALSO published on the house
+address (``address``, or what the name finds), and every link a piece
+hands out says the name: the home page's cards, a person's Setu link,
+a sign-in window's link, ntfy's. Yantra's page then wants its token
+(``YANTRA_WEB_TOKEN``, made once into secrets.env), and the home page's
+link to it carries it.
+
 With ``[dvara] on = true``, ``up`` also starts Dvara, the door your
 agents live behind for other people and for you on your phone. Its two
 tokens (dvara's own, and the Telegram bot's) are in secrets.env too.
@@ -75,9 +87,13 @@ KNOWN: dict[str, set[str]] = {
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
     "phone": {"on", "address", "wda", "awake"},
     "memory": {"via"},
+    "house": {"name", "address"},
     "smritikosh": {"checkout", "port", "database", "volume", "db_port", "full", "neo4j",
                    "mongodb", "redis", "dashboard", "dashboard_port"},
 }
+#: Yantra's page's token (its gate.py), made once by `up` into secrets.env:
+#: the page wants it, and the home page's link carries it.
+YANTRA_TOKEN = "YANTRA_WEB_TOKEN"
 #: Where Yantra (and Dvara's people) keep what they remember.
 MEMORY_ROADS = ("local", "smritikosh")
 DEFAULT_SMRITIKOSH_PORT, DEFAULT_DB_PORT = 8080, 5432
@@ -142,6 +158,29 @@ class Phone:
 
 
 @dataclass(frozen=True)
+class House:
+    """Every server on the home network, by one name: ``[house]``."""
+
+    #: The name links say: ``beast.local``, a router's DNS name.
+    name: str
+    #: The address everything is published on; None: what ``name`` finds.
+    address: str | None = None
+
+    def published_on(self) -> str | None:
+        """The address, or the first IPv4 address the name finds here; None
+        when it finds none (Avahi down, a name the router has forgotten)."""
+        if self.address:
+            return self.address
+        import socket
+
+        try:
+            found = socket.getaddrinfo(self.name, None, socket.AF_INET)
+        except OSError:
+            return None
+        return str(found[0][4][0]) if found else None
+
+
+@dataclass(frozen=True)
 class Smritikosh:
     """The memory server, as ``sarathi smritikosh`` set it up: ``[smritikosh]``."""
 
@@ -195,6 +234,8 @@ class Config:
     #: ``local`` (Yantra's built-in file) or ``smritikosh``.
     memory: str = "local"
     smritikosh: Smritikosh = Smritikosh()
+    #: ``[house]``: every server on the home network too, links by name.
+    house: House | None = None
 
     @property
     def remembers_in_smritikosh(self) -> bool:
@@ -202,15 +243,29 @@ class Config:
 
     def people_host(self) -> str | None:
         """Where people's phones reach Setu's page, for the link ``/accounts
-        page`` sends them: the door's window address, when it is ONE
-        address (Tailscale, the home network) -- never every address
-        (0.0.0.0) and never this computer alone. None: the page stays on
-        127.0.0.1, and a person's link opens only here."""
+        page`` sends them: the house's address (``[house]``), else the
+        door's window address, when it is ONE address (Tailscale, the home
+        network) -- never every address (0.0.0.0) and never this computer
+        alone. None: the page stays on 127.0.0.1, and a person's link
+        opens only here."""
+        if self.house is not None:
+            return self.house.published_on()
         door = self.door
         if door is None or not self.pages.on:
             return None
         host = (door.window_host or "").strip()
         return host if host and host not in NOT_ONE_ADDRESS else None
+
+    def link_host(self) -> str | None:
+        """The name or address a link says: the house's name, else the
+        address phones reach (people_host)."""
+        return self.house.name if self.house is not None else self.people_host()
+
+    def link(self, port: int, path: str = "/") -> str:
+        """``http://<link_host>:<port><path>``; this computer's 127.0.0.1
+        when there is no house address."""
+        host = self.link_host() or "127.0.0.1"
+        return f"http://{f'[{host}]' if ':' in host else host}:{port}{path}"
 
     def setu_window_env(self) -> dict[str, str]:
         """Setu's page's own streamed window, on the plain-programs road: a
@@ -222,7 +277,8 @@ class Config:
         host = self.people_host()
         if host is None or self.door is None or self.door.window_url:
             return {}
-        return {"SETU_WINDOW_HOST": host}
+        name = self.house.name if self.house is not None else None
+        return {"SETU_WINDOW_HOST": host, **({"SETU_WINDOW_NAME": name} if name else {})}
 
     def ntfy_host(self) -> str:
         """Where ntfy listens: the house address when there is one (a
@@ -233,16 +289,13 @@ class Config:
         """ntfy as a phone subscribes to it, or None with no ntfy."""
         if self.door is None or self.door.ntfy_port is None:
             return None
-        host = self.ntfy_host()
-        return f"http://{f'[{host}]' if ':' in host else host}:{self.door.ntfy_port}"
+        return self.link(self.door.ntfy_port, "")
 
     def people_env(self) -> dict[str, str]:
         """The door's word for that page (``setu page-link`` reads it)."""
-        host = self.people_host()
-        if host is None:
+        if self.people_host() is None:
             return {}
-        shown = f"[{host}]" if ":" in host else host
-        return {"SETU_PAGE_URL": f"http://{shown}:{self.pages.setu_port}/"}
+        return {"SETU_PAGE_URL": self.link(self.pages.setu_port)}
 
 
 @dataclass(frozen=True)
@@ -424,11 +477,23 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                                                  DEFAULT_DASHBOARD_PORT, "smritikosh"),
                             **{k: kosh[k] for k in ("neo4j", "mongodb", "redis")
                                if kosh.get(k)})
+    house_table = data.get("house")
+    house = None
+    if house_table is not None:
+        name, at = house_table.get("name"), house_table.get("address") or None
+        if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9.\-]{1,253}", name):
+            raise ConfigError(f"{where}: house.name must be this computer's name on your "
+                              f"network, like \"beast.local\", not {name!r}")
+        if at is not None and (not isinstance(at, str) or at in NOT_ONE_ADDRESS
+                               or not re.fullmatch(r"[0-9A-Fa-f.:]{2,45}", at)):
+            raise ConfigError(f"{where}: house.address must be this computer's one address "
+                              f"on your network, like \"192.168.1.44\", not {at!r}")
+        house = House(name=name, address=at)
     if via == "smritikosh" and smritikosh.checkout is None:
         raise ConfigError(f"{where}: memory.via = \"smritikosh\" but it isn't set up "
                           "yet: run `sarathi smritikosh`")
     return Config(provider=provider, road=road, door=door, pages=pages, phone=phone,
-                  memory=via, smritikosh=smritikosh,
+                  memory=via, smritikosh=smritikosh, house=house,
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   context_window=window,
@@ -492,9 +557,26 @@ sarathi_port = {config.pages.home_port}
 setu_port = {config.pages.setu_port}
 dvara_port = {config.pages.door_port}
 
+{_render_house(config.house)}
 {_render_door(config.door)}
 {_render_phone(config.phone)}
 {_render_memory(config)}"""
+
+
+def _render_house(house: House | None) -> str:
+    head = """# Every server on your home network too, by one name: Yantra's page,
+# Samay, Dvara and its page, Setu's page, this home page, ntfy and
+# Smritikosh. name: what your other devices call this computer (Avahi's
+# "<hostname>.local", or your router's name for it); every link says it.
+# address: the address they are published on; unset, what the name finds.
+# Yantra's page then wants its token; the home page's link carries it.
+"""
+    if house is None:
+        return head + '# [house]\n# name = "beast.local"\n'
+    address = f'address = "{house.address}"' if house.address else \
+        '# address = "192.168.1.44"'
+    return head + f'[house]\nname = "{house.name}"\n{address}\n'
+
 
 
 def _render_memory(config: Config) -> str:
@@ -616,6 +698,19 @@ def read_secrets() -> dict[str, str]:
             key, _, value = line.partition("=")
             found[key.strip()] = value.strip().strip("'\"")
     return found
+
+
+def yantra_token() -> str:
+    """Yantra's page's token: kept in secrets.env, made the first time. The
+    page wants it (Yantra's gate.py) and the home page's link carries it."""
+    import secrets as random
+
+    held = read_secrets().get(YANTRA_TOKEN)
+    if held:
+        return held
+    token = random.token_urlsafe(24)
+    save_secret(YANTRA_TOKEN, token)
+    return token
 
 
 def save_secret(name: str, value: str) -> Path:

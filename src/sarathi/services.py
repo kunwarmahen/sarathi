@@ -109,14 +109,21 @@ from sarathi.config import (
     BOT_TOKEN,
     DOOR_TOKEN,
     KEY_NAMES,
+    YANTRA_TOKEN,
     Config,
     ConfigError,
     read_secrets,
     state_dir,
+    yantra_token,
 )
 from sarathi.siblings import Found, read_status
 
 HOST = "127.0.0.1"
+#: Where a piece listens with ``[house]``: every address, so this computer
+#: (127.0.0.1, which the pieces use to reach each other) and the house's
+#: other devices both reach it. One flag takes one address; the firewall
+#: line ``up`` prints opens them to the house's network alone.
+EVERYWHERE = "0.0.0.0"
 #: How long `up` waits for a started piece to answer on its port.
 READY_TIMEOUT = 45.0
 #: How long `down` waits after asking a piece to stop, before insisting.
@@ -171,7 +178,8 @@ def model_env(config: Config, environ: dict[str, str] | None = None) -> dict[str
     from sarathi.smritikosh import SECRETS as MEMORY_SECRETS
 
     secrets = {k: v for k, v in read_secrets().items()
-               if k not in environ and k not in (DOOR_TOKEN, BOT_TOKEN, *MEMORY_SECRETS)}
+               if k not in environ and k not in (DOOR_TOKEN, BOT_TOKEN, YANTRA_TOKEN,
+                                                 *MEMORY_SECRETS)}
     env.update(secrets)
     key = KEY_NAMES.get(config.provider)
     if key and key not in environ and key not in env:
@@ -188,6 +196,7 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
                           "(see `sarathi status`)")
     env = model_env(config)
     notes: list[str] = []
+    listen = EVERYWHERE if config.house is not None else HOST
     clock_on = config.clock_on and samay.program is not None
     if config.clock_on and samay.program is None:
         notes.append(f"{'samay':<{WIDTH}} not started: samay was not found "
@@ -227,15 +236,17 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
                 and found["sparsh"].program is not None:
             run_scheduled += ["--sparsh", f"auto:{found['sparsh'].program}"]
         services.append(Service(
-            "samay", "samay", [samay.program, "serve", "--port", str(config.clock_port)],
+            "samay", "samay", [samay.program, "serve", "--host", listen,
+                               "--port", str(config.clock_port)],
             config.clock_port,
             {**env, "SAMAY_YANTRA": shlex.join(run_scheduled),
+             **({"SAMAY_PUBLIC_URL": config.link(config.clock_port)} if config.house else {}),
              "SAMAY_YANTRA_HOME": str(work_dir()), **meet, **memory_env,
              **phone_env(config)},
             says_address="page: "))
     if door is not None:
         services.append(door)
-    page_argv = [yantra.program, "--web", "--host", HOST, "--port", str(config.web_port)]
+    page_argv = [yantra.program, "--web", "--host", listen, "--port", str(config.web_port)]
     if setu.program is not None:
         page_argv += ["--setu", setu.program]
     page_argv += ["--samay", samay.program] if clock_on else ["--no-samay"]
@@ -244,8 +255,10 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         # until the person says to use one (Yantra's phone panel).
         page_argv += ["--sparsh", f"auto:{found['sparsh'].program}"]
     page_argv += run_yantra[1:]
+    # its token: the page wants it, and the home page's link carries it
     services.append(Service("yantra", "yantra", page_argv, config.web_port,
-                            {**env, **phone_env(config), **memory_env}))
+                            {**env, **phone_env(config), **memory_env,
+                             YANTRA_TOKEN: yantra_token()}))
     if config.pages.on:
         services += page_services(config, found, door is not None, notes)
     return services, notes
@@ -286,7 +299,8 @@ def memory_service(config: Config, notes: list[str]) -> Service | None:
         return "\n".join(said) or None
 
     return Service("smritikosh", "smritikosh",
-                   [str(uvicorn), "smritikosh.api.main:app", "--host", HOST,
+                   [str(uvicorn), "smritikosh.api.main:app", "--host",
+                    EVERYWHERE if config.house is not None else HOST,
                     "--port", str(kosh.port)],
                    kosh.port, {"BOOTSTRAP_ADMIN": "0"}, cwd=checkout, prepare=database)
 
@@ -296,7 +310,7 @@ def dashboard_service(config: Config, notes: list[str]) -> Service | None:
     from sarathi import smritikosh
 
     kosh = config.smritikosh
-    argv = smritikosh.dashboard_argv(kosh)
+    argv = smritikosh.dashboard_argv(kosh, house=config.house is not None)
     if argv is None:
         if kosh.dashboard and smritikosh.dashboard(config) is not None:
             notes.append(f"{'smritikosh-ui':<{WIDTH}} not started: "
@@ -304,7 +318,9 @@ def dashboard_service(config: Config, notes: list[str]) -> Service | None:
                          "(`sarathi smritikosh` builds it)")
         return None
     return Service("smritikosh-ui", "smritikosh", argv, kosh.dashboard_port,
-                   smritikosh.dashboard_env(kosh), cwd=smritikosh.ui_dir(kosh.path()))
+                   smritikosh.dashboard_env(kosh, config.house.name if config.house
+                                            else "localhost"),
+                   cwd=smritikosh.ui_dir(kosh.path()))
 
 
 #: Width of a piece's name in the lines `up`, `down` and `status` print.
@@ -338,9 +354,9 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
         argv = [setu, "serve", "--port", str(pages.setu_port)]
         if door is not None and door_on:
             argv += ["--people", str(door.path("state") / "setu")]
-            if config.people_host():
-                # people's links open on their phones (config.people_host)
-                argv += ["--also-host", config.people_host()]
+        if (door_on or config.house is not None) and config.people_host():
+            # people's links open on their phones (config.people_host)
+            argv += ["--also-host", config.people_host()]
         out.append(Service("setu", "setu", argv, pages.setu_port,
                            config.setu_window_env() if door_on else {},
                            says_address="  "))
@@ -355,13 +371,15 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
             [str(found["dvara"].program), "--root", str(door.path("root")), "--actors",
              str(door.path("actors")), "--state", str(door.path("state")),
              *(["--samay", str(samay)] if samay else []),
-             "page", "--as", door.owner, "--port", str(pages.door_port)],
+             "page", "--as", door.owner,
+             *(["--host", EVERYWHERE] if config.house is not None else []),
+             "--port", str(pages.door_port)],
             pages.door_port,
             # the door's token stays server-side in the page, never in a browser
             {DOOR_TOKEN: token, "DVARA_URL": f"http://{HOST}:{door.port}"},
             says_address="  "))
     home = [sarathi_program(), "home", "--port", str(pages.home_port)]
-    if door_on and config.people_host():
+    if (door_on or config.house is not None) and config.people_host():
         # the people in the house sign in from their phones (people.py)
         home += ["--also-host", config.people_host()]
     out.append(Service("sarathi", "sarathi", home, pages.home_port, says_address="  "))
@@ -473,13 +491,16 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
         # every person's notices, also to their own topic (dvara push.py)
         argv += ["--ntfy", config.ntfy_url()]
     # --web: the home page's chat, and every notice kept for it (dvara web.py)
-    argv += ["serve", "--host", HOST, "--port", str(door.port), "--web"]
+    argv += ["serve", "--host", EVERYWHERE if config.house is not None else HOST,
+             "--port", str(door.port), "--web"]
     if door.telegram:
         argv += ["--telegram", door.telegram]
     secrets = read_secrets()
     tokens = {k: secrets[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in secrets}
     return Service("dvara", "dvara", argv, door.port,
                    {**env, **tokens, **door_env(config), **door.window_env(),
+                    # with [house], a sign-in window (Gmail's page too) on it
+                    **(config.setu_window_env() if config.house is not None else {}),
                     **config.people_env(), **phone_env(config),
                     **(ntfy_click(config) if ntfy else {})})
 

@@ -519,6 +519,8 @@ function drawSarathiTab() {
                      dv.owner || "owner");
   const house = text(dv.window_host || "", { placeholder: "192.168.1.44" });
   const ntfy = check(dv.ntfy);
+  const lanName = text(s.house?.name || "", { placeholder: "beast.local" });
+  const lanAt = text(s.house?.address || "", { placeholder: "what the name finds" });
   const phoneOn = check(!!s.phone);
   const phoneAt = text(s.phone?.address || "", { placeholder: "192.168.1.23:41234" });
   const wdaAt = text(s.phone?.wda || "", { placeholder: "http://127.0.0.1:8100" });
@@ -544,6 +546,7 @@ function drawSarathiTab() {
     phone: phoneOn.checked ? { on: true, address: phoneAt.value.trim(),
                                wda: wdaAt.value.trim(), awake: awake.value }
                            : { on: false },
+    house: { name: lanName.value.trim(), address: lanAt.value.trim() },
   }));
   return [
     h("div.card.form", {}, h("h3", {}, "Which model answers"),
@@ -558,6 +561,12 @@ function drawSarathiTab() {
       field("This computer's address at home", house, "Phones at home reach the home page, " +
             "Setu's page and ntfy here. Your home network's address, or Tailscale's."),
       h("label.inline", {}, ntfy, " Notices on phones, through ntfy in the house")),
+    h("div.card.form", {}, h("h3", {}, "Every server on your home network"),
+      field("This computer's name at home", lanName, "Every program is reachable from " +
+            "your other devices too, and every link says this name: <hostname>.local, or " +
+            "your router's name for this computer. Empty: this computer alone."),
+      field("Its address", lanAt, "Where they are published. Empty: what the name finds."),
+      h("p.meta", {}, "Yantra's page then wants its token; the Yantra card here carries it.")),
     h("div.card.form", {}, h("h3", {}, "The rest"),
       h("label.inline", {}, samayOn, " Samay: things done later, on a schedule"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),

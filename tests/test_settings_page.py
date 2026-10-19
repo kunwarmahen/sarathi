@@ -138,6 +138,19 @@ def test_sarathis_own_file_is_checked_and_the_old_one_kept(owner_page):
     assert settings_mod.load().model == "gemma4:12b"
 
 
+def test_the_house_is_set_and_cleared_from_the_page(owner_page):
+    status, _ = send(owner_page, "/api/settings/sarathi",
+                     {"house": {"name": "beast.local", "address": ""}})
+    assert status == 200
+    assert settings_mod.load().house == settings_mod.House("beast.local")
+    view = json.loads(ask(owner_page, "/api/settings").text)["sarathi"]["house"]
+    assert view == {"name": "beast.local", "address": None}
+    status, got = send(owner_page, "/api/settings/sarathi", {"house": {"name": "a b"}})
+    assert status == 400 and "house.name" in got["detail"]
+    send(owner_page, "/api/settings/sarathi", {"house": {"name": ""}})
+    assert settings_mod.load().house is None
+
+
 def test_a_key_goes_in_and_never_comes_back_out(owner_page):
     status, _ = send(owner_page, "/api/settings/key/TELEGRAM_TOKEN", {"value": "123:secret"})
     assert status == 200

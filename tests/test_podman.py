@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 
+from sarathi import config as settings
 from sarathi import podman, services
 from sarathi.config import Config, ConfigError, Door, Pages
 
@@ -95,7 +96,6 @@ def test_a_local_model_is_reached_on_the_host_and_a_remote_one_where_it_is(host)
 
 def test_a_key_reaches_the_containers_only_through_their_own_env_file(host, world):
     cloud = Config("anthropic", road="podman")
-    assert "EnvironmentFile" not in page(cloud)
     secrets = world / "config" / "secrets.env"
     secrets.parent.mkdir(parents=True)
     secrets.write_text("ANTHROPIC_API_KEY=sk-secret\n")
@@ -105,6 +105,9 @@ def test_a_key_reaches_the_containers_only_through_their_own_env_file(host, worl
     podman.write_env_files(cloud)
     assert "ANTHROPIC_API_KEY=sk-secret" in own.read_text()
     assert oct(own.stat().st_mode & 0o777) == "0o600"
+    # the page's token, made once into secrets.env, rides the same file
+    token = settings.read_secrets()[settings.YANTRA_TOKEN]
+    assert f"YANTRA_WEB_TOKEN={token}" in own.read_text() and token not in text
 
 
 def test_a_key_in_the_shell_does_not_count_on_the_podman_road(host, monkeypatch):
@@ -229,7 +232,7 @@ def test_the_bots_token_reaches_the_door_and_no_other_container(host, world):
     page_env = podman.env_file("sarathi-yantra").read_text()
     assert "TELEGRAM_TOKEN=123:bot" in door and "DVARA_TOKEN=dvara-token" in door
     assert "SAMAY_DVARA_TOKEN=dvara-token" in clock and "TELEGRAM" not in clock
-    assert "TOKEN" not in page_env
+    assert "DVARA_TOKEN" not in page_env and "TELEGRAM" not in page_env
     assert oct(podman.env_file("x").parent.stat().st_mode & 0o777) == "0o700"
 
 
