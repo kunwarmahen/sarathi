@@ -724,6 +724,17 @@ your home page:
   http://127.0.0.1:8760/#token=…
 ```
 
+When `sarathi up` has already started it, `sarathi home` just prints
+its links, with the one for your other devices under `[house]`:
+
+```
+$ sarathi home
+your home page is already running:
+  http://127.0.0.1:8760/#token=…
+on your other devices:
+  http://linux-al-ml-beast.local:8760/#token=…
+```
+
 One page for all of it, in three views. With Dvara on, it opens on the
 chat (below), which fills the window. Two icons at the top right open
 the rest: **Your pages** (four squares) and **Settings** (a gear). Each

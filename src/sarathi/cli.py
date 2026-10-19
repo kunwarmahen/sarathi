@@ -42,6 +42,7 @@ Sparsh and Smritikosh are optional: missing, they are reported, never failed on.
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import os
 import sys
@@ -346,6 +347,35 @@ def _memory(config) -> dict | None:
             **{k: seen.get(k) for k in ("up", "url", "memories")}}
 
 
+def _home_answers(port: int) -> bool:
+    """Whether Sarathi's own home page answers on ``port`` here, to this
+    computer's key: something else on the port is an error, not a link."""
+    import urllib.request
+
+    from sarathi.home import home_token
+
+    request = urllib.request.Request(f"http://127.0.0.1:{port}/api/pieces",
+                                     headers={"Authorization": f"Bearer {home_token()}"})
+    try:
+        with urllib.request.urlopen(request, timeout=3) as answer:
+            return answer.status == 200
+    except OSError:
+        return False
+
+
+def _running_home(config, port: int) -> int:
+    """The running home page's links: here, and by the house's name."""
+    from sarathi.home import home_token
+
+    token = home_token()
+    print(f"your home page is already running:\n  http://127.0.0.1:{port}/#token={token}")
+    shown = config.link_host() if config.people_host() else None
+    if shown:
+        print(f"on your other devices:\n  {config.link(port)}#token={token}")
+    print("(the part after # is its key: open it once, the page keeps it)")
+    return 0
+
+
 def _serve_home(args) -> int:
     from sarathi.home import Chat, Home, HomeServer, home_token
     from sarathi.people import People
@@ -355,7 +385,13 @@ def _serve_home(args) -> int:
         server = HomeServer(Home(config, _said), home_token(), host=args.host,
                             port=args.port, chat=Chat.for_config(config),
                             people=People(), also_host=args.also_host)
-    except (ConfigError, ValueError, OSError) as exc:
+    except OSError as exc:
+        # already running (`sarathi up` starts it): its link is what was wanted
+        if exc.errno == errno.EADDRINUSE and _home_answers(args.port):
+            return _running_home(config, args.port)
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except (ConfigError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(f"your home page:\n  {server.page_url}\n"

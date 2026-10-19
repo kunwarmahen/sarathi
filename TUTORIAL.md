@@ -847,8 +847,9 @@ page on your home network** on the home page.) Then:
 sarathi down && sarathi up
 ```
 
-Open `http://linux-al-ml-beast.local:8760/` on your phone, with the
-home page's token: the `sarathi home` line's `#token=…`, once. Every
+Run `sarathi home`: with the page already running, it prints the link
+*on your other devices*, `http://linux-al-ml-beast.local:8760/#token=…`.
+Open that on your phone, once. Every
 card on it now opens on your phone. The **Yantra** card carries Yantra's
 own token, so open Yantra from there the first time on each device.
 `sarathi up` prints a longer `ufw` line naming every page's port; run it. Dvara's own port and Smritikosh's server and databases stay on this computer. If

@@ -469,3 +469,48 @@ def test_the_chat_finds_the_doors_token_in_secrets_and_the_owner_in_settings(
     chat = Chat.for_config(cfg)
     assert (chat.url, chat.token, chat.actor) == ("http://127.0.0.1:8799", DOOR_KEY, "mahen")
     assert Chat.for_config(Config(provider="ollama")) is None
+
+
+def test_sarathi_home_with_the_page_already_running_prints_its_links(keys, monkeypatch,
+                                                                    capsys):
+    """`sarathi up` starts the home page, and `sarathi home` is what people
+    type to get its link: it said "Address already in use" and nothing else."""
+    from dataclasses import replace
+
+    from sarathi import cli
+    from sarathi.config import House, render, settings_path
+
+    monkeypatch.setenv(ENV_TOKEN, GOOD)
+    settings_path().parent.mkdir(parents=True, exist_ok=True)
+    settings_path().write_text(render(replace(config(keys),
+                                              house=House("beast.local", "192.168.1.44"))))
+    running = HomeServer(Home(config(keys), lambda: {}), GOOD, port=0)
+    running.start()
+    try:
+        port = running.httpd.server_address[1]
+        assert cli.main(["home", "--port", str(port)]) == 0
+    finally:
+        running.stop()
+    said = capsys.readouterr().out
+    assert f"http://127.0.0.1:{port}/#token={GOOD}" in said
+    assert f"http://beast.local:{port}/#token={GOOD}" in said
+
+
+def test_sarathi_home_on_a_port_something_else_holds_is_still_an_error(keys, monkeypatch,
+                                                                      capsys):
+    import socket
+
+    from sarathi import cli
+    from sarathi.config import render, settings_path
+
+    monkeypatch.setenv(ENV_TOKEN, GOOD)
+    settings_path().parent.mkdir(parents=True, exist_ok=True)
+    settings_path().write_text(render(config(keys)))
+    other = socket.socket()
+    other.bind(("127.0.0.1", 0))
+    other.listen()
+    try:
+        assert cli.main(["home", "--port", str(other.getsockname()[1])]) == 2
+    finally:
+        other.close()
+    assert "Address already in use" in capsys.readouterr().err
