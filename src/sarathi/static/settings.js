@@ -561,10 +561,10 @@ function drawSarathiTab() {
       field("This computer's address at home", house, "Phones at home reach the home page, " +
             "Setu's page and ntfy here. Your home network's address, or Tailscale's."),
       h("label.inline", {}, ntfy, " Notices on phones, through ntfy in the house")),
-    h("div.card.form", {}, h("h3", {}, "Every server on your home network"),
-      field("This computer's name at home", lanName, "Every program is reachable from " +
-            "your other devices too, and every link says this name: <hostname>.local, or " +
-            "your router's name for this computer. Empty: this computer alone."),
+    h("div.card.form", {}, h("h3", {}, "Every page on your home network"),
+      field("This computer's name at home", lanName, "Every page opens from your other " +
+            "devices too, and every link says this name: <hostname>.local, or your " +
+            "router's name for this computer. Empty: this computer alone."),
       field("Its address", lanAt, "Where they are published. Empty: what the name finds."),
       h("p.meta", {}, "Yantra's page then wants its token; the Yantra card here carries it.")),
     h("div.card.form", {}, h("h3", {}, "The rest"),

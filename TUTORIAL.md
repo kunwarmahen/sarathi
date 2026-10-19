@@ -841,7 +841,7 @@ name = "linux-al-ml-beast.local"   # your computer's name + ".local"
 ```
 
 (`hostname` prints the first part. Or set it under **Settings → Every
-server on your home network** on the home page.) Then:
+page on your home network** on the home page.) Then:
 
 ```bash
 sarathi down && sarathi up
@@ -851,7 +851,7 @@ Open `http://linux-al-ml-beast.local:8760/` on your phone, with the
 home page's token: the `sarathi home` line's `#token=…`, once. Every
 card on it now opens on your phone. The **Yantra** card carries Yantra's
 own token, so open Yantra from there the first time on each device.
-`sarathi up` prints a longer `ufw` line naming every port; run it. If
+`sarathi up` prints a longer `ufw` line naming every page's port; run it. Dvara's own port and Smritikosh's server and databases stay on this computer. If
 your Android phone can't open `.local` names, use the computer's
 address in place of the name, in the link and in `name`.
 

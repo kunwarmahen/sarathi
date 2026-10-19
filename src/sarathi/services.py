@@ -299,8 +299,7 @@ def memory_service(config: Config, notes: list[str]) -> Service | None:
         return "\n".join(said) or None
 
     return Service("smritikosh", "smritikosh",
-                   [str(uvicorn), "smritikosh.api.main:app", "--host",
-                    EVERYWHERE if config.house is not None else HOST,
+                   [str(uvicorn), "smritikosh.api.main:app", "--host", HOST,
                     "--port", str(kosh.port)],
                    kosh.port, {"BOOTSTRAP_ADMIN": "0"}, cwd=checkout, prepare=database)
 
@@ -491,8 +490,7 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
         # every person's notices, also to their own topic (dvara push.py)
         argv += ["--ntfy", config.ntfy_url()]
     # --web: the home page's chat, and every notice kept for it (dvara web.py)
-    argv += ["serve", "--host", EVERYWHERE if config.house is not None else HOST,
-             "--port", str(door.port), "--web"]
+    argv += ["serve", "--host", HOST, "--port", str(door.port), "--web"]
     if door.telegram:
         argv += ["--telegram", door.telegram]
     secrets = read_secrets()

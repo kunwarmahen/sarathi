@@ -23,13 +23,15 @@ switches to it, ``sarathi smritikosh --off`` switches back, and nothing
 is deleted either way. Its key, and each Dvara person's, are Sarathi's
 to hand out, never written here.
 
-EVERY SERVER ON THE HOME NETWORK, BY ONE NAME: ``[house]``. Unset, each
+EVERY PAGE ON THE HOME NETWORK, BY ONE NAME: ``[house]``. Unset, each
 piece listens on this computer alone (127.0.0.1), and only the few a
 phone must reach -- the home page, Setu's page, the sign-in windows,
 ntfy -- also on Dvara's ``window_host``. With ``[house] name`` (the name
 the house knows this computer by: ``beast.local`` from Avahi, a router's
-DNS name, a Tailscale name), every piece is ALSO published on the house
-address (``address``, or what the name finds), and every link a piece
+DNS name, a Tailscale name), every page you open in a browser is ALSO
+published on the house address (``address``, or what the name finds);
+what only the pieces talk to (Dvara's own port, Smritikosh's server and
+databases) stays here. Every link a piece
 hands out says the name: the home page's cards, a person's Setu link,
 a sign-in window's link, ntfy's. Yantra's page then wants its token
 (``YANTRA_WEB_TOKEN``, made once into secrets.env), and the home page's
@@ -564,9 +566,9 @@ dvara_port = {config.pages.door_port}
 
 
 def _render_house(house: House | None) -> str:
-    head = """# Every server on your home network too, by one name: Yantra's page,
-# Samay, Dvara and its page, Setu's page, this home page, ntfy and
-# Smritikosh. name: what your other devices call this computer (Avahi's
+    head = """# Every page on your home network too, by one name: Yantra's, Samay's,
+# Dvara's, Setu's, this home page and Smritikosh's dashboard (what only
+# the programs talk to stays here). name: what your other devices call this computer (Avahi's
 # "<hostname>.local", or your router's name for it); every link says it.
 # address: the address they are published on; unset, what the name finds.
 # Yantra's page then wants its token; the home page's link carries it.

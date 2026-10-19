@@ -1,12 +1,13 @@
-# 23 — every server, by one name
+# 23 — every page, by one name
 
 *[Note 11](11-the-firewall-says-nothing.md) put the pages a phone needs on
 the house address: the home page, Setu's page, the sign-in windows and
 ntfy. Everything else stayed on `127.0.0.1`. Yantra's page, Samay, Dvara's
 page and Smritikosh opened only at this computer, and every link they
 handed out said `127.0.0.1` or an IP address nobody remembers. `[house]`
-puts every server on the home network, and has every link say the name
-the house knows this computer by.*
+puts every page you open in a browser on the home network, and has every
+link say the name the house knows this computer by. What only the
+pieces talk to stays on this computer.*
 
 ## One table, two words
 
@@ -25,13 +26,18 @@ address, and an address is no use to a person, who won't remember it.
 
 ## Published on both, linked by name
 
-On the Podman road, every unit keeps its `127.0.0.1` port and gets a
-second `PublishPort` on the house address: Yantra's page, Samay, Dvara,
-Dvara's page, Setu's page and its window, the home page, ntfy, and
-Smritikosh's server, database, dashboard and its Neo4j, MongoDB and
-Redis. On the plain-programs road a flag takes one address, so the
-pieces listen on every address (`0.0.0.0`). This computer and the
-pieces themselves keep reaching each other on `127.0.0.1`.
+**THE PAGES, AND NOTHING BEHIND THEM.** On the Podman road each page
+keeps its `127.0.0.1` port and gets a second `PublishPort` on the house
+address: Yantra's page, Samay's, Dvara's page, Setu's page, the home
+page, and Smritikosh's dashboard. So do the two things a page sends a
+phone to: the sign-in windows (8790, 8791) and ntfy, which were on the
+house address already (note 11). What only the pieces talk to stays on
+`127.0.0.1`: Dvara's own port (8770, which answers Samay and its page,
+not a browser), Smritikosh's server and its PostgreSQL, Neo4j, MongoDB
+and Redis. Nothing on another device has a reason to reach those, and a
+port nobody needs open is one less thing to guard. On the plain-programs
+road a flag takes one address, so the pages listen on every address
+(`0.0.0.0`). Dvara and Smritikosh stay on `127.0.0.1` there too.
 
 Then the words that leave each piece say the name:
 
@@ -78,8 +84,8 @@ on the house network would have helped Gmail on its own.
 them to the house's network alone:
 
 ```
-firewall: ufw is on; if a phone can't open 192.168.1.44 on 3000, 5432, 6379, 7474, 7687, 8080, 8321, 8760, 8770, 8775, 8780, 8785, 8790, 8791, 8793, 27017, open them to your network (once is enough):
-  sudo ufw allow from 192.168.1.0/24 to any port 3000,5432,6379,7474,7687,8080,8321,8760,8770,8775,8780,8785,8790,8791,8793,27017 proto tcp
+firewall: ufw is on; if a phone can't open 192.168.1.44 on 3000, 8321, 8760, 8775, 8780, 8785, 8790, 8791, 8793, open them to your network (once is enough):
+  sudo ufw allow from 192.168.1.0/24 to any port 3000,8321,8760,8775,8780,8785,8790,8791,8793 proto tcp
 ```
 
 It never runs it: that needs root, and it is your call, as in note 11.
@@ -93,7 +99,7 @@ not written (an extract):
 published on: 192.168.1.44 | links: linux-al-ml-beast.local
 == sarathi-dvara.container
    PublishPort=127.0.0.1:8770:8765
-   PublishPort=192.168.1.44:8770:8765
+   PublishPort=192.168.1.44:8790:8790
    Environment=SETU_WINDOW_URL=http://linux-al-ml-beast.local:8790
    Environment=SETU_PAGE_URL=http://linux-al-ml-beast.local:8775/
 == sarathi-samay.container
@@ -101,8 +107,10 @@ published on: 192.168.1.44 | links: linux-al-ml-beast.local
    Environment=SAMAY_PUBLIC_URL=http://linux-al-ml-beast.local:8780/
 == sarathi-setu.container
    Exec=/usr/local/bin/setu serve --host 0.0.0.0 --port 8775 --public-url http://linux-al-ml-beast.local:8775/ …
-== sarathi-smritikosh-db.container
-   PublishPort=192.168.1.44:5432:5432
+== sarathi-dvara-page.container
+   PublishPort=192.168.1.44:8785:8785
+== sarathi-smritikosh.container, -db, -neo4j, -mongodb, -redis
+   (127.0.0.1 only)
 == sarathi-yantra.container
    PublishPort=192.168.1.44:8321:8321
 dashboard: next start --hostname 0.0.0.0 --port 3000, AUTH_URL=http://linux-al-ml-beast.local:3000
@@ -120,9 +128,9 @@ and Dvara.
   keeps the pieces off other networks this computer is on (a VPN, a
   container bridge). The plain road has no such choice, and its
   firewall line is what narrows it.
-* **Passwords for the databases' ports.** PostgreSQL has its own
-  password from Smritikosh's `.env`. Neo4j, MongoDB and Redis keep
-  whatever their containers were made with. Publishing them was asked
-  for. The firewall line is what keeps them to the house.
+* **What isn't a page, on the house address.** Dvara's own port,
+  Smritikosh's server, and its PostgreSQL, Neo4j, MongoDB and Redis are
+  reached by the pieces alone, on this computer. Your memories are seen
+  from another device through Smritikosh's dashboard, which is a page.
 * **A name made up for you.** Sarathi doesn't set up Avahi or a DNS
   entry. `name` is whatever your network already answers to.

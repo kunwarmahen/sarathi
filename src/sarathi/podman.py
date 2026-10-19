@@ -636,12 +636,14 @@ def house_ports(config: Config) -> tuple[str, list[int]] | None:
 
 
 def lan_ports(config: Config) -> list[int]:
-    """Every port ``[house]`` publishes on the house address."""
+    """Every port ``[house]`` publishes on the house address: the pages
+    you open, and what they send a phone to (a sign-in window, ntfy).
+    Never what only the pieces talk to -- Dvara's own port, Smritikosh's
+    server and its stores."""
     kosh, door, pages = config.smritikosh, config.door, config.pages
     ports = [config.web_port]
     ports += [config.clock_port] if config.clock_on else []
     if door is not None:
-        ports.append(door.port)
         shown = window(config)
         ports += [int(shown[1])] if shown else []
         ports += [door.ntfy_port] if door.ntfy_port else []
@@ -650,12 +652,8 @@ def lan_ports(config: Config) -> list[int]:
         ports += [pages.door_port] if door is not None else []
         shown = setu_window(config)
         ports += [int(shown[1])] if shown else []
-    if config.remembers_in_smritikosh:
-        ports += [kosh.port, kosh.db_port]
-        ports += [kosh.dashboard_port] if kosh.dashboard else []
-        for text in extra_units(config).values():
-            ports += [int(line.split(":")[1]) for line in text.splitlines()
-                      if line.startswith("PublishPort=127.0.0.1:")]
+    if config.remembers_in_smritikosh and kosh.dashboard:
+        ports.append(kosh.dashboard_port)
     return ports
 
 
@@ -781,8 +779,7 @@ def units(config: Config) -> dict[str, str]:
         out[f"{UNITS['dvara']}.container"] = _unit(
             "Sarathi: Dvara", UNITS["dvara"], door_exec,
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
-            extra_container=lan(config, door.port, DOOR_PORT)
-                            + f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
+            extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
                             + streamed + people_url(config) + phone_env(config) + push,
             more_volumes=door_dirs(config) + phone_dirs(config)
             + ([mcp_dir()] if config.remembers_in_smritikosh else []))
@@ -897,7 +894,7 @@ Image={DB_IMAGE}
 ContainerName={db}
 Network={NETWORK}.network
 PublishPort=127.0.0.1:{kosh.db_port}:5432
-{lan(config, kosh.db_port, 5432)}Volume={kosh.volume}:/var/lib/postgresql/data:Z
+Volume={kosh.volume}:/var/lib/postgresql/data:Z
 EnvironmentFile={env_file(db)}
 
 [Service]
@@ -916,7 +913,7 @@ ContainerName={api}
 Network={NETWORK}.network
 Exec={serve}
 PublishPort=127.0.0.1:{kosh.port}:{SMRITIKOSH_PORT}
-{lan(config, kosh.port, SMRITIKOSH_PORT)}RunInit=true
+RunInit=true
 EnvironmentFile={env_file(api)}
 
 [Service]
@@ -956,8 +953,9 @@ def extra_units(config: Config) -> dict[str, str]:
                     for inner, bound in ((found.get("HostConfig") or {}).get("PortBindings")
                                          or {}).items()
                     for b in bound or [] if str(b.get("HostPort", "")).isdigit()]
-        ports = "".join(f"PublishPort=127.0.0.1:{port}:{inner}\n" + lan(config, port, inner)
-                        for port, inner in bindings)
+        # this computer only, [house] or not: Smritikosh's server reaches
+        # them on the containers' own network, and nothing else needs them
+        ports = "".join(f"PublishPort=127.0.0.1:{port}:{inner}\n" for port, inner in bindings)
         out[f"{unit}.container"] = f"""{HEADER}
 [Unit]
 Description=Sarathi: Smritikosh's {store}, from the container {name}

@@ -46,17 +46,19 @@ def test_with_no_address_the_house_is_published_on_what_its_name_finds(monkeypat
     assert HOUSE.published_on() == "192.168.1.44"
 
 
-def test_every_piece_is_published_on_the_house_address_too(host):  # noqa: F811
+def test_every_page_is_published_on_the_house_address_too(host):  # noqa: F811
     made = podman.units(housed())
     for unit, publish in (("sarathi-yantra", "192.168.1.44:8321:8321"),
                           ("sarathi-samay", "192.168.1.44:8780:8780"),
-                          ("sarathi-dvara", "192.168.1.44:8770:8765"),
                           ("sarathi-dvara-page", "192.168.1.44:8785:8785"),
                           ("sarathi-setu", "192.168.1.44:8775:8775"),
                           ("sarathi-ntfy", "192.168.1.44:8793:80")):
         text = made[f"{unit}.container"]
         assert f"PublishPort={publish}" in text, unit
         assert "PublishPort=127.0.0.1:" in text, unit          # and here, as before
+    # Dvara's own port answers Samay and its page, not a browser
+    door = made["sarathi-dvara.container"]
+    assert "192.168.1.44:8770" not in door and "PublishPort=127.0.0.1:8770:8765" in door
 
 
 def test_every_link_says_the_name(host):  # noqa: F811
@@ -90,7 +92,7 @@ def test_the_firewall_line_names_every_house_port(host, world, monkeypatch):  # 
         [], 0, "2: eno1    inet 192.168.1.44/24 brd 192.168.1.255 scope global eno1\n", "")
     note = podman.firewall_note(housed())
     assert note[1] == ("  sudo ufw allow from 192.168.1.0/24 to any port "
-                       "8321,8760,8770,8775,8780,8785,8790,8791,8793 proto tcp")
+                       "8321,8760,8775,8780,8785,8790,8791,8793 proto tcp")
 
 
 def test_on_the_plain_programs_road_the_pieces_listen_everywhere_and_say_the_name(
@@ -107,3 +109,23 @@ def test_on_the_plain_programs_road_the_pieces_listen_everywhere_and_say_the_nam
     assert by["yantra"].env[settings.YANTRA_TOKEN] == \
         settings.read_secrets()[settings.YANTRA_TOKEN]
     assert settings.YANTRA_TOKEN not in by["samay"].env
+
+
+def test_smritikosh_is_on_the_house_by_its_dashboard_alone(host, monkeypatch):  # noqa: F811
+    """Its server, PostgreSQL, Neo4j, MongoDB and Redis are reached by the
+    pieces alone, on this computer: only the dashboard is a page."""
+    from sarathi import smritikosh
+
+    monkeypatch.setattr(smritikosh, "container", lambda name: {
+        "Image": "redis:7", "Config": {"Env": []}, "Mounts": [],
+        "HostConfig": {"PortBindings": {"6379/tcp": [{"HostPort": "6379"}]}}})
+    from sarathi.config import Smritikosh
+    config = housed(memory="smritikosh",
+                    smritikosh=Smritikosh(checkout="/x", full=True))
+    made = podman.extra_units(config)["sarathi-smritikosh-redis.container"]
+    assert "PublishPort=127.0.0.1:6379:6379" in made and "192.168.1.44" not in made
+    units = podman.memory_units(config)
+    for unit in ("sarathi-smritikosh.container", "sarathi-smritikosh-db.container"):
+        assert "192.168.1.44" not in units[unit], unit
+    published = podman.lan_ports(config)
+    assert 3000 in published and not {5432, 6379, 8080, 8770} & set(published)

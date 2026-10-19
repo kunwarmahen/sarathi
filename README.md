@@ -174,7 +174,7 @@ attached and you say to use it (the phone panel's **use this phone**).
 No phone at the start means no phone tools, the same as a Yantra you
 start by hand ([notes/07](notes/07-the-phone-stays-on-the-cable.md)).
 
-### Every server on your home network: `[house]`
+### Every page on your home network: `[house]`
 
 Each piece listens on this computer alone unless you say otherwise. To
 open them all from your phone or another computer at home, name this
@@ -186,14 +186,16 @@ name = "linux-al-ml-beast.local"   # what your other devices call it
 address = "192.168.1.44"           # optional: what the name finds
 ```
 
-`sarathi up` then publishes every piece on that address too: Yantra's
-page, Samay, Dvara and its page, Setu's page and its window, the home
-page, ntfy, and Smritikosh's server, database, dashboard and stores.
+`sarathi up` then publishes every page on that address too: Yantra's,
+Samay's, Dvara's, Setu's and its sign-in windows, the home page, and
+Smritikosh's dashboard (and ntfy, as before). What isn't a page stays on
+this computer: Dvara's own port, Smritikosh's server and its databases,
+which only the pieces talk to.
 Every link the pieces hand out says the name: a person's `/accounts
 page` link, a sign-in window, an invite, ntfy, Samay's address.
 `<hostname>.local` works on most home networks (Avahi answers it), and so
 does your router's name for the computer. On the plain-programs road the
-pieces listen on every address, and the firewall line below narrows
+pages listen on every address, and the firewall line below narrows
 that. **Yantra's page then wants its token** (it runs a shell): Sarathi
 keeps one in secrets.env (`YANTRA_WEB_TOKEN`), and the home page's
 Yantra card carries it. Open the card once on each device, and that
@@ -893,7 +895,7 @@ src/sarathi/
                 the phone  (notes/07)
   config.py     sarathi.toml and secrets.env: read, checked, written  (notes/02);
                 each table by its project's name, old names still read  (notes/09);
-                [house], every server on the home network, links by its
+                [house], every page on the home network, links by its
                 name; Yantra's page's token, made once  (notes/23)
   first_run.py  sarathi init: which model answers, asked once  (notes/02)
   services.py   sarathi up / down: start Samay and the page, know
@@ -907,7 +909,7 @@ src/sarathi/
                 ntfy's own container  (notes/15); sarathi-adb, this
                 computer's adb lent to the containers by a file  (notes/20);
                 a second PublishPort on the house address for every
-                unit, and the firewall line naming them all  (notes/23)
+                page, and the firewall line naming them  (notes/23)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
