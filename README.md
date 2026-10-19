@@ -752,7 +752,8 @@ of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory*
 screen and last steps, for the phone's person),
 **New chat** to Dvara as the words they are, **History** opens every
 conversation the person has had, searched by its words, read again,
-carried on or deleted for good (Dvara's
+carried on, shared (Save as PDF, Download, or the phone's Send…) or
+deleted for good (Dvara's
 [notes/50](https://github.com/kunwarmahen/dvara/blob/main/notes/50-every-conversation-kept.md);
 [notes/21](notes/21-history.md)). On a phone the chat takes the whole screen too. A job can also be taught one step at a time:
 `/learn start <what it's for>` and each step (the agent does only what

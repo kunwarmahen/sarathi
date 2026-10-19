@@ -380,11 +380,22 @@ then:
 
 - **Carry on in the chat** puts it back in the chat, and you go on from
   where it stopped.
+- **Save as PDF** opens your browser's print window with just that
+  conversation laid out; pick *Save as PDF* as the printer.
+- **Download** saves it as a Markdown file, which any notes app opens.
+- **Send…** (on a phone) opens the phone's share sheet: WhatsApp, email
+  and so on.
 - **Delete** removes it for good, after asking once. The one you're in
   now can't be deleted: press **New chat** first.
 
+What a shared copy holds: your words, the agent's answers, and the
+names of the tools it used. What a tool read (an email, a page, a file)
+is left out. An answer that repeated something private still says it,
+so read it before you send it.
+
 The same works by typing: `/chats boiler` finds, `/chats 2` goes back
-into the second, `/chats delete 2` deletes it. Deleting clears your
+into the second, `/chats export 2` sends it to you as a file,
+`/chats delete 2` deletes it. Deleting clears your
 history. Your chat window here keeps its own recent lines until they age
 out, and the owner's record of what each message cost (`dvara runs`)
 keeps them too; that is on purpose, so the owner's record stays whole.

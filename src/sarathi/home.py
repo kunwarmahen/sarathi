@@ -598,7 +598,30 @@ def _handler(server: HomeServer):
             if not rest:
                 q = parse_qs(url.query).get("q", [""])[-1]
                 return self._chat(who, "GET", "/web/chats", query={"q": q})
+            if rest.endswith("/export") and rest.count("/") == 1:
+                # one of theirs as a file to share: Dvara writes it, we pass it on
+                return self._past_file(who, rest[:-len("/export")])
             return self._chat(who, "GET", f"/web/chats/{urllib.parse.quote(rest, safe='')}")
+
+        def _past_file(self, who: Who, conversation_id: str) -> None:
+            if server.chat is None:
+                return self._json(404, {"detail": "no chat here"})
+            try:
+                raw, named = server.chat.call(
+                    "GET", f"/web/chats/{urllib.parse.quote(conversation_id, safe='')}/export",
+                    actor=who.actor)
+            except ChatError as exc:
+                return self._json(exc.status, {"detail": str(exc)})
+            self.send_response(200)
+            self.send_header("Content-Type", "text/markdown; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            if named:
+                self.send_header("Content-Disposition", named)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(raw)
+            return None
 
         def do_GET(self) -> None:
             url = urlparse(self.path)

@@ -29,6 +29,13 @@ dialog:
   agent, so the answer arrives as the usual *"Back in: …"* line with the
   conversation unfolded under it, and the agent picker moves to that
   agent.
+* **Save as PDF**, **Download** and (on a phone) **Send…** share it.
+  Download and Send… use Dvara's Markdown file (`GET /web/chats/ID/export`:
+  words, answers, the tools' names, never their output). Send… hands it
+  to the phone's share sheet. Save as PDF draws the conversation into a
+  print layout (`#print-chat`, shown only by `@media print`) and opens
+  the browser's print window. A printed page gets the full date, not
+  "today's" time alone.
 * **Delete** asks once, then deletes for good through Dvara.
 
 ## Passing it through
@@ -39,6 +46,7 @@ names:
 ```
 GET  /api/chat/chats?q=WORDS        -> Dvara GET    /web/chats
 GET  /api/chat/chats/ID             -> Dvara GET    /web/chats/ID
+GET  /api/chat/chats/ID/export      -> Dvara GET    /web/chats/ID/export (the file, passed on)
 POST /api/chat/chats/ID/delete      -> Dvara DELETE /web/chats/ID
 ```
 
@@ -66,6 +74,12 @@ list, because a `display: grid` beat the `hidden` attribute. On a phone,
 **Delete** filled the row's width, so a tap in the middle of a row hit
 it. Both are fixed: `[hidden]` wins inside the dialog, and the button
 sits at the row's start.
+
+Sharing, on the same scratch Dvara: **Download** saved
+`2026-10-18-in-one-sentence-what-pressure-should-a-home-boil.md`, and
+**Save as PDF** printed a one-page A4 file holding the title, the date,
+YOU and GREETER and the answer, at 1280 px and at 390 px. Send… only
+shows where the browser has a share sheet, so not in headless Chrome.
 
 ## What is not here yet
 

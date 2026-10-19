@@ -262,6 +262,16 @@ def door():
 
         def do_GET(self):
             heard.append(("GET", self.path, {"auth": self.headers.get("Authorization")}))
+            if "/export" in self.path:
+                raw = "# the boiler\n\n**You**\n\nboiler?\n".encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/markdown; charset=utf-8")
+                self.send_header("Content-Disposition",
+                                 "attachment; filename*=UTF-8''2026-10-18-the-boiler.md")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+                return
             if self.path.startswith("/web/push"):
                 actor = self.path.split("actor=")[1].split("&")[0]
                 return self._answer(200, {"topic": f"dvara-{actor}-0123456789abcdef"})
@@ -364,6 +374,17 @@ def test_history_lists_searches_and_reads_only_the_owners_own(chatting, door):
     # an id is one segment on Dvara's side whatever it holds: never a step up
     ask(chatting, "/api/chat/chats/..%2Fweb")
     assert door.heard[-1][1].split("?")[0] == "/web/chats/..%252Fweb"
+
+
+def test_history_passes_a_conversation_on_as_a_file_to_share(chatting, door):
+    got = ask(chatting, "/api/chat/chats/abc123/export?actor=guest")
+    assert got.status_code == 200 and got.text.startswith("# the boiler")
+    assert got.headers["content-type"].startswith("text/markdown")
+    assert "the-boiler.md" in got.headers["content-disposition"]
+    method, path, headers = door.heard[-1]
+    assert path.split("?")[0] == "/web/chats/abc123/export" and "actor=mahen" in path
+    assert DOOR_KEY not in got.text
+    assert ask(chatting, "/api/chat/chats/abc123/export", token="wrong").status_code == 401
 
 
 def test_history_deletes_through_dvara_and_its_refusal_comes_back(chatting, door):

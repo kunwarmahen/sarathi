@@ -912,9 +912,83 @@ async function readHistory(id) {
     h("div", {}, h("div.title", {}, h("strong", {}, d.title)),
       h("div.meta", {}, `${when(d.started_at)} · ${d.agent} · on ${d.road}`
         + (d.model ? ` · ${d.model}` : ""))),
-    h("div.acts", {}, carry, deleteButton(d)),
+    h("div.acts", {}, carry, ...shareButtons(d), deleteButton(d)),
     ...lines);
   document.querySelector("#history-read mark.hit")?.scrollIntoView({ block: "center" });
+}
+
+/* Sharing one. A PDF is the browser's own "Save as PDF" over a print layout
+   of just this conversation (every script prints right; nothing to
+   install). The file is Markdown, made by Dvara: words, answers and the
+   names of the tools used, never what a tool returned. Send hands that
+   file to the phone's share sheet where there is one. */
+
+async function pastFile(d) {
+  const res = await fetch(`/api/chat/chats/${encodeURIComponent(d.id)}/export`,
+                          { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `status ${res.status}`);
+  const named = /filename\*=UTF-8''([^;]+)/.exec(res.headers.get("content-disposition") || "");
+  return new File([await res.blob()], named ? decodeURIComponent(named[1]) : "conversation.md",
+                  { type: "text/markdown" });
+}
+
+function shareButtons(d) {
+  const pdf = h("button.quiet", { type: "button", title: "Opens the print window: pick Save as PDF" }, "Save as PDF");
+  pdf.addEventListener("click", () => printPast(d));
+  const file = h("button.quiet", { type: "button", title: "A Markdown file: any notes app opens it" }, "Download");
+  file.addEventListener("click", async () => {
+    try {
+      const made = await pastFile(d);
+      const url = URL.createObjectURL(made);
+      const a = h("a", { href: url, download: made.name });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) { historySaid(`Couldn't download it: ${err.message}`); }
+  });
+  const out = [pdf, file];
+  if (navigator.canShare) {
+    const send = h("button.quiet", { type: "button", title: "WhatsApp, email, …" }, "Send…");
+    send.addEventListener("click", async () => {
+      try {
+        const made = await pastFile(d);
+        if (navigator.canShare({ files: [made] })) await navigator.share({ files: [made], title: d.title });
+        else await navigator.share({ title: d.title, text: await made.text() });
+      } catch (err) { if (err.name !== "AbortError") historySaid(`Not sent: ${err.message}`); }
+    });
+    out.push(send);
+  }
+  return out;
+}
+
+function printPast(d) {
+  const area = document.getElementById("print-chat");
+  const blocks = [h("header", {}, h("h1", {}, d.title),
+    // the full date: a printed page outlives "today"
+    h("p", {}, `${new Date(d.started_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`
+      + ` · ${d.agent} · on ${d.road}`))];
+  let tools = [];
+  const flush = () => {
+    if (tools.length) blocks.push(h("p.print-tools", {}, `Tools used: ${[...new Set(tools)].join(", ")}`));
+    tools = [];
+  };
+  for (const e of d.entries) {
+    if (e.who === "tool") { tools.push(e.name); continue; }
+    if (e.who === "you") flush();
+    blocks.push(h(`section.print-line.${e.who}`, {}, h("h2", {}, e.who === "you" ? "You" : d.agent),
+      e.who === "you" ? h("div.plain", {}, e.text) : bubble(e.text, "agent")));
+  }
+  flush();
+  area.replaceChildren(...blocks);
+  document.body.classList.add("printing-chat");
+  const done = () => {
+    document.body.classList.remove("printing-chat");
+    area.replaceChildren();
+    window.removeEventListener("afterprint", done);
+  };
+  window.addEventListener("afterprint", done);
+  window.print();
 }
 
 function startHistory() {
