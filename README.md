@@ -513,8 +513,10 @@ the firewall line ([notes/15](notes/15-notices-on-a-phone.md)).
 
 Dvara also checks every Setu folder's sign-ins once a day and tells the
 person when one stopped working, and looks back over a conversation
-nobody has written in for 30 minutes (dvara's note 39). Nothing to set:
-it comes with Dvara.
+nobody has written in for 30 minutes (dvara's note 39). `/new` doesn't
+wait for its look back either: "Starting fresh" comes at once, and what
+the look noticed comes after as one of these notices (dvara's note 51).
+Nothing to set: it comes with Dvara.
 
 A door that can't start (no actors file, a bot with no token) says why,
 and Samay and Yantra start anyway. On the Podman road it's a third
