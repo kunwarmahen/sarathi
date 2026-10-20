@@ -432,7 +432,17 @@ def named_step(args, found: Found, config, words: list[str]) -> int:
         return 2
     name, rest = words[1], words[2:]
     awake = args.awake
-    if rest[:1] == ["iphone"]:
+    saved = (phone.wda, phone.address) if phone is not None and not phone.named else ()
+    if rest[:1] == ["iphone"] and (rest[1] if len(rest) > 1 else WDA_HERE) in saved:
+        # NAMING WHAT IS SAVED ASKS NOTHING OF THE PHONE: an iPhone in a
+        # drawer must not stop the Android on the cable from being named
+        said = "the iPhone already saved, named (not asked: it needn't be plugged in)"
+        new = NamedPhone(name=name, wda=rest[1] if len(rest) > 1 else WDA_HERE,
+                         awake=awake or phone.awake)
+    elif rest[:1] and rest[0] in saved and ":" in rest[0]:
+        said = "the Android already saved, named (not asked: it needn't be reachable)"
+        new = NamedPhone(name=name, address=rest[0], awake=awake or phone.awake)
+    elif rest[:1] == ["iphone"]:
         url = rest[1] if len(rest) > 1 else WDA_HERE
         if is_here(url):
             print("starting the iPhone, if it isn't running (sparsh iphone)...", flush=True)

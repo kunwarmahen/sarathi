@@ -58,6 +58,20 @@ noticing, and each one is refused:
   says *"[phone] has a phone with no name yet (http://127.0.0.1:8100):
   name it first -- sarathi phone add NAME iphone http://127.0.0.1:8100"*.
   Naming it takes its place.
+* **A phone in a drawer blocking the rest.** Naming the iPhone already
+  saved (`add iphone iphone http://127.0.0.1:8100`) used to ask it to
+  answer first, so with only the Android plugged in, nothing could be
+  named. **NAMING WHAT IS SAVED ASKS NOTHING OF THE PHONE.** On a copy of
+  a real settings file, iPhone in a drawer:
+
+  ```
+  $ sarathi phone add iphone iphone http://127.0.0.1:8100
+  the iPhone already saved, named (not asked: it needn't be plugged in)
+  $ sarathi phone add nexus
+  $ sarathi phone list
+  iphone: iPhone at http://127.0.0.1:8100 -- not answering
+  nexus: Android at 84B7N16128001616 -- answers
+  ```
 * **One phone under two names.** Found in the live run below: *"the
   phone on the cable"* skips the emulator, so `add pixel` named the
   Nexus a second time. Two names for one phone means two owners in Dvara

@@ -143,6 +143,17 @@ def test_a_serial_adb_sees_is_named_directly(world, settings, capsys):
     assert "no phone called R58M123 is attached" in capsys.readouterr().out
 
 
+def test_naming_the_saved_iphone_needs_no_iphone_plugged_in(world, capsys):
+    (world / "config").mkdir(exist_ok=True)
+    (world / "config" / "sarathi.toml").write_text(
+        render(Config("ollama", phone=Phone(wda="http://127.0.0.1:8100"))))
+    nobody = sparsh_saying(world, json.dumps(STATUS))     # no iPhone answers
+    assert phone.run(args("add", "iphone", "iphone", "http://127.0.0.1:8100"), nobody) == 0
+    assert phone.run(args("add", "nexus"), nobody) == 0
+    assert [p.name for p in load().phone.named] == ["iphone", "nexus"]
+    assert "not asked" in capsys.readouterr().out
+
+
 def test_a_bad_name_saves_nothing(world, settings, capsys):
     found = sparsh_saying(world, json.dumps(STATUS))
     assert phone.run(args("add", "My Phone"), found) == 2
