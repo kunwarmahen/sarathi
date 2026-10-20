@@ -158,3 +158,14 @@ def test_a_bad_name_saves_nothing(world, settings, capsys):
     found = sparsh_saying(world, json.dumps(STATUS))
     assert phone.run(args("add", "My Phone"), found) == 2
     assert load().phone is None
+
+
+def test_the_home_card_names_each_phone(world, monkeypatch):
+    from sarathi.home import pages
+
+    monkeypatch.setenv("HOME", str(world / "home"))
+    program(world / "bin", "sparsh")
+    card = next(p for p in pages(Config("ollama", road="podman", pages=Pages(on=False),
+                                        phone=TWO)) if p.name == "sparsh")
+    assert card.title == "Your phones"
+    assert card.purpose.startswith("nexus (Android), iphone (iPhone), and what")

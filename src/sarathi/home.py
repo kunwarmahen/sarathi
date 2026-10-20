@@ -229,9 +229,18 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
         # panel on Yantra's page, so the card opens that page. On the
         # podman road only with a Wi-Fi address or an iPhone's
         # WebDriverAgent: a container can't reach a phone on a USB cable.
-        found.append(Page(
-            "sparsh", "Your phone", "Your phone and what the agent did on it: the phone "
-            "panel on Yantra's page.", config.web_port, **yantra))
+        named = config.phone.named if config.phone is not None else ()
+        if named:
+            # several, each by a name: the card says which (Yantra's panel
+            # shows each one's screen and steps)
+            which = ", ".join(f"{p.name} ({p.kind})" for p in named)
+            found.append(Page(
+                "sparsh", "Your phones", f"{which}, and what the agent did on each: the "
+                "phone panel on Yantra's page.", config.web_port, **yantra))
+        else:
+            found.append(Page(
+                "sparsh", "Your phone", "Your phone and what the agent did on it: the phone "
+                "panel on Yantra's page.", config.web_port, **yantra))
     if door is not None:
         found.append(Page(
             "dvara", "Dvara", "Your door: the people on it, what they've spent, what "

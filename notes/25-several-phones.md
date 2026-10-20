@@ -117,6 +117,7 @@ live receipts.
 
 * A real iPhone named beside a real Android. The iPhone's table is
   `wda`, the same address `[phone] wda` has always held.
-* One card per phone on the home page itself. The *Your phone* card
-  opens Yantra's phone panel, which lists every phone by name. That has
-  been enough so far.
+* ~~One card per phone on the home page itself.~~ The card is *Your
+  phones* and names each (*"nexus (Android), iphone (iPhone), and what
+  the agent did on each"*). It opens Yantra's phone panel, where each
+  phone has its own row, and where one can be picked by name.
