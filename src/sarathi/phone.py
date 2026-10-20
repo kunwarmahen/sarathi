@@ -65,6 +65,7 @@ or when the agent on Telegram leaves the phone out.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from dataclasses import replace
@@ -86,9 +87,10 @@ from sarathi.siblings import Found
 PHONE_TIMEOUT = 40.0
 
 
-def _sparsh(found: Found, *argv: str) -> tuple[int, str]:
+def _sparsh(found: Found, *argv: str, env: dict[str, str] | None = None) -> tuple[int, str]:
     try:
         done = subprocess.run([found.program, *argv], capture_output=True, text=True,
+                              env={**os.environ, **env} if env else None,
                               timeout=PHONE_TIMEOUT, check=False)
     except subprocess.TimeoutExpired:
         return 1, f"`sparsh {argv[0]}` took longer than {PHONE_TIMEOUT:.0f}s"
@@ -419,7 +421,11 @@ def named_step(args, found: Found, config, words: list[str]) -> int:
             return 0
         import json
 
-        code, said = _sparsh(found, "status", "--json")
+        from sarathi.services import phone_env
+
+        # asked with the names, as Yantra and Dvara are: Sparsh asks an
+        # iPhone only at an address it is given
+        code, said = _sparsh(found, "status", "--json", env=phone_env(config))
         answering = {p.get("serial") for p in (json.loads(said).get("phones") or [])
                      if p.get("state") == "device"} if code == 0 else set()
         for each in named:

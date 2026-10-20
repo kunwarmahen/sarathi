@@ -393,7 +393,8 @@ under each person in **Settings → People** (those boxes appear once
 phones have names; before, People has the single *work the phone* box).
 A phone already written down without a name is named first (`sarathi
 phone add iphone iphone http://127.0.0.1:8100`; it needn't be plugged
-in, and `list` says *not answering* until its WebDriverAgent runs), and
+in, and `list` says *not answering* until its WebDriverAgent runs;
+`list` asks Sparsh with the names, as Yantra and Dvara do), and
 one phone under two names is refused
 ([notes/25](notes/25-several-phones.md)). Names take effect at the next
 `sarathi down && sarathi up` (or **Apply**): the containers are handed
@@ -736,7 +737,10 @@ Each line says **where** a piece was found and **which rule** found it.
 The line under it is that piece's own account of itself: Yantra's
 release and the model it would ask (asked with the model, Setu and
 Samay `up` gives it, so a model Ollama hasn't pulled shows here with
-the `ollama pull` that fixes it, and so does a sibling it can't find), Setu's connections (and any sign-in the site refused, with `setu connect …` to fix it), Samay's clock, the phones Sparsh can reach, and
+the `ollama pull` that fixes it, and so does a sibling it can't find), Setu's connections (and any sign-in the site refused, with `setu connect …` to fix it), Samay's clock, the phones Sparsh can reach (with phones named, each
+one *connected* or *not connected* and why, and a phone attached under
+none of the names said to be out of the agents' reach; the home page's
+phone card says the same), and
 whether Dvara is serving (asked about the folders `[dvara]` names;
 with Dvara off, dvara isn't asked). Sarathi repeats it and adds
 nothing. Smritikosh has no status command, so its line is "found,

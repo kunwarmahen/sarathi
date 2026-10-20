@@ -122,10 +122,35 @@ from the cable, an address, or an iPhone). **Settings → People** shows
 is exactly what Sparsh, Yantra and Dvara were run with in their own
 live receipts.
 
+## Connected or not, as it is now
+
+The Nexus had moved from the cable to Wi-Fi, and the iPhone was on the
+cable with `sparsh iphone` running. `sarathi status` said *"phone
+192.168.1.160:5555 (Nexus_6P), http://127.0.0.1:8100 (iPhone) ready"*.
+Both phones were there, but Dvara's agents could reach only the iPhone.
+"nexus" was still the cable's serial, and nothing said so. And `sarathi
+phone list` said the iPhone was *not answering*, because it asked Sparsh
+without the names, and Sparsh asks an iPhone only at an address it is
+given. Now:
+
+```
+$ sarathi status
+sparsh      ~/Documents/ai/agent/sparsh/.venv/bin/sparsh  (beside)
+            the hands: your phone, worked by number, with a yes before Send
+            iphone (iPhone) connected; nexus (Android) not connected: nothing answers at 84B7N16128001616; attached under no name (your agents can't reach it): 192.168.1.160:5555 (Nexus_6P)
+$ sarathi phone list
+iphone: iPhone at http://127.0.0.1:8100 -- answers
+nexus: Android at 84B7N16128001616 -- not answering
+```
+
+The home page's *Your phones* card shows that same line under it, asked
+again every 30 seconds. The fix for this Nexus is `sarathi phone remove
+nexus`, then `sarathi phone add nexus 192.168.1.160:5555`.
+
 ## What is not here yet
 
-* A real iPhone named beside a real Android. The iPhone's table is
-  `wda`, the same address `[phone] wda` has always held.
+* ~~A real iPhone named beside a real Android.~~ Both named and checked
+  (above). A task on each from Dvara hasn't run yet.
 * ~~One card per phone on the home page itself.~~ The card is *Your
   phones* and names each (*"nexus (Android), iphone (iPhone), and what
   the agent did on each"*). It opens Yantra's phone panel, where each

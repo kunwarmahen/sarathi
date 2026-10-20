@@ -135,6 +135,24 @@ def test_add_an_address_then_list_then_remove(world, settings, capsys):
     assert load().phone is None
 
 
+def test_list_asks_sparsh_with_the_names(world, capsys):
+    """`phone list` said the iPhone wasn't answering while it was: Sparsh
+    was asked with no names, and it asks an iPhone only at an address it
+    is given."""
+    (world / "config").mkdir(exist_ok=True)
+    (world / "config" / "sarathi.toml").write_text(render(Config("ollama", phone=Phone(
+        named=(NamedPhone("iphone", wda="http://127.0.0.1:8100"),)))))
+    prog = world / "bin" / "sparsh"
+    prog.parent.mkdir(parents=True, exist_ok=True)
+    prog.write_text('#!/bin/sh\ncase "$SPARSH_PHONES" in *8100*) state=device;; '
+                    '*) state=unnamed;; esac\nprintf \'{"phones": [{"serial": '
+                    '"http://127.0.0.1:8100", "state": "%s"}]}\' "$state"\n')
+    prog.chmod(0o755)
+    found = Found(next(s for s in SIBLINGS if s.name == "sparsh"), program=str(prog))
+    assert phone.run(args("list"), found) == 0
+    assert "iphone: iPhone at http://127.0.0.1:8100 -- answers" in capsys.readouterr().out
+
+
 def test_a_serial_adb_sees_is_named_directly(world, settings, capsys):
     found = sparsh_saying(world, json.dumps(STATUS))
     assert phone.run(args("add", "pixel", "emulator-5554"), found) == 0

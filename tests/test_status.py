@@ -267,6 +267,32 @@ def test_the_phone_is_said_in_sparshs_own_terms(world, capsys, status, says):
     assert code == 0 and says in out
 
 
+NEXUS_WIFI = {"serial": "192.168.1.160:5555", "state": "device", "model": "Nexus_6P"}
+IPHONE = {"serial": "http://127.0.0.1:8100", "state": "device", "model": "iPhone",
+          "name": "iphone"}
+NAMED = [{"name": "iphone", "where": "http://127.0.0.1:8100", "kind": "iPhone"},
+         {"name": "nexus", "where": "84B7N16128001616", "kind": "Android"}]
+
+
+def test_each_named_phone_is_said_connected_or_not():
+    """The Nexus was named by its cable's serial and had moved to Wi-Fi:
+    the line said "phone ... ready" for both, and nothing said Dvara's
+    agents couldn't reach "nexus"."""
+    said = siblings.SAY["sparsh"]({**SPARSH, "rules": {}, "named": NAMED,
+                                   "phones": [NEXUS_WIFI, IPHONE]})
+    assert said == ("iphone (iPhone) connected; nexus (Android) not connected: nothing "
+                    "answers at 84B7N16128001616; attached under no name (your agents "
+                    "can't reach it): 192.168.1.160:5555 (Nexus_6P)")
+
+
+def test_a_named_phone_found_but_not_ready_says_sparshs_reason():
+    waiting = {**IPHONE, "state": "offline",
+               "note": "not answering -- start WebDriverAgent on it"}
+    said = siblings.SAY["sparsh"]({**SPARSH, "rules": {}, "named": NAMED[:1],
+                                   "phones": [waiting]})
+    assert said == "iphone (iPhone) not connected: not answering -- start WebDriverAgent on it"
+
+
 def test_sparsh_missing_is_optional(world, capsys):
     everything(world)
     code, out = run(capsys, "status")

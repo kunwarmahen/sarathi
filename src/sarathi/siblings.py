@@ -196,10 +196,38 @@ def _say_dvara(data: dict[str, Any]) -> str:
     return said + "".join(f"; {p}" for p in problems)
 
 
+def _say_named(data: dict[str, Any], named: list[dict[str, Any]]) -> str:
+    """Each named phone ([phone.NAME]), connected or not, as it is now. A
+    phone attached under none of the names is said too: Dvara's agents
+    can't reach it, and the name may hold the address it used to have."""
+    phones = data.get("phones") or []
+    found = {p.get("serial"): p for p in phones}
+    words = []
+    for each in named:
+        phone = found.get(each.get("where")) or {}
+        kind = each.get("kind") or "phone"
+        if phone.get("state") == "device":
+            words.append(f"{each['name']} ({phone.get('model') or kind}) connected")
+            continue
+        why = phone.get("note") or (
+            "plug it in, unlock it, and run `sparsh iphone`" if kind == "iPhone"
+            else f"nothing answers at {each.get('where')}")
+        words.append(f"{each['name']} ({kind}) not connected: {why}")
+    wheres = {each.get("where") for each in named}
+    stray = [p for p in phones if p.get("state") == "device" and p.get("serial") not in wheres]
+    if stray:
+        words.append("attached under no name (your agents can't reach it): " + ", ".join(
+            f"{p.get('serial')} ({p.get('model') or '?'})" for p in stray))
+    return "; ".join(words)
+
+
 def _say_sparsh(data: dict[str, Any]) -> str:
     phones = data.get("phones") or []
     ready = [p for p in phones if p.get("state") == "device"]
-    if ready:
+    named = [n for n in data.get("named") or [] if isinstance(n, dict) and n.get("name")]
+    if named:
+        said = _say_named(data, named)
+    elif ready:
         said = "phone " + ", ".join(
             f"{p.get('serial')} ({p.get('model') or '?'})" for p in ready) + " ready"
     elif phones:
