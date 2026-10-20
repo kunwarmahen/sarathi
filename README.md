@@ -389,10 +389,16 @@ iPhone at `host.containers.internal` inside the containers. In Dvara's
 actors file `phones = ["nexus"]` gives a person theirs, and their agents
 reach their phones and no others. The same is **Settings → Sarathi →
 Your phones** (each phone, Remove, Add a phone) and a box per phone
-under each person in **Settings → People**. A phone already written
-down without a name is named first (`sarathi phone add iphone iphone
-http://127.0.0.1:8100`), and one phone under two names is refused
-([notes/25](notes/25-several-phones.md)).
+under each person in **Settings → People** (those boxes appear once
+phones have names; before, People has the single *work the phone* box).
+A phone already written down without a name is named first (`sarathi
+phone add iphone iphone http://127.0.0.1:8100`; it needn't be plugged
+in, and `list` says *not answering* until its WebDriverAgent runs), and
+one phone under two names is refused
+([notes/25](notes/25-several-phones.md)). Names take effect at the next
+`sarathi down && sarathi up` (or **Apply**): the containers are handed
+`SPARSH_PHONES` when they start, and a running one keeps what it
+started with.
 
 **After the phone restarts.** A phone switched off and on stops
 listening over Wi-Fi, and its address can change, so Yantra's phone

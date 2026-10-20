@@ -45,7 +45,16 @@ same way the single cable phone did.
 lives in Dvara's actors file (`phones = ["nexus"]`) and nowhere else.
 **Settings → People** shows a box per phone under each person, and a
 person with `phone = true` (every phone) shows every box ticked, so a
-Save keeps what they had.
+Save keeps what they had. Until a phone has a name there are no boxes
+to draw, so People keeps the single *work the phone* box.
+
+**A NAME TAKES EFFECT AT THE NEXT START.** `phone add` writes the file
+and nothing else; it doesn't restart anything behind your back. The
+containers get `SPARSH_PHONES` from `sarathi up`, and a container's
+environment is fixed when it starts, so every `add` and `remove` ends
+with *next: `sarathi down && sarathi up`*. The home page reads the file
+on each request, so its boxes show the names at once, before the
+agents can use them.
 
 ## Nothing written down is dropped quietly
 

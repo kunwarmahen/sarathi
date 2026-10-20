@@ -1143,27 +1143,53 @@ with nothing to change.
 your own iPhone, a phone of someone else in the house: name each, then
 say whose it is.
 
-1. Name them, each plugged in (or reached) when you name it:
+1. Name them. A new phone is plugged in (or reached) when you name
+   it. A phone already saved without a name (the iPhone from the steps
+   above) is named first, and needn't be plugged in: naming what is
+   saved asks nothing of it.
 
    ```bash
+   sarathi phone add iphone iphone http://127.0.0.1:8100   # the iPhone already saved
    sarathi phone add nexus                  # the Android on the cable
-   sarathi phone add iphone iphone          # the iPhone, as above
    sarathi phone list
    ```
 
-   You should see each with *answers*:
+   You should see:
 
    ```
+   the iPhone already saved, named (not asked: it needn't be plugged in)
+   ...
+   84B7N16128001616 (Nexus_6P), on the cable
+   nexus is in ~/.config/sarathi/sarathi.toml: Android at 84B7N16128001616
+     give it to someone in Dvara's actors file: phones = ["nexus"] under their [actor.…]
+     the containers reach it through this computer's adb (sarathi-adb)
+   next: `sarathi down && sarathi up`
+
+   iphone: iPhone at http://127.0.0.1:8100 -- not answering
    nexus: Android at 84B7N16128001616 -- answers
-   iphone: iPhone at http://127.0.0.1:8100 -- answers
    ```
 
-   If an iPhone was already saved without a name, `add nexus` says so
-   and prints the command that names it; run that first.
+   *not answering* only means the iPhone's WebDriverAgent isn't running
+   right now (start it with `sparsh iphone`, or **Use the iPhone** on
+   the home page); the name is kept either way. If you skip naming the
+   saved iPhone, `add nexus` stops and prints the command that names
+   it, so the iPhone is never dropped.
 
 2. In **Settings → People**, open each person with **Change** and tick
-   their phones. Each phone is one person's: one ticked for two people
-   is refused. **Apply** (or `sarathi down && sarathi up`).
+   their phones. The boxes, one per phone (*Their phones (each is one
+   person's)*), appear only once phones have names: before that,
+   People shows a single box, *Their agents may work the phone on this
+   computer*. Each phone is one person's: one ticked for two people is
+   refused.
+
+   Then **Apply** (or `sarathi down && sarathi up`). Why a restart:
+   naming a phone only writes it into `sarathi.toml`. Yantra, Dvara and
+   Samay run in their own containers and are told which phones there
+   are (`SPARSH_PHONES`) when `sarathi up` starts them; a running
+   container keeps what it was started with. Until the restart, they
+   still see the old, unnamed phone, and `/phone nexus` doesn't know the
+   name. The home page reads the file afresh, so the boxes show at once;
+   the agents use the phones after the restart.
 
 3. Try it: *"Which phones can you work?"* on Telegram. Each person's
    helper names only their own. `/phone` shows the screen of your first
@@ -1298,6 +1324,8 @@ you're most likely to meet:
 | `browser: this machine has Chrome …, the image …` | your Chrome updated itself after the image was built | `sarathi image`, then `sarathi up` |
 | *"Your phone locked mid-task"* in the middle of a job | the screen went dark between two steps (a Sarathi from before `[phone] awake`) | `sarathi image`, then `sarathi up`; or `sarathi phone --awake always` |
 | a phone question comes as a long numbered list with no photo, or the bot opens Maps' rows one by one | containers from before the picture on every question | `sarathi image`, then `sarathi up` |
+| **Settings → People** shows one phone box, not one per phone | no phone has a name yet | `sarathi phone add NAME ...` for each (`sarathi phone list` says *no phones are named* until then), then reload the page |
+| *"Which phones can you work?"* names only one phone, or `/phone nexus` doesn't know the name, after `sarathi phone add` | the containers were started before the names, and keep what they started with | `sarathi down && sarathi up` (or **Apply**) |
 | the bot says the phone tools "aren't connected" | the agent's `[tools] allow` leaves the phone out | add `"mcp__sparsh__*"` to it; `sarathi phone ADDRESS` says which file |
 | a scheduled phone run is `skipped: the phone couldn't be reached` | the phone's address changed, or it restarted (it stopped listening over Wi-Fi) | plug it in, then `sarathi phone tcpip` (or **Settings → Sarathi → Your phone → Turn on Wi-Fi from the cable**); **Apply** if it says so |
 | Yantra's phone panel says *No phone yet*, or *not answering over Wi-Fi*, after the phone was switched off and on | the same: a restarted phone stops listening, and its address may move | the same: plug in, **Turn on Wi-Fi from the cable**; then **use this phone** on Yantra's panel |
