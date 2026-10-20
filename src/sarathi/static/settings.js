@@ -293,6 +293,14 @@ function agentForm(a) {
   const memory = pick([["", "Doesn't remember people"], ["local", "Remembers each person"]],
                       t.memory?.via && t.memory.via !== "off" ? "local" : "");
   const picker = toolPicker(a);
+  // How many tools a message is sent: automatic sends, past twenty, only
+  // the ones the message points at (a local model's window overflows
+  // otherwise); 0 sends every tool, every time.
+  const perTurn = t.tools?.per_turn;
+  const sent = pick([["", "Automatic: past 20, the ones the message needs"],
+                     ["0", "Every tool, every message"],
+                     ...(perTurn > 0 ? [[String(perTurn), `${perTurn} per message`]] : [])],
+                    perTurn == null ? "" : String(perTurn));
   const needs = lines(t.connections?.needs);
   const budget = text(t.budget?.max_usd_per_turn ?? "", { inputmode: "decimal",
                                                          placeholder: "no limit" });
@@ -310,7 +318,7 @@ function agentForm(a) {
       agent: { description: desc.value.trim() || null },
       model: { provider: provider.value || null, model: model.value.trim() || null },
       memory: { via: memory.value || null },
-      tools: { allow },
+      tools: { allow, per_turn: sent.value === "" ? null : Number(sent.value) },
       connections: { needs: listOf(needs).length ? listOf(needs) : null },
       budget: { max_usd_per_turn: numOr(budget) },
       permissions: { mode: mode.value || null },
@@ -322,6 +330,7 @@ function agentForm(a) {
     field("Provider", provider), field("Model", model, "Empty: the one Sarathi uses."),
     field("Memory", memory),
     picker.el,
+    field("Tools sent each message", sent, "Automatic keeps a local model's window from overflowing as accounts are added; nothing to change when you connect one."),
     field("Accounts it needs", needs, "One per line, connector:level, e.g. gmail:read; *:read is every account."),
     field("Most per message (US dollars)", budget),
     field("Asking before changes", mode),

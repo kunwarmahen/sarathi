@@ -505,6 +505,12 @@ account's reading tools, and a line like `docs:write` adds that server's
 writing ones. Which tools count as reading is in Setu's file for the
 server: `setu site file docs` shows it, and `--set` replaces it.
 
+Adding accounts never needs a change to the agent for the model's sake.
+Past twenty tools, each message is sent only the ones it points at, plus
+a way to list the rest, so a local model's window doesn't overflow as
+servers are added. *Tools sent each message* on the same form says so
+(*Automatic*), or sends every tool every time.
+
 **Amazon or X from someone's phone.** Those sites are signed in to in a
 browser window on this computer. Give Dvara a window address and Setu
 streams that window to their phone when they send `/connect amazon`
