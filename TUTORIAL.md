@@ -177,8 +177,9 @@ Google app once (Setu's README, *Testing mode signs you out weekly*).
 
 **An MCP server of your own** (optional). If you have a server that
 speaks MCP (a docs or notes server, a tool someone gave you an address
-for), add it to Setu once. Every road then has it: Yantra's page,
-Telegram and the home page's chat, containers included. The server
+for), add it to Setu once. Every road then has it: Yantra's page
+(within ten seconds, nothing restarted), Telegram and the home page's
+chat, containers included. The server
 needs one of three things, and it tells Setu which:
 
 * **Nothing.** Give the address:
@@ -207,10 +208,34 @@ needs one of three things, and it tells Setu which:
   request on its way to the server. If the server wants the token in
   some other header, add `--header X-API-Key` (or the name its docs give).
 
-* **Its own sign-in page** (Linear, Notion and other online services).
-  Give the address with no token. A browser opens on the service's
-  sign-in, as it did for Gmail. Sign in there, and Setu keeps the
-  sign-in and renews it.
+* **Its own sign-in page** (Linear, Notion, Robinhood and other online
+  services). Give the address with no token. A browser opens on the
+  service's sign-in, as it did for Gmail. Sign in there, and Setu keeps
+  the sign-in and renews it:
+
+  ```bash
+  $setu connect --server https://mcp.notion.com/mcp --id notion
+  #   https://mcp.notion.com/mcp signs in on its own page. A browser window is opening: ...
+  #   connected notion:personal (mcp.notion.com/mcp) -- All its tools, 65 tools
+  #     36 of them only read (they may run unasked); the rest are asked about. ...
+  ```
+
+  If you are already signed in to the service in that browser, it may
+  skip the password and go straight to its own **Allow** page: finish
+  that, and the terminal says *connected* by itself. Nothing to copy.
+  For an account that can spend money (a trading app), choose *Only its
+  reading tools* when Setu asks.
+
+  **From your phone instead:** send `/connect server
+  https://mcp.notion.com/mcp notion` to the bot. With `[house]` or a
+  window address set, its link shows the service's sign-in page running
+  on your computer, as Gmail's does (item 3 in Step 6). If the sign-in
+  sends you to another app on the phone (Microsoft Authenticator, a mail
+  with a code), the picture comes back when you return; if it shows a
+  broken image instead, reload the page. Keep going (choose the
+  workspace, **Allow access**) until the page says *Signed in*; the bot
+  then says *connected*. The *I've signed in* button only checks: before
+  the service has finished, it tells you what's left and closes nothing.
 
 Or do any of these on Setu's page instead: **My accounts** on the home
 page, then **Add your own server**, with the address and (if it needs
@@ -1226,7 +1251,9 @@ you're most likely to meet:
 | The agent knows your own server is connected but uses none of its tools | the server marked none of them read-only, so all are `write`, and the agent's need is `:read` | mark the reading ones read in `setu site file yourid` (the server's file; `--set` replaces it), or add `yourid:write` to *Accounts it needs* |
 | `/memory` answers that the agent doesn't keep memories, and Telegram's `/` menu has no `memory` | its package doesn't remember people | **Settings → Agents**, **Change**, *Memory*: *Remembers each person*; restart Dvara for the menu (**Apply**, or `sarathi down && sarathi up`) |
 | On Telegram the agent reads an email but says it can't open a link in it (a hotel's "View reservation") | the link goes to another site, and the account's tools keep to their own site | ask it what the email itself says (dates, number); to open such links, **Settings → Agents**, **Change**, tick *Open a page in its own browser* (no sign-in there), or tap the address it gives you |
-| A sign-in from the chat: after your password the page never loads | that's the expected `http://127.0.0.1…` page, and Telegram's own browser may not show its address | open the link in Chrome instead, then copy the failing page's whole address back into the chat |
+| A sign-in from the chat: after your password the page never loads | that's the expected `http://127.0.0.1…` page, and Telegram's own browser may not show its address | set `[house]` (or a window address) so the sign-in runs in the window and nothing is copied; or open the link in Chrome, then copy the failing page's whole address back into the chat |
+| A sign-in window shows a broken image (?) after you went to another app (an authenticator, your mail) | the phone dropped the live picture while that app was in front; the sign-in is still waiting | reload the page on the same phone and carry on; after `sarathi image`, the picture comes back by itself |
+| On Telegram the agent ignores a newly connected account (or answers a greeting instead of your question), though `/tools` lists its tools | too many tools for the model's window: a local model then loses the top of the prompt | nothing to tick: past 20 tools each turn sends only the ones your message points at (plus a way to list the rest). Needs `sarathi image` once; `[tools] per_turn = 0` in a package turns it off |
 | `no image yet (localhost/sarathi:latest): run sarathi image first` | Podman road, image not built | `sarathi image` |
 | a schedule never runs | Samay isn't running | `sarathi status`; on the process road, Samay stops with your session (Step 5 fixes that) |
 | `dvara not started: dvara.telegram is set but there is no TELEGRAM_TOKEN` | the bot's token wasn't saved | `sarathi dvara` again, and paste it |

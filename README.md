@@ -468,7 +468,8 @@ for it, hidden). One with its own sign-in page (Linear, Notion) opens it
 in a browser instead. The containers never need the token; Setu adds it
 ([TUTORIAL, Step 2](TUTORIAL.md#step-2--connect-an-account)). From then on every road has it: Yantra's page, the home page's chat
 and Telegram. A person adds one to their own folder from their page, or
-from the chat with `/connect server URL` when it needs no token
+from the chat with `/connect server URL` when it needs no token (one
+with its own sign-in page opens it in the streamed window)
 ([Dvara's notes/48](https://github.com/kunwarmahen/dvara/blob/main/notes/48-a-server-of-their-own.md)). On
 the Podman road, Setu runs inside the containers, so a server on this
 computer is `http://host.containers.internal:PORT/mcp`, not `127.0.0.1`.
