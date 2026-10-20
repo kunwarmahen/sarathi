@@ -336,7 +336,8 @@ sarathi phone --off
 ```
 
 turns on `[phone]`. Dvara's agents may then work the phone for the
-one person marked `phone = true` in its actors file (dvara's
+one person marked `phone = true` in its actors file (or, with several
+phones named, for each person their own `phones = [...]`; dvara's
 `--sparsh`), through a package whose `[tools] allow` names
 `mcp__sparsh__*` (it says when the agent on Telegram doesn't), and Yantra's page reconnects to a Wi-Fi phone by itself.
 On the Podman road an Android on this computer's cable reaches the
@@ -362,8 +363,9 @@ phone is plugged in is the one used**: Sparsh asks the iPhone and the
 Androids alike and takes the one that answers, so swapping the iPhone
 for an Android on the cable, or back, needs no setting changed. While an
 Android answers, `up` starts the iPhone's unit without waiting for it.
-Two phones that answer at once are said, not guessed
-([notes/20](notes/20-whichever-phone-is-plugged-in.md)). The containers
+Two unnamed phones that answer at once are said, not guessed
+([notes/20](notes/20-whichever-phone-is-plugged-in.md)); to use both,
+name them (*Several phones, each someone's*, below). The containers
 reach the iPhone at `host.containers.internal:8100`.
 Keep the iPhone unlocked while an agent works it; `--awake` can't change
 an iPhone's Auto-Lock. The same step is **Use the iPhone** on the

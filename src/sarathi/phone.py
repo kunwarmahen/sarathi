@@ -307,7 +307,8 @@ def _mention_door(config) -> None:
     """What would still keep the phone from Dvara's agents: nobody marked
     for it, or the Telegram agent's [tools] leaving Sparsh out."""
     if config.door is not None and not _anyone_marked(config.door.path("actors")):
-        print(f"  nobody in {config.door.actors} is marked `phone = true` yet: add it "
+        print(f"  nobody in {config.door.actors} has the phone yet (`phone = true`, or "
+              f"`phones = [...]` with named phones): add it "
               "under your own [actor.…] so Dvara's agents may work the phone for you")
     if config.door is not None and config.door.telegram:
         package = config.door.path("root") / config.door.telegram / "agent.toml"
@@ -324,7 +325,7 @@ def _anyone_marked(actors) -> bool:
         data = tomllib.loads(actors.read_text())
     except (OSError, tomllib.TOMLDecodeError):
         return False
-    return any(isinstance(body, dict) and body.get("phone") is True
+    return any(isinstance(body, dict) and (body.get("phone") is True or body.get("phones"))
                for body in (data.get("actor") or {}).values())
 
 

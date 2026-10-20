@@ -106,4 +106,6 @@ Android, and the Android's address again keeps it.
 * ~~The iPhone back on the cable after this, end to end.~~ Run: the
   Nexus swapped for the iPhone, and the next task went to the iPhone,
   with nothing changed in Sarathi.
-* Both phones on at once, each owned by a person (the several-phones plan).
+* ~~Both phones on at once, each owned by a person.~~ Named in
+  `[phone.NAME]`, each given to someone in Dvara's people
+  ([note 25](25-several-phones.md)).

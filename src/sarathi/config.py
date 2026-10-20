@@ -137,7 +137,8 @@ class Pages:
 @dataclass(frozen=True)
 class Phone:
     """Your phone, through Sparsh: ``[phone]``. On, the door's agents may
-    work it for the person marked ``phone = true`` in its actors file,
+    work it for the person marked ``phone = true`` in its actors file
+    (with named phones, each person's own ``phones = [...]``),
     and on the podman road the containers reach it: an Android on this
     computer's cable through this computer's adb (``sarathi-adb``,
     podman.py), or over Wi-Fi at ``address``.

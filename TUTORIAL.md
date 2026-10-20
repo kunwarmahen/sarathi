@@ -987,9 +987,10 @@ a USB cable, so they reach the phone over your Wi-Fi.
    sarathi down && sarathi up
    ```
 
-   It says what's still missing: *"nobody in ~/dvara/actors.toml is
-   marked `phone = true` yet"* (in **Settings → People**, **Change** on
-   yourself, tick *Their agents may work the phone*), or *"minder, the
+   It says what's still missing: *"nobody in ~/dvara/actors.toml has
+   the phone yet"* (in **Settings → People**, **Change** on yourself,
+   tick *Their agents may work the phone*, or, with several phones
+   named, the boxes under *Their phones*), or *"minder, the
    agent on Telegram, can't use the phone: its [tools] … leaves out
    "mcp__sparsh__*""* (in **Settings → Agents**, **Change** on
    minder, tick *Your phone (Sparsh)* under *Tools it may use*). The restart matters: before it, the containers
