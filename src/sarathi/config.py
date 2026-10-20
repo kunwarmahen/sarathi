@@ -157,6 +157,42 @@ class Phone:
     #: The screen while an agent works it, as Sparsh's ``SPARSH_AWAKE``
     #: (one of AWAKE). None: Sparsh's own default, kept on while working.
     awake: str | None = None
+    #: Several phones, each by a name (``[phone.nexus]``): then the three
+    #: above are unset, and each named phone says its own.
+    named: tuple[NamedPhone, ...] = ()
+
+    @property
+    def wdas(self) -> list[str]:
+        """Every iPhone's WebDriverAgent address written down."""
+        return [w for w in [self.wda, *(p.wda for p in self.named)] if w]
+
+    @property
+    def addresses(self) -> list[str]:
+        """Every Android's Wi-Fi address written down."""
+        return [a for a in [self.address, *(p.address for p in self.named)] if a]
+
+
+@dataclass(frozen=True)
+class NamedPhone:
+    """One of several phones: ``[phone.NAME]``, as Sparsh's ``SPARSH_PHONES``
+    names it. Exactly one of ``serial`` (an Android on this computer's
+    cable), ``address`` (one over Wi-Fi) and ``wda`` (an iPhone). Whose
+    it is, Dvara's actors file says (``phones = ["NAME"]``): this says
+    what phones there are."""
+
+    name: str
+    serial: str | None = None
+    address: str | None = None
+    wda: str | None = None
+    awake: str | None = None
+
+    @property
+    def where(self) -> str:
+        return self.wda or self.address or self.serial or ""
+
+    @property
+    def kind(self) -> str:
+        return "iPhone" if self.wda else "Android"
 
 
 @dataclass(frozen=True)
@@ -387,7 +423,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
         if table not in KNOWN or not isinstance(value, dict):
             raise ConfigError(f"{where}: unknown table [{table}] "
                               f"(known: {', '.join(f'[{k}]' for k in KNOWN)})")
-        unknown = sorted(set(value) - KNOWN[table])
+        unknown = sorted(k for k in set(value) - KNOWN[table]
+                         if not (table == "phone" and isinstance(value[k], dict)))
         if unknown:
             raise ConfigError(f"{where}: unknown key {table}.{unknown[0]} "
                               f"(known: {', '.join(sorted(KNOWN[table]))})")
@@ -454,7 +491,13 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     if awake is not None and awake not in AWAKE:
         raise ConfigError(f"{where}: phone.awake is one of {', '.join(AWAKE)}, "
                           f"not {awake!r}")
-    phone = Phone(address=address, wda=wda, awake=awake) \
+    named = tuple(_named_phone(n, body, where)
+                  for n, body in phone_table.items() if isinstance(body, dict))
+    if named and (address or wda or awake):
+        raise ConfigError(f"{where}: [phone] has address, wda or awake beside named "
+                          f"phones ([phone.{named[0].name}]); with names, each phone "
+                          f"says its own")
+    phone = Phone(address=address, wda=wda, awake=awake, named=named) \
         if phone_table.get("on", False) else None
     via = data.get("memory", {}).get("via", "local")
     if via not in MEMORY_ROADS:
@@ -618,17 +661,89 @@ via = "{config.memory}"
 """ + "\n".join(lines) + "\n")
 
 
+def with_phone(phone: Phone | None, named: NamedPhone) -> Phone:
+    """``[phone]`` with ``named`` added, or put in place of the one by its
+    name. An old unnamed phone can't stay beside it: naming it (the same
+    address or wda) takes its place; another phone is refused until it is
+    named, so nothing written down is dropped quietly."""
+    if phone is not None and (phone.address or phone.wda):
+        if named.where not in (phone.address, phone.wda):
+            old = phone.wda or phone.address
+            how = f"iphone {phone.wda}" if phone.wda else phone.address
+            raise ConfigError(f"[phone] has a phone with no name yet ({old}): name it "
+                              f"first -- sarathi phone add NAME {how}")
+        phone = None
+    kept = [p for p in (phone.named if phone else ()) if p.name != named.name]
+    twin = next((p for p in kept if p.where == named.where), None)
+    if twin is not None:
+        # one phone, two names: two owners in Dvara for one set of messages
+        raise ConfigError(f"{named.where} is already named {twin.name}: one phone, one "
+                          f"name (sarathi phone remove {twin.name} first, to rename it)")
+    return Phone(named=(*kept, named))
+
+
+def without_phone(phone: Phone | None, name: str) -> Phone | None:
+    """``[phone]`` without the one called ``name``; None when it was the last."""
+    kept = tuple(p for p in (phone.named if phone else ()) if p.name != name)
+    if phone is None or len(kept) == len(phone.named):
+        raise ConfigError(f"no phone is called {name!r}"
+                          + (f" ({', '.join(p.name for p in phone.named)})"
+                             if phone and phone.named else ""))
+    return Phone(named=kept) if kept else None
+
+
+#: A phone's name, as Sparsh takes it (its phones.py).
+PHONE_NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,31}")
+PHONE_KEYS = {"serial", "address", "wda", "awake"}
+
+
+def _named_phone(name: str, body: dict, where: str) -> NamedPhone:
+    if not PHONE_NAME.fullmatch(name):
+        raise ConfigError(f"{where}: [phone.{name}] -- a phone's name is lower case "
+                          f"letters, digits and dashes (nexus, asha-iphone)")
+    unknown = sorted(set(body) - PHONE_KEYS)
+    if unknown:
+        raise ConfigError(f"{where}: unknown key phone.{name}.{unknown[0]} "
+                          f"(known: {', '.join(sorted(PHONE_KEYS))})")
+    given = [k for k in ("serial", "address", "wda") if body.get(k)]
+    if len(given) != 1:
+        raise ConfigError(f"{where}: [phone.{name}] needs exactly one of serial (a "
+                          f"phone on this computer's cable), address (over Wi-Fi) or "
+                          f"wda (an iPhone)")
+    value = body[given[0]]
+    checks = {"serial": r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}",
+              "address": r"[A-Za-z0-9.\-\[\]:]{1,80}:\d{1,5}",
+              "wda": r"https?://[A-Za-z0-9.\-\[\]:]{1,80}:\d{1,5}/?"}
+    if not isinstance(value, str) or not re.fullmatch(checks[given[0]], value):
+        raise ConfigError(f"{where}: phone.{name}.{given[0]} can't be {value!r}")
+    awake = body.get("awake") or None
+    if awake is not None and awake not in AWAKE:
+        raise ConfigError(f"{where}: phone.{name}.awake is one of {', '.join(AWAKE)}, "
+                          f"not {awake!r}")
+    return NamedPhone(name=name, awake=awake, **{given[0]: value})
+
+
 def _render_phone(phone: Phone | None) -> str:
     head = """# Your phone, through Sparsh: Dvara's agents may work it for the one
 # person marked `phone = true` in its actors file. An Android on this
 # computer's cable just works (the containers get this computer's adb);
 # over Wi-Fi, `address` (`sarathi phone ADDRESS`). An iPhone: `wda`,
 # WebDriverAgent's address (`sarathi phone iphone`). Both may be set: the
-# one plugged in, the one that answers, is used.
+# one plugged in, the one that answers, is used. Several at once, each by
+# a name (`sarathi phone add NAME ...`): a [phone.NAME] table for each,
+# and Dvara's actors file says whose (phones = ["NAME"]).
 [phone]
 """
     if phone is None:
         return head + "on = false\n"
+    if phone.named:
+        out = head + "on = true\n"
+        for each in phone.named:
+            key = "wda" if each.wda else "address" if each.address else "serial"
+            out += f"\n[phone.{each.name}]\n{key} = \"{each.where}\"\n"
+            if each.awake:
+                out += f'awake = "{each.awake}"\n'
+        return out
     address = f'address = "{phone.address}"' if phone.address else \
         '# address = "192.168.1.23:41234"   # its Wireless debugging address'
     wda = f'wda = "{phone.wda}"' if phone.wda else \

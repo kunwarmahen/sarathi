@@ -79,9 +79,11 @@ and writes its own file; a person signed in gets 403:
     POST /api/settings/tool/AGENT          {"person", "skill", "remove"?}: a learned skill
                                            made a tool, or the tool taken back
                                            (sarathi, actors, policy, agent, prompt, site)
-    POST /api/settings/phone               {"do": "tcpip"|"connect"|"pair",
-                                           "address", "code"}: the phone, reached
-                                           from this computer, its address saved
+    POST /api/settings/phone               {"do": "tcpip"|"connect"|"pair"|"iphone"
+                                           |"cable"|"remove", "address", "code",
+                                           "name"}: the phone, reached from this
+                                           computer, its address saved; with a
+                                           name, one of several ([phone.NAME])
     POST /api/settings/apply               `sarathi up`, for what needs a restart
 
 With ``--also-host`` (the door's window address, when it is one) the page
@@ -221,7 +223,7 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     sparsh = next(s for s in SIBLINGS if s.name == "sparsh")
     on_cable = config.road != "podman" and locate(sparsh, dict(env)) is not None
     over_wifi = config.road == "podman" and config.phone is not None \
-        and (config.phone.address is not None or config.phone.wda is not None)
+        and bool(config.phone.addresses or config.phone.wdas or config.phone.named)
     if on_cable or over_wifi:
         # Sparsh has no page of its own: the phone is watched from the
         # panel on Yantra's page, so the card opens that page. On the

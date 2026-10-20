@@ -52,12 +52,14 @@ from sarathi.config import (
     DEFAULT_NTFY_PORT,
     KEY_NAMES,
     MEMORY_ROADS,
+    PHONE_NAME,
     PROVIDERS,
     ROADS,
     Config,
     ConfigError,
     Door,
     House,
+    NamedPhone,
     Phone,
     load,
     parse,
@@ -65,6 +67,8 @@ from sarathi.config import (
     render,
     save_secret,
     settings_path,
+    with_phone,
+    without_phone,
 )
 
 #: How long one program may take to answer.
@@ -231,8 +235,10 @@ def sarathi_view(config: Config) -> dict:
             "window_host": door.window_host, "window_port": door.window_port,
             "window_url": door.window_url, "ntfy": door.ntfy_port is not None,
             "ntfy_port": door.ntfy_port or DEFAULT_NTFY_PORT},
-        "phone": None if phone is None else {"address": phone.address, "wda": phone.wda,
-                                             "awake": phone.awake},
+        "phone": None if phone is None else {
+            "address": phone.address, "wda": phone.wda, "awake": phone.awake,
+            "named": [{"name": p.name, "kind": p.kind, "where": p.where, "awake": p.awake}
+                      for p in phone.named]},
         "memory": {"via": config.memory},
         "house": None if config.house is None else {"name": config.house.name,
                                                     "address": config.house.address},
@@ -301,7 +307,9 @@ def sarathi_apply(changes: dict) -> Config:
                            or DEFAULT_NTFY_PORT) if ntfy else None))
     if "phone" in changes:
         ph = changes["phone"]
+        named = config.phone.named if config.phone else ()
         config = replace(config, phone=None if ph is None or ph.get("on") is False else
+                         Phone(named=named) if named else
                          Phone(address=ph.get("address") or None,
                                wda=ph.get("wda") or None,
                                awake=ph.get("awake") or None))
@@ -342,6 +350,19 @@ def phone_step(config: Config, body: dict) -> tuple[str, bool]:
         raise EditError(409, "sparsh wasn't found on this computer (see `sarathi status`)")
     do = str(body.get("do") or "")
     address = str(body.get("address") or "").strip()
+    name = str(body.get("name") or "").strip()
+    if do == "remove":
+        try:
+            sarathi_text(render(replace(config, phone=without_phone(config.phone, name))))
+        except ConfigError as exc:
+            raise EditError(400, str(exc)) from None
+        return (f"{name} removed. Apply; and take it out of anyone's phones in Dvara's "
+                "people.", True)
+    if do != "pair" and not name and config.phone is not None and config.phone.named:
+        raise EditError(400, "your phones have names: say which one this is "
+                             f"({', '.join(p.name for p in config.phone.named)}, or a new one)")
+    if name and do in ("iphone", "tcpip", "connect", "cable"):
+        return _named_step(config, found, do, name, address, body)
     if do == "pair":
         code = str(body.get("code") or "").strip()
         if not address or not code:
@@ -388,6 +409,47 @@ def phone_step(config: Config, body: dict) -> tuple[str, bool]:
         return (f"{said}; saved. Apply, so the containers reach it at {address}.", True)
     return (f"{said}. Same address as before: nothing to restart. Yantra's phone panel "
             "finds it on its next look.", False)
+
+
+def _named_step(config: Config, found, do: str, name: str, address: str,
+                body: dict) -> tuple[str, bool]:
+    """A phone button with a name: that phone added, or put in place of
+    the one by its name (``[phone.NAME]``, phone.py's ``add``)."""
+    from sarathi import phone as phone_cmd
+
+    if not PHONE_NAME.fullmatch(name):
+        raise EditError(400, "a phone's name is lower case letters, digits and dashes "
+                             "(nexus, asha-iphone)")
+    awake = body.get("awake") or None
+    if awake is not None and awake not in AWAKE:
+        raise EditError(400, f"awake is one of {', '.join(AWAKE)}")
+    if do == "iphone":
+        url = str(body.get("wda") or "").strip() or phone_cmd.WDA_HERE
+        ok, said = phone_cmd.iphone_ready(found, url)
+        if not ok:
+            raise EditError(400, f"{said} -- not saved")
+        new = NamedPhone(name=name, wda=url, awake=awake)
+    elif do == "cable":
+        serial, said = phone_cmd.cable_serial(found)
+        if serial is None:
+            raise EditError(400, said)
+        new = NamedPhone(name=name, serial=serial, awake=awake)
+    else:
+        if do == "tcpip":
+            status, address, said = phone_cmd.from_cable(found)
+        elif not address:
+            raise EditError(400, "type the phone's address first, like 192.168.1.23:5555")
+        else:
+            status, said = phone_cmd._sparsh(found, "connect", address)
+        if status:
+            raise EditError(400, said.removeprefix("sparsh: ") + " -- not saved")
+        new = NamedPhone(name=name, address=address, awake=awake)
+    try:
+        sarathi_text(render(replace(config, phone=with_phone(config.phone, new))))
+    except ConfigError as exc:
+        raise EditError(400, str(exc)) from None
+    return (f"{said}; saved as {name} ({new.kind} at {new.where}). Apply, then give it "
+            "to someone in People (their phones).", True)
 
 
 def set_key(name: str, value: str) -> None:

@@ -445,6 +445,10 @@ def phone_env(config: Config) -> str:
     env = services.phone_env(config)
     if "SPARSH_WDA" in env:
         env["SPARSH_WDA"] = from_container(env["SPARSH_WDA"])
+    if "SPARSH_PHONES" in env:
+        env["SPARSH_PHONES"] = ",".join(
+            f"{p.name}={from_container(p.wda) if p.wda else p.where}"
+            for p in config.phone.named)
     if config.phone is not None:
         # this computer's adb, lent through a file (module docstring)
         env["ADB_SERVER_SOCKET"] = f"localfilesystem:{adb_socket()}"

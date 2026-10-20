@@ -507,10 +507,20 @@ def phone_env(config: Config) -> dict[str, str]:
     """Sparsh's name for the phone's Wi-Fi address: it reconnects to it
     whenever it looks for phones, so a restart finds the phone again. An
     iPhone's WebDriverAgent, as ``SPARSH_WDA``. And ``[phone] awake``, its
-    screen while an agent works it."""
+    screen while an agent works it.
+
+    Several phones by name (``[phone.NAME]``): ``SPARSH_PHONES``, every
+    one as ``NAME=WHERE`` -- Sparsh reconnects a named Wi-Fi address by
+    itself -- and ``SPARSH_AWAKE`` one word per phone that says one."""
     phone = config.phone
     if phone is None:
         return {}
+    if phone.named:
+        env = {"SPARSH_PHONES": ",".join(f"{p.name}={p.where}" for p in phone.named)}
+        awake = ",".join(f"{p.name}={p.awake}" for p in phone.named if p.awake)
+        if awake:
+            env["SPARSH_AWAKE"] = awake
+        return env
     pairs = (("SPARSH_CONNECT", phone.address), ("SPARSH_WDA", phone.wda),
              ("SPARSH_AWAKE", phone.awake))
     return {k: v for k, v in pairs if v}

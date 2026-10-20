@@ -121,14 +121,16 @@ def build_parser() -> argparse.ArgumentParser:
     phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for Dvara's "
                                 "agents and the containers: on, pair, its Wi-Fi address")
     phone_cmd.add_argument("words", nargs="*",
-                           metavar="ADDRESS | tcpip | pair ADDRESS CODE | iphone [URL]",
+                           metavar="ADDRESS | tcpip | pair ADDRESS CODE | iphone [URL] | "
+                                   "add NAME ... | remove NAME | list",
                            help="nothing: a phone on a cable; ADDRESS: over Wi-Fi; "
                                 "tcpip: the phone on the cable listens over Wi-Fi "
                                 "(again after each restart of the phone); "
                                 "pair ADDRESS CODE: trust this computer, once; "
                                 "iphone [URL]: an iPhone, its WebDriverAgent at URL "
                                 "(default http://127.0.0.1:8100, started first when it "
-                                "isn't answering)")
+                                "isn't answering); add NAME [same words]: one of "
+                                "several phones, by name; remove NAME; list")
     phone_cmd.add_argument("--off", action="store_true", help="stop giving the phone out")
     phone_cmd.add_argument("--awake", choices=AWAKE, help="its screen while an agent works "
                            "it: working (default: kept on, then yours back), always, off")
@@ -295,7 +297,7 @@ def _iphone_up(config, found) -> list[str]:
     answering (phone.py): after a restart, `up` brings it back too."""
     from sarathi import phone
 
-    wda = config.phone.wda if config.phone else None
+    wda = next(iter(config.phone.wdas), None) if config.phone else None
     sparsh = next((f for f in found if f.sibling.name == "sparsh"), None)
     if not wda or not phone.is_here(wda) or sparsh is None or sparsh.program is None:
         return []

@@ -163,7 +163,8 @@ function drawPeopleTab() {
     const bits = [agents, accounts,
                   p.max_usd_per_day != null ? `$${p.max_usd_per_day} a day` : "no daily limit",
                   p.telegram.length ? `Telegram ${p.telegram.join(", ")}` : "no Telegram",
-                  p.phone ? "the phone" : null].filter(Boolean);
+                  p.phones ? `phones: ${p.phones.join(", ")}`
+                    : p.phone ? "the phone" : null].filter(Boolean);
     out.push(h("article.card", {},
       h("div.card-head", {}, h("h3", {}, p.id + (p.id === owner ? " (you)" : ""))),
       h("div.meta", {}, bits.join(" · ")),
@@ -201,6 +202,15 @@ function personForm(p, isNew) {
   const receipt = pick([["", "Nothing"], ["cost", "What it cost"], ["remaining", "What's left today"]],
                        p.receipt || "");
   const phone = check(p.phone);
+  // With several phones named (Settings → Sarathi → Your phone), a box
+  // for each: whose each is, said here (Dvara's phones = [...]).
+  const named = sets.data.sarathi?.phone?.named || [];
+  const phoneBoxes = named.map((n) => {
+    // phone = true is every phone: each ticked, so a Save keeps them all
+    const c = check(p.phone || (p.phones || []).includes(n.name));
+    c.dataset.phone = n.name;
+    return h("label.inline", {}, c, ` ${n.name} (${n.kind})`);
+  });
   const telegram = text((p.telegram || []).join(", "), { inputmode: "numeric",
                                                           placeholder: "8675309" });
   const go = button(isNew ? "Add" : "Save", () => {
@@ -212,7 +222,10 @@ function personForm(p, isNew) {
     save(`/api/settings/person/${encodeURIComponent(who)}`, {
       agents, setu: setu.value, setu_manage: setu.value !== "own" && setu.value !== "none"
         && manage.checked, permissions: rung.value || null, max_usd_per_day: numOr(day),
-      max_usd_per_turn: numOr(turn), receipt: receipt.value || null, phone: phone.checked,
+      max_usd_per_turn: numOr(turn), receipt: receipt.value || null,
+      phone: named.length ? false : phone.checked,
+      phones: named.length ? phoneBoxes.map((l) => l.querySelector("input"))
+        .filter((c) => c.checked).map((c) => c.dataset.phone) : null,
       telegram: listOf(telegram) });
   });
   return h("article.card.form", {},
@@ -228,7 +241,10 @@ function personForm(p, isNew) {
     field("Under each answer", receipt),
     field("Telegram ids", telegram, "Their numbers, comma-separated. Someone who messages the " +
           "bot and isn't on the list shows above, to add."),
-    h("label.inline", {}, phone, " Their agents may work the phone on this computer"),
+    named.length
+      ? h("div.field", {}, h("span.label", {}, "Their phones (each is one person's)"),
+          h("div.checks", {}, ...phoneBoxes))
+      : h("label.inline", {}, phone, " Their agents may work the phone on this computer"),
     row(go, button("Cancel", () => { sets.editing = null; drawTabs(); }, "linkish")));
 }
 
@@ -571,7 +587,7 @@ function drawSarathiTab() {
       h("label.inline", {}, samayOn, " Samay: things done later, on a schedule"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
       field("How it runs", road)),
-    phoneCard(phoneOn, phoneAt, wdaAt, awake, s.run.road),
+    phoneCard(phoneOn, phoneAt, wdaAt, awake, s.run.road, s.phone?.named || []),
     h("details.card", {}, h("summary", {}, "Ports"),
       field("Yantra", ports.yantra), field("Samay", ports.samay),
       field("This home page", ports.home), field("Setu's page", ports.setu),
@@ -586,8 +602,9 @@ function drawSarathiTab() {
 // The phone: its settings (saved with the rest), and the steps that reach it
 // from this computer, where its USB cable is. Each step is Sparsh's own,
 // run here; the address that answered is saved (editing.py, phone_step).
-function phoneCard(phoneOn, phoneAt, wdaAt, awake, road) {
+function phoneCard(phoneOn, phoneAt, wdaAt, awake, road, named) {
   const step = (label, body) => button(label, () => save("/api/settings/phone", body()));
+  if (named.length) return namedPhonesCard(phoneOn, named, step);
   const fromCable = step("Turn on Wi-Fi from the cable", () => ({ do: "tcpip" }));
   const connect = step("Connect", () => ({ do: "connect", address: phoneAt.value.trim() }));
   const pairAt = text("", { placeholder: "192.168.1.23:37000" });
@@ -610,7 +627,39 @@ function phoneCard(phoneOn, phoneAt, wdaAt, awake, road) {
         "with pairing code. Type the address and six digits it shows, then Pair. Then put " +
         "the address on the Wireless debugging page itself above, and Connect."),
       field("Pairing address", pairAt), field("Pairing code", code), row(pair)),
-    iphoneSteps(wdaAt, step));
+    iphoneSteps(wdaAt, step), addPhone(step, true));
+}
+
+// Several phones, each by a name ([phone.NAME]): the list, each one's Remove,
+// and Add -- the same steps as one phone, with a name. Whose each is, People
+// says (editing.py, _named_step).
+function namedPhonesCard(phoneOn, named, step) {
+  const rows = named.map((n) => h("div.row", { style: "gap: .75rem; align-items: center" },
+    h("span", {}, h("b", {}, n.name), ` — ${n.kind} at `, h("code", {}, n.where),
+      n.awake ? ` · awake ${n.awake}` : ""),
+    step("Remove", () => ({ do: "remove", name: n.name }))));
+  return h("div.card.form", {}, h("h3", {}, "Your phones"),
+    h("label.inline", {}, phoneOn, " Your phones, through Sparsh"),
+    ...rows, addPhone(step, false));
+}
+
+function addPhone(step, first) {
+  const name = text("", { autocapitalize: "none", placeholder: "nexus" });
+  const at = text("", { placeholder: "192.168.1.23:5555" });
+  const wda = text("", { placeholder: "http://127.0.0.1:8100" });
+  const named = (body) => () => ({ ...body(), name: name.value.trim() });
+  return h("details", first ? {} : { open: true },
+    h("summary", {}, first ? "Several phones? Name each" : "Add a phone"),
+    h("p.meta", {}, "A name is your word for it: lower case, digits and dashes. Then, in " +
+      "People, tick whose it is: each phone is one person's, and their agents reach their " +
+      "phones only."),
+    field("Its name", name),
+    row(step("The phone on the cable", named(() => ({ do: "cable" }))),
+        step("Wi-Fi, from the cable", named(() => ({ do: "tcpip" })))),
+    field("Or its Wi-Fi address", at), row(step("Connect", named(() => ({
+      do: "connect", address: at.value.trim() })))),
+    field("Or an iPhone's WebDriverAgent", wda), row(step("Use the iPhone", named(() => ({
+      do: "iphone", wda: wda.value.trim() })))));
 }
 
 // An iPhone too: WebDriverAgent's address, checked by Sparsh before it's

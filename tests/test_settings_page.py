@@ -225,6 +225,17 @@ def test_pairing_runs_sparsh_and_saves_nothing(with_sparsh):
     assert send(with_sparsh, "/api/settings/phone", {"do": "reboot"})[0] == 400
 
 
+def test_a_phone_with_a_name_is_added_and_the_rest_then_need_one(with_sparsh):
+    status, got = send(with_sparsh, "/api/settings/phone",
+                       {"do": "connect", "address": "192.168.1.160:5555", "name": "nexus"})
+    assert status == 200 and "saved as nexus" in got["said"]
+    assert settings_mod.load().phone.named[0].address == "192.168.1.160:5555"
+    status, got = send(with_sparsh, "/api/settings/phone", {"do": "tcpip"})
+    assert status == 400 and "say which one this is (nexus" in got["detail"]
+    status, got = send(with_sparsh, "/api/settings/phone", {"do": "remove", "name": "nexus"})
+    assert status == 200 and settings_mod.load().phone is None
+
+
 def test_a_person_signed_in_cannot_touch_the_phone(with_sparsh):
     link = with_sparsh.people_book.invite("priya", ["mahen", "priya"], "mahen")
     session = send(with_sparsh, "/api/claim", {"link": link, "password": "a long password"},

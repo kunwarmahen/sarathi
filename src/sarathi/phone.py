@@ -9,6 +9,17 @@
                                          (http://127.0.0.1:8100 when not given)
     sarathi phone --off
 
+Several phones at once, each by a name (``[phone.NAME]``; whose each is,
+Dvara's actors file says with ``phones = ["NAME"]``):
+
+    sarathi phone add NAME               the phone on this computer's cable
+    sarathi phone add NAME tcpip         the same, told to listen over Wi-Fi
+    sarathi phone add NAME ADDRESS       one over Wi-Fi at ADDRESS
+    sarathi phone add NAME SERIAL        one adb sees by its serial (emulator-5554)
+    sarathi phone add NAME iphone [URL]  an iPhone
+    sarathi phone remove NAME
+    sarathi phone list                   the phones written down, and who answers
+
 WIRING, NOT A PHONE. Sparsh knows phones; this only writes ``[phone]``
 into sarathi.toml and runs the Sparsh that ``sarathi status`` found for
 the two things that need the phone in front of you: ``pair`` (the six
@@ -58,7 +69,17 @@ import shutil
 import subprocess
 from dataclasses import replace
 
-from sarathi.config import ConfigError, Phone, load, render, settings_path
+from sarathi.config import (
+    PHONE_NAME,
+    ConfigError,
+    NamedPhone,
+    Phone,
+    load,
+    render,
+    settings_path,
+    with_phone,
+    without_phone,
+)
 from sarathi.siblings import Found
 
 #: How long a pair or a first connect may take.
@@ -197,6 +218,9 @@ def run(args, found: Found) -> int:
               "SARATHI_SPARSH=/path/to/sparsh (see `sarathi status`)")
         return 2
     words = list(args.words)
+    if words[:1] in (["add"], ["remove"], ["list"]) or (
+            not words and config.phone is not None and config.phone.named):
+        return named_step(args, found, config, words)
     if words[:1] == ["iphone"]:
         if len(words) > 2:
             print("error: sarathi phone iphone [URL] -- one address, like " + WDA_HERE)
@@ -323,3 +347,135 @@ def _lets_phone_in(package) -> bool:
         return False
     allow = tools.get("allow")
     return allow is None or any(fnmatch.fnmatch(name, pat) for pat in allow)
+
+
+def cable_serial(found: Found) -> tuple[str | None, str]:
+    """The Android on this computer's USB cable, by its adb serial:
+    (serial, what was found), or (None, why not)."""
+    import json
+
+    code, said = _sparsh(found, "status", "--json")
+    if code != 0:
+        return None, said
+    try:
+        phones = json.loads(said).get("phones") or []
+    except ValueError:
+        return None, "sparsh status didn't print JSON"
+    cabled = [p for p in phones if p.get("state") == "device"
+              and ":" not in str(p.get("serial")) and not str(p.get("serial")).startswith(
+                  ("http", "emulator-"))]
+    if not cabled:
+        return None, ("no Android is on a USB cable here, ready (plugged in, USB "
+                      "debugging on, and allowed on the phone)")
+    if len(cabled) > 1:
+        return None, ("more than one Android is on a cable ("
+                      + ", ".join(p["serial"] for p in cabled) + "): unplug all but one")
+    phone = cabled[0]
+    return phone["serial"], f"{phone['serial']} ({phone.get('model') or '?'}), on the cable"
+
+
+def attached_serial(found: Found, serial: str) -> tuple[str | None, str]:
+    """An adb serial Sparsh sees now (``emulator-5554``, a second cable):
+    (serial, what was found), or (None, why not)."""
+    import json
+
+    code, said = _sparsh(found, "status", "--json")
+    if code != 0:
+        return None, said
+    try:
+        phones = json.loads(said).get("phones") or []
+    except ValueError:
+        return None, "sparsh status didn't print JSON"
+    match = next((p for p in phones if p.get("serial") == serial), None)
+    if match is None or match.get("state") != "device":
+        return None, (f"no phone called {serial} is attached and ready (`sparsh devices` "
+                      "lists them)")
+    return serial, f"{serial} ({match.get('model') or '?'})"
+
+
+def named_step(args, found: Found, config, words: list[str]) -> int:
+    """``sarathi phone add|remove|list`` (the module docstring)."""
+    phone = config.phone
+    if words[:1] == ["remove"]:
+        if len(words) != 2:
+            print("error: sarathi phone remove NAME")
+            return 2
+        try:
+            kept = without_phone(phone, words[1])
+        except ConfigError as exc:
+            print(f"error: {exc}")
+            return 2
+        settings_path().write_text(render(replace(config, phone=kept)))
+        print(f"{words[1]} is no longer in {settings_path()}"
+              + ("" if kept else "; that was the last, so the phone is off"))
+        print("  if it's in someone's phones in Dvara's actors file, take it out there too")
+        print("next: `sarathi down && sarathi up`")
+        return 0
+    if words[:1] != ["add"]:
+        named = phone.named if phone else ()
+        if not named:
+            print("no phones are named; `sarathi phone add NAME ...` names one")
+            return 0
+        import json
+
+        code, said = _sparsh(found, "status", "--json")
+        answering = {p.get("serial") for p in (json.loads(said).get("phones") or [])
+                     if p.get("state") == "device"} if code == 0 else set()
+        for each in named:
+            here = "answers" if each.where in answering else "not answering"
+            awake = f", awake {each.awake}" if each.awake else ""
+            print(f"{each.name}: {each.kind} at {each.where} -- {here}{awake}")
+        return 0
+    if len(words) < 2 or not PHONE_NAME.fullmatch(words[1]):
+        print("error: sarathi phone add NAME [tcpip | ADDRESS | iphone [URL]] -- NAME in "
+              "lower case letters, digits and dashes (nexus, asha-iphone)")
+        return 2
+    name, rest = words[1], words[2:]
+    awake = args.awake
+    if rest[:1] == ["iphone"]:
+        url = rest[1] if len(rest) > 1 else WDA_HERE
+        if is_here(url):
+            print("starting the iPhone, if it isn't running (sparsh iphone)...", flush=True)
+        ok, said = iphone_ready(found, url)
+        if not ok:
+            print(f"error: {said} -- not saved")
+            return 1
+        new = NamedPhone(name=name, wda=url, awake=awake)
+    elif rest == ["tcpip"]:
+        code, address, said = from_cable(found)
+        if code != 0:
+            print(f"error: {said.removeprefix('sparsh: ')}")
+            return 1
+        new = NamedPhone(name=name, address=address, awake=awake)
+    elif rest and ":" not in rest[0] and len(rest) == 1:
+        serial, said = attached_serial(found, rest[0])
+        if serial is None:
+            print(f"error: {said}")
+            return 1
+        new = NamedPhone(name=name, serial=serial, awake=awake)
+    elif rest:
+        code, said = _sparsh(found, "connect", rest[0])
+        if code != 0:
+            print(f"error: {said} -- not saved")
+            return 1
+        new = NamedPhone(name=name, address=rest[0], awake=awake)
+    else:
+        serial, said = cable_serial(found)
+        if serial is None:
+            print(f"error: {said}")
+            return 1
+        new = NamedPhone(name=name, serial=serial, awake=awake)
+    try:
+        kept = with_phone(phone, new)
+    except ConfigError as exc:
+        print(f"error: {exc}")
+        return 2
+    print(said)
+    settings_path().write_text(render(replace(config, phone=kept)))
+    print(f"{name} is in {settings_path()}: {new.kind} at {new.where}")
+    print(f"  give it to someone in Dvara's actors file: phones = [\"{name}\"] under "
+          f"their [actor.…]")
+    if config.road == "podman" and new.serial:
+        print("  the containers reach it through this computer's adb (sarathi-adb)")
+    print("next: `sarathi down && sarathi up`")
+    return 0

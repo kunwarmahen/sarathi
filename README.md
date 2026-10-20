@@ -369,6 +369,29 @@ Keep the iPhone unlocked while an agent works it; `--awake` can't change
 an iPhone's Auto-Lock. The same step is **Use the iPhone** on the
 **Your phone** card ([notes/19](notes/19-an-iphone-too.md)).
 
+**Several phones, each someone's.** Name each phone, and Dvara's
+actors file says whose it is:
+
+```bash
+sarathi phone add nexus                 # the Android on this computer's cable
+sarathi phone add pixel emulator-5554   # one adb sees, by its serial
+sarathi phone add asha 192.168.1.160:5555   # one over Wi-Fi (or: add NAME tcpip)
+sarathi phone add iphone iphone         # an iPhone, its WebDriverAgent
+sarathi phone list                      # each one, and whether it answers
+sarathi phone remove pixel
+```
+
+Each is a `[phone.NAME]` table with one of `serial`, `address` or
+`wda` (and its own `awake`), handed to Sparsh as `SPARSH_PHONES`, an
+iPhone at `host.containers.internal` inside the containers. In Dvara's
+actors file `phones = ["nexus"]` gives a person theirs, and their agents
+reach their phones and no others. The same is **Settings → Sarathi →
+Your phones** (each phone, Remove, Add a phone) and a box per phone
+under each person in **Settings → People**. A phone already written
+down without a name is named first (`sarathi phone add iphone iphone
+http://127.0.0.1:8100`), and one phone under two names is refused
+([notes/25](notes/25-several-phones.md)).
+
 **After the phone restarts.** A phone switched off and on stops
 listening over Wi-Fi, and its address can change, so Yantra's phone
 panel lists it as *not answering over Wi-Fi* with what to do. Plug it in
@@ -932,7 +955,8 @@ src/sarathi/
                 agent works it, --awake  (notes/10); `tcpip`, Wi-Fi turned
                 on from the cable and the address saved  (notes/17); an
                 iPhone's WebDriverAgent, `iphone`, beside the Android, the
-                plugged-in one used  (notes/19, notes/20)
+                plugged-in one used  (notes/19, notes/20); several by name,
+                `add`, `remove`, `list`  (notes/25)
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
                 the phone's card, which opens Yantra's page  (notes/07); the
@@ -961,7 +985,7 @@ src/sarathi/
                 status [--json] | home | invite | people
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
-  test_pages_up.py  test_phone.py  test_names.py  test_smritikosh.py  test_people.py
+  test_pages_up.py  test_phone.py  test_phones_named.py  test_names.py  test_smritikosh.py  test_people.py
   test_house.py
 ```
 

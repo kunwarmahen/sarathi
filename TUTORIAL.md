@@ -1138,6 +1138,40 @@ with nothing to change.
      locked iPhone is always asked about. `podman exec sarathi-samay
      samay rm <id>` when you're done, or it runs every morning.
 
+**Several phones, each someone's.** An old Android kept for the helper,
+your own iPhone, a phone of someone else in the house: name each, then
+say whose it is.
+
+1. Name them, each plugged in (or reached) when you name it:
+
+   ```bash
+   sarathi phone add nexus                  # the Android on the cable
+   sarathi phone add iphone iphone          # the iPhone, as above
+   sarathi phone list
+   ```
+
+   You should see each with *answers*:
+
+   ```
+   nexus: Android at 84B7N16128001616 -- answers
+   iphone: iPhone at http://127.0.0.1:8100 -- answers
+   ```
+
+   If an iPhone was already saved without a name, `add nexus` says so
+   and prints the command that names it; run that first.
+
+2. In **Settings → People**, open each person with **Change** and tick
+   their phones. Each phone is one person's: one ticked for two people
+   is refused. **Apply** (or `sarathi down && sarathi up`).
+
+3. Try it: *"Which phones can you work?"* on Telegram. Each person's
+   helper names only their own. `/phone` shows the screen of your first
+   phone and lists the others (`/phone iphone`). A schedule for someone
+   with several phones says which: *"every morning at 8, on my iphone,
+   open Settings and read the Battery row"*. One that doesn't is
+   skipped with a sentence saying so, never run on whichever phone
+   answered.
+
 ---
 
 ## Step 7 (optional) · A memory that finds things by meaning
