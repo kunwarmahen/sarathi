@@ -9,13 +9,15 @@ job and stand on their own:
 | **Yantra** (यन्त्र, "machine") | the agent itself |
 | **Setu** (सेतु, "bridge") | your accounts — Gmail, Home Assistant, X — signed in once, the key never shown to the model |
 | **Samay** (समय, "time") | work done later, on a schedule, with a record of every run |
+| **Prahari** (प्रहरी, "the sentinel") | tells your agent when something happens — a price, a mail, a phone's notification — looking with no model |
 | **Dvara** (द्वार, "door") | many people and many agents behind one always-on service, e.g. on Telegram |
 | **Sparsh** (स्पर्श, "touch") | your phone, worked by the agent from a numbered list of what's on its screen, with a yes before Send |
 | **Smritikosh** (स्मृतिकोश, "store of memories") | a memory store an agent can use instead of Yantra's own |
 
 Each is useful alone. Together they are a helper that knows your
-accounts, remembers you, keeps time and works your phone — but only if
-you know six names, six installs, and how they find each other. **Sarathi is the
+accounts, remembers you, keeps time, keeps watch and works your phone —
+but only if you know seven names, seven installs, and how they find each
+other. **Sarathi is the
 part you install.** It finds the others, asks you once which model
 should answer, and starts them together.
 
@@ -119,6 +121,10 @@ port = 8321
 on = true
 port = 8780
 
+[prahari]
+on = true              # started when Prahari is on this computer; optional
+port = 8782
+
 [memory]
 via = "local"          # or "smritikosh", once `sarathi smritikosh` set it up
 ```
@@ -142,6 +148,7 @@ Yantra shortens a long chat much earlier than it needs to.
 ```
 $ sarathi up
 samay      up at http://127.0.0.1:8780/#token=…  (pid 3324159)
+prahari    up at http://127.0.0.1:8782/#token=…  (pid 3324161)
 yantra     up at http://127.0.0.1:8321/  (pid 3324163)
 setu       up at http://127.0.0.1:8775/#token=…  (pid 3324170)
 sarathi    up at http://127.0.0.1:8760/#token=…  (pid 3324178)
@@ -153,8 +160,9 @@ address to open, `dvara      up on 8770 (no page here; yours is
 dvara-page, below)`, because Dvara's port answers Samay and its own
 page, not a browser ([notes/09](notes/09-each-by-its-own-name.md)).
 
-That starts **Samay's clock** and **Yantra's page**, in
-that order, and then the pages you look at: **Setu's page** (your
+That starts **Samay's clock**, **Prahari's watch** (when Prahari is on
+this computer) and **Yantra's page**, in that order, and then the pages
+you look at: **Setu's page** (your
 accounts), **Dvara's owner page** when Dvara is on, and **the home
 page** that links them all. Bookmark the `sarathi` address. The page asks once, at start-up, whether Samay runs, so
 Samay has to be there first. With `[memory] via = "smritikosh"`,
@@ -174,6 +182,34 @@ attached and you say to use it (the phone panel's **use this phone**).
 No phone at the start means no phone tools, the same as a Yantra you
 start by hand ([notes/07](notes/07-the-phone-stays-on-the-cable.md)).
 
+### Tell me when: Prahari
+
+With [Prahari](https://github.com/kunwarmahen/prahari) beside the other
+checkouts (or on your `PATH`), `up` starts it too, between the clock and
+the page, and your agent can offer a watch: *"tell me when ALAB drops
+under $50"*, *"tell me when a mail from the bank comes"*. Prahari looks
+with no model, one tool call every so often, and the news comes to your
+chat through Dvara like a schedule's answer. It's optional: without it,
+nothing about it is started, and `[prahari] on = false` turns it off
+when it is here.
+
+What `up` wires for you:
+
+* **Yantra's page** gets `--prahari`, so the agent there can offer
+  watches, and Prahari's own page is on the home page under **Your pages**.
+* **Prahari** gets the door's address, token and owner (`PRAHARI_DVARA_URL`,
+  `PRAHARI_DVARA_TOKEN`, `PRAHARI_DVARA_ACTOR`), the same three Samay
+  gets, so what a watch sees reaches you.
+* **Dvara** gets `--prahari <it> --prahari-for <dvara.owner>`. A watch
+  looks with this computer's accounts, so it's yours alone: the people in
+  your house don't get Prahari's tools in their chats (Dvara's notes/55).
+* **The inlet.** Prahari's page shows an address and a key that can only
+  knock: an Android phone's MacroDroid (a WhatsApp notification, say), a
+  Home Assistant automation or a webhook sends there, and a watch that
+  listens decides. With `[house]`, the inlet is on the house address too,
+  and the firewall line names its port (8782)
+  ([notes/26](notes/26-the-watch-started-with-the-rest.md)).
+
 ### Every page on your home network: `[house]`
 
 Each piece listens on this computer alone unless you say otherwise. To
@@ -187,7 +223,8 @@ address = "192.168.1.44"           # optional: what the name finds
 ```
 
 `sarathi up` then publishes every page on that address too: Yantra's,
-Samay's, Dvara's, Setu's and its sign-in windows, the home page, and
+Samay's, Prahari's (with its inlet, where a phone app knocks), Dvara's,
+Setu's and its sign-in windows, the home page, and
 Smritikosh's dashboard (and ntfy, as before). What isn't a page stays on
 this computer: Dvara's own port, Smritikosh's server and its databases,
 which only the pieces talk to.
@@ -461,6 +498,7 @@ in that order:
 ```
 dvara  dvara --root ~/dvara/agents --actors ~/dvara/actors.toml --state ~/dvara/state
              --ask --provider <model.provider> --model <model.model> --samay <samay>
+             [--prahari <prahari> --prahari-for <dvara.owner>]
              serve --port <dvara.port> --web [--telegram <dvara.telegram>]
 ```
 
@@ -664,8 +702,9 @@ takes the units out, so nothing starts at login.
 
 What goes into the containers:
 
-* **One image holding Yantra, Setu and Samay.** They call each other as
-  programs, so each container needs all of them. `sarathi image` builds
+* **One image holding Yantra, Setu and Samay** (and Dvara, Sparsh and
+  Prahari when their checkouts are beside Sarathi's). They call each
+  other as programs, so each container needs all of them. `sarathi image` builds
   it from the **committed** code of the checkouts beside Sarathi, and
   names any uncommitted changes it left out.
 * **A browser, and the wall around a connector.** Google Chrome at
@@ -679,8 +718,8 @@ What goes into the containers:
   build which Chrome is here, so that step isn't taken from the cache;
   [notes/05](notes/05-a-browser-in-the-image.md)). Google ships
   Chrome for amd64 only; elsewhere the image gets Debian's Chromium.
-* **Your data, at the same paths.** Samay's schedules, Setu's sign-ins
-  and Yantra's memory are mounted from where they are on your machine,
+* **Your data, at the same paths.** Samay's schedules, Prahari's
+  watches, Setu's sign-ins and Yantra's memory are mounted from where they are on your machine,
   at the same paths, and the containers run as you. Nothing is copied,
   and the process road and the Podman road see the same things.
 * **Smritikosh, when your memories are kept there.** Its database runs
@@ -725,6 +764,9 @@ setu        ~/.local/bin/setu  (path)
 samay       ~/agent/samay/.venv/bin/samay  (beside)
             work done later, with receipts
             not running (start it: samay serve); schedules: 0 active, 0 paused
+prahari     ~/agent/prahari/.venv/bin/prahari  (beside)
+            the watch: tells your agent when something happens
+            watching at http://127.0.0.1:8782/; watches: 2 active (1 at the inlet), 0 paused
 dvara       ~/agent/dvara/.venv/bin/dvara  (beside)
             many people and agents behind one service
             door serving at http://127.0.0.1:8770 (dvara serve); 3 agents, 2 people
@@ -791,7 +833,8 @@ and **← Back to the chat** or Escape goes back
 no chat, and the page opens on Your pages.
 
 **Your pages** links to each program's own page: Yantra's, Samay's,
-Setu's (`setu serve`) and, with Dvara on, Dvara's (`dvara page`).
+Prahari's (when it's here), Setu's (`setu serve`) and, with Dvara on,
+Dvara's (`dvara page`).
 With Sparsh found (on the Podman road, once `[phone] address` or `wda` is set), a **Your phone** card
 opens Yantra's page, where the phone panel shows the phone and what the
 agent did on it; Sparsh has no page of its own. Each
@@ -922,7 +965,7 @@ In this order; the first hit wins:
 
 | Rule | Where |
 |---|---|
-| `env` | a path you set: `SARATHI_YANTRA`, `SARATHI_SETU`, `SARATHI_SAMAY`, `SARATHI_DVARA`, `SARATHI_SPARSH`, `SARATHI_SMRITIKOSH` |
+| `env` | a path you set: `SARATHI_YANTRA`, `SARATHI_SETU`, `SARATHI_SAMAY`, `SARATHI_PRAHARI`, `SARATHI_DVARA`, `SARATHI_SPARSH`, `SARATHI_SMRITIKOSH` |
 | `path` | what your shell would run |
 | `sarathi.toml` | Smritikosh, where `sarathi smritikosh` set it up (`[smritikosh] checkout`) |
 | its database | Smritikosh only, while `sarathi smritikosh` sets it up: with its database container already here, the checkout whose `.env` holds that container's user and password (beside, the folder above, `~/src`, `~/Documents`, home). Nothing is cloned around an existing database |
@@ -944,7 +987,7 @@ In this order; the first hit wins:
 | `~/.local/share/sarathi/` | `smritikosh-accounts.json` the passwords of the Smritikosh accounts Sarathi made, and `mcp/` how Yantra, Samay's runs and Dvara start `smritikosh-mcp` (no key in it); `home.token` the home page's key (yours alone), `people.json` the people in the house's sign-ins (hashes only; yours alone), `work/` where the page starts, `run/` what `up` started, `logs/` what each printed (`$SARATHI_STATE`); `run/` and `logs/` are yours alone, since Samay's page token appears in them |
 
 Each sibling keeps its own data where it always has. Samay's schedules
-are still in `~/.samay`, and Setu's sign-ins are still where Setu put
+are still in `~/.samay`, Prahari's watches in `~/.prahari`, and Setu's sign-ins are still where Setu put
 them. Sarathi starts the pieces; it doesn't move their files.
 
 ## The source
@@ -962,7 +1005,8 @@ src/sarathi/
   services.py   sarathi up / down: start Samay and the page, know
                 which are ours  (notes/02); and the pages  (notes/06);
                 each line by its project's name  (notes/09); ntfy before
-                Dvara, for notices on phones  (notes/15)
+                Dvara, for notices on phones  (notes/15); Prahari beside
+                the clock, wired to the door, the owner's alone  (notes/26)
   podman.py     the same on the podman road: the image, the Quadlet
                 units, systemd  (notes/03); Dvara's unit  (notes/04);
                 its streamed window, and the image's browser  (notes/05);
@@ -1009,7 +1053,7 @@ src/sarathi/
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
   test_pages_up.py  test_phone.py  test_phones_named.py  test_names.py  test_smritikosh.py  test_people.py
-  test_house.py
+  test_house.py  test_prahari.py
 ```
 
 ## Status

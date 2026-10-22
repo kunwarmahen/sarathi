@@ -1,9 +1,9 @@
-"""Six programs, found -- and each one asked what it is doing.
+"""Seven programs, found -- and each one asked what it is doing.
 
 Sarathi puts together projects that were each built to stand alone:
 Yantra (the agent), Setu (your accounts), Dvara (many people behind one
-door), Samay (the clock), Sparsh (your phone) and Smritikosh (a memory
-store). Before it can
+door), Samay (the clock), Prahari (the watch), Sparsh (your phone) and
+Smritikosh (a memory store). Before it can
 start any of them it has to answer a plainer question: which of them are
 on this machine, where, and what does each say about itself?
 
@@ -30,7 +30,8 @@ The first hit wins, and the answer says which rule found it, so "why is
 it running THAT one?" always has an answer on screen.
 
 ONLY WHAT THE SIBLING SAYS. Setu knows its connections, Samay knows
-whether its clock is running, Dvara knows whether the door is serving
+whether its clock is running, Prahari whether it is watching, Dvara
+knows whether the door is serving
 (asked of its folders as sarathi.toml names them, so the answer is about
 the door Sarathi starts), Sparsh knows which phones it can reach, and
 Yantra knows its release and which model
@@ -71,6 +72,8 @@ SIBLINGS: tuple[Sibling, ...] = (
             status_format="setu.status.v1"),
     Sibling("samay", "samay", "work done later, with receipts",
             status_format="samay.status.v1"),
+    Sibling("prahari", "prahari", "the watch: tells your agent when something happens",
+            status_format="prahari.status.v1", optional=True),
     Sibling("dvara", "dvara", "many people and agents behind one service",
             status_format="dvara.status.v1", optional=True),
     Sibling("sparsh", "sparsh", "the hands: your phone, worked by number, with a yes "
@@ -179,6 +182,15 @@ def _say_samay(data: dict[str, Any]) -> str:
     return f"not running (start it: samay serve); schedules: {tally}"
 
 
+def _say_prahari(data: dict[str, Any]) -> str:
+    counts = data.get("watches") or {}
+    tally = (f"{counts.get('active', 0)} active ({counts.get('listening', 0)} at the "
+             f"inlet), {counts.get('paused', 0)} paused")
+    if data.get("serving"):
+        return f"watching at {data.get('url') or '(no page)'}; watches: {tally}"
+    return f"not running (start it: prahari serve); watches: {tally}"
+
+
 def _say_dvara(data: dict[str, Any]) -> str:
     running = data.get("running") or {}
     agents = len(data.get("agents") or [])
@@ -250,14 +262,15 @@ def _say_yantra(data: dict[str, Any]) -> str:
         said += f"; would ask {data['provider']} for {data.get('model')}"
     # Only what it does NOT find: Setu's and Samay's own lines already say
     # what they are, and a Yantra that cannot see one is the news.
-    for name in ("setu", "samay"):
+    for name in ("setu", "samay", "prahari"):
         if isinstance(data.get(name), dict) and not data[name].get("found"):
             said += f"; finds no {name}"
     problems = data.get("problems") or []
     return said + "".join(f"; {p}" for p in problems)
 
 
-SAY = {"yantra": _say_yantra, "setu": _say_setu, "samay": _say_samay, "dvara": _say_dvara,
+SAY = {"yantra": _say_yantra, "setu": _say_setu, "samay": _say_samay,
+       "prahari": _say_prahari, "dvara": _say_dvara,
        "sparsh": _say_sparsh}
 
 

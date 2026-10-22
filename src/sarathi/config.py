@@ -66,6 +66,8 @@ KEY_NAMES = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 
 DEFAULT_WEB_PORT = 8321
 DEFAULT_CLOCK_PORT = 8780
+#: Prahari: its page, its API and its inlet (what a phone app knocks on).
+DEFAULT_WATCH_PORT = 8782
 DEFAULT_DOOR_PORT = 8770
 #: ntfy, the push server Dvara's notices reach phones through (`dvara.ntfy`).
 DEFAULT_NTFY_PORT = 8793
@@ -83,6 +85,7 @@ KNOWN: dict[str, set[str]] = {
     "model": {"provider", "model", "base_url", "context_window"},
     "yantra": {"port"},
     "samay": {"on", "port"},
+    "prahari": {"on", "port"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner", "ntfy", "ntfy_port"},
@@ -275,6 +278,9 @@ class Config:
     smritikosh: Smritikosh = Smritikosh()
     #: ``[house]``: every server on the home network too, links by name.
     house: House | None = None
+    #: Prahari, the watch: on unless sarathi.toml says ``[prahari] on = false``.
+    watch_on: bool = True
+    watch_port: int = DEFAULT_WATCH_PORT
 
     @property
     def remembers_in_smritikosh(self) -> bool:
@@ -442,6 +448,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     clock = data.get("samay", {})
     if not isinstance(clock.get("on", True), bool):
         raise ConfigError(f"{where}: samay.on must be true or false")
+    watch = data.get("prahari", {})
+    if not isinstance(watch.get("on", True), bool):
+        raise ConfigError(f"{where}: prahari.on must be true or false")
     road = data.get("run", {}).get("road", "process")
     if road not in ROADS:
         raise ConfigError(f"{where}: run.road must be one of {', '.join(ROADS)}, not {road!r}")
@@ -545,7 +554,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   context_window=window,
                   web_port=_port(data.get("yantra", {}), "port", DEFAULT_WEB_PORT, "yantra"),
                   clock_on=clock.get("on", True),
-                  clock_port=_port(clock, "port", DEFAULT_CLOCK_PORT, "samay"))
+                  clock_port=_port(clock, "port", DEFAULT_CLOCK_PORT, "samay"),
+                  watch_on=watch.get("on", True),
+                  watch_port=_port(watch, "port", DEFAULT_WATCH_PORT, "prahari"))
 
 
 def load() -> Config:
@@ -589,6 +600,13 @@ port = {config.web_port}
 on = {"true" if config.clock_on else "false"}
 port = {config.clock_port}
 
+# Prahari: tells your agent when something happens (a price, a mail, a
+# phone's notification), looking with no model. Its page also has the
+# inlet, where a phone app or a webhook knocks.
+[prahari]
+on = {"true" if config.watch_on else "false"}
+port = {config.watch_port}
+
 # How `sarathi up` starts them: process (plain programs on this machine)
 # | podman (containers kept running by systemd; build with `sarathi image`).
 [run]
@@ -596,7 +614,7 @@ road = "{config.road}"
 
 # Each program's own page, started by `sarathi up`: Setu's (your accounts),
 # Dvara's (when Dvara is on), and Sarathi's own, which links them all
-# with Yantra's and Samay's -- bookmark that one.
+# with Yantra's, Samay's and Prahari's -- bookmark that one.
 [pages]
 on = {"true" if config.pages.on else "false"}
 sarathi_port = {config.pages.home_port}
@@ -611,7 +629,8 @@ dvara_port = {config.pages.door_port}
 
 def _render_house(house: House | None) -> str:
     head = """# Every page on your home network too, by one name: Yantra's, Samay's,
-# Dvara's, Setu's, this home page and Smritikosh's dashboard (what only
+# Prahari's (and its inlet, for a phone app), Dvara's, Setu's, this home
+# page and Smritikosh's dashboard (what only
 # the programs talk to stays here). name: what your other devices call this computer (Avahi's
 # "<hostname>.local", or your router's name for it); every link says it.
 # address: the address they are published on; unset, what the name finds.

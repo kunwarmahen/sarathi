@@ -28,7 +28,7 @@
 
 ``init`` takes flags for everything it asks (``--provider``, ``--model``,
 ``--base-url``, ``--yantra-port``, ``--samay-port``, ``--no-samay``,
-``--memory``), so it
+``--prahari-port``, ``--no-prahari``, ``--memory``), so it
 can run with nobody there.
 
 ``status`` exits 0 when every piece Sarathi needs is found and readable,
@@ -76,6 +76,10 @@ def build_parser() -> argparse.ArgumentParser:
                       help="Samay's page")
     init.add_argument("--no-samay", "--no-clock", dest="no_clock", action="store_true",
                       help="do not start Samay")
+    init.add_argument("--prahari-port", dest="watch_port", type=int,
+                      help="Prahari's page and its inlet")
+    init.add_argument("--no-prahari", dest="no_watch", action="store_true",
+                      help="do not start Prahari")
     init.add_argument("--podman", action="store_true",
                       help="start things as Podman containers (see `sarathi image`)")
     init.add_argument("--memory", choices=("local", "smritikosh"),
@@ -273,19 +277,22 @@ def _settings_or_none():
 def _yantra_env(config) -> dict[str, str]:
     """What ``up`` gives Yantra, so its status is about that Yantra: the
     model settings (left out when there is no key to give it yet -- the
-    missing key is ``up``'s to report), and the Setu and Samay programs
-    ``up`` names with --setu, --samay and --sparsh, as the variables that
-    say the same (``off`` for a clock turned off)."""
+    missing key is ``up``'s to report), and the Setu, Samay and Prahari
+    programs ``up`` names with --setu, --samay, --prahari and --sparsh, as
+    the variables that say the same (``off`` for one turned off)."""
     try:
         env = services.model_env(config)
     except ConfigError:
         env = {}
-    for name, var in (("setu", "YANTRA_SETU"), ("samay", "YANTRA_SAMAY")):
+    for name, var in (("setu", "YANTRA_SETU"), ("samay", "YANTRA_SAMAY"),
+                      ("prahari", "YANTRA_PRAHARI")):
         hit = locate(next(s for s in SIBLINGS if s.name == name))
         if hit is not None:
             env[var] = hit[0]
     if not config.clock_on:
         env["YANTRA_SAMAY"] = "off"
+    if not config.watch_on:
+        env["YANTRA_PRAHARI"] = "off"
     hit = locate(next(s for s in SIBLINGS if s.name == "sparsh"))
     if hit is not None:
         env["YANTRA_SPARSH"] = f"auto:{hit[0]}"

@@ -635,7 +635,7 @@ def test_with_ufw_on_up_names_the_house_ports_and_the_command_to_open_them(
     long ago for 8790 alone, and nothing anywhere said so."""
     with_door_secrets(world)
     monkeypatch.setattr(podman, "preflight", lambda config: None)
-    monkeypatch.setattr(podman.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(podman.shutil, "which", lambda name, **_: f"/usr/bin/{name}")
     (world / "ufw.conf").write_text("# comment\nENABLED=yes\nLOGLEVEL=low\n")
     host.answers[("ip", "-o", "addr")] = subprocess.CompletedProcess([], 0, IP_ADDR, "")
     config = Config("ollama", road="podman", door=Door(window_host="192.168.1.44"),

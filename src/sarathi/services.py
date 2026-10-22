@@ -17,6 +17,10 @@ files:
                    [phone] address, SPARSH_CONNECT=<address> to both
     samay   samay serve --port <samay.port>
                    with SAMAY_YANTRA=<the yantra Sarathi found>
+    prahari prahari serve --port <prahari.port>
+                   with PRAHARI_YANTRA=<the yantra Sarathi found>; then Yantra
+                   gets --prahari <it>, and Dvara --prahari <it> --prahari-for
+                   <dvara.owner> (a watch looks with this computer's accounts)
     dvara   dvara --root/--actors/--state <dvara.*> --ask --samay <samay>
                   [--sparsh <sparsh>, with [phone] on]
                   serve --port <dvara.port> --web [--telegram <dvara.telegram>]
@@ -56,7 +60,10 @@ otherwise copy by hand into two places and get wrong in one. And
 Yantra's page, runs here but its answer still reaches you through the
 door -- on Telegram, and on the home page's chat (``--web``). The order
 is clock, door, page -- the door, like the page, asks once at start-up
-whether the clock is running.
+whether the clock is running. Prahari is told the same three things
+(``PRAHARI_DVARA_URL``, ``PRAHARI_DVARA_TOKEN``, ``PRAHARI_DVARA_ACTOR``):
+what a watch sees reaches you through the door, and it starts beside the
+clock, before the door and the page that ask about it.
 
 Both get the same model settings (``YANTRA_PROVIDER``, ``<PROVIDER>_MODEL``,
 ``<PROVIDER>_CONTEXT_WINDOW`` and so on, plus secrets.env), so a scheduled
@@ -191,6 +198,7 @@ def model_env(config: Config, environ: dict[str, str] | None = None) -> dict[str
 def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[str]]:
     """What `up` would start, and lines about what it will not."""
     yantra, setu, samay = found["yantra"], found["setu"], found["samay"]
+    prahari = found.get("prahari")
     if yantra.program is None:
         raise ConfigError("yantra was not found, so there is nothing to start "
                           "(see `sarathi status`)")
@@ -203,6 +211,12 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
                      "(see `sarathi status`)")
     elif not config.clock_on:
         notes.append(f"{'samay':<{WIDTH}} off in sarathi.toml")
+    watch_on = config.watch_on and prahari is not None and prahari.program is not None
+    if config.watch_on and not watch_on and prahari is not None:
+        notes.append(f"{'prahari':<{WIDTH}} not started: prahari was not found "
+                     "(see `sarathi status`; it's optional)")
+    elif not config.watch_on:
+        notes.append(f"{'prahari':<{WIDTH}} off in sarathi.toml")
 
     # The clock starts first: the page asks Samay whether its clock runs
     # once, at start-up, and tells the model what it heard for the whole
@@ -217,7 +231,8 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
     push = ntfy_service(config, notes)
     if push is not None:
         services.append(push)
-    door = door_service(config, found, env, clock_on, notes, ntfy=push is not None)
+    door = door_service(config, found, env, clock_on, notes, ntfy=push is not None,
+                        watch_on=watch_on)
     meet = door_env(config) if door is not None else {}
     memory_env: dict[str, str] = {}
     run_yantra = [yantra.program]
@@ -244,12 +259,28 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
              "SAMAY_YANTRA_HOME": str(work_dir()), **meet, **memory_env,
              **phone_env(config)},
             says_address="page: "))
+    if watch_on:
+        # every look is `yantra --call` with your accounts and memory, as the
+        # page's own; what it sees reaches you through the door
+        services.append(Service(
+            "prahari", "prahari", [prahari.program, "serve", "--host", listen,
+                                   "--port", str(config.watch_port)],
+            config.watch_port,
+            {**env, "PRAHARI_YANTRA": shlex.join(run_yantra),
+             **({"PRAHARI_PUBLIC_URL": config.link(config.watch_port)} if config.house
+                else {}),
+             "PRAHARI_YANTRA_HOME": str(work_dir()), **watch_door_env(meet), **memory_env},
+            says_address="page: "))
     if door is not None:
         services.append(door)
     page_argv = [yantra.program, "--web", "--host", listen, "--port", str(config.web_port)]
     if setu.program is not None:
         page_argv += ["--setu", setu.program]
     page_argv += ["--samay", samay.program] if clock_on else ["--no-samay"]
+    if watch_on:
+        page_argv += ["--prahari", prahari.program]
+    elif not config.watch_on:
+        page_argv += ["--no-prahari"]
     if found.get("sparsh") is not None and found["sparsh"].program is not None:
         # auto, not on: no phone at the start still means no phone tools
         # until the person says to use one (Yantra's phone panel).
@@ -332,7 +363,8 @@ OLD_NAMES = {"clock": "samay", "door": "dvara", "page": "yantra", "owner": "dvar
              "home": "sarathi"}
 
 #: The sarathi.toml key that moves each piece's port, for "change it" lines.
-PORT_SETTINGS = {"yantra": "yantra.port", "samay": "samay.port", "dvara": "dvara.port",
+PORT_SETTINGS = {"yantra": "yantra.port", "samay": "samay.port",
+                 "prahari": "prahari.port", "dvara": "dvara.port",
                  "setu": "pages.setu_port", "dvara-page": "pages.dvara_port",
                  "sarathi": "pages.sarathi_port", "smritikosh": "smritikosh.port",
                  "smritikosh-db": "smritikosh.db_port",
@@ -400,6 +432,24 @@ def door_env(config: Config, at: str | None = None) -> dict[str, str]:
             "SAMAY_DVARA_TOKEN": token, "SAMAY_DVARA_ACTOR": config.door.owner}
 
 
+def watching(config: Config, env: dict[str, str] | None = None) -> bool:
+    """Prahari is on in sarathi.toml AND on this machine (found the way
+    `status` finds it). It's optional: with no checkout and nothing on
+    PATH, nothing about it is started, published or passed."""
+    from sarathi.siblings import SIBLINGS, locate
+
+    if not config.watch_on:
+        return False
+    return locate(next(s for s in SIBLINGS if s.name == "prahari"), env) is not None
+
+
+def watch_door_env(meet: dict[str, str]) -> dict[str, str]:
+    """The door's address, token and owner, in Prahari's own names: the
+    same three the clock gets (``door_env``), so a watch's news reaches
+    you as a schedule's answer does."""
+    return {key.replace("SAMAY_", "PRAHARI_", 1): value for key, value in meet.items()}
+
+
 def door_problems(config: Config, found: dict[str, Found] | None) -> list[str]:
     """Why the door cannot start, in words -- before anything is started.
     ``found`` None: dvara is not looked for on this machine (it is in the
@@ -461,8 +511,8 @@ def ntfy_click(config: Config) -> dict[str, str]:
 
 
 def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
-                 clock_on: bool, notes: list[str], *, ntfy: bool = False
-                 ) -> Service | None:
+                 clock_on: bool, notes: list[str], *, ntfy: bool = False,
+                 watch_on: bool = False) -> Service | None:
     door = config.door
     if door is None:
         return None
@@ -478,6 +528,10 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     argv += ["--provider", config.provider] + (["--model", config.model] if config.model
                                                else [])
     argv += ["--samay", samay] if clock_on and samay else ["--samay", "off"]
+    prahari = found["prahari"].program if "prahari" in found else None
+    # a watch looks with this computer's accounts: the owner's alone (dvara's notes/55)
+    if watch_on and prahari:
+        argv += ["--prahari", prahari, "--prahari-for", door.owner]
     if config.remembers_in_smritikosh and config.smritikosh.path() is not None:
         # each person's turns, with each person's own key (memory.json)
         argv += ["--memory", str(memory_files(config)[1])]
@@ -499,7 +553,8 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     secrets = read_secrets()
     tokens = {k: secrets[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in secrets}
     return Service("dvara", "dvara", argv, door.port,
-                   {**env, **tokens, **door_env(config), **door.window_env(),
+                   {**env, **tokens, **door_env(config),
+                    **watch_door_env(door_env(config)), **door.window_env(),
                     # with [house], a sign-in window (Gmail's page too) on it
                     **(config.setu_window_env() if config.house is not None else {}),
                     **config.people_env(), **phone_env(config),
@@ -618,6 +673,17 @@ def _clock_elsewhere(samay: Found) -> str | None:
     return (status.get("url") or "(no page)") if status.get("serving") else None
 
 
+def _watch_elsewhere(prahari: Found | None) -> str | None:
+    """The address of a Prahari Sarathi did not start, if one is watching."""
+    if prahari is None or prahari.program is None:
+        return None
+    try:
+        status = read_status(prahari.program, "prahari.status.v1")
+    except ValueError:
+        return None
+    return (status.get("url") or "(no page)") if status.get("serving") else None
+
+
 def start(service: Service, owner: bool = False) -> str:
     """Start one piece and wait for it to answer; one line saying how it went."""
     work_dir().mkdir(parents=True, exist_ok=True)
@@ -712,6 +778,12 @@ def up(config: Config, found: dict[str, Found]) -> tuple[list[str], bool]:
                 lines.append(f"{'samay':<{WIDTH}} already running at {elsewhere}, "
                              "not started by "
                              "Sarathi: left alone")
+                continue
+        if service.name == "prahari":
+            elsewhere = _watch_elsewhere(found.get("prahari"))
+            if elsewhere:
+                lines.append(f"{'prahari':<{WIDTH}} already watching at {elsewhere}, not "
+                             "started by Sarathi: left alone")
                 continue
         if answers(service.port, host=service.host):
             ok = False

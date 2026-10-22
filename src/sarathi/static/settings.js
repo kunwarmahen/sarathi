@@ -535,6 +535,7 @@ function drawSarathiTab() {
   const base = text(s.model.base_url || "", { placeholder: "the usual address" });
   const ctx = text(s.model.context_window || "", { inputmode: "numeric", placeholder: "8192" });
   const samayOn = check(s.samay.on);
+  const prahariOn = check(s.prahari ? s.prahari.on : true);
   const road = pick([["process", "Plain programs"], ["podman", "Containers (Podman)"]], s.run.road);
   const pagesOn = check(s.pages.on);
   const dv = s.dvara || {};
@@ -552,7 +553,8 @@ function drawSarathiTab() {
   const awake = pick([["", "Kept on while working"], ...s.awake.map((a) => [a, a])],
                      s.phone?.awake || "");
   const ports = {
-    yantra: text(s.yantra.port), samay: text(s.samay.port), home: text(s.pages.sarathi_port),
+    yantra: text(s.yantra.port), samay: text(s.samay.port),
+    prahari: text(s.prahari ? s.prahari.port : 8782), home: text(s.pages.sarathi_port),
     setu: text(s.pages.setu_port), dvaraPage: text(s.pages.dvara_port),
     dvara: text(dv.port || 8770), ntfy: text(dv.ntfy_port || 8793),
   };
@@ -561,6 +563,7 @@ function drawSarathiTab() {
              context_window: ctx.value.trim() || null },
     yantra: { port: ports.yantra.value },
     samay: { on: samayOn.checked, port: ports.samay.value },
+    prahari: { on: prahariOn.checked, port: ports.prahari.value },
     run: { road: road.value },
     pages: { on: pagesOn.checked, sarathi_port: ports.home.value, setu_port: ports.setu.value,
              dvara_port: ports.dvaraPage.value },
@@ -594,11 +597,13 @@ function drawSarathiTab() {
       h("p.meta", {}, "Yantra's page then wants its token; the Yantra card here carries it.")),
     h("div.card.form", {}, h("h3", {}, "The rest"),
       h("label.inline", {}, samayOn, " Samay: things done later, on a schedule"),
+      h("label.inline", {}, prahariOn, " Prahari: tells you when something happens"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
       field("How it runs", road)),
     phoneCard(phoneOn, phoneAt, wdaAt, awake, s.run.road, s.phone?.named || []),
     h("details.card", {}, h("summary", {}, "Ports"),
       field("Yantra", ports.yantra), field("Samay", ports.samay),
+      field("Prahari (its page and its inlet)", ports.prahari),
       field("This home page", ports.home), field("Setu's page", ports.setu),
       field("Dvara's page", ports.dvaraPage), field("Dvara", ports.dvara),
       field("ntfy", ports.ntfy)),

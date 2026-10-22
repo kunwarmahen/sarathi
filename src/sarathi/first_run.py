@@ -42,6 +42,7 @@ from collections.abc import Callable
 
 from sarathi.config import (
     DEFAULT_CLOCK_PORT,
+    DEFAULT_WATCH_PORT,
     DEFAULT_WEB_PORT,
     KEY_NAMES,
     PROVIDERS,
@@ -149,6 +150,8 @@ def run(args, *, ask: Callable[[str], str] = input,
                     web_port=args.web_port or DEFAULT_WEB_PORT,
                     clock_on=not args.no_clock,
                     clock_port=args.clock_port or DEFAULT_CLOCK_PORT,
+                    watch_on=not getattr(args, "no_watch", False),
+                    watch_port=getattr(args, "watch_port", None) or DEFAULT_WATCH_PORT,
                     road="podman" if getattr(args, "podman", False) else "process")
     memory = getattr(args, "memory", None)
     if memory is None and interactive:

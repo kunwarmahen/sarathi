@@ -227,6 +227,7 @@ def sarathi_view(config: Config) -> dict:
                   "base_url": config.base_url, "context_window": config.context_window},
         "yantra": {"port": config.web_port},
         "samay": {"on": config.clock_on, "port": config.clock_port},
+        "prahari": {"on": config.watch_on, "port": config.watch_port},
         "run": {"road": config.road},
         "pages": {"on": config.pages.on, "sarathi_port": config.pages.home_port,
                   "setu_port": config.pages.setu_port, "dvara_port": config.pages.door_port},
@@ -280,6 +281,10 @@ def sarathi_apply(changes: dict) -> Config:
         s = changes["samay"]
         config = replace(config, clock_on=bool(s.get("on", config.clock_on)),
                          clock_port=_num(s.get("port"), "Samay's port") or config.clock_port)
+    if "prahari" in changes:
+        w = changes["prahari"]
+        config = replace(config, watch_on=bool(w.get("on", config.watch_on)),
+                         watch_port=_num(w.get("port"), "Prahari's port") or config.watch_port)
     if "run" in changes:
         config = replace(config, road=changes["run"].get("road", config.road))
     if "pages" in changes:

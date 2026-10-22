@@ -102,13 +102,13 @@ def test_yantras_page_gets_its_token_through_its_own_env_file_only(host):  # noq
 
 
 def test_the_firewall_line_names_every_house_port(host, world, monkeypatch):  # noqa: F811
-    monkeypatch.setattr(podman.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(podman.shutil, "which", lambda name, **_: f"/usr/bin/{name}")
     (world / "ufw.conf").write_text("ENABLED=yes\n")
     host.answers[("ip", "-o", "addr")] = subprocess.CompletedProcess(
         [], 0, "2: eno1    inet 192.168.1.44/24 brd 192.168.1.255 scope global eno1\n", "")
     note = podman.firewall_note(housed())
     assert note[1] == ("  sudo ufw allow from 192.168.1.0/24 to any port "
-                       "8321,8760,8775,8780,8785,8790,8791,8792,8793 proto tcp")
+                       "8321,8760,8775,8780,8782,8785,8790,8791,8792,8793 proto tcp")
 
 
 def test_on_the_plain_programs_road_the_pieces_listen_everywhere_and_say_the_name(

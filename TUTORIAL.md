@@ -13,7 +13,7 @@ you.
 
 ## What you're setting up
 
-Six small programs, each with one job. You'll use three of them today:
+Seven small programs, each with one job. You'll use three of them today:
 
 ```
    you, in a browser
@@ -49,7 +49,9 @@ it (its SETUP.md) and Sarathi finds it, and Yantra's page gets a phone
 panel. `sarathi phone` turns it on for Dvara too, and on the
 containers' road it reaches the phone over Wi-Fi. Smritikosh, a memory
 that finds things by meaning, is optional too: Step 7, when the helper
-starts forgetting things you told it.)
+starts forgetting things you told it. And Prahari, which tells you when
+something happens — a price drops, a mail comes, Mum messages — is
+Step 8.)
 
 ---
 
@@ -1299,6 +1301,69 @@ If you keep it somewhere unusual, say where:
 
 ---
 
+## Step 8 (optional) · Tell me when something happens
+
+A schedule (Step 4) does something at a time. Some things you want
+aren't like that: *"tell me when ALAB drops under $50"*, *"tell me when
+a mail from my bank comes"*, *"when Mum messages me on WhatsApp, read it
+to me"*. The answer is usually *not yet*, and asking the model every hour
+just to hear *not yet* is a waste. **Prahari** waits for you without the
+model: it looks with one of the helper's own tools every so often, and
+wakes the helper only when the thing happens.
+
+**Get it**, beside the others, and start again:
+
+```bash
+cd ~/agent && git clone https://github.com/kunwarmahen/prahari && (cd prahari && uv sync)
+sarathi down && sarathi up      # on containers: sarathi image first
+```
+
+```
+prahari    up at http://127.0.0.1:8782/#token=…  (pid 3324161)
+```
+
+**Ask for a watch.** On Yantra's page, or in your chat on Telegram or
+the home page:
+
+* *"Tell me when a mail from alerts@mybank.com arrives."*
+
+The helper picks a tool it has that reads (here, the Gmail search),
+tries it once, tells you what it sees now, and asks. The card says
+exactly what it will run and how often, and when it will tell you. Say
+yes. From then on, Prahari searches every 30 minutes or so with no
+model, and when that mail comes you get a line in your chat. The first
+look only learns what's already there, so you aren't told about the
+mail you already have.
+
+A price works the same way: *"tell me when ALAB is under 50"* fires
+once when it crosses the line, not every hour while it stays below. If
+a site changes its page and the watch can't find the price any more, it
+pauses and tells you, and *"fix my ALAB watch"* in the chat mends it.
+
+**Your phone can tell Prahari itself.** On an Android phone, the free
+app **MacroDroid** can send Prahari each notification the moment it
+arrives, so a WhatsApp from Mum reaches your helper without anything
+logging in to WhatsApp:
+
+1. Ask the helper *"when Mum messages me on WhatsApp, tell me"*. It
+   makes a watch that *listens*, and says where to send.
+2. On Prahari's page (on the home page under **Your pages**), **The
+   inlet** shows the address and a key. **Copy the address with its key.**
+3. In MacroDroid: trigger *Notification received* (application:
+   WhatsApp); action *HTTP request*, method POST, to the address you
+   copied with `whatsapp` at the end, content type `application/json`,
+   body `{"title": "[notification_title]", "text": "[notification]"}`.
+
+The phone has to reach this computer: with `[house]` (Step 6) the inlet
+is on your home network, and `sarathi up` prints the firewall line with
+port 8782 in it. Run it once. An iPhone can't do this: it doesn't let
+other apps read its notifications.
+
+Watches are yours alone: they look with this computer's accounts, so
+the people in your house don't get them in their chats.
+
+---
+
 ## When something goes wrong
 
 Sarathi tries to say what happened and what fixes it. The messages
@@ -1373,6 +1438,7 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Their conversations, and their own sign-ins | `~/dvara/state/` (each person's past conversations, for **History** and `/chats`: `~/dvara/state/past/<name>.sqlite`) |
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
 | Your schedules and their history | Samay's folder, `~/.samay/` |
+| What you're watching for, and what each watch saw | Prahari's folder, `~/.prahari/` (its inlet's key: `inlet.token` there, only you) |
 | What the helper remembers about you | `~/.local/state/yantra/`, or with Smritikosh on, its database (the `smritikosh-pgdata` volume) |
 | Your conversations on Yantra's page, for its **history** button | `~/.local/state/yantra/conversations.sqlite` |
 | Your Smritikosh key, for the helper | `~/.config/sarathi/secrets.env`, as `SMRITIKOSH_API_KEY` |
@@ -1400,8 +1466,15 @@ need inviting again).
 * **Account / connection** — one sign-in Setu keeps, like `gmail:mine`.
 * **Schedule** — something Samay asks the helper to do later, or on a
   repeat.
+* **Watch** — something Prahari keeps an eye on for you ("tell me when
+  the price drops under $50"). It looks with no model, and wakes the
+  helper only when the thing happens.
+* **Inlet** — Prahari's door for things that can tell it themselves: a
+  phone app, a Home Assistant automation, a webhook. Its key can only
+  knock.
 * **Port** — a number that tells your browser which program on your
-  computer to talk to (8321 for the page, 8780 for Samay).
+  computer to talk to (8321 for the page, 8780 for Samay, 8782 for
+  Prahari).
 * **Container** — a program running in its own sealed box, which your
   computer can restart on its own. Podman is the program that runs them.
 * **Bot** — a Telegram account that a program answers instead of a

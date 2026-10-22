@@ -211,6 +211,14 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     if config.clock_on:
         found.append(Page("samay", "Samay", "What runs later, and what each run said.",
                           config.clock_port, "SAMAY_TOKEN", samay_state / "serve.token"))
+    from sarathi.services import watching
+
+    if watching(config, dict(env)):
+        prahari_state = Path(env.get("PRAHARI_STATE", "").strip()
+                             or home / ".prahari").expanduser()
+        found.append(Page("prahari", "Prahari", "What you're waiting for, what each "
+                          "watch saw, and the inlet a phone app knocks on.",
+                          config.watch_port, "PRAHARI_TOKEN", prahari_state / "serve.token"))
     # started by `sarathi up` when [pages] is on; by hand otherwise
     by_up = config.pages.on
     found.append(Page("setu", "Setu", "Your accounts: what's connected, at what level, "

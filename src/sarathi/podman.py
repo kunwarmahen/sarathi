@@ -27,7 +27,8 @@ runs the container as you, so files written inside are yours outside.
 
 ONE CLOCK, SEEN FROM BOTH. Samay's clock holds a lock on a file in its
 state folder for as long as it runs (Samay's note 05), and the page's
-container mounts the same folder, so it sees the same lock. The two
+container mounts the same folder, so it sees the same lock. Prahari's
+watch does the same with ``~/.prahari``, mounted in every container. The two
 containers share nothing else: either can crash and come back alone.
 The page starts after the clock (``Wants=``, ``After=``), because the
 page asks about the clock once, at start-up (note 02).
@@ -196,12 +197,14 @@ IMAGE = "localhost/sarathi:latest"
 IN_IMAGE = "/usr/local/bin"
 CHECKOUTS = ("yantra", "setu", "samay")
 #: Built into the image when its checkout is there: the door needs dvara,
-#: and the phone needs sparsh.
-OPTIONAL_CHECKOUTS = ("dvara", "sparsh")
+#: the phone needs sparsh, and watches need prahari.
+OPTIONAL_CHECKOUTS = ("dvara", "sparsh", "prahari")
 #: Built in from where sarathi.toml says, when it says (``[smritikosh]``).
 MEMORY_CHECKOUT = "smritikosh"
 #: Ports inside the containers; the host ports come from sarathi.toml.
 PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
+#: Prahari's page, its API and its inlet, inside its container.
+WATCH_PORT = 8782
 SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
 SMRITIKOSH_PORT = 8080
 #: ntfy's own image (not Sarathi's: nothing of ours runs in it), pinned,
@@ -212,7 +215,8 @@ NTFY_IMAGE, NTFY_PORT = "docker.io/binwiederhier/ntfy:v2.11.0", 80
 WINDOW_PORT = 8790
 #: The browser in the image, and the one a desktop's Setu records.
 BROWSER = "/usr/bin/google-chrome"
-UNITS = {"samay": "sarathi-samay", "dvara": "sarathi-dvara", "yantra": "sarathi-yantra",
+UNITS = {"samay": "sarathi-samay", "prahari": "sarathi-prahari", "dvara": "sarathi-dvara",
+         "yantra": "sarathi-yantra",
          "setu": "sarathi-setu", "dvara-page": "sarathi-dvara-page",
          "sarathi": "sarathi-home", "smritikosh-db": "sarathi-smritikosh-db",
          "smritikosh": "sarathi-smritikosh", "smritikosh-neo4j": "sarathi-smritikosh-neo4j",
@@ -345,8 +349,10 @@ def data_dirs() -> list[Path]:
     home = Path.home()
     xdg_state = Path(os.environ.get("XDG_STATE_HOME") or home / ".local" / "state")
     samay = os.environ.get("SAMAY_STATE", "").strip()
+    prahari = os.environ.get("PRAHARI_STATE", "").strip()
     return [Path(samay).expanduser() if samay else home / ".samay",
-            xdg_state / "setu", xdg_state / "yantra", home / ".yantra", work_dir()]
+            xdg_state / "setu", xdg_state / "yantra", home / ".yantra", work_dir(),
+            Path(prahari).expanduser() if prahari else home / ".prahari"]
 
 
 def setu_files() -> list[Path]:
@@ -405,7 +411,9 @@ def container_env(config: Config) -> dict[str, str]:
         # Samay's runs keep memories where Yantra's page does (units)
         run_yantra += f" --mcp-config {memory_files(config)[0]}"
     env = {"HOME": str(Path.home()), "YANTRA_PROVIDER": config.provider,
-           "SAMAY_YANTRA": run_yantra, "SAMAY_YANTRA_HOME": str(work_dir())}
+           "SAMAY_YANTRA": run_yantra, "SAMAY_YANTRA_HOME": str(work_dir()),
+           # every look is `yantra --call`, with the page's accounts and memory
+           "PRAHARI_YANTRA": run_yantra, "PRAHARI_YANTRA_HOME": str(work_dir())}
     zone = host_timezone()
     if zone:
         env["TZ"] = zone          # the browser's clock, the logs', the schedules'
@@ -515,6 +523,10 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
     # every address (Yantra's gate.py); the home page's link carries it
     out = {UNITS["yantra"]: {**model, YANTRA_TOKEN: yantra_token()},
            UNITS["samay"]: {**model, **door}}
+    if services.watching(config):
+        # a watch's then-turn is a turn: the key; its news goes to the door
+        out[UNITS["prahari"]] = {**model, **{k.replace("SAMAY_", "PRAHARI_", 1): v
+                                             for k, v in door.items()}}
     if config.remembers_in_smritikosh:
         from sarathi import smritikosh
 
@@ -522,6 +534,8 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
             # yours: Yantra's page, and the runs Samay starts for you
             out[UNITS["yantra"]][smritikosh.KEY] = held[smritikosh.KEY]
             out[UNITS["samay"]][smritikosh.KEY] = held[smritikosh.KEY]
+            if UNITS["prahari"] in out:
+                out[UNITS["prahari"]][smritikosh.KEY] = held[smritikosh.KEY]
         checkout = config.smritikosh.path()
         assert checkout is not None
         out[UNITS["smritikosh"]] = smritikosh.container_dotenv(
@@ -535,6 +549,9 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
                                        "POSTGRES_DB": db.name}
     if config.door is not None:
         out[UNITS["dvara"]] = {**model, **door,
+                              # what Dvara's per-turn `prahari mcp` checks a watch against
+                              **({"PRAHARI_DVARA_TOKEN": door["SAMAY_DVARA_TOKEN"]}
+                                 if services.watching(config) and door else {}),
                               **{k: held[k] for k in (DOOR_TOKEN, BOT_TOKEN) if k in held}}
         if config.pages.on and DOOR_TOKEN in held:
             # the owner page passes your answers to the door: its token, nothing else
@@ -667,6 +684,8 @@ def lan_ports(config: Config) -> list[int]:
     shown = yantra_window(config) if config.house is not None else None
     ports += [int(shown[1])] if shown else []
     ports += [config.clock_port] if config.clock_on else []
+    # Prahari's page, and its inlet: what a phone app knocks on
+    ports += [config.watch_port] if services.watching(config) else []
     if door is not None:
         shown = window(config)
         ports += [int(shown[1])] if shown else []
@@ -770,6 +789,24 @@ def units(config: Config) -> dict[str, str]:
         page_unit = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"
     else:
         page_exec += "--no-samay"
+    watch = services.watching(config)
+    if watch:
+        out[f"{UNITS['prahari']}.container"] = _unit(
+            "Sarathi: Prahari", UNITS["prahari"],
+            f"{IN_IMAGE}/prahari serve --host 0.0.0.0 --port {WATCH_PORT}",
+            f"127.0.0.1:{config.watch_port}:{WATCH_PORT}", config, memory_after,
+            # its page and its inlet on the house address too: a phone app knocks
+            extra_container=lan(config, config.watch_port, WATCH_PORT)
+                            + f"Environment=PRAHARI_PUBLIC_URL={config.link(config.watch_port)}\n"
+                            + (f"Environment=PRAHARI_DVARA_URL=http://{UNITS['dvara']}:"
+                               f"{DOOR_PORT}\n"
+                               f"Environment=PRAHARI_DVARA_ACTOR={config.door.owner}\n"
+                               if config.door else "") + memory_env,
+            more_volumes=memory_dirs or None)
+        page_exec += f" --prahari {IN_IMAGE}/prahari"
+        page_unit += f"Wants={UNITS['prahari']}.service\nAfter={UNITS['prahari']}.service\n"
+    elif not config.watch_on:
+        page_exec += " --no-prahari"
     if config.door is not None:
         door, after = config.door, ""
         door_exec = (f"{IN_IMAGE}/dvara --root {door.path('root')} --actors "
@@ -777,6 +814,9 @@ def units(config: Config) -> dict[str, str]:
                      f"--provider {config.provider} "
                      + (f"--model {config.model} " if config.model else "")
                      + (f"--samay {IN_IMAGE}/samay " if config.clock_on else "--samay off ")
+                     # a watch looks with this computer's accounts: the owner's
+                     + (f"--prahari {IN_IMAGE}/prahari --prahari-for {door.owner} "
+                        if watch else "")
                      + (f"--sparsh {IN_IMAGE}/sparsh " if config.phone else "")
                      + (f"--memory {memory_files(config)[1]} "
                         if config.remembers_in_smritikosh else "")
@@ -785,6 +825,9 @@ def units(config: Config) -> dict[str, str]:
                      + (f" --telegram {door.telegram}" if door.telegram else ""))
         if config.clock_on:
             after = f"Wants={UNITS['samay']}.service\nAfter={UNITS['samay']}.service\n"
+        if watch:
+            after += (f"Wants={UNITS['prahari']}.service\n"
+                      f"After={UNITS['prahari']}.service\n")
         if config.remembers_in_smritikosh:
             after += (f"Wants={UNITS['smritikosh']}.service\n"
                       f"After={UNITS['smritikosh']}.service\n")
@@ -804,6 +847,8 @@ def units(config: Config) -> dict[str, str]:
             "Sarathi: Dvara", UNITS["dvara"], door_exec,
             f"127.0.0.1:{door.port}:{DOOR_PORT}", config, after,
             extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
+                            + (f"Environment=PRAHARI_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
+                               if watch else "")
                             + streamed + people_url(config) + phone_env(config) + push,
             more_volumes=door_dirs(config) + phone_dirs(config)
             + ([mcp_dir()] if config.remembers_in_smritikosh else []))
@@ -1201,6 +1246,16 @@ def clock_address(config: Config) -> str | None:
     return None
 
 
+def watch_address(config: Config) -> str | None:
+    """Prahari's own 'page:' line (it says this computer's address itself,
+    told by PRAHARI_PUBLIC_URL)."""
+    logs = run(["podman", "logs", UNITS["prahari"]])
+    for line in reversed((logs.stdout + logs.stderr).splitlines()):
+        if line.startswith("page: "):
+            return line[len("page: "):].strip()
+    return None
+
+
 def journal_tail(unit: str, lines: int = 5) -> list[str]:
     out = run(["journalctl", "--user", "-u", f"{unit}.service", "-n", str(lines),
                "--no-pager", "-o", "cat"]).stdout
@@ -1300,6 +1355,8 @@ def up(config: Config) -> tuple[list[str], bool]:
         run(["systemctl", "--user", "restart", f"{NETWORK}-network.service"])
     if not config.clock_on:
         lines.append(f"{'samay':<{WIDTH}} off in sarathi.toml")
+    if not config.watch_on:
+        lines.append(f"{'prahari':<{WIDTH}} off in sarathi.toml")
     ok = True
     wanted = []
     if config.remembers_in_smritikosh:
@@ -1311,6 +1368,7 @@ def up(config: Config) -> tuple[list[str], bool]:
         ok = ok and extras_ok
         wanted.append(("smritikosh", config.smritikosh.port))
     wanted += [("samay", config.clock_port)] if config.clock_on else []
+    wanted += [("prahari", config.watch_port)] if services.watching(config) else []
     if config.door is not None:
         if config.door.ntfy_port:
             wanted.append(("ntfy", config.door.ntfy_port))
@@ -1448,6 +1506,8 @@ def _address(config: Config, name: str, url: str) -> str:
         return f"127.0.0.1:{config.smritikosh.db_port} (PostgreSQL)"
     if name == "samay":
         return clock_address(config) or url
+    if name == "prahari":
+        return watch_address(config) or url
     if name in ("setu", "dvara-page", "sarathi"):
         return keyed_address(config, name, url)
     return url
@@ -1458,7 +1518,7 @@ def down(remove: bool = False) -> list[str]:
     next login, which is what they are for -- unless ``remove``."""
     lines = retire_old()
     for name in ("smritikosh-ui", "sarathi", "dvara-page", "setu", "yantra", "dvara",
-                 "ntfy", "samay",
+                 "ntfy", "prahari", "samay",
                  "smritikosh", "smritikosh-db", "smritikosh-neo4j", "smritikosh-mongodb",
                  "smritikosh-redis"):
         unit = UNITS[name]
@@ -1499,6 +1559,7 @@ def running(config: Config) -> list[dict]:
     for name, port in (("smritikosh-db", config.smritikosh.db_port),
                        ("smritikosh", config.smritikosh.port),
                        ("samay", config.clock_port),
+                       ("prahari", config.watch_port),
                        ("ntfy", config.door.ntfy_port if config.door else None),
                        ("dvara", door_port),
                        ("yantra", config.web_port), ("setu", pages.setu_port),
