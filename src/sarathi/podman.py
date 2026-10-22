@@ -621,15 +621,19 @@ def setu_window(config: Config) -> tuple[str, str, str] | None:
 def yantra_window(config: Config) -> tuple[str, str, str] | None:
     """(host it is published on, port, the link's base) for the streamed
     window of a sign-in started on Yantra's page -- a site added, an
-    account connected -- from another device. Only with ``[house]``: the
-    one road on which Yantra's page opens anywhere but this computer. The
-    port after Setu's page's window; None behind ``window_url``, as there."""
+    account connected. In its container every browser is "another
+    device", you at this computer too (Podman's bridge), so it always has
+    one: on the house address with ``[house]``, where the page opens on
+    every device, else on 127.0.0.1 for you alone. The port after Setu's
+    page's window; None behind ``window_url``, as there."""
     door = config.door
-    host = config.people_host() if config.house is not None else None
-    if not host or (door is not None and door.window_url):
+    if door is not None and door.window_url:
         return None
     port = ((door.window_port if door else None) or WINDOW_PORT) + 2
-    return host, str(port), config.link(port, "")
+    host = config.people_host() if config.house is not None else None
+    if host:
+        return host, str(port), config.link(port, "")
+    return "127.0.0.1", str(port), f"http://127.0.0.1:{port}"
 
 
 def house_ports(config: Config) -> tuple[str, list[int]] | None:
@@ -660,7 +664,7 @@ def lan_ports(config: Config) -> list[int]:
     server and its stores."""
     kosh, door, pages = config.smritikosh, config.door, config.pages
     ports = [config.web_port]
-    shown = yantra_window(config)
+    shown = yantra_window(config) if config.house is not None else None
     ports += [int(shown[1])] if shown else []
     ports += [config.clock_port] if config.clock_on else []
     if door is not None:

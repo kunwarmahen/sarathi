@@ -631,7 +631,7 @@ would otherwise start again at your next login. It starts nothing new;
 | voice notes heard | your ffmpeg (`sudo apt install ffmpeg`) and an Ollama model listing "audio" | ffmpeg in the image; the model in your Ollama |
 | Dvara's streamed window | listens on `window_host` itself | published from Dvara's container |
 | Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |
-| Yantra's page's streamed window (`[house]` only) | on the house address, any free port | published from Yantra's container on the port after that (8792) |
+| Yantra's page's streamed window | with `[house]`, on the house address, any free port | published from Yantra's container on the port after that (8792): on the house address with `[house]`, else on `127.0.0.1` for you (in its container even your own browser is "another device") |
 | Setu's page for people's phones | `setu serve --also-host <window_host>` | published on `window_host` too; only the people's folders mounted |
 | the pages | plain programs | Setu's and Dvara's as containers; the home page, and Smritikosh's dashboard when it's on, as user services (`~/.config/systemd/user/sarathi-home.service`, `sarathi-smritikosh-ui.service`) |
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |

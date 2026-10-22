@@ -81,8 +81,12 @@ def test_a_sign_in_on_yantras_page_from_a_phone_has_its_own_window(host):  # noq
     assert "PublishPort=192.168.1.44:8792:8792" in page
     assert "SETU_WINDOW_HOST=0.0.0.0" in page and "SETU_WINDOW_PORT=8792" in page
     assert "SETU_WINDOW_URL=http://beast.local:8792" in page
-    assert podman.yantra_window(Config("ollama", road="podman", door=Door(),
-                                       pages=Pages(on=True))) is None
+    # no house: still one, for you at this computer (Podman's bridge
+    # makes your own browser "another device" to the page)
+    alone = podman.units(Config("ollama", road="podman", door=Door(), pages=Pages(on=True)))
+    page = alone["sarathi-yantra.container"]
+    assert "PublishPort=127.0.0.1:8792:8792" in page
+    assert "SETU_WINDOW_URL=http://127.0.0.1:8792" in page
 
 
 def test_yantras_page_gets_its_token_through_its_own_env_file_only(host):  # noqa: F811
