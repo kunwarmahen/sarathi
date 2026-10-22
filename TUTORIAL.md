@@ -884,7 +884,9 @@ Run `sarathi home`: with the page already running, it prints the link
 Open that on your phone, once. Every
 card on it now opens on your phone. The **Yantra** card carries Yantra's
 own token, so open Yantra from there the first time on each device.
-`sarathi up` prints a longer `ufw` line naming every page's port; run it. Dvara's own port and Smritikosh's server and databases stay on this computer. If
+`sarathi up` prints a longer `ufw` line naming every page's port (8792
+among them: the sign-in window for Yantra's page, so **connect** and
+**Another site?** there work from your phone too); run it. Dvara's own port and Smritikosh's server and databases stay on this computer. If
 your Android phone can't open `.local` names, use the computer's
 address in place of the name, in the link and in `name`.
 

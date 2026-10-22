@@ -30,8 +30,9 @@ address, and an address is no use to a person, who won't remember it.
 keeps its `127.0.0.1` port and gets a second `PublishPort` on the house
 address: Yantra's page, Samay's, Dvara's page, Setu's page, the home
 page, and Smritikosh's dashboard. So do the two things a page sends a
-phone to: the sign-in windows (8790, 8791) and ntfy, which were on the
-house address already (note 11). What only the pieces talk to stays on
+phone to: the sign-in windows (8790, 8791, and 8792 for a sign-in
+started on Yantra's page) and ntfy, which were on the house address
+already (note 11). What only the pieces talk to stays on
 `127.0.0.1`: Dvara's own port (8770, which answers Samay and its page,
 not a browser), Smritikosh's server and its PostgreSQL, Neo4j, MongoDB
 and Redis. Nothing on another device has a reason to reach those, and a

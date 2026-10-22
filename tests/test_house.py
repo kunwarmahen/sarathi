@@ -73,6 +73,18 @@ def test_every_link_says_the_name(host):  # noqa: F811
     assert config.ntfy_url() == "http://beast.local:8793"
 
 
+def test_a_sign_in_on_yantras_page_from_a_phone_has_its_own_window(host):  # noqa: F811
+    """With the house's name Yantra's page opens on every device, and a
+    site added there had no window a phone could open."""
+    config = housed()
+    page = podman.units(config)["sarathi-yantra.container"]
+    assert "PublishPort=192.168.1.44:8792:8792" in page
+    assert "SETU_WINDOW_HOST=0.0.0.0" in page and "SETU_WINDOW_PORT=8792" in page
+    assert "SETU_WINDOW_URL=http://beast.local:8792" in page
+    assert podman.yantra_window(Config("ollama", road="podman", door=Door(),
+                                       pages=Pages(on=True))) is None
+
+
 def test_yantras_page_gets_its_token_through_its_own_env_file_only(host):  # noqa: F811
     config = housed()
     text = podman.units(config)["sarathi-yantra.container"]
@@ -92,7 +104,7 @@ def test_the_firewall_line_names_every_house_port(host, world, monkeypatch):  # 
         [], 0, "2: eno1    inet 192.168.1.44/24 brd 192.168.1.255 scope global eno1\n", "")
     note = podman.firewall_note(housed())
     assert note[1] == ("  sudo ufw allow from 192.168.1.0/24 to any port "
-                       "8321,8760,8775,8780,8785,8790,8791,8793 proto tcp")
+                       "8321,8760,8775,8780,8785,8790,8791,8792,8793 proto tcp")
 
 
 def test_on_the_plain_programs_road_the_pieces_listen_everywhere_and_say_the_name(
@@ -109,6 +121,7 @@ def test_on_the_plain_programs_road_the_pieces_listen_everywhere_and_say_the_nam
     assert by["yantra"].env[settings.YANTRA_TOKEN] == \
         settings.read_secrets()[settings.YANTRA_TOKEN]
     assert settings.YANTRA_TOKEN not in by["samay"].env
+    assert by["yantra"].env["SETU_WINDOW_NAME"] == "beast.local"
 
 
 def test_smritikosh_is_on_the_house_by_its_dashboard_alone(host, monkeypatch):  # noqa: F811

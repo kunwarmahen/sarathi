@@ -258,6 +258,9 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
     # its token: the page wants it, and the home page's link carries it
     services.append(Service("yantra", "yantra", page_argv, config.web_port,
                             {**env, **phone_env(config), **memory_env,
+                             # with [house] the page opens on every device: a
+                             # sign-in started there streams its window
+                             **yantra_window_env(config),
                              YANTRA_TOKEN: yantra_token()}))
     if config.pages.on:
         services += page_services(config, found, door is not None, notes)
@@ -501,6 +504,18 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
                     **(config.setu_window_env() if config.house is not None else {}),
                     **config.people_env(), **phone_env(config),
                     **(ntfy_click(config) if ntfy else {})})
+
+
+def yantra_window_env(config: Config) -> dict[str, str]:
+    """Yantra's page's streamed window, on the plain-programs road: with
+    ``[house]`` the page opens on every device, and a sign-in started
+    there (a site added, an account connected) shows its window on the
+    house address under the house's name, on any free port. Nothing
+    without a house, or behind the door's ``window_url``."""
+    host = config.people_host() if config.house is not None else None
+    if not host or (config.door is not None and config.door.window_url):
+        return {}
+    return {"SETU_WINDOW_HOST": host, "SETU_WINDOW_NAME": config.house.name}
 
 
 def phone_env(config: Config) -> dict[str, str]:

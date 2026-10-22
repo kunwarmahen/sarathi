@@ -203,8 +203,12 @@ device stays in. The home page's cards link by whatever name you opened
 it at, so on your phone they say `linux-al-ml-beast.local` and here they
 say `127.0.0.1`. With Dvara on, `[house]` also opens the sign-in window
 on that address, and `/connect gmail` from Telegram streams Google's
-page to your phone, so nothing has to be copied back. `sarathi up`
-names every port and the `ufw` line that opens them to your network
+page to your phone, so nothing has to be copied back. Yantra's page
+gets a sign-in window of its own too (8792 on the Podman road, after
+Dvara's 8790 and Setu's page's 8791): **connect** and **Another site?**
+on its Connections panel, opened on your phone, show the sign-in there
+instead of a command to type at the computer. `sarathi up` names every
+port and the `ufw` line that opens them to your network
 ([notes/23](notes/23-every-server-by-one-name.md)).
 
 ### A memory by meaning: `sarathi smritikosh`
@@ -627,6 +631,7 @@ would otherwise start again at your next login. It starts nothing new;
 | voice notes heard | your ffmpeg (`sudo apt install ffmpeg`) and an Ollama model listing "audio" | ffmpeg in the image; the model in your Ollama |
 | Dvara's streamed window | listens on `window_host` itself | published from Dvara's container |
 | Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |
+| Yantra's page's streamed window (`[house]` only) | on the house address, any free port | published from Yantra's container on the port after that (8792) |
 | Setu's page for people's phones | `setu serve --also-host <window_host>` | published on `window_host` too; only the people's folders mounted |
 | the pages | plain programs | Setu's and Dvara's as containers; the home page, and Smritikosh's dashboard when it's on, as user services (`~/.config/systemd/user/sarathi-home.service`, `sarathi-smritikosh-ui.service`) |
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
