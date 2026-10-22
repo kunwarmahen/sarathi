@@ -728,11 +728,16 @@ Agents**, press **Change** on `minder` and add a line to *Accounts it
 needs*:
 
 ```
-amazon:read                    open, follow, scroll, search -- never a click or a purchase
+amazon:read                    open, follow, scroll, search, a picture -- never a click or a purchase
 ```
 
 (In its file, `~/dvara/agents/minder/agent.toml`, that's `needs =
 ["amazon:read"]` under `[connections]`.)
+
+*A picture* is the site's screenshot: ask *"send me a screenshot of my
+Amazon orders page"* and minder takes one, saved in your folder with it,
+and sends it with `send_file`, which asks you first (give minder
+`send_file` under *Tools it may use* if it doesn't have it).
 
 The need brings Amazon's tools with it; `[tools] allow` doesn't have to
 name them. Your home works the same way: `needs = ["amazon:read",
