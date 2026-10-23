@@ -31,11 +31,17 @@ What each piece is given:
   chat.
 * **Yantra's page**: `--prahari <it>`, so the agent there can offer a
   watch.
-* **Dvara**: `--prahari <it> --prahari-for <dvara.owner>`.
+* **Dvara**: `--prahari <it>`, and `--prahari-for` only when
+  `[prahari] people` names some.
 
 ## Yours alone
 
-That last flag is the one decision in this note. A schedule run through
+(Since Dvara's notes/56 and Prahari's notes/02 this is no longer so: a
+watch's look goes to Dvara as its person, with their own accounts, so
+`up` gives watches to everyone, and `[prahari] people` narrows it. The
+section below is why it once was.)
+
+That last flag was the one decision in this note. A schedule run through
 Dvara is a Dvara turn, with the person's own Setu folder. A watch's look
 is not: it is `yantra --call` with this computer's accounts. If anybody
 in the house could make a watch, they could have Prahari read your mail
@@ -52,6 +58,29 @@ MacroDroid sends a notification there the moment it arrives. So with
 page, and the firewall line `up` prints includes 8782. Its address says
 the house's name (`PRAHARI_PUBLIC_URL`), so the address the page shows
 for MacroDroid is one the phone can open.
+
+## The inlet from outside
+
+Gmail's push, and any webhook on the internet, need the inlet reachable
+from outside the house. `[prahari]` takes two keys for that:
+
+```toml
+[prahari]
+inlet_port = 8783
+public_url = "https://beast.tail1234.ts.net:8443"
+```
+
+`inlet_port` makes `up` start Prahari with `--inlet-port`: a second
+listener with the inlet ALONE, no page and no API. On the program road
+it's on 127.0.0.1. On the Podman road the container publishes it on
+`127.0.0.1:8783` only, never on the house address and never in the
+firewall line, because Tailscale Funnel reaches it on this computer.
+Prahari's `deploy/public-inlet-tailscale.sh` makes the public name.
+You run it yourself, because it signs in to your Tailscale account.
+`public_url` passes that name as `PRAHARI_INLET_PUBLIC_URL`, so
+Prahari's page and your agent's `inlet_address` show it. A `public_url`
+without an `inlet_port` is refused: the public road reaches the inlet
+alone, or nothing. All three keys are on the settings page too.
 
 ## Optional, all the way down
 

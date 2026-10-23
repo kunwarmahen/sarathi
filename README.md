@@ -200,15 +200,23 @@ What `up` wires for you:
 * **Prahari** gets the door's address, token and owner (`PRAHARI_DVARA_URL`,
   `PRAHARI_DVARA_TOKEN`, `PRAHARI_DVARA_ACTOR`), the same three Samay
   gets, so what a watch sees reaches you.
-* **Dvara** gets `--prahari <it> --prahari-for <dvara.owner>`. A watch
-  looks with this computer's accounts, so it's yours alone: the people in
-  your house don't get Prahari's tools in their chats (Dvara's notes/55).
+* **Dvara** gets `--prahari <it>`, so everyone in your house can ask
+  for a watch in their chat, and each watch looks as its person, with
+  their own accounts (Dvara's notes/56). `people = ["you", "asha"]` under
+  `[prahari]` narrows that (`--prahari-for`).
 * **The inlet.** Prahari's page shows an address and a key that can only
   knock: an Android phone's MacroDroid (a WhatsApp notification, say), a
   Home Assistant automation or a webhook sends there, and a watch that
   listens decides. With `[house]`, the inlet is on the house address too,
-  and the firewall line names its port (8782)
+  and the firewall line names its port (8782). Each person has their own
+  key, so their phone reaches only their watches
   ([notes/26](notes/26-the-watch-started-with-the-rest.md)).
+* **The inlet from outside**, for Gmail's push or a webhook on the
+  internet: `inlet_port = 8783` under `[prahari]` opens the inlet ALONE
+  (no page, no API) on 127.0.0.1, Prahari's
+  `deploy/public-inlet-tailscale.sh` gives it a public HTTPS name through
+  Tailscale Funnel, and `public_url = "https://…:8443"` tells Prahari
+  that name, so its page and your agent show it.
 
 ### Every page on your home network: `[house]`
 
@@ -498,7 +506,7 @@ in that order:
 ```
 dvara  dvara --root ~/dvara/agents --actors ~/dvara/actors.toml --state ~/dvara/state
              --ask --provider <model.provider> --model <model.model> --samay <samay>
-             [--prahari <prahari> --prahari-for <dvara.owner>]
+             [--prahari <prahari> [--prahari-for <prahari.people>]]
              serve --port <dvara.port> --web [--telegram <dvara.telegram>]
 ```
 

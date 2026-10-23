@@ -205,6 +205,8 @@ MEMORY_CHECKOUT = "smritikosh"
 PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
 #: Prahari's page, its API and its inlet, inside its container.
 WATCH_PORT = 8782
+#: Prahari's inlet alone, inside its container (the public road's).
+WATCH_INLET_PORT = 8783
 SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
 SMRITIKOSH_PORT = 8080
 #: ntfy's own image (not Sarathi's: nothing of ours runs in it), pinned,
@@ -793,10 +795,17 @@ def units(config: Config) -> dict[str, str]:
     if watch:
         out[f"{UNITS['prahari']}.container"] = _unit(
             "Sarathi: Prahari", UNITS["prahari"],
-            f"{IN_IMAGE}/prahari serve --host 0.0.0.0 --port {WATCH_PORT}",
+            f"{IN_IMAGE}/prahari serve --host 0.0.0.0 --port {WATCH_PORT}"
+            + (f" --inlet-port {WATCH_INLET_PORT}" if config.watch_inlet_port else ""),
             f"127.0.0.1:{config.watch_port}:{WATCH_PORT}", config, memory_after,
             # its page and its inlet on the house address too: a phone app knocks
             extra_container=lan(config, config.watch_port, WATCH_PORT)
+                            # the inlet alone, on 127.0.0.1, where Tailscale Funnel
+                            # reaches it for the public road
+                            + (f"PublishPort=127.0.0.1:{config.watch_inlet_port}:"
+                               f"{WATCH_INLET_PORT}\n" if config.watch_inlet_port else "")
+                            + (f"Environment=PRAHARI_INLET_PUBLIC_URL={config.watch_public}\n"
+                               if config.watch_public else "")
                             + f"Environment=PRAHARI_PUBLIC_URL={config.link(config.watch_port)}\n"
                             + (f"Environment=PRAHARI_DVARA_URL=http://{UNITS['dvara']}:"
                                f"{DOOR_PORT}\n"
@@ -814,9 +823,10 @@ def units(config: Config) -> dict[str, str]:
                      f"--provider {config.provider} "
                      + (f"--model {config.model} " if config.model else "")
                      + (f"--samay {IN_IMAGE}/samay " if config.clock_on else "--samay off ")
-                     # a watch looks with this computer's accounts: the owner's
-                     + (f"--prahari {IN_IMAGE}/prahari --prahari-for {door.owner} "
-                        if watch else "")
+                     # each person's watch looks with their own accounts
+                     + (f"--prahari {IN_IMAGE}/prahari " if watch else "")
+                     + (f"--prahari-for {','.join(config.watch_people)} "
+                        if watch and config.watch_people else "")
                      + (f"--sparsh {IN_IMAGE}/sparsh " if config.phone else "")
                      + (f"--memory {memory_files(config)[1]} "
                         if config.remembers_in_smritikosh else "")

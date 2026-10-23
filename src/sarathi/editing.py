@@ -227,7 +227,10 @@ def sarathi_view(config: Config) -> dict:
                   "base_url": config.base_url, "context_window": config.context_window},
         "yantra": {"port": config.web_port},
         "samay": {"on": config.clock_on, "port": config.clock_port},
-        "prahari": {"on": config.watch_on, "port": config.watch_port},
+        "prahari": {"on": config.watch_on, "port": config.watch_port,
+                    "inlet_port": config.watch_inlet_port,
+                    "public_url": config.watch_public,
+                    "people": list(config.watch_people)},
         "run": {"road": config.road},
         "pages": {"on": config.pages.on, "sarathi_port": config.pages.home_port,
                   "setu_port": config.pages.setu_port, "dvara_port": config.pages.door_port},
@@ -285,6 +288,18 @@ def sarathi_apply(changes: dict) -> Config:
         w = changes["prahari"]
         config = replace(config, watch_on=bool(w.get("on", config.watch_on)),
                          watch_port=_num(w.get("port"), "Prahari's port") or config.watch_port)
+        if "inlet_port" in w:
+            config = replace(config, watch_inlet_port=_num(
+                w.get("inlet_port"), "Prahari's inlet port", low=0) or 0)
+        if "public_url" in w:
+            config = replace(config, watch_public=str(w.get("public_url") or "")
+                             .strip().rstrip("/"))
+        if "people" in w:
+            people = w.get("people") or []
+            if isinstance(people, str):
+                people = [n for n in people.replace(",", " ").split()]
+            config = replace(config, watch_people=tuple(str(n).strip() for n in people
+                                                        if str(n).strip()))
     if "run" in changes:
         config = replace(config, road=changes["run"].get("road", config.road))
     if "pages" in changes:

@@ -1359,8 +1359,38 @@ is on your home network, and `sarathi up` prints the firewall line with
 port 8782 in it. Run it once. An iPhone can't do this: it doesn't let
 other apps read its notifications.
 
-Watches are yours alone: they look with this computer's accounts, so
-the people in your house don't get them in their chats.
+**Everyone in the house can have watches.** When Asha asks her helper
+*"tell me when my bank writes"*, the watch looks with *her* accounts,
+never yours. Her phone gets a key of its own too: she asks her helper
+*"where does my phone send to?"* and puts that address in her
+MacroDroid, so her notifications reach only her watches. To keep
+watches to a few people, write their names under `[prahari]` in
+sarathi.toml, `people = ["you", "asha"]` (or on **Settings → Sarathi**).
+
+**Mail the moment it lands.** A watch on mail looks every half hour.
+To hear sooner, let Prahari keep your mail folder open, once, at this
+computer:
+
+```bash
+~/agent/prahari/.venv/bin/prahari mailbox add work-mail --server imap.gmail.com --user you@gmail.com
+```
+
+It asks for a password. For Gmail, iCloud and Outlook, make an *app
+password* in your account's security settings and paste that, never
+your real password. It stays on this computer, readable only by you.
+Run `sarathi down && sarathi up` so Prahari starts listening. Now ask
+the helper *"tell me as soon as my bank writes, using work-mail"*: a new
+mail knocks the moment it lands, and only who it's from and the subject
+are read, never the mail itself.
+
+**From outside the house** (for Gmail's own push, or a website that
+calls a webhook): put `inlet_port = 8783` under `[prahari]`, run
+`sarathi up`, then run Prahari's `deploy/public-inlet-tailscale.sh`
+yourself. It gives this computer a public address through Tailscale,
+and that address reaches the inlet alone: never the pages, never your
+data. Put the address it prints as `public_url` under `[prahari]` and
+run `sarathi up` again. Prahari's README has the Google Cloud steps for
+Gmail's push.
 
 ---
 
@@ -1471,7 +1501,9 @@ need inviting again).
   helper only when the thing happens.
 * **Inlet** — Prahari's door for things that can tell it themselves: a
   phone app, a Home Assistant automation, a webhook. Its key can only
-  knock.
+  knock, and each person has their own.
+* **Mailbox** — a mail folder Prahari keeps open, so a new mail is news
+  the moment it lands, not at the next look.
 * **Port** — a number that tells your browser which program on your
   computer to talk to (8321 for the page, 8780 for Samay, 8782 for
   Prahari).

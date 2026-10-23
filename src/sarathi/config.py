@@ -85,7 +85,7 @@ KNOWN: dict[str, set[str]] = {
     "model": {"provider", "model", "base_url", "context_window"},
     "yantra": {"port"},
     "samay": {"on", "port"},
-    "prahari": {"on", "port"},
+    "prahari": {"on", "port", "inlet_port", "public_url", "people"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner", "ntfy", "ntfy_port"},
@@ -281,6 +281,13 @@ class Config:
     #: Prahari, the watch: on unless sarathi.toml says ``[prahari] on = false``.
     watch_on: bool = True
     watch_port: int = DEFAULT_WATCH_PORT
+    #: Prahari's inlet ALONE (no page, no API) on its own port, for the
+    #: public road; 0 for none.
+    watch_inlet_port: int = 0
+    #: Where the internet reaches that inlet (its Tailscale Funnel name).
+    watch_public: str = ""
+    #: Only these people get watches through Dvara; () for everyone.
+    watch_people: tuple[str, ...] = ()
 
     @property
     def remembers_in_smritikosh(self) -> bool:
@@ -451,6 +458,23 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     watch = data.get("prahari", {})
     if not isinstance(watch.get("on", True), bool):
         raise ConfigError(f"{where}: prahari.on must be true or false")
+    watch_inlet = watch.get("inlet_port", 0)
+    if watch_inlet != 0:
+        watch_inlet = _port(watch, "inlet_port", 0, "prahari")
+    watch_public = watch.get("public_url", "")
+    if not isinstance(watch_public, str) or (
+            watch_public and not watch_public.startswith(("https://", "http://"))):
+        raise ConfigError(f"{where}: prahari.public_url is the inlet's public address, "
+                          f"like https://<computer>.<tailnet>.ts.net:8443 -- not "
+                          f"{watch_public!r}")
+    if watch_public and not watch_inlet:
+        raise ConfigError(f"{where}: prahari.public_url needs prahari.inlet_port: the "
+                          "public road reaches the inlet alone, on a port of its own")
+    watch_people = watch.get("people", [])
+    if not isinstance(watch_people, list) or not all(
+            isinstance(n, str) and n.strip() for n in watch_people):
+        raise ConfigError(f"{where}: prahari.people is a list of names from Dvara's "
+                          "actors file (leave it out for everyone)")
     road = data.get("run", {}).get("road", "process")
     if road not in ROADS:
         raise ConfigError(f"{where}: run.road must be one of {', '.join(ROADS)}, not {road!r}")
@@ -556,7 +580,20 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   clock_on=clock.get("on", True),
                   clock_port=_port(clock, "port", DEFAULT_CLOCK_PORT, "samay"),
                   watch_on=watch.get("on", True),
-                  watch_port=_port(watch, "port", DEFAULT_WATCH_PORT, "prahari"))
+                  watch_port=_port(watch, "port", DEFAULT_WATCH_PORT, "prahari"),
+                  watch_inlet_port=watch_inlet, watch_public=watch_public.rstrip("/"),
+                  watch_people=tuple(n.strip() for n in watch_people))
+
+
+def _render_watch_extra(config: Config) -> str:
+    lines = []
+    if config.watch_inlet_port:
+        lines.append(f"inlet_port = {config.watch_inlet_port}")
+    if config.watch_public:
+        lines.append(f'public_url = "{config.watch_public}"')
+    if config.watch_people:
+        lines.append("people = [" + ", ".join(f'"{n}"' for n in config.watch_people) + "]")
+    return "\n".join(lines) + ("\n" if lines else "")
 
 
 def load() -> Config:
@@ -602,11 +639,15 @@ port = {config.clock_port}
 
 # Prahari: tells your agent when something happens (a price, a mail, a
 # phone's notification), looking with no model. Its page also has the
-# inlet, where a phone app or a webhook knocks.
+# inlet, where a phone app or a webhook knocks. Everyone in Dvara's
+# actors file may make watches, each looking with their own accounts;
+# people = ["you", "asha"] narrows that. inlet_port opens the inlet ALONE
+# (no page, no API) for the public road, and public_url is where the
+# internet reaches it (deploy/public-inlet-tailscale.sh in Prahari).
 [prahari]
 on = {"true" if config.watch_on else "false"}
 port = {config.watch_port}
-
+{_render_watch_extra(config)}
 # How `sarathi up` starts them: process (plain programs on this machine)
 # | podman (containers kept running by systemd; build with `sarathi image`).
 [run]

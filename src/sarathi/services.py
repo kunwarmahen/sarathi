@@ -17,10 +17,11 @@ files:
                    [phone] address, SPARSH_CONNECT=<address> to both
     samay   samay serve --port <samay.port>
                    with SAMAY_YANTRA=<the yantra Sarathi found>
-    prahari prahari serve --port <prahari.port>
+    prahari prahari serve --port <prahari.port> [--inlet-port <prahari.inlet_port>]
                    with PRAHARI_YANTRA=<the yantra Sarathi found>; then Yantra
-                   gets --prahari <it>, and Dvara --prahari <it> --prahari-for
-                   <dvara.owner> (a watch looks with this computer's accounts)
+                   gets --prahari <it>, and Dvara --prahari <it> [--prahari-for
+                   <prahari.people>] (each watch looks as its person, through
+                   Dvara)
     dvara   dvara --root/--actors/--state <dvara.*> --ask --samay <samay>
                   [--sparsh <sparsh>, with [phone] on]
                   serve --port <dvara.port> --web [--telegram <dvara.telegram>]
@@ -264,11 +265,17 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
         # page's own; what it sees reaches you through the door
         services.append(Service(
             "prahari", "prahari", [prahari.program, "serve", "--host", listen,
-                                   "--port", str(config.watch_port)],
+                                   "--port", str(config.watch_port),
+                                   # the inlet alone, for the public road: on
+                                   # 127.0.0.1 only, where Tailscale Funnel reaches it
+                                   *(["--inlet-port", str(config.watch_inlet_port)]
+                                     if config.watch_inlet_port else [])],
             config.watch_port,
             {**env, "PRAHARI_YANTRA": shlex.join(run_yantra),
              **({"PRAHARI_PUBLIC_URL": config.link(config.watch_port)} if config.house
                 else {}),
+             **({"PRAHARI_INLET_PUBLIC_URL": config.watch_public}
+                if config.watch_public else {}),
              "PRAHARI_YANTRA_HOME": str(work_dir()), **watch_door_env(meet), **memory_env},
             says_address="page: "))
     if door is not None:
@@ -529,9 +536,11 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
                                                else [])
     argv += ["--samay", samay] if clock_on and samay else ["--samay", "off"]
     prahari = found["prahari"].program if "prahari" in found else None
-    # a watch looks with this computer's accounts: the owner's alone (dvara's notes/55)
+    # each person's watch looks with their own accounts, through Dvara (its notes/56)
     if watch_on and prahari:
-        argv += ["--prahari", prahari, "--prahari-for", door.owner]
+        argv += ["--prahari", prahari]
+        argv += ["--prahari-for", ",".join(config.watch_people)] if config.watch_people \
+            else []
     if config.remembers_in_smritikosh and config.smritikosh.path() is not None:
         # each person's turns, with each person's own key (memory.json)
         argv += ["--memory", str(memory_files(config)[1])]

@@ -1,12 +1,13 @@
 """Prahari, the watch, started with the rest.
 
-The bias these tests encode: A WATCH THAT READS ONE PERSON'S ACCOUNTS
-MUST BE THAT PERSON'S, AND ITS NEWS MUST REACH THEM. Prahari's looks run
-this computer's Yantra with this computer's accounts, so Dvara is told
-whose watches they are (the owner, ``--prahari-for``), and Prahari gets
-the same door address, token and owner the clock does, so what a watch
-sees comes to the owner's chat. And IT IS OPTIONAL: with no Prahari on
-this machine, nothing about it is started, published, passed or carded.
+The bias these tests encode: A WATCH IS ITS PERSON'S, AND ITS NEWS MUST
+REACH THEM. Each person's watch looks through Dvara as them, with their
+own accounts, so Dvara offers watches to everyone -- unless
+``[prahari] people`` names some (``--prahari-for``) -- and Prahari gets
+the same door address, token and owner the clock does. The public road
+is the inlet ALONE, on 127.0.0.1, where Tailscale Funnel reaches it. And
+IT IS OPTIONAL: with no Prahari on this machine, nothing about it is
+started, published, passed or carded.
 """
 
 from __future__ import annotations
@@ -39,6 +40,23 @@ class TestTheSetting:
         assert (off.watch_on, off.watch_port) == (False, 8799)
         assert parse(render(off)) == off and "[prahari]" in render(Config("ollama"))
 
+    def test_the_public_road_and_the_people_read_back_as_written(self):
+        public = parse('[model]\nprovider = "ollama"\n[prahari]\ninlet_port = 8783\n'
+                       'public_url = "https://beast.tail.ts.net:8443/"\n'
+                       'people = ["mahen", "asha"]\n')
+        assert public.watch_inlet_port == 8783
+        assert public.watch_public == "https://beast.tail.ts.net:8443"
+        assert public.watch_people == ("mahen", "asha")
+        assert parse(render(public)) == public
+
+    def test_a_public_address_needs_the_inlet_alone(self):
+        import pytest
+
+        from sarathi.config import ConfigError
+        with pytest.raises(ConfigError, match="needs prahari.inlet_port"):
+            parse('[model]\nprovider = "ollama"\n[prahari]\n'
+                  'public_url = "https://beast.tail.ts.net:8443"\n')
+
 
 class TestThePlainRoad:
     def test_it_starts_before_the_door_and_the_page_wired_to_both(self, world, monkeypatch):
@@ -60,8 +78,24 @@ class TestThePlainRoad:
         assert page[page.index("--prahari") + 1] == "/bin/prahari"
         door = next(s for s in planned if s.name == "dvara")
         at = door.argv.index("--prahari")
-        assert door.argv[at:at + 4] == ["--prahari", "/bin/prahari", "--prahari-for", "mahen"]
+        assert door.argv[at:at + 2] == ["--prahari", "/bin/prahari"]
+        assert "--prahari-for" not in door.argv           # everyone, each as themselves
         assert door.env["PRAHARI_DVARA_URL"] == "http://127.0.0.1:8770"
+
+    def test_people_named_narrow_it_and_the_inlet_alone_is_passed(self, world,
+                                                                  monkeypatch):
+        with_door_secrets(world)
+        monkeypatch.setattr(services, "model_env", lambda c: {})
+        monkeypatch.setattr(services, "door_problems", lambda c, f: [])
+        config = Config("ollama", door=Door(owner="mahen"), pages=Pages(on=False),
+                        watch_inlet_port=8783, watch_public="https://b.ts.net:8443",
+                        watch_people=("mahen", "asha"))
+        planned, _ = services.plan(config, found(*ALL))
+        watch = next(s for s in planned if s.name == "prahari")
+        assert watch.argv[-2:] == ["--inlet-port", "8783"]
+        assert watch.env["PRAHARI_INLET_PUBLIC_URL"] == "https://b.ts.net:8443"
+        door = next(s for s in planned if s.name == "dvara").argv
+        assert door[door.index("--prahari-for") + 1] == "mahen,asha"
 
     def test_not_installed_is_nothing_at_all(self, world, monkeypatch):
         monkeypatch.setattr(services, "model_env", lambda c: {})
@@ -95,7 +129,7 @@ class TestThePodmanRoad:
         assert "Environment=PRAHARI_YANTRA=/usr/local/bin/yantra" in unit
         assert "/.prahari:" in unit                      # its state, mounted everywhere
         door = made["sarathi-dvara.container"]
-        assert "--prahari /usr/local/bin/prahari --prahari-for mahen " in door
+        assert "--prahari /usr/local/bin/prahari " in door and "--prahari-for" not in door
         assert "After=sarathi-prahari.service" in door
         page = made["sarathi-yantra.container"]
         assert "--prahari /usr/local/bin/prahari" in page
@@ -103,6 +137,18 @@ class TestThePodmanRoad:
                                              door=Door(owner="mahen")))
         assert secrets["sarathi-prahari"]["PRAHARI_DVARA_TOKEN"] == "dvara-token"
         assert secrets["sarathi-dvara"]["PRAHARI_DVARA_TOKEN"] == "dvara-token"
+
+    def test_the_inlet_alone_is_published_on_this_computer_only(self, host,  # noqa: F811
+                                                                world):
+        installed(world)
+        config = Config("ollama", road="podman", pages=Pages(on=False),
+                        house=House("beast.local", "192.168.1.44"),
+                        watch_inlet_port=8783, watch_public="https://b.ts.net:8443")
+        unit = podman.units(config)["sarathi-prahari.container"]
+        assert "--inlet-port 8783" in unit
+        assert "PublishPort=127.0.0.1:8783:8783" in unit
+        assert "192.168.1.44:8783" not in unit and 8783 not in podman.lan_ports(config)
+        assert "Environment=PRAHARI_INLET_PUBLIC_URL=https://b.ts.net:8443" in unit
 
     def test_with_a_house_the_inlet_is_published_for_a_phone(self, host, world):  # noqa: F811
         installed(world)

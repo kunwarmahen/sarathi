@@ -536,6 +536,10 @@ function drawSarathiTab() {
   const ctx = text(s.model.context_window || "", { inputmode: "numeric", placeholder: "8192" });
   const samayOn = check(s.samay.on);
   const prahariOn = check(s.prahari ? s.prahari.on : true);
+  const prahariPublic = text(s.prahari?.public_url || "",
+                             { placeholder: "https://beast.tail1234.ts.net:8443" });
+  const prahariPeople = text((s.prahari?.people || []).join(", "),
+                             { placeholder: "everyone in Dvara's list" });
   const road = pick([["process", "Plain programs"], ["podman", "Containers (Podman)"]], s.run.road);
   const pagesOn = check(s.pages.on);
   const dv = s.dvara || {};
@@ -554,7 +558,9 @@ function drawSarathiTab() {
                      s.phone?.awake || "");
   const ports = {
     yantra: text(s.yantra.port), samay: text(s.samay.port),
-    prahari: text(s.prahari ? s.prahari.port : 8782), home: text(s.pages.sarathi_port),
+    prahari: text(s.prahari ? s.prahari.port : 8782),
+    prahariInlet: text(s.prahari?.inlet_port || "", { placeholder: "none" }),
+    home: text(s.pages.sarathi_port),
     setu: text(s.pages.setu_port), dvaraPage: text(s.pages.dvara_port),
     dvara: text(dv.port || 8770), ntfy: text(dv.ntfy_port || 8793),
   };
@@ -563,7 +569,9 @@ function drawSarathiTab() {
              context_window: ctx.value.trim() || null },
     yantra: { port: ports.yantra.value },
     samay: { on: samayOn.checked, port: ports.samay.value },
-    prahari: { on: prahariOn.checked, port: ports.prahari.value },
+    prahari: { on: prahariOn.checked, port: ports.prahari.value,
+               inlet_port: ports.prahariInlet.value.trim() || 0,
+               public_url: prahariPublic.value.trim(), people: prahariPeople.value },
     run: { road: road.value },
     pages: { on: pagesOn.checked, sarathi_port: ports.home.value, setu_port: ports.setu.value,
              dvara_port: ports.dvaraPage.value },
@@ -598,12 +606,18 @@ function drawSarathiTab() {
     h("div.card.form", {}, h("h3", {}, "The rest"),
       h("label.inline", {}, samayOn, " Samay: things done later, on a schedule"),
       h("label.inline", {}, prahariOn, " Prahari: tells you when something happens"),
+      field("Prahari's watches are for", prahariPeople, "Names from Dvara's people list, " +
+            "with commas. Empty: everyone; each person's watch looks with their own accounts."),
+      field("Prahari's inlet from outside", prahariPublic, "Its Tailscale Funnel address " +
+            "(Prahari's deploy/public-inlet-tailscale.sh prints it), for a webhook or " +
+            "Gmail's push. Needs the inlet's own port, under Ports."),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
       field("How it runs", road)),
     phoneCard(phoneOn, phoneAt, wdaAt, awake, s.run.road, s.phone?.named || []),
     h("details.card", {}, h("summary", {}, "Ports"),
       field("Yantra", ports.yantra), field("Samay", ports.samay),
       field("Prahari (its page and its inlet)", ports.prahari),
+      field("Prahari's inlet alone (the public road)", ports.prahariInlet),
       field("This home page", ports.home), field("Setu's page", ports.setu),
       field("Dvara's page", ports.dvaraPage), field("Dvara", ports.dvara),
       field("ntfy", ports.ntfy)),
