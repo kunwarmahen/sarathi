@@ -19,6 +19,15 @@ it to the rest. It adds no logic.
 The badge never says green when the summary has a suite that could
 not run.
 
+## Seeing and deleting them is Yantra's
+
+The card links to Yantra's page opened on its kept tests (`#tests`),
+signed in like the card's other link. There each test shows its last
+result and **delete** takes one back. The card deletes nothing itself:
+the tests are Yantra's files, and the program that keeps them is the
+one that changes them. In a chat (Telegram, the home chat) a person
+uses `/tests` and `/tests delete N`, which are Dvara's.
+
 ## One button, asked once
 
 **Run them every night** posts to the home page (`POST

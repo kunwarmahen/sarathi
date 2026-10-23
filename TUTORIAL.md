@@ -1446,6 +1446,13 @@ them at 3 in the morning with your model. Nothing real happens: no
 email is sent and nothing is bought, because every tool answers from
 what it said when you kept the test.
 
+**Changed your mind about one?** On the card, **See and delete them on
+Yantra's page** lists them all with how each did. **delete** takes one
+back (the conversation stays in History). In a chat: `/tests`, then
+`/tests delete 2`. To keep an earlier answer rather than the last, use
+the small *keep this answer as a test* link under it in History, or
+`/chats test 2 turn 1` in a chat.
+
 **What you'll see.** The card shows the last night's result:
 *"5 of 6 passed, 1 broke since the run before"*. You get a message in
 your chat only when something **broke**. A quiet night means all is

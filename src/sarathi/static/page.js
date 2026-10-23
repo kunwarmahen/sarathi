@@ -117,7 +117,7 @@ function memoryCard(m) {
 // night (Yantra's last.json) and offers the night run once.
 const tests = { busy: false, said: "" };
 
-function testsCard(t) {
+function testsCard(t, yantra) {
   const night = t.summary;
   let badge = ["down", "none kept yet"];
   if (night && night.suites.length) {
@@ -158,6 +158,11 @@ function testsCard(t) {
     t.suites ? null : h("div.meta", {}, "Keep one from History on Yantra's page, or send "
       + "/keep test in a chat."),
     action,
+    // the list itself, with delete, is Yantra's: its tests, its page
+    t.suites && yantra && yantra.up
+      ? h("a.open", { href: yantra.open + "#tests", target: "_blank",
+                      rel: "noopener noreferrer" }, "See and delete them on Yantra's page")
+      : null,
     tests.said ? h("div.meta", { role: "status" }, tests.said) : null);
 }
 
@@ -289,7 +294,7 @@ async function refresh() {
              "My accounts") : null);
   const cards = body.pieces.map(card);
   if (body.memory) cards.push(memoryCard(body.memory));
-  if (body.tests) cards.push(testsCard(body.tests));
+  if (body.tests) cards.push(testsCard(body.tests, body.pieces.find((p) => p.name === "yantra")));
   document.getElementById("pieces").replaceChildren(...cards);
   if (body.people) drawPeople();
   if (body.chat && !chat.on) { startChat(); drawPush(); }

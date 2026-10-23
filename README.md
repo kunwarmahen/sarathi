@@ -869,7 +869,10 @@ notes/141). It shows how many passed, what broke since the run before,
 and any suite that couldn't run. It reads Yantra's own `last.json`. Its
 one button, **Run them every night**, asks Samay's own API for Samay's
 `tests` road at 03:00. Samay checks and keeps the schedule, and asked
-twice it is asked once. The tests run on the model `[model]` names,
+twice it is asked once. **See and delete them on Yantra's page** opens
+Yantra's own list of them (`#tests`), where each shows how it did and
+**delete** takes one back: they are Yantra's files, so Yantra's page
+changes them. The tests run on the model `[model]` names,
 because Samay's Yantra is given it like every other. You hear about a
 night only when something broke ([notes/27](notes/27-kept-tests-every-night.md)).
 
