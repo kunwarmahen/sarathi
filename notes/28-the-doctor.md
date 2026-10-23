@@ -99,18 +99,55 @@ at phone width in dark mode, and refused anyone without the token (401).
 
 ## What is not here
 
-* **No fix button.** A fix that needs root or the person stays a line
-  to type. The places the home page can already fix something (Apply,
-  Bring it back, My accounts) are where those fixes live.
-* **No near-expiry for Google sign-ins.** Only using the token tells,
-  and Setu already does that daily. The iPhone's signature has a date,
-  so it gets one.
+* ~~**No fix button.**~~ Built: see *Buttons* below. A fix that needs
+  root or a Mac (the firewall, disk, the iPhone's signature) still stays
+  a line to type.
+* ~~**No near-expiry for Google sign-ins.**~~ Built: Setu now knows the
+  day an app in Testing ends a sign-in (7 days after it was made, said
+  as `ends` in its status), so in the last three days it's an amber
+  line. A published app says so once (`setu config google-published
+  on`) and is never warned.
 * **No exact tool-token count.** The window check compares what the
   model holds with what Yantra plans for, plus a floor (16k) under which
   a big connection won't fit. Selection on many tools (Yantra's note 106)
   handles the rest.
-* **Not on a schedule.** A nightly doctor that messages you is one
-  Samay schedule away. It wasn't added until someone wants it.
+* ~~**Not on a schedule.**~~ Built: *Every morning* below.
 
-Tests: `tests/test_doctor.py` (25). The bias is a known problem not
+## Buttons
+
+A line carries `act` when the home page can already do its fix
+somewhere, and the Check tab shows that button under the line:
+
+| the line | the button | does what the page already did |
+|---|---|---|
+| a piece stopped, Samay/Prahari/Dvara not running, Smritikosh down, a container on an older image | Start everything again | Settings' Apply (`sarathi up`) |
+| the image older than the code, or none | Rebuild and restart | `sarathi image && sarathi up`, behind the answer, logged to `rebuild.log` (new: `POST /api/settings/image`) |
+| the model holds less, or much more, than Yantra plans for | Set it to N and restart | Settings → Sarathi's `[model] context_window`, then Apply |
+| an Android not connected | Bring it back | the phone card's `tcpip`, by the phone's name |
+| a sign-in stopped or about to end | Open Setu's page | the Setu card's link, signed in |
+
+Each one is pressed by the person and changes only what that button
+always changed. Nothing new can be done from the Check tab that
+couldn't be done from the page before.
+
+## Every morning
+
+**Check every morning** asks Samay once for a 07:30 schedule on its
+`doctor` road (Samay's note 09). Samay may be in a container, and the
+doctor has to look from the computer, so Samay asks the home page over
+HTTP with `SAMAY_DOCTOR_URL` and `SAMAY_DOCTOR_TOKEN`, which `sarathi up`
+gives it. That key is `doctor.token` in Sarathi's state folder, not the
+home token: it opens `GET /api/doctor` and gets 401 everywhere else.
+With `?news=1` the answer also says which red and amber lines are new
+since that road last asked, and which are gone, and the doctor keeps
+this answer (`doctor-told.json`) for next time. So a phone left
+unplugged all week is told once. Pressing Check never asks for news,
+so it doesn't use up the morning's.
+
+Live: two `samay run-now` against a scratch home page. The first
+reported the 5 ambers as new, Gmail's end date (Sun 25 Oct) included.
+The second was `quiet`, NOTHING NEW. On the Check tab, *Open Setu's
+page* opened Setu's page on 8775, signed in.
+
+Tests: `tests/test_doctor.py` (38). The bias is a known problem not
 said, and its opposite, a doctor that cries wolf.

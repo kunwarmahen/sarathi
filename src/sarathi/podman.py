@@ -524,7 +524,9 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
     # Yantra's page wants its token in the container, where it listens on
     # every address (Yantra's gate.py); the home page's link carries it
     out = {UNITS["yantra"]: {**model, YANTRA_TOKEN: yantra_token()},
-           UNITS["samay"]: {**model, **door}}
+           UNITS["samay"]: {**model, **door,
+                            **{k: v for k, v in services.doctor_env(config).items()
+                               if k == "SAMAY_DOCTOR_TOKEN"}}}
     if services.watching(config):
         # a watch's then-turn is a turn: the key; its news goes to the door
         out[UNITS["prahari"]] = {**model, **{k.replace("SAMAY_", "PRAHARI_", 1): v
@@ -778,6 +780,11 @@ def units(config: Config) -> dict[str, str]:
             # that, not the container's own bind (an older image ignores it)
             extra_container=lan(config, config.clock_port, CLOCK_PORT)
                             + f"Environment=SAMAY_PUBLIC_URL={config.link(config.clock_port)}\n"
+                            # the doctor answers on the host (it looks at systemd,
+                            # Podman, the firewall): reached as the host, keyed
+                            + "".join(f"Environment={k}={v}\n" for k, v in
+                                      services.doctor_env(config, "host.containers.internal")
+                                      .items() if k == "SAMAY_DOCTOR_URL")
                             + (f"Environment=SAMAY_DVARA_URL=http://{UNITS['dvara']}:"
                                f"{DOOR_PORT}\n"
                                # a schedule made on Yantra's page is told to you

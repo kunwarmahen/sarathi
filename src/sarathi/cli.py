@@ -406,12 +406,13 @@ def _running_home(config, port: int) -> int:
 
 
 def _serve_home(args) -> int:
-    from sarathi.home import Chat, Home, HomeServer, home_token
+    from sarathi.home import Chat, Home, HomeServer, doctor_token, home_token
     from sarathi.people import People
 
     try:
         config = load()
-        server = HomeServer(Home(config, _said, doctor=_doctor), home_token(), host=args.host,
+        server = HomeServer(Home(config, _said, doctor=_doctor), home_token(),
+                            doctor_key=doctor_token(), host=args.host,
                             port=args.port, chat=Chat.for_config(config),
                             people=People(), also_host=args.also_host)
     except OSError as exc:

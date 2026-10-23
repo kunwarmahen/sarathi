@@ -22,6 +22,24 @@ to click, and the doctor runs none of them: opening a port needs root,
 a rebuild takes minutes, a sign-in needs the person. It exits 1 when
 anything is red, so a script can ask it too.
 
+A BUTTON ONLY WHERE THE PAGE CAN ALREADY DO IT. On the home page's Check
+tab a line may carry ``act``: start everything again (Apply), rebuild
+the image and start again, set ``context_window`` to what the model
+holds, bring a Wi-Fi phone back from its cable, open Setu's page to
+sign in. Each is a button the page already had somewhere, offered where
+the problem is said, and pressed by the person. Nothing that needs root
+or a Mac gets one.
+
+A GOOGLE SIGN-IN'S END, BEFORE IT HAPPENS. Setu says the day each
+Google sign-in will end (an app in Testing: 7 days after it was made),
+and in its last three days that's an amber line here.
+
+WHAT'S NEW SINCE THE LAST MORNING. Samay's doctor road asks with
+``news``: the answer then also says which red and amber lines weren't
+there last time (``new``) and which are gone (``gone``), and the doctor
+remembers this answer for the next. A phone left unplugged all week is
+told once.
+
 WHAT IT CAN'T SEE, IT SAYS. ufw's rules are root's to read; the doctor
 tries ``sudo -n`` (which never asks for a password) and, when that
 can't, says so in amber with the line to run, instead of guessing
@@ -31,6 +49,7 @@ does once a day; the doctor reports Setu's mark, not a new try.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -54,6 +73,10 @@ DISK_RED, DISK_AMBER = 2 * 1024**3, 10 * 1024**3
 ROOM = 1.25
 #: The iPhone's signature, this close to its end, is worth a look.
 WDA_DAYS = 3.0
+#: A Google sign-in this close to its end (an app in Testing) too.
+SIGN_IN_DAYS = 3.0
+UP = {"do": "up", "label": "Start everything again"}
+SETU_PAGE = {"do": "page", "page": "setu", "label": "Open Setu's page"}
 
 
 @dataclass
@@ -62,8 +85,11 @@ class Line:
     about: str          # the piece: "setu", "image", "firewall"
     said: str           # what is the matter, in plain words
     fix: str = ""       # what to type or click; "" for green
+    #: The page's button for it, when the page can do the fix itself:
+    #: {"do": "up"|"image"|"window"|"phone"|"page", "label", ...}.
+    act: dict | None = None
 
-    def as_json(self) -> dict[str, str]:
+    def as_json(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -102,6 +128,29 @@ def report(lines: list[Line]) -> dict[str, Any]:
     counts = {level: sum(1 for line in lines if line.level == level) for level in LEVELS}
     return {"format": FORMAT, "ok": counts["red"] == 0, **counts,
             "lines": [line.as_json() for line in lines]}
+
+
+def news(answer: dict[str, Any], told: Path) -> dict[str, Any]:
+    """``answer`` with ``news``: its red and amber lines that weren't in the
+    last answer kept at ``told``, and the ones gone since; this answer is
+    kept there for the next time. A first time has everything new."""
+    def key(line: dict) -> tuple[str, str]:
+        return (line.get("about", ""), line.get("said", ""))
+    bad = [line for line in answer.get("lines", []) if line.get("level") != "green"]
+    try:
+        before = json.loads(told.read_text())
+    except (OSError, ValueError):
+        before = []
+    before = before if isinstance(before, list) else []
+    was = {key(line) for line in before if isinstance(line, dict)}
+    now = {key(line) for line in bad}
+    told.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    staged = told.with_suffix(".tmp")
+    staged.write_text(json.dumps(bad))
+    os.replace(staged, told)
+    return {**answer, "news": {
+        "new": [line for line in bad if key(line) not in was],
+        "gone": [line for line in before if isinstance(line, dict) and key(line) not in now]}}
 
 
 MARK = {"red": "✗ needs fixing", "amber": "! worth a look", "green": "✓ fine"}
@@ -143,7 +192,8 @@ def _sibling(f: Found, config: Any) -> list[Line]:
 
 
 def _yantra(data: dict, config: Any) -> list[Line]:
-    lines = [Line("red", "model", problem, _model_fix(problem))
+    lines = [Line("red", "model", problem, _model_fix(problem),
+                  act=_window(_held(problem)) if _held(problem) else None)
              for problem in data.get("problems") or []]
     provider, model = data.get("provider"), data.get("model")
     local = data.get("local") or {}
@@ -166,7 +216,8 @@ def _yantra(data: dict, config: Any) -> list[Line]:
             lines.append(Line(
                 "amber", "model", f"{model} holds {holds} tokens but Yantra plans for "
                 f"{plans}, so long talks are shortened sooner than they need to be",
-                f"Settings → Sarathi → [model] context_window = {holds}"))
+                f"Settings → Sarathi → [model] context_window = {holds}",
+                act=_window(holds)))
         if not any(line.level != "green" for line in lines):
             lines.append(Line("green", "model", f"{model} is pulled and answering"
                               + (f"; it holds {holds} tokens" if holds else "")))
@@ -174,6 +225,18 @@ def _yantra(data: dict, config: Any) -> list[Line]:
         lines.append(Line("green", "model", f"{provider} {model} (a cloud model isn't "
                           f"tried here: that costs a call)"))
     return lines
+
+
+def _held(problem: str) -> int | None:
+    """The tokens a "holds N tokens but Yantra plans for M" problem names."""
+    if "OLLAMA_CONTEXT_WINDOW=" not in problem:
+        return None
+    said = problem.split("OLLAMA_CONTEXT_WINDOW=", 1)[1].split(",")[0].strip()
+    return int(said) if said.isdigit() else None
+
+
+def _window(tokens: int) -> dict:
+    return {"do": "window", "value": tokens, "label": f"Set it to {tokens} and restart"}
 
 
 def _model_fix(problem: str) -> str:
@@ -192,8 +255,20 @@ def _setu(data: dict, config: Any) -> list[Line]:
     lines = [Line("red", "setu", f"{c.get('ref')}: the sign-in stopped working "
                   f"(the site ended it); your agents can't use it",
                   f"setu connect {c.get('connector')} --as {c.get('account')}, "
-                  f"or My accounts on the home page")
+                  f"or sign in again on Setu's page", act=SETU_PAGE)
              for c in rows if c.get("expired")]
+    now = time.time()
+    for c in rows:
+        end = _epoch(c.get("ends"))
+        if c.get("expired") or end is None or end - now > SIGN_IN_DAYS * 86400:
+            continue
+        when = time.strftime("%a %d %b %H:%M", time.localtime(end))
+        lines.append(Line(
+            "amber", "setu", f"{c.get('ref')}: Google ends this sign-in {when} (an app "
+            f"in Testing signs you out 7 days after you sign in)",
+            f"sign in again before then: setu connect {c.get('connector')} --as "
+            f"{c.get('account')}; or publish the Google app, then `setu config "
+            f"google-published on`", act=SETU_PAGE))
     lines += [Line("amber", "setu", str(p), "") for p in data.get("problems") or []]
     if not lines:
         lines.append(Line("green", "setu", f"{len(rows)} account"
@@ -207,7 +282,7 @@ def _samay(data: dict, config: Any) -> list[Line]:
         return []
     if not data.get("serving"):
         return [Line("red", "samay", "Samay isn't running: nothing scheduled runs",
-                     "sarathi up")]
+                     "sarathi up", act=UP)]
     recent = data.get("recent") or {}
     lines = [Line("amber", "samay",
                   f"a schedule {row.get('outcome', 'failed').replace('_', ' ')} at "
@@ -232,7 +307,7 @@ def _prahari(data: dict, config: Any) -> list[Line]:
         return []
     if not data.get("serving"):
         return [Line("red", "prahari", "Prahari isn't running: no watch looks or "
-                     "hears a knock", "sarathi up")]
+                     "hears a knock", "sarathi up", act=UP)]
     return [Line("green", "prahari", "Prahari is watching")]
 
 
@@ -240,7 +315,7 @@ def _dvara(data: dict, config: Any) -> list[Line]:
     lines = [Line("amber", "dvara", str(p), "") for p in data.get("problems") or []]
     if not data.get("serving"):
         lines.insert(0, Line("red", "dvara", "Dvara isn't serving: Telegram and the "
-                             "home page's chat get no answer", "sarathi up"))
+                             "home page's chat get no answer", "sarathi up", act=UP))
     elif not lines:
         lines.append(Line("green", "dvara", "Dvara is serving"))
     return lines
@@ -261,7 +336,9 @@ def _sparsh(data: dict, config: Any) -> list[Line]:
             "amber", "phone", f"{each['name']} isn't connected"
             + (f": {phone['note']}" if phone.get("note") else ""),
             "plug it in, unlock it, then `sparsh iphone`" if iphone else
-            "plug it in and press Bring it back on the home page (or `sparsh tcpip`)"))
+            "plug it in by cable, then Bring it back (or `sparsh tcpip`)",
+            act=None if iphone else {"do": "phone", "name": each["name"],
+                                     "label": "Bring it back (plugged in first)"}))
     wda = data.get("wda") or {}
     left = wda.get("days_left")
     if isinstance(left, (int, float)) and left <= 0:
@@ -280,6 +357,17 @@ def _sparsh(data: dict, config: Any) -> list[Line]:
 READERS: dict[str, Callable[[dict, Any], list[Line]]] = {
     "yantra": _yantra, "setu": _setu, "samay": _samay, "prahari": _prahari,
     "dvara": _dvara, "sparsh": _sparsh}
+
+
+def _epoch(at: Any) -> float | None:
+    if not at:
+        return None
+    try:
+        from datetime import datetime
+
+        return datetime.fromisoformat(str(at)).timestamp()
+    except ValueError:
+        return None
 
 
 def _when(at: str | None) -> str:
@@ -309,7 +397,8 @@ def _started(started: list[dict], config: Any) -> list[Line]:
         last = next((x for x in reversed(row.get("log") or []) if x.strip()), "")
         lines.append(Line("red", row["name"], "stopped" + (f"; its log ends: {last.strip()}"
                                                           if last else ""),
-                          "sarathi up (`sarathi status` shows the end of its log)"))
+                          "sarathi up (`sarathi status` shows the end of its log)",
+                          act=UP))
     alive = sum(1 for row in started if row.get("alive"))
     if alive:
         lines.append(Line("green", "running", f"{alive} of {len(started)} pieces "
@@ -365,15 +454,18 @@ def _image(state: dict | None) -> list[Line]:
         return [Line("amber", "image", "Podman didn't say when the image was built", "")]
     if not state.get("exists"):
         return [Line("red", "image", "there is no image yet, and the podman road runs "
-                     "everything from it", "sarathi image")]
+                     "everything from it", "sarathi image",
+                     act={"do": "image", "label": "Build it and start everything"})]
     lines = []
     if state.get("newer"):
         lines.append(Line("amber", "image", "the image is older than the code: "
                           + ", ".join(state["newer"]) + " came after it",
-                          "sarathi image && sarathi up"))
+                          "sarathi image && sarathi up",
+                          act={"do": "image", "label": "Rebuild and restart (minutes)"}))
     if state.get("behind"):
         lines.append(Line("amber", "image", "still running an older image: "
-                          + ", ".join(state["behind"]), "sarathi up (it restarts them)"))
+                          + ", ".join(state["behind"]), "sarathi up (it restarts them)",
+                          act=UP))
     if not lines:
         built = time.strftime("%a %d %b %H:%M", time.localtime(state["made"]))
         lines.append(Line("green", "image", f"built {built}, newer than every checkout"))
@@ -456,7 +548,7 @@ def _memory(config: Any, memory: dict | None) -> list[Line]:
         return []
     if memory.get("up") is False:
         return [Line("red", "memory", "Smritikosh isn't answering: nothing is remembered "
-                     "or recalled", "sarathi up")]
+                     "or recalled", "sarathi up", act=UP)]
     return [Line("green", "memory", "Smritikosh is answering")]
 
 

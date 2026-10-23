@@ -171,12 +171,15 @@ Amazon through a browser) and what each level allows.
 `sarathi status` now says `1 account connected: gmail:…`.
 
 **One week later, Gmail may stop.** Google expires the sign-in of an app
-still in *Testing* every seven days. You'll see it in `sarathi status`
+still in *Testing* every seven days. In its last three days, `sarathi
+doctor` (and Settings → Check) warns you with the day it ends, so you can
+sign in again before it does. If it ends anyway, you'll see it in `sarathi status`
 (`SIGN-IN EXPIRED, sign in again: setu connect gmail --as personal`), in
 `setu list`, and from the helper itself when you ask about mail. Run that
 command, and the helper has Gmail again on your next message; nothing
 needs restarting, containers included. To stop it happening, publish your
-Google app once (Setu's README, *Testing mode signs you out weekly*).
+Google app once (Setu's README, *Testing mode signs you out weekly*), then
+tell Setu with `setu config google-published on` so the warning stops.
 
 **An MCP server of your own** (optional). If you have a server that
 speaks MCP (a docs or notes server, a tool someone gave you an address
@@ -544,7 +547,11 @@ ticked stays ticked while it's hidden. Under each agent, *Skills its
   Then the agent does that job in one step. **Stop using as a tool**
   takes it back: the skill stays, as steps the agent reads.
 * **Rules**: standing answers for a tool (always allow, always ask,
-  never), so you're not asked the same thing twice.
+  never), so you're not asked the same thing twice. One thing no rule
+  answers: once a turn has read an email, a page or anything a
+  connection returned, a change after it is always put to you, with what
+  was read on the card's first line. A line in an email can't give your
+  agent orders.
 * **Accounts**: Setu's settings, and the rules of each site you added.
 * **Sarathi**: the model, Dvara and its bot, notices on phones, your
   phone, ports.
@@ -1475,7 +1482,15 @@ sarathi doctor
 
 Or on the home page: **Settings → Check → Check everything**. Red needs
 fixing, amber is worth a look, green is fine. It changes nothing by
-itself. You type the fix, or press the button it names.
+itself. Under a line the page can fix, there's a button (**Start
+everything again**, **Rebuild and restart**, **Bring it back**, **Open
+Setu's page**). Other fixes, like opening the firewall, you type.
+
+**Check every morning** (next to it) has Samay ask the doctor at 07:30
+each day, and you get a message only when something is newly wrong.
+Your morning might say *"gmail:personal: Google ends this sign-in Sun
+25 Oct"* with what to do, while a phone you left unplugged all week
+is mentioned only once.
 
 Sarathi also tries to say what happened, and what fixes it, at the
 moment it happens. The messages you're most likely to meet:

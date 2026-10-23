@@ -257,6 +257,7 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
             config.clock_port,
             {**env, "SAMAY_YANTRA": shlex.join(run_scheduled),
              **({"SAMAY_PUBLIC_URL": config.link(config.clock_port)} if config.house else {}),
+             **doctor_env(config),
              "SAMAY_YANTRA_HOME": str(work_dir()), **meet, **memory_env,
              **phone_env(config)},
             says_address="page: "))
@@ -425,6 +426,17 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
         home += ["--also-host", config.people_host()]
     out.append(Service("sarathi", "sarathi", home, pages.home_port, says_address="  "))
     return out
+
+
+def doctor_env(config: Config, host: str = HOST) -> dict[str, str]:
+    """Where Samay's doctor road asks, and its key (Sarathi's home page
+    must be one `up` starts: it is where the doctor answers)."""
+    if not config.pages.on:
+        return {}
+    from sarathi.home import doctor_token
+
+    return {"SAMAY_DOCTOR_URL": f"http://{host}:{config.pages.home_port}/api/doctor?news=1",
+            "SAMAY_DOCTOR_TOKEN": doctor_token()}
 
 
 def door_env(config: Config, at: str | None = None) -> dict[str, str]:

@@ -508,7 +508,7 @@ def test_a_running_unit_whose_file_changed_is_restarted_not_left_on_old_settings
         [], 0, "", "")
     podman.install(podman.units(LOCAL))
     lines, _ = podman.up(Config("ollama", "gemma4:12b", web_port=8411, clock_port=8790,
-                                road="podman"))
+                                road="podman", pages=Pages(on=False)))
     assert "yantra     restarting with the new settings  (unit sarathi-yantra)" in lines
     assert host.said("systemctl", "--user", "stop", "sarathi-yantra.service") == 1
     assert host.said("systemctl", "--user", "stop", "sarathi-samay.service") == 0

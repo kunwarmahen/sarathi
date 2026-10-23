@@ -68,7 +68,12 @@ EVERY SETTINGS FILE, THE OWNER'S ALONE (editing.py). Each program checks
 and writes its own file; a person signed in gets 403:
 
     GET  /api/settings                     every file's settings and text
-    GET  /api/doctor                       `sarathi doctor --json`: what's wrong, and its fix
+    GET  /api/doctor[?news=1]              `sarathi doctor --json`: what's wrong, and its
+                                           fix; with news, what's new since the last
+                                           such ask (Samay's doctor road, by the
+                                           doctor key, which opens this and nothing else)
+    POST /api/doctor/morning               Samay asked once to run the doctor each morning
+    POST /api/settings/image               `sarathi image && sarathi up`, behind the answer
     POST /api/settings/sarathi             {table: {key: value}}: sarathi.toml
     POST /api/settings/key/NAME            {"value"}: a key into secrets.env
     POST /api/settings/person/NAME         {fields} | {"remove": true}: actors.toml
@@ -148,6 +153,10 @@ from sarathi.siblings import SIBLINGS, locate
 DEFAULT_PORT = 8760
 ENV_TOKEN = "SARATHI_HOME_TOKEN"
 TOKEN_FILE = "home.token"
+#: The key Samay's doctor road asks with: it opens GET /api/doctor only.
+DOCTOR_TOKEN_FILE = "doctor.token"
+#: The doctor's last answer to that road, to say what's new against.
+DOCTOR_TOLD = "doctor-told.json"
 STATUS_EVERY = 30.0
 #: The longest chat message passed on, in bytes.
 MAX_BODY = 256 * 1024     # a whole settings file, or an agent's prompt
@@ -301,6 +310,41 @@ def memory_status(config: Config) -> dict[str, Any]:
 #: replays every conversation kept as a test (Yantra's note 141).
 NIGHTLY = {"prompt": "the night's kept tests", "when": "at 03:00",
            "runner": "tests", "time_limit": 3600, "notify": "when_new"}
+MORNING = {"prompt": "the house, checked by Sarathi's doctor", "when": "at 07:30",
+           "runner": "doctor", "time_limit": 300, "notify": "when_new"}
+
+
+def doctor_token() -> str:
+    """The doctor key, made once in Sarathi's state folder (yours alone).
+    Not the home token: Samay holds this one, and it opens the doctor's
+    answer and nothing else -- no page keys, no chat, no settings."""
+    path = state_dir() / DOCTOR_TOKEN_FILE
+    try:
+        kept = path.read_text().strip()
+        if len(kept) >= 16:
+            return kept
+    except OSError:
+        pass
+    token = secrets.token_urlsafe(24)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as out:
+        out.write(token + "\n")
+    return token
+
+
+def run_image() -> None:
+    """``sarathi image && sarathi up``, behind the answer: minutes long,
+    and it restarts this page at the end."""
+    from sarathi.services import sarathi_program
+
+    log = state_dir() / "logs" / "rebuild.log"
+    log.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    program = sarathi_program()
+    with open(log, "ab") as out:
+        subprocess.Popen(["sh", "-c", '"$0" image && "$0" up', program],
+                         stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT,
+                         start_new_session=True)
 
 
 def tests_root(env: dict[str, str] | None = None) -> Path:
@@ -375,7 +419,8 @@ class Home:
                  restart: Callable[[], None] = run_up,
                  tests: Callable[[Config], dict[str, Any]] | None = None,
                  ask_samay: Callable[..., Any] | None = None,
-                 doctor: Callable[[], dict[str, Any]] | None = None) -> None:
+                 doctor: Callable[[], dict[str, Any]] | None = None,
+                 rebuild: Callable[[], None] = run_image) -> None:
         self.config = config
         self._said = said
         self._up = up
@@ -387,32 +432,59 @@ class Home:
         self._tests = tests
         self._ask_samay = ask_samay
         self._doctor = doctor
+        self._rebuild = rebuild
         self._lock = threading.Lock()
 
-    def doctor(self) -> tuple[int, dict[str, Any]]:
+    def doctor(self, news: bool = False) -> tuple[int, dict[str, Any]]:
         """(status, answer): ``sarathi doctor``, asked now. Never cached: a
-        person pressing Check has just fixed something."""
+        person pressing Check has just fixed something. ``news``: what's
+        new since the last ask with news (doctor.news), which only
+        Samay's doctor road asks for, so pressing Check doesn't eat it."""
         if self._doctor is None:
             return 404, {"detail": "the doctor isn't wired in here"}
         try:
-            return 200, self._doctor()
+            answer = self._doctor()
         except Exception as exc:          # a check that broke is a line, not a 500
             return 500, {"detail": f"the check itself failed: {exc}"}
+        if news:
+            from sarathi import doctor
+
+            answer = doctor.news(answer, state_dir() / DOCTOR_TOLD)
+        return 200, answer
+
+    def morning(self) -> tuple[int, str]:
+        """(status, words): Samay asked once to run the doctor each morning."""
+        return self._ask_once(MORNING, "doctor", "Samay already checks the house "
+                              "each morning", "Every morning at 07:30 Samay asks the "
+                              "doctor. You hear only when something new is wrong.")
+
+    def rebuild(self) -> str:
+        self._rebuild()
+        return ("Rebuilding the image, then starting everything again: several "
+                "minutes, and this page restarts at the end. Its log: "
+                f"{state_dir() / 'logs' / 'rebuild.log'}")
 
     def tests(self) -> dict[str, Any]:
         return (self._tests or kept_tests_status)(self.config)
 
     def nightly(self) -> tuple[int, str]:
         """(status, words): Samay asked for the night run, once."""
+        return self._ask_once(NIGHTLY, "tests", "Samay already runs them every night",
+                              "Every night at 03:00 Samay replays your kept tests. "
+                              "You hear about it only when one breaks.")
+
+    def _ask_once(self, schedule: dict[str, Any], runner: str, already: str,
+                  done: str) -> tuple[int, str]:
+        """Samay asked for ``schedule`` -- unless one on ``runner`` is there."""
         if not self.config.clock_on:
             return 409, "Samay isn't on here: turn it on in Settings first"
         try:
             ask = self._ask_samay or _samay
             listed = ask(self.config, "GET", "schedules")
             rows = listed.get("schedules", listed) if isinstance(listed, dict) else listed
-            if any(r.get("runner") == "tests" for r in rows or []):
-                return 200, "Samay already runs them every night"
-            ask(self.config, "POST", "schedules", NIGHTLY)
+            if any(r.get("runner") == runner for r in rows or []):
+                return 200, already
+            ask(self.config, "POST", "schedules", schedule)
         except urllib.error.HTTPError as exc:
             try:
                 why = json.loads(exc.read() or b"{}").get("detail") or str(exc)
@@ -421,8 +493,7 @@ class Home:
             return exc.code, f"Samay said no: {why}"
         except (OSError, ValueError) as exc:
             return 502, f"Samay didn't answer: {exc}"
-        return 200, ("Every night at 03:00 Samay replays your kept tests. "
-                     "You hear about it only when one breaks.")
+        return 200, done
 
     def memory(self) -> dict[str, Any]:
         with self._lock:
@@ -566,10 +637,14 @@ def invite_address(config: Config, link: str) -> tuple[str, bool]:
 class HomeServer:
     def __init__(self, home: Home, token: str, *, host: str = HOST,
                  port: int = DEFAULT_PORT, chat: Chat | None = None,
-                 people: People | None = None, also_host: str | None = None) -> None:
+                 people: People | None = None, also_host: str | None = None,
+                 doctor_key: str | None = None) -> None:
         self.home = home
         self.chat = chat
         self.token = token
+        #: Samay's key for the doctor's answer alone (doctor_token); a
+        #: random one when none is given, so no empty header ever matches.
+        self.doctor_key = doctor_key or secrets.token_urlsafe(24)
         self.people = people
         self.httpd = ThreadingHTTPServer((host, port), _handler(self))
         self.httpd.daemon_threads = True
@@ -777,9 +852,14 @@ def _handler(server: HomeServer):
             if url.path == "/api/settings":
                 return self._settings_get()
             if url.path == "/api/doctor":
-                if self._owner() is None:
+                query = {k: v[-1] for k, v in parse_qs(url.query).items()}
+                offered = self.headers.get("Authorization", "")
+                # the doctor key opens this one answer; anything else is the owner's
+                if not hmac.compare_digest(offered.encode(),
+                                           f"Bearer {server.doctor_key}".encode()) \
+                        and self._owner() is None:
                     return None
-                return self._json(*server.home.doctor())
+                return self._json(*server.home.doctor(news=query.get("news") == "1"))
             if url.path.startswith("/api/chat/chats"):
                 return self._past(url)
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
@@ -942,6 +1022,8 @@ def _handler(server: HomeServer):
             restart, said = False, "Saved."
             try:
                 config = load()
+                if what == "image":
+                    return self._json(200, {"said": server.home.rebuild()})
                 if what == "apply":
                     server.home._restart()
                     return self._json(200, {"said": "Starting everything again with the "
@@ -1055,6 +1137,11 @@ def _handler(server: HomeServer):
                 if body is None:
                     return None
                 code, words = server.home.switch(str(body.get("via")))
+                return self._json(code, {"detail" if code >= 400 else "said": words})
+            if parts == ["api", "doctor", "morning"]:
+                if self._owner() is None:
+                    return None
+                code, words = server.home.morning()
                 return self._json(code, {"detail" if code >= 400 else "said": words})
             if parts == ["api", "tests", "nightly"]:
                 if self._owner() is None:

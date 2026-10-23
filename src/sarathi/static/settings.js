@@ -723,11 +723,19 @@ const CHECK_WORDS = { red: "Needs fixing", amber: "Worth a look", green: "Fine" 
 function drawCheckTab() {
   const out = h("div.doctor", { "aria-live": "polite" });
   const go = button("Check everything", () => runCheck(go, out));
+  const morning = button("Check every morning", async () => {
+    morning.disabled = true;
+    try { said((await api("/api/doctor/morning", {})).said); }
+    catch (err) { said(err.message, true); }
+    finally { morning.disabled = false; }
+  }, "quiet");
   const intro = h("p.meta", {}, "Asks every program how it's doing: what's running, " +
-    "the image, the firewall, your accounts, phones, the model, last day's schedules, " +
-    "disk. Nothing is changed; each problem says what fixes it. It takes a few seconds.");
+    "the image, the firewall, your accounts and when a Google sign-in ends, phones, " +
+    "the model, last day's schedules, disk. Nothing changes until you press a fix. " +
+    "It takes a few seconds. Every morning: Samay asks the same at 07:30 and tells " +
+    "you only what's new.");
   if (sets.checked) drawCheck(out, sets.checked);
-  return [intro, row(go), out];
+  return [intro, row(go, morning), out];
 }
 
 async function runCheck(go, out) {
@@ -743,13 +751,52 @@ async function runCheck(go, out) {
   }
 }
 
+// A line's fix, done by a button the page already has elsewhere.
+async function doFix(act, btn) {
+  btn.disabled = true;
+  try {
+    if (act.do === "page") {
+      const pieces = (await api("/api/pieces")).pieces || [];
+      const page = pieces.find((p) => p.name === act.page);
+      if (!page || !page.up) throw new Error(`${act.page}'s page isn't running`);
+      window.open(page.open, "_blank", "noopener");
+      said("");
+      return;
+    }
+    const got = act.do === "up" ? await api("/api/settings/apply", {})
+      : act.do === "image" ? await api("/api/settings/image", {})
+      : act.do === "phone" ? await api("/api/settings/phone",
+                                       { do: "tcpip", name: act.name })
+      : act.do === "window" ? await api("/api/settings/sarathi",
+                                        { model: { context_window: String(act.value) } })
+      : null;
+    if (got === null) throw new Error(`no button for ${act.do}`);
+    if (act.do === "window") {
+      said((await api("/api/settings/apply", {})).said);
+    } else {
+      said(got.said || "Done.");
+    }
+  } catch (err) {
+    said(err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function drawCheck(out, got) {
   const head = h("p.doctor-head", {},
     `${got.red} to fix, ${got.amber} worth a look, ${got.green} fine`);
-  out.replaceChildren(head, ...got.lines.map((line) => h(`div.doctor-line.${line.level}`, {},
-    h("span.doctor-mark", {}, CHECK_WORDS[line.level]),
-    h("div", {}, h("strong", {}, line.about), " ", line.said,
-      line.fix ? h("code.doctor-fix", {}, line.fix) : null))));
+  out.replaceChildren(head, ...got.lines.map((line) => {
+    let fixBtn = null;
+    if (line.act) {
+      fixBtn = h("button.open.doctor-act", { type: "button" }, line.act.label);
+      fixBtn.addEventListener("click", () => doFix(line.act, fixBtn));
+    }
+    return h(`div.doctor-line.${line.level}`, {},
+      h("span.doctor-mark", {}, CHECK_WORDS[line.level]),
+      h("div", {}, h("strong", {}, line.about), " ", line.said,
+        line.fix ? h("code.doctor-fix", {}, line.fix) : null, fixBtn));
+  }));
 }
 
 function drawKeysTab() {

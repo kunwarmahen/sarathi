@@ -239,3 +239,135 @@ def test_the_text_form_puts_each_fix_under_its_line():
     shown = doctor.text(got)
     assert shown.splitlines()[0].startswith("1 to fix")
     assert "      fix: free some space" in shown
+
+
+# ---- a Google sign-in's end, the buttons, what's new, the morning road -----------
+
+def ends_in(days: float) -> str:
+    from datetime import UTC, datetime, timedelta
+    return (datetime.now(UTC) + timedelta(days=days)).isoformat(timespec="seconds")
+
+
+class TestAGoogleSignInsEnd:
+    def setu(self, **row):
+        return world(setu={"connections": [{"ref": "gmail:me", "connector": "gmail",
+                                            "account": "me", "expired": None, **row}],
+                           "problems": []})
+
+    def test_in_its_last_days_it_is_amber_with_setus_page(self):
+        line = next(x for x in lines(self.setu(ends=ends_in(2))) if x.about == "setu")
+        assert line.level == "amber" and "Google ends this sign-in" in line.said
+        assert "setu config google-published on" in line.fix
+        assert line.act == doctor.SETU_PAGE
+
+    def test_a_week_away_or_none_is_fine(self):
+        assert level(lines(self.setu(ends=ends_in(5))), "setu") == ["green"]
+        assert level(lines(self.setu(ends=None)), "setu") == ["green"]
+
+    def test_an_expired_one_is_red_once_not_also_ending(self):
+        got = lines(self.setu(ends=ends_in(-1), expired={"since": "x"}))
+        assert level(got, "setu") == ["red"]
+
+
+class TestAButtonOnlyWhereThePageCanDoIt:
+    def test_a_stopped_piece_offers_starting_again(self):
+        got = lines(started=[{"name": "dvara", "alive": False, "log": []}])
+        assert next(x for x in got if x.about == "dvara").act == doctor.UP
+
+    def test_an_old_image_offers_the_rebuild(self):
+        got = lines(config=replace(CONFIG, road="podman"),
+                    image=lambda c: {"exists": True, "made": 0,
+                                     "newer": ["yantra x"], "behind": []})
+        assert next(x for x in got if x.about == "image").act["do"] == "image"
+
+    def test_a_window_too_small_for_the_plan_offers_the_right_number(self):
+        problem = ("m holds 8192 tokens but Yantra plans for 65536: ... "
+                   "Set OLLAMA_CONTEXT_WINDOW=8192, or use a model")
+        got = lines(world(yantra={"provider": "ollama", "model": "m", "problems": [problem],
+                                  "context_window": 65536, "local": {}}))
+        act = next(x for x in got if x.about == "model").act
+        assert act["do"] == "window" and act["value"] == 8192
+
+    def test_an_android_offers_bring_it_back_and_an_iphone_nothing(self):
+        named = [{"name": "nexus", "kind": "Android", "where": "a"},
+                 {"name": "iphone", "kind": "iPhone", "where": "b"}]
+        got = [x for x in lines(world(sparsh={"phones": [], "named": named}))
+               if x.about == "phone"]
+        assert got[0].act == {"do": "phone", "name": "nexus",
+                              "label": "Bring it back (plugged in first)"}
+        assert got[1].act is None
+
+    def test_root_and_the_mac_get_no_button(self):
+        wall = {"host": "h", "ports": [1], "wall": "ufw", "open": set(), "command": "c"}
+        got = lines(firewall=lambda c: wall, disk=lambda p: 1024**3)
+        assert all(x.act is None for x in got if x.about in ("firewall", "disk"))
+
+
+class TestWhatsNewSinceTheLastMorning:
+    def test_once_said_it_is_not_new_and_a_fix_is_gone(self, tmp_path):
+        told = tmp_path / "told.json"
+        first = doctor.report(lines(started=[{"name": "dvara", "alive": False, "log": []}]))
+        assert [x["about"] for x in doctor.news(first, told)["news"]["new"]] == ["dvara"]
+        assert doctor.news(first, told)["news"]["new"] == []
+        fixed = doctor.news(doctor.report(lines()), told)["news"]
+        assert fixed["new"] == [] and [x["about"] for x in fixed["gone"]] == ["dvara"]
+
+
+class TestTheDoctorKey:
+    def served(self, tmp_path, told):
+        from test_home import config
+        answer = doctor.report(lines(started=[{"name": "dvara", "alive": False,
+                                               "log": []}]))
+        home = Home(config(tmp_path), lambda: {}, doctor=lambda: answer)
+        server = HomeServer(home, GOOD, port=0, doctor_key="the-doctor-key-long-enough")
+        server.start()
+        return server
+
+    def test_it_opens_the_doctor_with_news_and_nothing_else(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("SARATHI_STATE", str(tmp_path / "state"))
+        server = self.served(tmp_path, tmp_path / "told.json")
+        try:
+            key = "the-doctor-key-long-enough"
+            got = get(server, "/api/doctor?news=1", token=key)
+            assert got.status_code == 200 and got.json()["news"]["new"]
+            assert get(server, "/api/doctor?news=1", token=key).json()["news"]["new"] == []
+            for path in ("/api/pieces", "/api/settings", "/api/people", "/api/chat"):
+                assert get(server, path, token=key).status_code == 401
+            assert "news" not in get(server, "/api/doctor").json()
+        finally:
+            server.stop()
+
+
+class TestTheMorningRoad:
+    def test_samay_is_asked_once(self, tmp_path):
+        from test_home import config
+        asked = []
+
+        def samay(cfg, method, path, body=None):
+            asked.append((method, body))
+            return {"schedules": [{"runner": "doctor"}] if len(asked) > 2 else []}
+        home = Home(config(tmp_path), lambda: {}, ask_samay=samay)
+        assert home.morning()[0] == 200
+        assert asked[1] == ("POST", doctor_home_morning())
+        assert "already" in home.morning()[1]
+
+    def test_samay_is_told_where_and_with_which_key(self, tmp_path, monkeypatch):
+        from sarathi import services
+        from sarathi.config import Pages
+        monkeypatch.setenv("SARATHI_STATE", str(tmp_path))
+        env = services.doctor_env(replace(CONFIG, pages=Pages(on=True)))
+        assert env["SAMAY_DOCTOR_URL"].endswith("/api/doctor?news=1")
+        assert len(env["SAMAY_DOCTOR_TOKEN"]) >= 16
+        assert services.doctor_env(replace(CONFIG, pages=Pages(on=False))) == {}
+
+    def test_the_rebuild_runs_behind_the_answer(self, tmp_path, monkeypatch):
+        from test_home import config
+        monkeypatch.setenv("SARATHI_STATE", str(tmp_path))
+        ran = []
+        home = Home(config(tmp_path), lambda: {}, rebuild=lambda: ran.append(1))
+        assert "Rebuilding the image" in home.rebuild() and ran == [1]
+
+
+def doctor_home_morning():
+    from sarathi.home import MORNING
+    return MORNING

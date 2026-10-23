@@ -512,6 +512,7 @@ button.danger:hover { color: var(--clay); border-color: var(--clay); }
 .doctor-line.red .doctor-mark { color: var(--clay); }
 .doctor-line.amber .doctor-mark { color: var(--accent); }
 .doctor-line.green .doctor-mark { color: var(--ok); }
+.doctor-act { margin-top: 8px; }
 .doctor-fix { display: block; margin-top: 6px; font: 12.5px/1.45 var(--mono);
   background: var(--sunk); padding: 6px 8px; border-radius: 4px; white-space: pre-wrap; }
 @media (max-width: 520px) {

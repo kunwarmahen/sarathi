@@ -845,7 +845,8 @@ $ sarathi doctor
 ```
 
 Every line comes from the program that knows: each sibling's own
-`status --json` (Setu's stopped sign-ins, Samay's failed runs of the
+`status --json` (Setu's stopped sign-ins and the day a Google sign-in
+in Testing will end, Samay's failed runs of the
 last day, Sparsh's phones and the iPhone's signature, Yantra's model and
 how many tokens it really holds, Dvara's problems), what `up` started,
 Podman's image against each checkout's last commit (and containers still
@@ -856,6 +857,17 @@ look, **green** is fine. It changes nothing, and exits 1 when anything
 is red. `--json` prints `sarathi.doctor.v1`. The same check is a
 **Check** tab in the home page's Settings
 ([notes/28](notes/28-the-doctor.md)).
+
+On that tab a line gets a button when the page can already do its fix:
+**Start everything again** (a stopped piece), **Rebuild and restart**
+(an image older than the code; minutes, behind the answer), **Set it to
+N and restart** (the model's window), **Bring it back** (a Wi-Fi phone,
+plugged in first), **Open Setu's page** (a sign-in to renew). Firewall,
+disk and the iPhone's signature need root or a Mac, so they stay lines
+to type. **Check every morning** asks Samay, once, for a 07:30 schedule
+on its doctor road: it asks the doctor with a key that opens that one
+answer and nothing else, and tells you only what's newly wrong (Samay's
+notes/09).
 
 ### Every page in one place: `sarathi home`
 
