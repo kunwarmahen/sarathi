@@ -1303,13 +1303,26 @@ If you keep it somewhere unusual, say where:
 
 ## Step 8 (optional) · Tell me when something happens
 
-A schedule (Step 4) does something at a time. Some things you want
-aren't like that: *"tell me when ALAB drops under $50"*, *"tell me when
+A schedule (Step 4) does something **at a time**: "every morning at
+8", "on Friday". Some things you want aren't like that: *"tell me when ALAB drops under $50"*, *"tell me when
 a mail from my bank comes"*, *"when Mum messages me on WhatsApp, read it
 to me"*. The answer is usually *not yet*, and asking the model every hour
 just to hear *not yet* is a waste. **Prahari** waits for you without the
 model: it looks with one of the helper's own tools every so often, and
 wakes the helper only when the thing happens.
+
+**Which one do I want?** Ask yourself: *is this about a time, or about
+something happening?*
+
+| You say | It's | Who does it |
+|---|---|---|
+| "Every morning at 8, summarise my mail" | at a time | Samay (a schedule) |
+| "Remind me on Friday to call the plumber" | at a time | Samay |
+| "Tell me when ALAB drops under $50" | waiting for something | Prahari (a watch) |
+| "Tell me as soon as the bank writes" | waiting for something | Prahari |
+
+You don't have to remember this. Ask the helper in plain words, and it
+picks the right one.
 
 **Get it**, beside the others, and start again:
 
@@ -1368,17 +1381,29 @@ watches to a few people, write their names under `[prahari]` in
 sarathi.toml, `people = ["you", "asha"]` (or on **Settings → Sarathi**).
 
 **Mail the moment it lands.** A watch on mail looks every half hour.
-To hear sooner, let Prahari keep your mail folder open, once, at this
-computer:
+To hear sooner, let Prahari keep your mail folder open. Two steps, once:
 
-```bash
-~/agent/prahari/.venv/bin/prahari mailbox add work-mail --server imap.gmail.com --user you@gmail.com
-```
+1. **Add the mail account in Setu.** On the home page, open **Setu**
+   under *Your pages*, find the **Mail (IMAP)** card, and fill in the
+   mail server (Gmail: `imap.gmail.com`, iCloud: `imap.mail.me.com`,
+   Outlook: `outlook.office365.com`), your address, and an *app
+   password*. Make the app password in your account's security
+   settings, never your real password. Setu checks it with your mail
+   server before keeping it, and keeps it with your other sign-ins.
+   Call the account `work`.
+2. **Tell Prahari to keep it open**, at this computer:
 
-It asks for a password. For Gmail, iCloud and Outlook, make an *app
-password* in your account's security settings and paste that, never
-your real password. It stays on this computer, readable only by you.
-Run `sarathi down && sarathi up` so Prahari starts listening. Now ask
+   ```bash
+   ~/agent/prahari/.venv/bin/prahari mailbox add work-mail --account mail:work
+   ```
+
+   Then `sarathi down && sarathi up` so Prahari starts listening.
+   Prahari never keeps the password. It asks Setu each time it connects.
+
+Someone else in your house does step 1 on *their* own Setu page: in
+their chat they send `/accounts page` for a link to it (`/connect mail`
+sends them there too, so no password is ever typed into a chat). You
+do step 2 for them, adding `--for asha`. Now ask
 the helper *"tell me as soon as my bank writes, using work-mail"*: a new
 mail knocks the moment it lands, and only who it's from and the subject
 are read, never the mail itself.

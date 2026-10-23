@@ -193,6 +193,16 @@ chat through Dvara like a schedule's answer. It's optional: without it,
 nothing about it is started, and `[prahari] on = false` turns it off
 when it is here.
 
+**Samay or Prahari?** Samay does things *at a time* ("every morning at
+8", "on Friday"); Prahari waits for something *to happen* ("when the
+price drops", "as soon as the bank writes"). Ask your agent in plain
+words, and it picks; the tutorial's Step 8 has a table.
+
+**Mail the moment it lands**: add the mail account on Setu's page (its
+**Mail (IMAP)** card, with an app password), then `prahari mailbox add
+work-mail --account mail:work`. The password stays in Setu; Prahari keeps
+the folder open and asks Setu for the login each time it connects.
+
 What `up` wires for you:
 
 * **Yantra's page** gets `--prahari`, so the agent there can offer
