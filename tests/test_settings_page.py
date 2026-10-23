@@ -262,3 +262,15 @@ def test_an_iphone_that_does_not_answer_is_said_and_not_saved(with_sparsh):
     assert status == 400 and "not saved" in got["detail"]
     assert "is WebDriverAgent running on that iPhone?" in got["detail"]
     assert settings_mod.load().phone is None
+
+
+def test_a_household_fact_goes_to_dvara_as_the_owner(owner_page):
+    """Settings → Household: kept by Dvara as the owner (--owner), and only
+    the words a change can be made of are sent on."""
+    status, got = send(owner_page, "/api/settings/household",
+                       {"add": "bins go out Tuesday", "sneak": "x"})
+    assert status == 200 and "everyone's agents" in got["said"]
+    last = heard(owner_page)[-1]
+    assert last["argv"][last["argv"].index("--owner") + 1] == "mahen"
+    assert last["argv"][-2:] == ["settings", "household"]
+    assert json.loads(last["stdin"]) == {"add": "bins go out Tuesday"}

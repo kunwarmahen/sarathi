@@ -119,7 +119,7 @@ class TestStartedTogether:
         assert gate["argv"] == [
             "--root", str(home / "dvara" / "agents"), "--actors",
             str(home / "dvara" / "actors.toml"), "--state", str(home / "dvara" / "state"),
-            "--ask", "--provider", "ollama", "--model", "gemma4:12b",
+            "--ask", "--owner", "owner", "--provider", "ollama", "--model", "gemma4:12b",
             "--samay", str(bin_dir / "samay"),
             "serve", "--host", "127.0.0.1", "--port", str(port), "--web",
             "--telegram", "greeter"]

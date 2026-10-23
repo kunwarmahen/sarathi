@@ -547,7 +547,9 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     dvara, samay = found["dvara"].program, found["samay"].program
     assert dvara is not None
     argv = [dvara, "--root", str(door.path("root")), "--actors", str(door.path("actors")),
-            "--state", str(door.path("state")), "--ask"]
+            "--state", str(door.path("state")), "--ask",
+            # whose word keeps a fact for everyone's agents (dvara household.py)
+            "--owner", door.owner]
     # the same model as the page, overruling a package that names another
     argv += ["--provider", config.provider] + (["--model", config.model] if config.model
                                                else [])

@@ -1017,9 +1017,13 @@ links and sessions only as hashes, in `~/.local/share/sarathi/people.json`.
 ([notes/14](notes/14-everyone-in-the-house.md))
 
 **Every setting, on the page.** Behind the gear, **Settings** changes
-every file you'd otherwise edit by hand, in six tabs: **People** (Dvara's
+every file you'd otherwise edit by hand, in tabs: **People** (Dvara's
 actors file: who, which agents, accounts, allowance, Telegram ids, and
-anyone who messaged the bot unlisted), **Agents** (each agent's model,
+anyone who messaged the bot unlisted; for a child, the hours their
+agents answer, messages a day, and who says yes to their changes,
+Dvara's notes/61), **Household** (what every agent is told whoever it's
+talking to: kept by you, offered by anyone with `/remember for everyone`,
+Dvara's notes/62), **Agents** (each agent's model,
 memory, tools as checkboxes in plain words, each marked *asks you first*
 or *runs unasked*, accounts, budget and instructions; add from an
 example; the skills its people kept, and **Make it a tool** for one with

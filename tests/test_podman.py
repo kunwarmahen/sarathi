@@ -210,7 +210,7 @@ def test_the_door_is_a_third_container_wired_to_the_clock_by_name(host, world):
     made = podman.units(DOOR)
     door = made["sarathi-dvara.container"]
     home = world / "home"
-    assert "--ask --provider ollama --model gemma4:12b --samay /usr/local/bin/samay" in door
+    assert "--ask --owner owner --provider ollama --model gemma4:12b --samay /usr/local/bin/samay" in door
     assert "serve --host 0.0.0.0 --port 8765 --web --telegram greeter" in door
     assert "PublishPort=127.0.0.1:8766:8765" in door
     assert "After=sarathi-samay.service" in door

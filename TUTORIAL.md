@@ -52,7 +52,7 @@ that finds things by meaning, is optional too: Step 7, when the helper
 starts forgetting things you told it. And Prahari, which tells you when
 something happens — a price drops, a mail comes, Mum messages — is
 Step 8. Step 9 keeps good answers as tests, so a new model can't quietly
-break them.)
+break them. Step 10 sets up a morning brief.)
 
 ---
 
@@ -839,6 +839,34 @@ connect their own Gmail from their phone by sending `/connect gmail` to
 the bot. Their sign-ins are kept on your computer, in a folder of their
 own, so you could read them. Tell them that.
 
+**For a child.** On their **Change** form in **Settings → People**,
+three boxes besides the allowance:
+
+* **Hours their agents answer**: `07:00-21:00`, on this computer's
+  clock. Outside them they're told *"I'm not answering now -- your hours
+  here are 07:00-21:00"*, and a schedule of theirs set for 2 am doesn't
+  run either.
+* **Messages a day**: `40`, say. What they send that reaches an agent
+  counts; schedules and words like `/memory` don't. On a local model
+  money never runs out, so this is the limit that does.
+* **Who says yes to changes**: pick yourself, and set *Asking before
+  changes* to *Asked before anything changes*. When their agent wants to
+  write a file, spend, or change something after reading an email, the
+  question comes to **your** Telegram as *"For kid: …"*, with the
+  buttons. They can't answer it, and if you don't, it's refused.
+
+*Agents they may use* and *Accounts their agents use* are the other two
+limits; give a child an agent made for them.
+
+**Things everyone should know.** **Settings → Household** is a short
+list every agent is told, whoever it's talking to: the wifi, bin day,
+where the spare key is. Type one and press **Keep for everyone**. From
+your own chat, `/remember for everyone the bins go out Tuesday night`
+does the same. When someone else in the house says it, it waits on
+that tab (and comes to your chat) for you to **Keep** or not.
+`/household` in any chat lists them. Everyone's own memories stay
+theirs; this is only for what you'd put on the fridge.
+
 **Amazon or X for them, too.** Those sites can't send a sign-in link;
 they're signed in to in a browser on your computer. If you tell Dvara
 where its pages can be reached, it sends the person a link that shows
@@ -1468,6 +1496,48 @@ well.
 You need the latest image for this (`sarathi image`, then `sarathi down
 && sarathi up`). Until then, Samay says *"runner must be one of direct,
 dvara"* when you press the button.
+
+---
+
+## Step 10 (optional) · Your first morning brief
+
+One message every weekday morning: the mail that needs you, today's
+calendar, your positions, your to-dos, your phone's battery and missed
+calls, and how last night's tests went. It only reads, so it can't send
+a mail or place a trade.
+
+1. **Add the agent.** **Settings → Agents**, *New agent from an example*:
+   pick **morning**, name it `morning`, **Add**. Then **Settings →
+   People → Change** on yourself and tick it under *Agents they may
+   use* (or leave *Every agent*).
+2. **Connect what it should read** (Step 2): Gmail, Google Calendar,
+   Robinhood, Notion, whichever you use. It reads every account you
+   connect, read only. What you haven't connected it leaves out.
+3. **Ask for it.** Open the bot's chat with `morning` (or the home page
+   chat), and say:
+
+   ```
+   Send me my morning brief on weekdays at 7:30.
+   ```
+
+   It reads the time back (*"every weekday at 07:30 -- next: Mon …"*)
+   and asks. Say yes, then press **approve** on the card. From then on
+   Samay runs it each weekday and the brief arrives in this chat.
+4. **Want one now?** *"Brief me now."*
+
+The phone part reads the battery and missed calls without touching the
+screen, so the brief doesn't wait for the phone or ask you to unlock it.
+An iPhone tells its battery but not its calls. Last night's tests come
+from Step 9's nightly run, if you set one up.
+
+**Which model.** Use `qwen3.8` (or a cloud model). In a trial with only
+the phone connected, `qwen3.8-64k` wrote just the phone part every time.
+`gemma4:12b` made up tools for the mail and calendar it didn't have,
+and wrote *"Mail: tool failed"*.
+
+You need the latest image (`sarathi image`, then `sarathi down &&
+sarathi up`): the brief's phone tool and schedules read on a schedule
+are new.
 
 ---
 

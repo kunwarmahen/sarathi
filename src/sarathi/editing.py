@@ -109,7 +109,7 @@ def _dvara(config: Config) -> list[str]:
     if found is None:
         raise EditError(409, "dvara wasn't found on this computer (see `sarathi status`)")
     return [found, "--root", str(door.path("root")), "--actors", str(door.path("actors")),
-            "--state", str(door.path("state"))]
+            "--state", str(door.path("state")), "--owner", door.owner]
 
 
 def dvara(config: Config, args: list[str], body: Any = None, *,

@@ -6,7 +6,8 @@
 
 const sets = { data: null, tab: "people", editing: null, checked: null };
 
-const TABS = [["people", "People"], ["agents", "Agents"], ["rules", "Rules"],
+const TABS = [["people", "People"], ["household", "Household"], ["agents", "Agents"],
+              ["rules", "Rules"],
               ["accounts", "Accounts"], ["sarathi", "Sarathi"], ["keys", "Keys"],
               ["check", "Check"]];
 
@@ -39,7 +40,8 @@ function drawTabs() {
     b.addEventListener("click", () => { sets.tab = id; sets.editing = null; said(""); drawTabs(); });
     return b;
   }));
-  const draw = { people: drawPeopleTab, agents: drawAgentsTab, rules: drawRulesTab,
+  const draw = { people: drawPeopleTab, household: drawHouseholdTab, agents: drawAgentsTab,
+                 rules: drawRulesTab,
                  accounts: drawAccountsTab, sarathi: drawSarathiTab, keys: drawKeysTab,
                  check: drawCheckTab };
   document.getElementById("settings-body").replaceChildren(
@@ -164,6 +166,9 @@ function drawPeopleTab() {
       : `accounts in ${p.setu}${p.setu_manage ? " (may change them)" : ""}`;
     const bits = [agents, accounts,
                   p.max_usd_per_day != null ? `$${p.max_usd_per_day} a day` : "no daily limit",
+                  p.hours ? `answers ${p.hours}` : null,
+                  p.max_turns_per_day != null ? `${p.max_turns_per_day} messages a day` : null,
+                  p.approver ? `${p.approver} says yes to changes` : null,
                   p.telegram.length ? `Telegram ${p.telegram.join(", ")}` : "no Telegram",
                   p.phones ? `phones: ${p.phones.join(", ")}`
                     : p.phone ? "the phone" : null].filter(Boolean);
@@ -203,6 +208,12 @@ function personForm(p, isNew) {
   const turn = text(p.max_usd_per_turn ?? "", { inputmode: "decimal", placeholder: "the agent's own" });
   const receipt = pick([["", "Nothing"], ["cost", "What it cost"], ["remaining", "What's left today"]],
                        p.receipt || "");
+  const hours = text(p.hours || "", { placeholder: "every hour (or 07:00-21:00)" });
+  const turns = text(p.max_turns_per_day ?? "", { inputmode: "numeric", placeholder: "no limit" });
+  const approver = pick([["", "They do"], ...d.people.filter((x) => x.id !== p.id)
+                           .map((x) => [x.id, x.id + (x.id === sets.data.sarathi.dvara?.owner
+                                                      ? " (you)" : "")])],
+                        p.approver || "");
   const phone = check(p.phone);
   // With several phones named (Settings → Sarathi → Your phone), a box
   // for each: whose each is, said here (Dvara's phones = [...]).
@@ -225,6 +236,8 @@ function personForm(p, isNew) {
       agents, setu: setu.value, setu_manage: setu.value !== "own" && setu.value !== "none"
         && manage.checked, permissions: rung.value || null, max_usd_per_day: numOr(day),
       max_usd_per_turn: numOr(turn), receipt: receipt.value || null,
+      hours: hours.value.trim() || null, max_turns_per_day: numOr(turns),
+      approver: approver.value || null,
       phone: named.length ? false : phone.checked,
       phones: named.length ? phoneBoxes.map((l) => l.querySelector("input"))
         .filter((c) => c.checked).map((c) => c.dataset.phone) : null,
@@ -241,6 +254,12 @@ function personForm(p, isNew) {
     field("Daily allowance (US dollars)", day),
     field("Most per message (US dollars)", turn),
     field("Under each answer", receipt),
+    field("Hours their agents answer", hours, "On this computer's clock, like 07:00-21:00; " +
+          "a schedule of theirs outside them doesn't run. Blank: every hour."),
+    field("Messages a day", turns, "What they send that reaches an agent; schedules don't " +
+          "count. Blank: no limit."),
+    field("Who says yes to changes", approver, "Someone else, and the question goes to them " +
+          "(a parent for a child) — a spend too. Pair it with Asked before anything changes."),
     field("Telegram ids", telegram, "Their numbers, comma-separated. Someone who messages the " +
           "bot and isn't on the list shows above, to add."),
     named.length
@@ -248,6 +267,35 @@ function personForm(p, isNew) {
           h("div.checks", {}, ...phoneBoxes))
       : h("label.inline", {}, phone, " Their agents may work the phone on this computer"),
     row(go, button("Cancel", () => { sets.editing = null; drawTabs(); }, "linkish")));
+}
+
+// ---- Household ----------------------------------------------------------------------
+
+// What everyone's agents know: written by you, offered by anyone in the
+// chat (/remember for everyone …), shown whole in every agent's turn.
+function drawHouseholdTab() {
+  const d = sets.data.dvara;
+  if (!d) return dvaraOff();
+  const house = d.household || { facts: [], offered: [] };
+  const fact = text("", { placeholder: "The bins go out Tuesday night" });
+  const out = [h("p.meta", {}, "Things every agent here is told, whoever it's talking to. " +
+                 "Anyone can offer one from the chat with /remember for everyone …; " +
+                 "it's kept when you say yes. Everyone's own memories stay theirs."),
+               h("article.card.form", {}, field("Add one", fact),
+                 row(button("Keep for everyone", () => {
+                   if (fact.value.trim()) save("/api/settings/household", { add: fact.value.trim() });
+                 })))];
+  if (house.offered.length) {
+    out.push(h("div.card", {}, h("div.meta", {}, "Offered, waiting on you:"),
+      ...house.offered.map((f) => row(h("span", {}, `${f.text} — from ${f.by}`),
+        button("Keep", () => save("/api/settings/household", { yes: f.id })),
+        button("Not this", () => save("/api/settings/household", { no: f.id }), "no")))));
+  }
+  out.push(house.facts.length
+    ? h("div.card", {}, ...house.facts.map((f) => row(h("span", {}, f.text),
+        button("Forget", () => save("/api/settings/household", { forget: f.id }), "no"))))
+    : h("p.meta", {}, "Nothing kept for everyone yet."));
+  return out;
 }
 
 // ---- Agents ------------------------------------------------------------------------

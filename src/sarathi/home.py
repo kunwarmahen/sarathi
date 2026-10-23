@@ -78,6 +78,8 @@ and writes its own file; a person signed in gets 403:
     POST /api/settings/key/NAME            {"value"}: a key into secrets.env
     POST /api/settings/person/NAME         {fields} | {"remove": true}: actors.toml
     POST /api/settings/rules               [rules]: policy.toml
+    POST /api/settings/household           {"add"|"forget"|"yes"|"no"}: what everyone's
+                                           agents know (dvara household.json)
     POST /api/settings/agent/NAME          {"tables", "prompt"} | {"remove": true}
                                            | {"from_example": NAME}
     POST /api/settings/setu/NAME           {"value"}: `setu config NAME`
@@ -1052,6 +1054,12 @@ def _handler(server: HomeServer):
                         fields = {k: v for k, v in body.items() if k != "remove"}
                         editing.dvara(config, ["person", name], fields)
                         said = f"{name} saved. Dvara uses it from their next message."
+                elif what == "household":
+                    # what everyone's agents know (dvara household.py)
+                    editing.dvara(config, ["household"], {k: body[k] for k in
+                                  ("add", "forget", "yes", "no") if k in body})
+                    said = ("Kept for everyone's agents, from their next message."
+                            if "add" in body or "yes" in body else "Done.")
                 elif what == "rules":
                     rules = body.get("rules") if isinstance(body.get("rules"), list) else []
                     editing.dvara(config, ["rules"], rules)
