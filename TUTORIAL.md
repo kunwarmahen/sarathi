@@ -1419,6 +1419,42 @@ Gmail's push.
 
 ---
 
+## Step 9 (optional) · Make sure a change doesn't break what works
+
+You will change things: a newer model, a different prompt, a new
+connection. Each one can quietly break an answer that used to be right.
+You'd only find out the day you need it. So keep a few good
+conversations as **tests**, and let them be asked again every night.
+
+**Keep one.** When an answer was right *and you checked it*:
+
+* on Yantra's page: **History** → open the conversation → **keep as a
+  test**. Type a few words the answer must say (for example `May 20,
+  refund`), or leave it empty;
+* on Telegram or the home page chat: send `/keep test May 20, refund`
+  right after the answer.
+
+**Check it first.** A test is only as right as the answer it was kept
+from. If the kept answer had a mistake, every night will "fail" for
+being right.
+
+**Run them every night.** On the home page, open **Your pages**. On the
+**Kept tests** card, press **Run them every night**. Samay now replays
+them at 3 in the morning with your model. Nothing real happens: no
+email is sent and nothing is bought, because every tool answers from
+what it said when you kept the test.
+
+**What you'll see.** The card shows the last night's result:
+*"5 of 6 passed, 1 broke since the run before"*. You get a message in
+your chat only when something **broke**. A quiet night means all is
+well.
+
+You need the latest image for this (`sarathi image`, then `sarathi down
+&& sarathi up`). Until then, Samay says *"runner must be one of direct,
+dvara"* when you press the button.
+
+---
+
 ## When something goes wrong
 
 Sarathi tries to say what happened and what fixes it. The messages

@@ -112,6 +112,67 @@ function memoryCard(m) {
     dash ? h("span.ref", {}, dash.url) : null);
 }
 
+// Your kept tests: conversations kept as tests (Yantra's note 141),
+// replayed by Samay's tests road each night. The card says the last
+// night (Yantra's last.json) and offers the night run once.
+const tests = { busy: false, said: "" };
+
+function testsCard(t) {
+  const night = t.summary;
+  let badge = ["down", "none kept yet"];
+  if (night && night.suites.length) {
+    badge = night.errors ? ["down", "couldn't run"]
+      : night.broke ? ["down", `${night.broke} broke`]
+      : [night.green ? "up" : "down", `${night.passed} of ${night.cases} passed`];
+  } else if (t.suites) badge = ["down", "not run yet"];
+  const lines = [];
+  if (night && night.suites.length) {
+    lines.push(h("div.said", {}, `Last run ${new Date(night.at).toLocaleString()}: `
+      + `${night.passed} of ${night.cases} passed`
+      + (night.broke ? `, ${night.broke} broke since the run before` : "")
+      + (night.fixed ? `, ${night.fixed} fixed` : "") + "."));
+    for (const row of night.suites) {
+      const whose = row.person ? `${row.person}'s ${row.agent}` : row.agent;
+      if (row.error) lines.push(h("div.warn", {}, `${whose}: couldn't run — ${row.error}`));
+      else if (row.broke.length) lines.push(h("div.warn", {}, `${whose}: broke ${row.broke.join(", ")}`));
+      else if (row.red.length) lines.push(h("div.meta", {}, `${whose}: still red ${row.red.join(", ")}`));
+    }
+  }
+  let action = null;
+  if (t.nightly) {
+    action = h("div.meta", {}, "Samay replays them every night; you hear only when one breaks.");
+  } else if (t.clock_on && t.samay) {
+    action = h("button.open", { type: "button", disabled: tests.busy }, "Run them every night");
+    action.addEventListener("click", askNightly);
+  } else if (t.clock_on) {
+    action = h("div.meta", {}, "Samay isn't answering, so the night run can't be set yet.");
+  } else {
+    action = h("div.meta", {}, "Turn Samay on in Settings to run them every night.");
+  }
+  return h("article.card", {},
+    h("div.card-head", {}, h("h3", {}, "Kept tests"),
+      h("span.badge." + badge[0], {}, badge[1])),
+    h("div.who", {}, "Conversations that went well, asked again with the tools answering "
+      + "from what they said then — so a new model or prompt can't quietly break them."),
+    ...lines,
+    t.suites ? null : h("div.meta", {}, "Keep one from History on Yantra's page, or send "
+      + "/keep test in a chat."),
+    action,
+    tests.said ? h("div.meta", { role: "status" }, tests.said) : null);
+}
+
+async function askNightly() {
+  tests.busy = true;
+  refresh();
+  try {
+    tests.said = (await api("/api/tests/nightly", {})).said;
+  } catch (err) {
+    tests.said = err.message;
+  }
+  tests.busy = false;
+  refresh();
+}
+
 async function switchMemory(via) {
   memory.busy = true;
   memory.said = "Switching…";
@@ -228,6 +289,7 @@ async function refresh() {
              "My accounts") : null);
   const cards = body.pieces.map(card);
   if (body.memory) cards.push(memoryCard(body.memory));
+  if (body.tests) cards.push(testsCard(body.tests));
   document.getElementById("pieces").replaceChildren(...cards);
   if (body.people) drawPeople();
   if (body.chat && !chat.on) { startChat(); drawPush(); }

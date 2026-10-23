@@ -117,6 +117,7 @@ import os
 import re
 import secrets
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -295,6 +296,63 @@ def memory_status(config: Config) -> dict[str, Any]:
             "dashboard": smritikosh.dashboard(config)}
 
 
+#: The night run Sarathi asks Samay for: Samay's own tests road, which
+#: replays every conversation kept as a test (Yantra's note 141).
+NIGHTLY = {"prompt": "the night's kept tests", "when": "at 03:00",
+           "runner": "tests", "time_limit": 3600, "notify": "when_new"}
+
+
+def tests_root(env: dict[str, str] | None = None) -> Path:
+    """Where Yantra keeps the kept tests (its kept_tests.default_root)."""
+    env = os.environ if env is None else env
+    chosen = env.get("YANTRA_TESTS", "").strip()
+    if chosen:
+        return Path(chosen).expanduser()
+    state = Path(env.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+    return state / "yantra" / "tests"
+
+
+def _samay(config: Config, method: str, path: str, body: dict | None = None,
+           env: dict[str, str] | None = None) -> Any:
+    """One call to Samay's own API, with its token. Samay checks and
+    keeps the schedule; Sarathi only asks."""
+    env = os.environ if env is None else env
+    state = Path(env.get("SAMAY_STATE", "").strip() or Path.home() / ".samay").expanduser()
+    token = env.get("SAMAY_TOKEN", "").strip()
+    if not token:
+        token = (state / "serve.token").read_text().strip()
+    request = urllib.request.Request(
+        f"http://{HOST}:{config.clock_port}/api/{path}", method=method,
+        data=json.dumps(body).encode() if body is not None else None,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    with urllib.request.urlopen(request, timeout=5) as answer:
+        return json.loads(answer.read() or b"null")
+
+
+def kept_tests_status(config: Config, env: dict[str, str] | None = None) -> dict[str, Any]:
+    """The kept-tests card: the last night's summary (Yantra's last.json),
+    and whether Samay has the night run. Nothing here runs a test."""
+    summary = None
+    try:
+        raw = json.loads((tests_root(env) / "last.json").read_text())
+        if raw.get("format") == "yantra.tests.v1":
+            summary = raw
+    except (OSError, ValueError):
+        pass
+    nightly, samay = None, False
+    if config.clock_on:
+        try:
+            listed = sys.modules[__name__]._samay(config, "GET", "schedules", env=env)
+            rows = listed.get("schedules", listed) if isinstance(listed, dict) else listed
+            nightly = next((r for r in rows or [] if r.get("runner") == "tests"), None)
+            samay = True
+        except (OSError, ValueError, urllib.error.URLError):
+            samay = False
+    kept = sum(1 for _ in tests_root(env).glob("**/cases.toml")) if tests_root(env).is_dir() else 0
+    return {"summary": summary, "nightly": nightly, "samay": samay,
+            "clock_on": config.clock_on, "suites": kept}
+
+
 def run_up() -> None:
     """``sarathi up``, behind the answer: it outlives this request, and
     this page, if it is ever the one restarted."""
@@ -313,7 +371,9 @@ class Home:
     def __init__(self, config: Config, said: Callable[[], dict[str, str]],
                  *, up: Callable[[int], bool] = answers, every: float = STATUS_EVERY,
                  memory: Callable[[Config], dict[str, Any]] = memory_status,
-                 restart: Callable[[], None] = run_up) -> None:
+                 restart: Callable[[], None] = run_up,
+                 tests: Callable[[Config], dict[str, Any]] | None = None,
+                 ask_samay: Callable[..., Any] | None = None) -> None:
         self.config = config
         self._said = said
         self._up = up
@@ -322,7 +382,34 @@ class Home:
         self._memory = memory
         self._memory_cache: tuple[float, dict[str, Any]] | None = None
         self._restart = restart
+        self._tests = tests
+        self._ask_samay = ask_samay
         self._lock = threading.Lock()
+
+    def tests(self) -> dict[str, Any]:
+        return (self._tests or kept_tests_status)(self.config)
+
+    def nightly(self) -> tuple[int, str]:
+        """(status, words): Samay asked for the night run, once."""
+        if not self.config.clock_on:
+            return 409, "Samay isn't on here: turn it on in Settings first"
+        try:
+            ask = self._ask_samay or _samay
+            listed = ask(self.config, "GET", "schedules")
+            rows = listed.get("schedules", listed) if isinstance(listed, dict) else listed
+            if any(r.get("runner") == "tests" for r in rows or []):
+                return 200, "Samay already runs them every night"
+            ask(self.config, "POST", "schedules", NIGHTLY)
+        except urllib.error.HTTPError as exc:
+            try:
+                why = json.loads(exc.read() or b"{}").get("detail") or str(exc)
+            except ValueError:
+                why = str(exc)
+            return exc.code, f"Samay said no: {why}"
+        except (OSError, ValueError) as exc:
+            return 502, f"Samay didn't answer: {exc}"
+        return 200, ("Every night at 03:00 Samay replays your kept tests. "
+                     "You hear about it only when one breaks.")
 
     def memory(self) -> dict[str, Any]:
         with self._lock:
@@ -718,6 +805,7 @@ def _handler(server: HomeServer):
             try:
                 return self._json(200, {"pieces": server.home.pieces(self._opened_at()),
                                         "memory": server.home.memory(),
+                                        "tests": server.home.tests(),
                                         "chat": server.chat is not None,
                                         "people": server.people is not None
                                         and server.home.config.door is not None})
@@ -950,6 +1038,11 @@ def _handler(server: HomeServer):
                 if body is None:
                     return None
                 code, words = server.home.switch(str(body.get("via")))
+                return self._json(code, {"detail" if code >= 400 else "said": words})
+            if parts == ["api", "tests", "nightly"]:
+                if self._owner() is None:
+                    return None
+                code, words = server.home.nightly()
                 return self._json(code, {"detail" if code >= 400 else "said": words})
             if parts == ["api", "chat", "accounts-page"]:
                 # their own Setu page, by the link /accounts page makes

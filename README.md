@@ -861,6 +861,18 @@ line (the one `sarathi status` prints), and has an **Open** link that
 opens the page already signed in. A page that isn't running shows the
 command that starts it.
 
+A **Kept tests** card shows what the last night's run of your kept tests
+said. These are conversations that went well, kept from History on
+Yantra's page or with `/keep test` in a chat, and replayed with the
+tools answering from what they said then, so nothing real runs (Yantra's
+notes/141). It shows how many passed, what broke since the run before,
+and any suite that couldn't run. It reads Yantra's own `last.json`. Its
+one button, **Run them every night**, asks Samay's own API for Samay's
+`tests` road at 03:00. Samay checks and keeps the schedule, and asked
+twice it is asked once. The tests run on the model `[model]` names,
+because Samay's Yantra is given it like every other. You hear about a
+night only when something broke ([notes/27](notes/27-kept-tests-every-night.md)).
+
 `sarathi up` starts it, with Setu's page and (with Dvara on) Dvara's,
 unless `[pages] on = false` in sarathi.toml. With Dvara on, Setu's page
 also knows where each person's own folder is (`--people`), for the
@@ -1044,6 +1056,8 @@ src/sarathi/
                 `add`, `remove`, `list`  (notes/25)
   home.py       sarathi home: one page linking every program's page, each
                 with its status and its key; static/ is that page  (notes/06);
+                the Kept tests card: Yantra's last.json, and Samay asked
+                for its tests road once  (notes/27);
                 the phone's card, which opens Yantra's page  (notes/07); the
                 chat, passed through to Dvara's web channel as you  (notes/12),
                 showing each step and the answer as it comes, md.js for

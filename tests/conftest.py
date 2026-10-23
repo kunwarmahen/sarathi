@@ -38,6 +38,15 @@ def world(tmp_path, monkeypatch):
         monkeypatch.delenv(name, raising=False)
     for s in siblings.SIBLINGS:
         monkeypatch.delenv(siblings.env_name(s), raising=False)
+    # Kept tests and Samay's API: never this machine's (the home page's card)
+    monkeypatch.setenv("YANTRA_TESTS", str(tmp_path / "yantra-tests"))
+    import urllib.error
+
+    from sarathi import home
+
+    def no_samay(*_a, **_k):
+        raise urllib.error.URLError("no Samay in tests")
+    monkeypatch.setattr(home, "_samay", no_samay)
     return tmp_path
 
 
