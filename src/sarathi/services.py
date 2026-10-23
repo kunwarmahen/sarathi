@@ -434,14 +434,17 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
 
 
 def doctor_env(config: Config, host: str = HOST) -> dict[str, str]:
-    """Where Samay's doctor road asks, and its key (Sarathi's home page
+    """Where Samay's doctor and backup roads ask, and their keys (Sarathi's home page
     must be one `up` starts: it is where the doctor answers)."""
     if not config.pages.on:
         return {}
-    from sarathi.home import doctor_token
+    from sarathi.home import backup_token, doctor_token
 
     return {"SAMAY_DOCTOR_URL": f"http://{host}:{config.pages.home_port}/api/doctor?news=1",
-            "SAMAY_DOCTOR_TOKEN": doctor_token()}
+            "SAMAY_DOCTOR_TOKEN": doctor_token(),
+            # the backup road makes the backup there too, by its own key
+            "SAMAY_BACKUP_URL": f"http://{host}:{config.pages.home_port}/api/backup",
+            "SAMAY_BACKUP_TOKEN": backup_token()}
 
 
 def door_env(config: Config, at: str | None = None) -> dict[str, str]:

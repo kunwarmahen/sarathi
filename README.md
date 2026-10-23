@@ -42,8 +42,9 @@ spend stay Dvara's ([notes/14](notes/14-everyone-in-the-house.md)).
 
 It also imports none of them. Each lives in its own environment, with
 its own dependencies, so Sarathi runs each as a program and reads the
-JSON it prints. Sarathi itself has no dependencies.
-([notes/01](notes/01-five-names-one-answer.md))
+JSON it prints. Sarathi itself has one dependency, `cryptography`, for
+locking a backup ([notes/01](notes/01-five-names-one-answer.md),
+[notes/29](notes/29-the-house-in-one-file.md)).
 
 ## Setup
 
@@ -871,6 +872,52 @@ on its doctor road: it asks the doctor with a key that opens that one
 answer and nothing else, and tells you only what's newly wrong (Samay's
 notes/09).
 
+### The house in one file: `sarathi backup`, `sarathi restore`
+
+```
+$ sarathi backup
+yantra     state          ~/.local/state/yantra
+setu       home           ~/.local/state/setu
+...
+written: ~/sarathi-backups/sarathi-beast-20261024-023000.sarathi-backup (512.3 MB, 41s), locked with your backup passphrase
+$ sarathi restore ~/sarathi-backups/sarathi-beast-20261024-023000.sarathi-backup --list
+$ sarathi down && sarathi restore FILE && sarathi up
+```
+
+One locked file of everything that is yours here: Setu's accounts, keys
+and browser profiles, each person's conversations and own Setu folder in
+Dvara's, Samay's schedules and logbook, Prahari's watches, Sparsh's
+rules and adb's key, Yantra's History and learned skills, Smritikosh's
+memories (`pg_dump`), and every settings file. **Each program says what
+it keeps** (`<program> keeps --json`, `<name>.keeps.v1`), and Sarathi
+packs what it says. A program that can't say is named in the answer, and
+the command exits 1. Browser caches are left out. SQLite files are
+copied with SQLite's own backup, so a run finishing mid-copy is in it
+whole.
+
+The first backup asks for a passphrase twice and keeps a key pair in
+`backup-key.json` (the private half sealed by the passphrase). Every
+backup is sealed to the public half, so a night needs no passphrase, and
+each file opens on a new computer with the file and the passphrase
+alone. `restore` refuses while anything runs, puts each place back under
+this computer's home (Sarathi's own `sarathi.toml` follows), moves what
+was there aside to `<name>.before-restore-<time>`, and puts the memories
+back with `pg_restore --clean`. `--only NAME,...` puts back some of it,
+and `--new-passphrase` chooses a new passphrase.
+
+```toml
+[backup]
+folder = "~/sarathi-backups"   # where it is written; a USB disk's folder too
+keep = 7                       # the newest N kept there; 0 keeps all
+also = ["~/keys"]              # places of yours no program keeps
+```
+
+Settings → **Check** has a **Backups** card: the newest file, **Back up
+now**, and **Back up every night**, which asks Samay once for a 02:30
+schedule on its backup road. Samay asks with a key that makes a backup
+and opens nothing, and you hear only when a night fails
+([notes/29](notes/29-the-house-in-one-file.md)).
+
 ### Every page in one place: `sarathi home`
 
 ```
@@ -1104,6 +1151,11 @@ src/sarathi/
                 with its fix, from each sibling's own status, what `up`
                 started, the image's age, the firewall, the disk; the
                 home page's Settings → Check asks the same  (notes/28)
+  backup.py     sarathi backup / restore: each program asked what it keeps,
+                one file sealed to a key only your passphrase opens, SQLite
+                copied whole, Smritikosh's pg_dump; restore under this
+                home, what was there moved aside; the Backups card and
+                Samay's backup road  (notes/29)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi
@@ -1140,11 +1192,11 @@ src/sarathi/
                 started; its line in status, its card on the home page  (notes/13)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | dvara | phone | smritikosh | road | image | up | down |
-                status [--json] | home | invite | people
+                status [--json] | doctor | backup | restore | home | invite | people
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
   test_pages_up.py  test_phone.py  test_phones_named.py  test_names.py  test_smritikosh.py  test_people.py
-  test_house.py  test_prahari.py
+  test_house.py  test_prahari.py  test_doctor.py  test_backup.py
 ```
 
 ## Status
@@ -1177,6 +1229,10 @@ run on Sarathi's roads. Every settings file is changed from the home page,
 each checked by its own program ([notes/16](notes/16-every-setting-from-the-page.md)),
 and the phone is reached again from the page after it restarts, run on
 a real Nexus 6P ([notes/17](notes/17-the-phone-from-the-page.md)).
+`sarathi backup` and `restore` were run end to end on a house made by
+hand: restored into an empty home, memories brought back into a database
+that had been deleted, and a night's backup made by Samay's backup road
+([notes/29](notes/29-the-house-in-one-file.md)).
 
 ## Tests
 

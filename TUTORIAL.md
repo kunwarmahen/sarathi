@@ -52,7 +52,8 @@ that finds things by meaning, is optional too: Step 7, when the helper
 starts forgetting things you told it. And Prahari, which tells you when
 something happens — a price drops, a mail comes, Mum messages — is
 Step 8. Step 9 keeps good answers as tests, so a new model can't quietly
-break them. Step 10 sets up a morning brief.)
+break them. Step 10 sets up a morning brief. Step 11 keeps a copy of
+everything, so a dead disk or a new computer is one command.)
 
 ---
 
@@ -1539,6 +1540,70 @@ You need the latest image (`sarathi image`, then `sarathi down &&
 sarathi up`): the brief's phone tool and schedules read on a schedule
 are new.
 
+## Step 11 (optional) · Keep a copy of everything
+
+Your sign-ins, everyone's conversations, the schedules, the watches,
+the phone rules, the skills it learned, its memories and every setting
+live in a dozen folders. A disk that dies loses all of them. One command
+puts them in one locked file:
+
+```bash
+sarathi backup
+```
+
+The first time, it asks you to choose a **passphrase**, twice. Only
+that passphrase opens your backups, on this computer or any other.
+Nobody can get it back for you, so write it down somewhere safe (a
+password manager, a card in a drawer). Then it asks each program what it
+keeps and writes the file:
+
+```
+setu       home           ~/.local/state/setu
+samay      state          ~/.samay
+...
+written: ~/sarathi-backups/sarathi-beast-20261024-023000.sarathi-backup (512.3 MB, 41s), locked with your backup passphrase
+```
+
+Browser caches are left out, which is most of the size. A line starting
+`NOT IN IT:` means something was left out, and it says why. *"setu
+doesn't say what it keeps (an older setu: update it)"* means update that
+program and run it again.
+
+**Every night.** **Settings → Check → Back up every night**: Samay
+makes one at 02:30, and you hear about it only if a night fails. It
+needs no passphrase for this. Only opening a backup does.
+
+**Where they go, and how many.** **Settings → Sarathi**, under
+`[backup]`:
+
+```toml
+[backup]
+folder = "~/sarathi-backups"   # or a USB disk's folder: "/media/you/backup-disk"
+keep = 7                       # the newest 7 are kept, older ones removed
+also = ["~/keys"]              # anything else of yours to include
+```
+
+A backup on the same disk doesn't help when that disk dies. Point
+`folder` at a USB disk, or copy the files somewhere else now and then.
+Each file is safe to put anywhere: without the passphrase it's noise.
+
+**Putting it back**, on this computer or a new one (a Raspberry Pi):
+
+1. Install the programs (Step 1). A backup holds what's yours, not the
+   programs.
+2. Stop everything: `sarathi down`.
+3. Look first, if you like: `sarathi restore FILE --list` shows what's
+   in it and changes nothing.
+4. `sarathi restore FILE`, and type the passphrase.
+5. `sarathi up` (on the containers' road, `sarathi image` first on a
+   new computer).
+
+Anything already in the way is moved aside, never deleted: you'll see
+`actors.toml.before-restore-20261024-090000` beside the restored one.
+`--only setu,dvara` puts back only those. If Smritikosh isn't on the new
+computer yet, the restore says so: clone it where it says, then
+`sarathi restore FILE --only smritikosh`.
+
 ---
 
 ## When something goes wrong
@@ -1593,6 +1658,10 @@ moment it happens. The messages you're most likely to meet:
 | `page exited at once (code 2)`, then a few lines | the page stopped as it started | read the lines; `--web needs the web extra` means Step 1's `uv sync --extra web` was missed |
 | `clock already running at …, not started by Sarathi: left alone` | you already run Samay's clock another way | nothing: a second clock would run every schedule twice |
 | `unknown key clock.onn` | a typo in sarathi.toml | fix the spelling; Sarathi never guesses |
+| `that passphrase doesn't open this backup` | a different passphrase, or one chosen later (`--new-passphrase`) | the one you chose when that file was made; older files keep their own |
+| `these are running and write into what a restore replaces` | `sarathi restore` with the house up | `sarathi down`, then restore, then `sarathi up` |
+| `there is no backup passphrase yet` (from **Back up now** or a night's run) | no passphrase has been chosen | run `sarathi backup` once in a terminal |
+| `NOT IN IT: Smritikosh's database isn't running` | the memories' database was stopped | `sarathi up`, then back up again |
 | On Telegram the agent says it has no Home Assistant (or Gmail…) and tells you to connect it, though Yantra's page uses it fine | the Telegram agent's package doesn't ask for that account | **Settings → Agents**, **Change** on that agent, add `homeassistant:write` to *Accounts it needs*; there's nothing to reconnect |
 | `setu connect --server …` says `asks for a token (HTTP 401); add one with --ask-token` | the server wants an API key, and has no sign-in page of its own | run it again with `--ask-token` and paste the key when asked (Step 2, *An MCP server of your own*), or put it in the token box on Setu's page |
 | An MCP server you added in Setu isn't among the boxes under *Tools it may use* | those boxes are Yantra's own tools, Samay and the phone; accounts come another way | nothing to tick: its *Accounts it needs* decides. `*:read` gives the server's reading tools; add `yourid:write` for the rest |
@@ -1665,6 +1734,8 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | The key each person's ntfy topic is made from | `~/dvara/state/ntfy.key` (only you) |
 | Which stopped sign-ins people were already told about | `~/dvara/state/signins.json` (only you) |
 | What Sarathi started, and what each printed | `~/.local/share/sarathi/` |
+| Your backups | `~/sarathi-backups/` (or `[backup] folder`); each a `.sarathi-backup` file only your passphrase opens |
+| The backups' key (the private half sealed by your passphrase) | `~/.config/sarathi/backup-key.json` (only you) |
 
 Sarathi doesn't move anything: each program keeps its files where it
 always has. To start over with Sarathi, delete its two folders; your

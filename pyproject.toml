@@ -5,10 +5,11 @@ description = "sarathi -- the one you install: Yantra and its siblings, found an
 requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-# No dependencies, on purpose: each sibling lives in its own environment,
-# so Sarathi runs them as programs and reads the JSON they print. It
-# imports none of them.
-dependencies = []
+# One dependency, and no sibling: each sibling lives in its own
+# environment, so Sarathi runs them as programs and reads the JSON they
+# print -- it imports none of them. cryptography is for `sarathi backup`
+# alone (X25519 and AES-GCM, the same as Setu's locked folder).
+dependencies = ["cryptography>=42"]
 
 [project.scripts]
 sarathi = "sarathi.cli:main"

@@ -73,6 +73,10 @@ and writes its own file; a person signed in gets 403:
                                            such ask (Samay's doctor road, by the
                                            doctor key, which opens this and nothing else)
     POST /api/doctor/morning               Samay asked once to run the doctor each morning
+    GET  /api/backup                       the backups: the folder, the newest, the key
+    POST /api/backup                       `sarathi backup`, now (and Samay's backup road,
+                                           by the backup key, which opens this alone)
+    POST /api/backup/nightly               Samay asked once to back up every night
     POST /api/settings/image               `sarathi image && sarathi up`, behind the answer
     POST /api/settings/sarathi             {table: {key: value}}: sarathi.toml
     POST /api/settings/key/NAME            {"value"}: a key into secrets.env
@@ -159,6 +163,8 @@ TOKEN_FILE = "home.token"
 DOCTOR_TOKEN_FILE = "doctor.token"
 #: The doctor's last answer to that road, to say what's new against.
 DOCTOR_TOLD = "doctor-told.json"
+#: The key Samay's backup road asks with: it opens POST /api/backup only.
+BACKUP_TOKEN_FILE = "backup.token"
 STATUS_EVERY = 30.0
 #: The longest chat message passed on, in bytes.
 MAX_BODY = 256 * 1024     # a whole settings file, or an agent's prompt
@@ -314,13 +320,27 @@ NIGHTLY = {"prompt": "the night's kept tests", "when": "at 03:00",
            "runner": "tests", "time_limit": 3600, "notify": "when_new"}
 MORNING = {"prompt": "the house, checked by Sarathi's doctor", "when": "at 07:30",
            "runner": "doctor", "time_limit": 300, "notify": "when_new"}
+#: Before the kept tests, so a night's backup never waits behind them.
+BACKUP_NIGHTLY = {"prompt": "the house, backed up", "when": "at 02:30",
+                  "runner": "backup", "time_limit": 3600, "notify": "when_new"}
 
 
 def doctor_token() -> str:
     """The doctor key, made once in Sarathi's state folder (yours alone).
     Not the home token: Samay holds this one, and it opens the doctor's
     answer and nothing else -- no page keys, no chat, no settings."""
-    path = state_dir() / DOCTOR_TOKEN_FILE
+    return _key_file(DOCTOR_TOKEN_FILE)
+
+
+def backup_token() -> str:
+    """The backup key: Samay's too, and it opens POST /api/backup alone. A
+    backup is sealed to a public key, so this key can make one and open
+    none."""
+    return _key_file(BACKUP_TOKEN_FILE)
+
+
+def _key_file(name: str) -> str:
+    path = state_dir() / name
     try:
         kept = path.read_text().strip()
         if len(kept) >= 16:
@@ -422,7 +442,8 @@ class Home:
                  tests: Callable[[Config], dict[str, Any]] | None = None,
                  ask_samay: Callable[..., Any] | None = None,
                  doctor: Callable[[], dict[str, Any]] | None = None,
-                 rebuild: Callable[[], None] = run_image) -> None:
+                 rebuild: Callable[[], None] = run_image,
+                 backup: Callable[[], dict[str, Any]] | None = None) -> None:
         self.config = config
         self._said = said
         self._up = up
@@ -435,6 +456,8 @@ class Home:
         self._ask_samay = ask_samay
         self._doctor = doctor
         self._rebuild = rebuild
+        self._backup = backup
+        self._backing_up = threading.Lock()
         self._lock = threading.Lock()
 
     def doctor(self, news: bool = False) -> tuple[int, dict[str, Any]]:
@@ -459,6 +482,47 @@ class Home:
         return self._ask_once(MORNING, "doctor", "Samay already checks the house "
                               "each morning", "Every morning at 07:30 Samay asks the "
                               "doctor. You hear only when something new is wrong.")
+
+    def backup_now(self) -> tuple[int, dict[str, Any]]:
+        """(status, sarathi.backup.made.v1): one backup, now; one at a time."""
+        from sarathi.backup import BackupError
+
+        if self._backup is None:
+            return 404, {"detail": "backups aren't wired in here"}
+        if not self._backing_up.acquire(blocking=False):
+            return 409, {"detail": "a backup is being made already"}
+        try:
+            return 200, self._backup()
+        except BackupError as exc:
+            return 409, {"detail": str(exc)}
+        except Exception as exc:          # a full disk, a folder gone: said, not a 500
+            return 500, {"detail": f"the backup didn't finish: {exc}"}
+        finally:
+            self._backing_up.release()
+
+    def backups(self) -> dict[str, Any]:
+        """Where they go, the newest there, and whether the key is chosen."""
+        from sarathi import backup
+
+        folder = self.config.backup.path()
+        made = sorted(folder.glob(f"sarathi-*{backup.SUFFIX}"),
+                      key=lambda p: p.stat().st_mtime) if folder.is_dir() else []
+        newest = made[-1] if made else None
+        return {"folder": str(folder), "keep": self.config.backup.keep,
+                "key": backup.read_key() is not None, "count": len(made),
+                "busy": self._backing_up.locked(),
+                "newest": None if newest is None else {
+                    "name": newest.name, "bytes": newest.stat().st_size,
+                    "made": time.strftime("%a %d %b %H:%M",
+                                          time.localtime(newest.stat().st_mtime))}}
+
+    def backup_nightly(self) -> tuple[int, str]:
+        """(status, words): Samay asked once to back up every night."""
+        return self._ask_once(BACKUP_NIGHTLY, "backup", "Samay already backs up every night",
+                              "Every night at 02:30 Samay makes a backup in "
+                              f"{self.config.backup.folder}, keeping the newest "
+                              f"{self.config.backup.keep or 'all'}. You hear only when "
+                              "one fails.")
 
     def rebuild(self) -> str:
         self._rebuild()
@@ -640,13 +704,15 @@ class HomeServer:
     def __init__(self, home: Home, token: str, *, host: str = HOST,
                  port: int = DEFAULT_PORT, chat: Chat | None = None,
                  people: People | None = None, also_host: str | None = None,
-                 doctor_key: str | None = None) -> None:
+                 doctor_key: str | None = None, backup_key: str | None = None) -> None:
         self.home = home
         self.chat = chat
         self.token = token
         #: Samay's key for the doctor's answer alone (doctor_token); a
         #: random one when none is given, so no empty header ever matches.
         self.doctor_key = doctor_key or secrets.token_urlsafe(24)
+        #: Samay's key for making a backup alone (backup_token).
+        self.backup_key = backup_key or secrets.token_urlsafe(24)
         self.people = people
         self.httpd = ThreadingHTTPServer((host, port), _handler(self))
         self.httpd.daemon_threads = True
@@ -862,6 +928,10 @@ def _handler(server: HomeServer):
                         and self._owner() is None:
                     return None
                 return self._json(*server.home.doctor(news=query.get("news") == "1"))
+            if url.path == "/api/backup":
+                if self._owner() is None:
+                    return None
+                return self._json(200, server.home.backups())
             if url.path.startswith("/api/chat/chats"):
                 return self._past(url)
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
@@ -1150,6 +1220,19 @@ def _handler(server: HomeServer):
                 if self._owner() is None:
                     return None
                 code, words = server.home.morning()
+                return self._json(code, {"detail" if code >= 400 else "said": words})
+            if parts == ["api", "backup"]:
+                offered = self.headers.get("Authorization", "")
+                # the backup key makes one; anything else is the owner's
+                if not hmac.compare_digest(offered.encode(),
+                                           f"Bearer {server.backup_key}".encode()) \
+                        and self._owner() is None:
+                    return None
+                return self._json(*server.home.backup_now())
+            if parts == ["api", "backup", "nightly"]:
+                if self._owner() is None:
+                    return None
+                code, words = server.home.backup_nightly()
                 return self._json(code, {"detail" if code >= 400 else "said": words})
             if parts == ["api", "tests", "nightly"]:
                 if self._owner() is None:

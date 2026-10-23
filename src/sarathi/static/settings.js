@@ -783,7 +783,60 @@ function drawCheckTab() {
     "It takes a few seconds. Every morning: Samay asks the same at 07:30 and tells " +
     "you only what's new.");
   if (sets.checked) drawCheck(out, sets.checked);
-  return [intro, row(go, morning), out];
+  return [intro, row(go, morning), out, backupsCard()];
+}
+
+// ---- Backups: `sarathi backup`, from here -------------------------------------------
+
+function backupsCard() {
+  const state = h("p.meta", {}, "…");
+  const now = button("Back up now", async () => {
+    now.disabled = true;
+    state.textContent = "Backing up: a minute or more, most of it the browser profiles…";
+    try {
+      const made = await api("/api/backup", {});
+      said(made.problems.length ? `Made, but not in it: ${made.problems.join("; ")}`
+        : `Made: ${made.file} (${sizeOf(made.bytes)}, ${made.seconds}s)`, !made.ok);
+    } catch (err) { said(err.message, true); }
+    finally { now.disabled = false; showBackups(state); }
+  });
+  const nightly = button("Back up every night", async () => {
+    nightly.disabled = true;
+    try { said((await api("/api/backup/nightly", {})).said); }
+    catch (err) { said(err.message, true); }
+    finally { nightly.disabled = false; }
+  }, "quiet");
+  showBackups(state);
+  return h("div.card.form", {}, h("h3", {}, "Backups"),
+    h("p.meta", {}, "One locked file of everything here: your accounts and sign-ins, " +
+      "everyone's conversations, schedules, watches, phone rules, learned skills, " +
+      "memories and every setting. Only your backup passphrase opens it; ",
+      h("code", {}, "sarathi restore FILE"), " puts it all back, here or on a new " +
+      "computer. Where it goes and how many are kept: Settings → Sarathi, [backup]."),
+    state, row(now, nightly));
+}
+
+async function showBackups(state) {
+  try {
+    const b = await api("/api/backup");
+    if (!b.key) {
+      state.replaceChildren("No passphrase yet: run ", h("code", {}, "sarathi backup"),
+        " once in a terminal on this computer to choose it. After that, these buttons " +
+        "and Samay need no passphrase to make one.");
+      return;
+    }
+    state.textContent = b.newest
+      ? `Newest: ${b.newest.name}, ${sizeOf(b.newest.bytes)}, ${b.newest.made}. ` +
+        `${b.count} in ${b.folder}` + (b.keep ? `, the newest ${b.keep} kept.` : ".")
+      : `None yet. They go in ${b.folder}.`;
+  } catch (err) { state.textContent = err.message; }
+}
+
+function sizeOf(n) {
+  for (const unit of ["bytes", "KB", "MB", "GB"]) {
+    if (n < 1024 || unit === "GB") return unit === "bytes" ? `${n} bytes` : `${n.toFixed(1)} ${unit}`;
+    n /= 1024;
+  }
 }
 
 async function runCheck(go, out) {

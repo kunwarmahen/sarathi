@@ -93,6 +93,7 @@ KNOWN: dict[str, set[str]] = {
     "phone": {"on", "address", "wda", "awake"},
     "memory": {"via"},
     "house": {"name", "address"},
+    "backup": {"folder", "keep", "also"},
     "smritikosh": {"checkout", "port", "database", "volume", "db_port", "full", "neo4j",
                    "mongodb", "redis", "dashboard", "dashboard_port"},
 }
@@ -223,6 +224,21 @@ class House:
 
 
 @dataclass(frozen=True)
+class Backup:
+    """``sarathi backup``: where its files go, how many are kept, and any
+    place of yours beyond what the programs keep: ``[backup]``."""
+
+    folder: str = "~/sarathi-backups"
+    #: The newest this many are kept in ``folder``; 0 keeps every one.
+    keep: int = 7
+    #: Files or folders that are yours, not a program's (a signing key).
+    also: tuple[str, ...] = ()
+
+    def path(self) -> Path:
+        return Path(self.folder).expanduser()
+
+
+@dataclass(frozen=True)
 class Smritikosh:
     """The memory server, as ``sarathi smritikosh`` set it up: ``[smritikosh]``."""
 
@@ -288,6 +304,7 @@ class Config:
     watch_public: str = ""
     #: Only these people get watches through Dvara; () for everyone.
     watch_people: tuple[str, ...] = ()
+    backup: Backup = Backup()
 
     @property
     def remembers_in_smritikosh(self) -> bool:
@@ -568,11 +585,24 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
             raise ConfigError(f"{where}: house.address must be this computer's one address "
                               f"on your network, like \"192.168.1.44\", not {at!r}")
         house = House(name=name, address=at)
+    kept = data.get("backup", {})
+    if not isinstance(kept.get("folder", ""), str):
+        raise ConfigError(f"{where}: backup.folder must be text, a folder's path")
+    keep = kept.get("keep", Backup.keep)
+    if isinstance(keep, bool) or not isinstance(keep, int) or keep < 0:
+        raise ConfigError(f"{where}: backup.keep must be how many to keep (0: all), "
+                          f"not {keep!r}")
+    also = kept.get("also", [])
+    if not isinstance(also, list) or not all(isinstance(a, str) and a.strip() for a in also):
+        raise ConfigError(f"{where}: backup.also must be a list of paths, like "
+                          "[\"~/keys\"]")
+    backup = Backup(folder=kept.get("folder") or Backup.folder, keep=keep,
+                    also=tuple(a.strip() for a in also))
     if via == "smritikosh" and smritikosh.checkout is None:
         raise ConfigError(f"{where}: memory.via = \"smritikosh\" but it isn't set up "
                           "yet: run `sarathi smritikosh`")
     return Config(provider=provider, road=road, door=door, pages=pages, phone=phone,
-                  memory=via, smritikosh=smritikosh, house=house,
+                  memory=via, smritikosh=smritikosh, house=house, backup=backup,
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   context_window=window,
@@ -663,6 +693,7 @@ setu_port = {config.pages.setu_port}
 dvara_port = {config.pages.door_port}
 
 {_render_house(config.house)}
+{_render_backup(config.backup)}
 {_render_door(config.door)}
 {_render_phone(config.phone)}
 {_render_memory(config)}"""
@@ -683,6 +714,19 @@ def _render_house(house: House | None) -> str:
         '# address = "192.168.1.44"'
     return head + f'[house]\nname = "{house.name}"\n{address}\n'
 
+
+
+def _render_backup(backup: Backup) -> str:
+    also = "also = [" + ", ".join(f'"{a}"' for a in backup.also) + "]" if backup.also \
+        else '# also = ["~/keys"]'
+    return f"""# `sarathi backup`: one locked file of everything here. folder: where it
+# is written (a USB disk's folder, too); keep: the newest this many are
+# kept there, 0 for all; also: places of yours no program keeps.
+[backup]
+folder = "{backup.folder}"
+keep = {backup.keep}
+{also}
+"""
 
 
 def _render_memory(config: Config) -> str:

@@ -27,6 +27,11 @@
                               they choose a password and get their own chat
     sarathi people            who can sign in to the home page; --sign-out NAME
                               ends their devices, --remove NAME their sign-in
+    sarathi backup            everything here in one locked file: each program's
+                              own files, the settings, the memories (the first
+                              time, it asks for the passphrase that opens it)
+    sarathi restore FILE      put it all back, on this computer or a new one
+                              (--list: what's in it; --only NAME,...: some of it)
 
 ``init`` takes flags for everything it asks (``--provider``, ``--model``,
 ``--base-url``, ``--yantra-port``, ``--samay-port``, ``--no-samay``,
@@ -177,6 +182,25 @@ def build_parser() -> argparse.ArgumentParser:
     doctor = subs.add_parser("doctor", help="what's wrong, and the line that fixes it")
     doctor.add_argument("--json", dest="json_out", action="store_true",
                         help="print sarathi.doctor.v1 instead of lines")
+    backup = subs.add_parser("backup", help="everything here in one locked file")
+    backup.add_argument("--to", metavar="FOLDER",
+                        help="where to write it (default: [backup] folder)")
+    backup.add_argument("--keep", type=int, metavar="N",
+                        help="keep the newest N there, removing older ones "
+                             "(default: [backup] keep; 0 keeps all)")
+    backup.add_argument("--new-passphrase", dest="new_passphrase", action="store_true",
+                        help="choose a new passphrase (older backups still open with "
+                             "the one they were made with)")
+    backup.add_argument("--json", dest="json_out", action="store_true",
+                        help="print sarathi.backup.made.v1")
+    restore = subs.add_parser("restore", help="put a backup back, here or on a new "
+                              "computer")
+    restore.add_argument("file", help="the .sarathi-backup file")
+    restore.add_argument("--list", dest="list_only", action="store_true",
+                         help="say what's in it, and change nothing")
+    restore.add_argument("--only", metavar="NAME,...",
+                         help="only these: yantra, setu, samay, prahari, dvara, sparsh, "
+                              "sarathi, smritikosh, you")
     return parser
 
 
@@ -406,13 +430,15 @@ def _running_home(config, port: int) -> int:
 
 
 def _serve_home(args) -> int:
-    from sarathi.home import Chat, Home, HomeServer, doctor_token, home_token
+    from sarathi.home import Chat, Home, HomeServer, backup_token, doctor_token, home_token
     from sarathi.people import People
 
     try:
         config = load()
-        server = HomeServer(Home(config, _said, doctor=_doctor), home_token(),
-                            doctor_key=doctor_token(), host=args.host,
+        server = HomeServer(Home(config, _said, doctor=_doctor,
+                                 backup=lambda: run_backup(ask=False).as_json()),
+                            home_token(), doctor_key=doctor_token(),
+                            backup_key=backup_token(), host=args.host,
                             port=args.port, chat=Chat.for_config(config),
                             people=People(), also_host=args.also_host)
     except OSError as exc:
@@ -499,8 +525,149 @@ def _people(args) -> int:
         return 2
 
 
+def backup_places(config) -> tuple[list, list[str]]:
+    """Every program's places (each asked what it keeps), Sarathi's own
+    after them; and what couldn't be asked, in words."""
+    from sarathi import backup
+
+    places, problems = [], []
+    for s in SIBLINGS:
+        if s.status_format is None:
+            continue                  # Smritikosh: its .env and database are Sarathi's
+        hit = locate(s)
+        if hit is None:
+            if not s.optional:
+                problems.append(f"{s.name} isn't on this computer, so nothing of its "
+                                f"is in this backup")
+            continue
+        before = None
+        if s.name == "dvara":
+            if config is None or config.door is None:
+                continue              # off: no door's folders to ask about
+            before = door_folders(config)
+        try:
+            places += backup.ask_keeps(Found(s, program=hit[0], how=hit[1]), before)
+        except backup.BackupError as exc:
+            problems.append(str(exc))
+    return places + backup.own_places(config), problems
+
+
+def run_backup(*, to: str | None = None, keep: int | None = None,
+               new_passphrase: bool = False, ask: bool = True,
+               say=lambda _line: None):
+    """`sarathi backup`, for the command and the home page alike. With
+    ``ask`` False (the home page, Samay), a missing key is an error: the
+    passphrase is chosen by a person, at a terminal."""
+    from sarathi import backup
+    from sarathi.config import Backup
+
+    config = _settings_or_none()
+    settings = config.backup if config is not None else Backup()
+    key = None if new_passphrase else backup.read_key()
+    if key is None:
+        if not ask and not os.environ.get(backup.ENV_PASSPHRASE):
+            raise backup.BackupError("there is no backup passphrase yet: run `sarathi "
+                                     "backup` once at a terminal to choose it")
+        print("Choose the passphrase that opens your backups. Without it nothing can "
+              "open them -- not even you -- so write it down somewhere safe.",
+              file=sys.stderr)
+        key = backup.make_key(backup.ask_passphrase(twice=True))
+        print(f"its key: {_home(str(backup.save_key(key)))}", file=sys.stderr)
+    places, problems = backup_places(config)
+    folder = Path(to).expanduser() if to else settings.path()
+    made = backup.make(places, key, folder, config=config, problems=problems, say=say)
+    made.removed = backup.prune(folder, settings.keep if keep is None else keep)
+    return made
+
+
+def _backup(args) -> int:
+    from sarathi import backup
+
+    try:
+        made = run_backup(to=args.to, keep=args.keep, new_passphrase=args.new_passphrase,
+                          say=(lambda _line: None) if args.json_out else
+                          (lambda line: print(line, flush=True)))
+    except backup.BackupError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if args.json_out:
+        print(json.dumps(made.as_json()))
+    else:
+        print("\n".join([""] + backup.made_lines(made)))
+    return 0 if not made.problems else 1
+
+
+def _restore(args) -> int:
+    from sarathi import backup
+
+    file = Path(args.file).expanduser()
+    only = {n.strip() for n in args.only.split(",") if n.strip()} if args.only else None
+    try:
+        if not file.is_file():
+            raise backup.BackupError(f"there is no file at {file}")
+        if not args.list_only:
+            config = _settings_or_none()
+            started = podman.running(config) if config and config.road == "podman" \
+                else services.running()
+            alive = [r["name"] for r in started if r.get("alive")]
+            if alive:
+                raise backup.BackupError(
+                    f"these are running and write into what a restore replaces: "
+                    f"{', '.join(alive)}. Stop them first: `sarathi down`")
+        passphrase = backup.ask_passphrase(twice=False)
+        if args.list_only:
+            manifest = backup.peek(file, passphrase)
+            print(f"made {manifest.get('made')} on {manifest.get('host')}:")
+            for row in manifest.get("places") or []:
+                kind = row.get("kind")
+                said = {"folder": f"{row.get('files')} files, {backup.size(row['bytes'])}",
+                        "file": backup.size(row.get("bytes", 0))}.get(kind, "wasn't there")
+                where = backup.tilde(backup.rebase(row["path"], manifest.get("home", "")))
+                print(f"  {row['owner'] + ' ' + row['id']:<24} {said:<22} {where}")
+            if manifest.get("memory"):
+                print(f"  {'smritikosh database':<24} its memories")
+            for p in manifest.get("problems") or []:
+                print(f"  not in it: {p}")
+            return 0
+        restored = backup.unpack(file, passphrase, only=only,
+                                 say=lambda line: print(line, flush=True))
+    except backup.BackupError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    code = 0
+    lines = ["", f"put back, from {restored.manifest.get('host')} "
+                 f"({restored.manifest.get('made')}):", *restored.lines]
+    if restored.memory_dump is not None:
+        try:
+            config = load()
+            lines.append(f"  {'smritikosh database':<24} "
+                         + backup.restore_memory(config, restored.memory_dump,
+                                                 say=lambda line: print(line, flush=True)))
+        except (backup.BackupError, ConfigError) as exc:
+            lines.append(f"NOT PUT BACK: {exc}")
+            code = 1
+    backup.finish(restored)
+    for refused in restored.refused:
+        lines.append(f"left out (it would have pointed outside its folder): {refused}")
+    if restored.moved_aside:
+        lines += ["", "what was here before is kept beside each, not deleted:",
+                  *(f"  {_home(p)}" for p in restored.moved_aside)]
+    config = _settings_or_none()
+    nxt = "sarathi up"
+    if config is not None and config.road == "podman" and not podman.image_exists():
+        nxt = "sarathi image && sarathi up"
+    lines += ["", f"next: `{nxt}` (each program must be installed here first: a "
+                  "backup holds what is yours, not the programs)"]
+    print("\n".join(lines))
+    return code
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "backup":
+        return _backup(args)
+    if args.command == "restore":
+        return _restore(args)
     if args.command == "home":
         return _serve_home(args)
     if args.command in ("invite", "people"):

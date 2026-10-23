@@ -45,7 +45,8 @@ so that its sign-in files are read by one small program and nothing
 else. Pulling it into one Python with Playwright, FastAPI and a model
 client would undo the reason it was split off. So Sarathi does what Yantra
 already does with Setu and Samay: **find the program, run `status --json`,
-read the `format`.** Sarathi has no dependencies at all.
+read the `format`.** Sarathi depends on none of them. Its one dependency,
+`cryptography`, locks a backup ([notes/29](29-the-house-in-one-file.md)).
 
 **AN UNKNOWN FORMAT IS REFUSED.** `setu.status.v1` is a promise about
 which fields mean what. A `v2` might have renamed `connections`, and a

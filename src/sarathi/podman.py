@@ -528,7 +528,7 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
     out = {UNITS["yantra"]: {**model, YANTRA_TOKEN: yantra_token()},
            UNITS["samay"]: {**model, **door,
                             **{k: v for k, v in services.doctor_env(config).items()
-                               if k == "SAMAY_DOCTOR_TOKEN"}}}
+                               if k in ("SAMAY_DOCTOR_TOKEN", "SAMAY_BACKUP_TOKEN")}}}
     if services.watching(config):
         # a watch's then-turn is a turn: the key; its news goes to the door
         out[UNITS["prahari"]] = {**model, **{k.replace("SAMAY_", "PRAHARI_", 1): v
@@ -786,7 +786,7 @@ def units(config: Config) -> dict[str, str]:
                             # Podman, the firewall): reached as the host, keyed
                             + "".join(f"Environment={k}={v}\n" for k, v in
                                       services.doctor_env(config, "host.containers.internal")
-                                      .items() if k == "SAMAY_DOCTOR_URL")
+                                      .items() if k in ("SAMAY_DOCTOR_URL", "SAMAY_BACKUP_URL"))
                             + (f"Environment=SAMAY_DVARA_URL=http://{UNITS['dvara']}:"
                                f"{DOOR_PORT}\n"
                                # a schedule made on Yantra's page is told to you
