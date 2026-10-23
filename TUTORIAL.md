@@ -51,7 +51,8 @@ containers' road it reaches the phone over Wi-Fi. Smritikosh, a memory
 that finds things by meaning, is optional too: Step 7, when the helper
 starts forgetting things you told it. And Prahari, which tells you when
 something happens — a price drops, a mail comes, Mum messages — is
-Step 8.)
+Step 8. Step 9 keeps good answers as tests, so a new model can't quietly
+break them.)
 
 ---
 
@@ -422,7 +423,8 @@ so read it before you send it.
 
 The same works by typing: `/chats boiler` finds, `/chats 2` goes back
 into the second, `/chats export 2` sends it to you as a file,
-`/chats delete 2` deletes it. Deleting clears your
+`/chats delete 2` deletes it, and `/keep test` keeps a good answer as
+a test (Step 9). Deleting clears your
 history. Your chat window here keeps its own recent lines until they age
 out, and the owner's record of what each message cost (`dvara runs`)
 keeps them too; that is on purpose, so the owner's record stays whole.
@@ -1532,6 +1534,7 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | What you're watching for, and what each watch saw | Prahari's folder, `~/.prahari/` (its inlet's key: `inlet.token` there, only you) |
 | What the helper remembers about you | `~/.local/state/yantra/`, or with Smritikosh on, its database (the `smritikosh-pgdata` volume) |
 | Your conversations on Yantra's page, for its **history** button | `~/.local/state/yantra/conversations.sqlite` |
+| Conversations kept as tests, and each night's result | `~/.local/state/yantra/tests/` (yours by agent; each person's under `people/`; last night in `last.json`) |
 | Your Smritikosh key, for the helper | `~/.config/sarathi/secrets.env`, as `SMRITIKOSH_API_KEY` |
 | Each person's Smritikosh key, for Dvara | `~/dvara/state/memory.json` (only you can read it) |
 | Passwords of the Smritikosh accounts Sarathi made | `~/.local/share/sarathi/smritikosh-accounts.json` (only you) |
