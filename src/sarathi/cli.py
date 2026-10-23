@@ -19,6 +19,8 @@
     sarathi status            each piece: found where, what it says, and
                               what `up` started
     sarathi status --json     the same, as sarathi.status.v1
+    sarathi doctor            what's wrong, green / amber / red, and the line
+                              that fixes each (--json: sarathi.doctor.v1)
     sarathi home              one page linking every program's page, with status,
                               and a chat with your agents
     sarathi invite NAME       a one-time link for someone in Dvara's actors file:
@@ -172,6 +174,9 @@ def build_parser() -> argparse.ArgumentParser:
     status = subs.add_parser("status", help="what is here, and what each piece says")
     status.add_argument("--json", dest="json_out", action="store_true",
                         help=f"print {FORMAT} instead of lines")
+    doctor = subs.add_parser("doctor", help="what's wrong, and the line that fixes it")
+    doctor.add_argument("--json", dest="json_out", action="store_true",
+                        help="print sarathi.doctor.v1 instead of lines")
     return parser
 
 
@@ -340,6 +345,21 @@ def _said() -> dict[str, str]:
             for f in found}
 
 
+def _doctor() -> dict:
+    """`sarathi doctor --json`, for the home page's Check: everything asked
+    again, with sarathi.toml as it is on disk now."""
+    from sarathi import doctor
+
+    config = _settings_or_none()
+    found = find_all(before={"dvara": door_folders(config)} if config else None,
+                     asked_with={"yantra": _yantra_env(config),
+                                 "sparsh": services.phone_env(config)} if config else None,
+                     kept=_kept(config))
+    started = podman.running(config) if config and config.road == "podman" \
+        else services.running()
+    return doctor.report(doctor.examine(config, found, started, _memory(config)))
+
+
 def _memory(config) -> dict | None:
     """Where memories are kept, and how that is going (smritikosh.py)."""
     if config is None:
@@ -391,7 +411,7 @@ def _serve_home(args) -> int:
 
     try:
         config = load()
-        server = HomeServer(Home(config, _said), home_token(), host=args.host,
+        server = HomeServer(Home(config, _said, doctor=_doctor), home_token(), host=args.host,
                             port=args.port, chat=Chat.for_config(config),
                             people=People(), also_host=args.also_host)
     except OSError as exc:
@@ -529,10 +549,19 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    # status
+    # status, doctor
     started = podman.running(config) if config and config.road == "podman" \
         else services.running()
     memory = _memory(config)
+    if args.command == "doctor":
+        from sarathi import doctor
+
+        lines = doctor.examine(config, found, started, memory)
+        if args.json_out:
+            print(json.dumps(doctor.report(lines)))
+        else:
+            print(doctor.text(lines, colour=sys.stdout.isatty()))
+        return 0 if doctor.report(lines)["ok"] else 1
     if args.json_out:
         print(json.dumps({"format": FORMAT, "version": __version__, "ok": _ok(found),
                           "siblings": [f.as_json() for f in found], "started": started,

@@ -498,3 +498,22 @@ button.danger:hover { color: var(--clay); border-color: var(--clay); }
   #print-chat pre, #print-chat code { white-space: pre-wrap; font-size: 9.5pt; }
   #print-chat .print-tools { color: #555; font-size: 9pt; font-style: italic; margin: -4pt 0 10pt; }
 }
+
+/* Settings → Check (`sarathi doctor`) */
+.doctor { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.doctor-head { font-weight: 600; margin: 0; }
+.doctor-line { display: grid; grid-template-columns: 7.5em 1fr; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--line); border-left-width: 4px;
+  border-radius: 6px; background: var(--sheet); overflow-wrap: anywhere; }
+.doctor-line.red { border-left-color: var(--clay); }
+.doctor-line.amber { border-left-color: var(--accent); }
+.doctor-line.green { border-left-color: var(--ok); }
+.doctor-mark { font-size: 12.5px; font-weight: 600; }
+.doctor-line.red .doctor-mark { color: var(--clay); }
+.doctor-line.amber .doctor-mark { color: var(--accent); }
+.doctor-line.green .doctor-mark { color: var(--ok); }
+.doctor-fix { display: block; margin-top: 6px; font: 12.5px/1.45 var(--mono);
+  background: var(--sunk); padding: 6px 8px; border-radius: 4px; white-space: pre-wrap; }
+@media (max-width: 520px) {
+  .doctor-line { grid-template-columns: 1fr; gap: 4px; }
+}

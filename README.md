@@ -823,6 +823,40 @@ Setu and Samay are all found and readable, and 1 otherwise. Dvara,
 Sparsh and Smritikosh are optional: a missing one is reported and never fails the
 check.
 
+### When something's wrong: `sarathi doctor`
+
+`status` says what each piece is doing. `doctor` says what's wrong, and
+the line that fixes it:
+
+```
+$ sarathi doctor
+0 to fix, 5 worth a look, 8 fine
+
+! worth a look  image: the image is older than the code: dvara 4db57fa, yantra 2ecc3e4 came after it
+      fix: sarathi image && sarathi up
+! worth a look  phone: the iPhone's WebDriverAgent signature runs out Sat 24 Oct 14:49: ...
+      fix: on the Mac: ./build-wda-on-mac.sh, then `sparsh iphone WDA.ipa`
+! worth a look  firewall: ufw is on, and its rules need root to read; if a phone can't open a page ...
+      fix: sudo ufw allow from 192.168.1.0/24 to any port 3000,8321,8760,... proto tcp
+✓ fine  model: qwen3.8-64k:latest is pulled and answering; it holds 65536 tokens
+✓ fine  setu: 13 accounts, none marked stopped (Setu tries each sign-in once a day)
+✓ fine  running: 11 of 11 pieces `sarathi up` started are running
+...
+```
+
+Every line comes from the program that knows: each sibling's own
+`status --json` (Setu's stopped sign-ins, Samay's failed runs of the
+last day, Sparsh's phones and the iPhone's signature, Yantra's model and
+how many tokens it really holds, Dvara's problems), what `up` started,
+Podman's image against each checkout's last commit (and containers still
+on an older one), the firewall's ports for the phones (`sudo -n ufw
+status`, which never asks for a password; unreadable is amber, never
+"open"), and free disk. **Red** is broken now, **amber** is worth a
+look, **green** is fine. It changes nothing, and exits 1 when anything
+is red. `--json` prints `sarathi.doctor.v1`. The same check is a
+**Check** tab in the home page's Settings
+([notes/28](notes/28-the-doctor.md)).
+
 ### Every page in one place: `sarathi home`
 
 ```
@@ -1048,6 +1082,10 @@ src/sarathi/
                 computer's adb lent to the containers by a file  (notes/20);
                 a second PublishPort on the house address for every
                 page, and the firewall line naming them  (notes/23)
+  doctor.py     sarathi doctor: what's wrong, green / amber / red, each
+                with its fix, from each sibling's own status, what `up`
+                started, the image's age, the firewall, the disk; the
+                home page's Settings → Check asks the same  (notes/28)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04)
   phone.py      sarathi phone: [phone] on, paired and reached over Wi-Fi

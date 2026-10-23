@@ -68,6 +68,7 @@ EVERY SETTINGS FILE, THE OWNER'S ALONE (editing.py). Each program checks
 and writes its own file; a person signed in gets 403:
 
     GET  /api/settings                     every file's settings and text
+    GET  /api/doctor                       `sarathi doctor --json`: what's wrong, and its fix
     POST /api/settings/sarathi             {table: {key: value}}: sarathi.toml
     POST /api/settings/key/NAME            {"value"}: a key into secrets.env
     POST /api/settings/person/NAME         {fields} | {"remove": true}: actors.toml
@@ -373,7 +374,8 @@ class Home:
                  memory: Callable[[Config], dict[str, Any]] = memory_status,
                  restart: Callable[[], None] = run_up,
                  tests: Callable[[Config], dict[str, Any]] | None = None,
-                 ask_samay: Callable[..., Any] | None = None) -> None:
+                 ask_samay: Callable[..., Any] | None = None,
+                 doctor: Callable[[], dict[str, Any]] | None = None) -> None:
         self.config = config
         self._said = said
         self._up = up
@@ -384,7 +386,18 @@ class Home:
         self._restart = restart
         self._tests = tests
         self._ask_samay = ask_samay
+        self._doctor = doctor
         self._lock = threading.Lock()
+
+    def doctor(self) -> tuple[int, dict[str, Any]]:
+        """(status, answer): ``sarathi doctor``, asked now. Never cached: a
+        person pressing Check has just fixed something."""
+        if self._doctor is None:
+            return 404, {"detail": "the doctor isn't wired in here"}
+        try:
+            return 200, self._doctor()
+        except Exception as exc:          # a check that broke is a line, not a 500
+            return 500, {"detail": f"the check itself failed: {exc}"}
 
     def tests(self) -> dict[str, Any]:
         return (self._tests or kept_tests_status)(self.config)
@@ -763,6 +776,10 @@ def _handler(server: HomeServer):
                                   .read_bytes(), kind)
             if url.path == "/api/settings":
                 return self._settings_get()
+            if url.path == "/api/doctor":
+                if self._owner() is None:
+                    return None
+                return self._json(*server.home.doctor())
             if url.path.startswith("/api/chat/chats"):
                 return self._past(url)
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",

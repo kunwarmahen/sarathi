@@ -1466,8 +1466,19 @@ dvara"* when you press the button.
 
 ## When something goes wrong
 
-Sarathi tries to say what happened and what fixes it. The messages
-you're most likely to meet:
+Start with the doctor. It asks every program how it's doing and says
+what's wrong, each line with what fixes it:
+
+```bash
+sarathi doctor
+```
+
+Or on the home page: **Settings → Check → Check everything**. Red needs
+fixing, amber is worth a look, green is fine. It changes nothing by
+itself. You type the fix, or press the button it names.
+
+Sarathi also tries to say what happened, and what fixes it, at the
+moment it happens. The messages you're most likely to meet:
 
 | You see | What it means | Do this |
 |---|---|---|

@@ -4,10 +4,11 @@
 // Nothing is decided here: each change goes to the program whose file it
 // is (editing.py on the server), which checks it before writing.
 
-const sets = { data: null, tab: "people", editing: null };
+const sets = { data: null, tab: "people", editing: null, checked: null };
 
 const TABS = [["people", "People"], ["agents", "Agents"], ["rules", "Rules"],
-              ["accounts", "Accounts"], ["sarathi", "Sarathi"], ["keys", "Keys"]];
+              ["accounts", "Accounts"], ["sarathi", "Sarathi"], ["keys", "Keys"],
+              ["check", "Check"]];
 
 const RUNGS = { "": "Dvara's default (read only)", read_only: "Read only: never asked",
                 ask: "Asked before anything changes", yolo: "Never asked: anything" };
@@ -39,7 +40,8 @@ function drawTabs() {
     return b;
   }));
   const draw = { people: drawPeopleTab, agents: drawAgentsTab, rules: drawRulesTab,
-                 accounts: drawAccountsTab, sarathi: drawSarathiTab, keys: drawKeysTab };
+                 accounts: drawAccountsTab, sarathi: drawSarathiTab, keys: drawKeysTab,
+                 check: drawCheckTab };
   document.getElementById("settings-body").replaceChildren(
     ...[draw[sets.tab]()].flat().filter((kid) => kid != null));
 }
@@ -713,6 +715,42 @@ const KEY_WORDS = {
   ANTHROPIC_API_KEY: "Anthropic (Claude) key", OPENAI_API_KEY: "OpenAI key",
   TELEGRAM_TOKEN: "Telegram bot's token (from @BotFather)",
 };
+
+// ---- Check: `sarathi doctor`, asked from here ------------------------------------
+
+const CHECK_WORDS = { red: "Needs fixing", amber: "Worth a look", green: "Fine" };
+
+function drawCheckTab() {
+  const out = h("div.doctor", { "aria-live": "polite" });
+  const go = button("Check everything", () => runCheck(go, out));
+  const intro = h("p.meta", {}, "Asks every program how it's doing: what's running, " +
+    "the image, the firewall, your accounts, phones, the model, last day's schedules, " +
+    "disk. Nothing is changed; each problem says what fixes it. It takes a few seconds.");
+  if (sets.checked) drawCheck(out, sets.checked);
+  return [intro, row(go), out];
+}
+
+async function runCheck(go, out) {
+  go.disabled = true;
+  out.replaceChildren(h("p.meta", {}, "Checking…"));
+  try {
+    sets.checked = await api("/api/doctor");
+    drawCheck(out, sets.checked);
+  } catch (err) {
+    out.replaceChildren(h("p.warn", {}, `The check didn't finish: ${err.message}`));
+  } finally {
+    go.disabled = false;
+  }
+}
+
+function drawCheck(out, got) {
+  const head = h("p.doctor-head", {},
+    `${got.red} to fix, ${got.amber} worth a look, ${got.green} fine`);
+  out.replaceChildren(head, ...got.lines.map((line) => h(`div.doctor-line.${line.level}`, {},
+    h("span.doctor-mark", {}, CHECK_WORDS[line.level]),
+    h("div", {}, h("strong", {}, line.about), " ", line.said,
+      line.fix ? h("code.doctor-fix", {}, line.fix) : null))));
+}
 
 function drawKeysTab() {
   const keys = sets.data.sarathi.keys;
