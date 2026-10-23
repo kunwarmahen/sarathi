@@ -1503,6 +1503,14 @@ Yantra's own page shows a **carry on / leave it** bar. A schedule that
 was running carries itself on if the restart came soon after it started;
 otherwise its logbook says *interrupted*.
 
+**Seeing what went wrong, step by step.** When an answer isn't right,
+look at what the agent actually did. Send `/steps` in the chat for your
+last turn: each tool, what it was given, what came back, how long it
+took, and who said yes. On Yantra's page, every answer has a **steps**
+link. Dvara's page and Samay's page have a **Steps** button on each run.
+To report a bug, Yantra's page and Dvara's page (for your own runs) make
+a file of it. It holds what the tools read, so look before you send it.
+
 Sarathi also tries to say what happened, and what fixes it, at the
 moment it happens. The messages you're most likely to meet:
 
