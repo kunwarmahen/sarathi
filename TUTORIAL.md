@@ -1492,6 +1492,17 @@ Your morning might say *"gmail:personal: Google ends this sign-in Sun
 25 Oct"* with what to do, while a phone you left unplugged all week
 is mentioned only once.
 
+**Restarting in the middle of a job is safe.** Every step of a job is
+saved as it happens. If you `sarathi down && sarathi up` (or the
+computer restarts) while the agent is six taps into returning a parcel,
+each person it was working for gets a message when it comes back:
+*"I stopped part way through "return the blue kettle" (6 steps done…).
+Send /carry to carry on from there."* `/carry` goes on from the last
+step without redoing any, and the agent looks at the screen again first.
+Yantra's own page shows a **carry on / leave it** bar. A schedule that
+was running carries itself on if the restart came soon after it started;
+otherwise its logbook says *interrupted*.
+
 Sarathi also tries to say what happened, and what fixes it, at the
 moment it happens. The messages you're most likely to meet:
 
