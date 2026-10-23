@@ -144,5 +144,8 @@ def test_smritikosh_is_on_the_house_by_its_dashboard_alone(host, monkeypatch):  
     units = podman.memory_units(config)
     for unit in ("sarathi-smritikosh.container", "sarathi-smritikosh-db.container"):
         assert "192.168.1.44" not in units[unit], unit
+    # a rebuilt image's new column reaches the database before any query does
+    assert ('Exec=/bin/sh -c "cd /opt/smritikosh && .venv/bin/alembic upgrade head && '
+            'exec .venv/bin/uvicorn' in units["sarathi-smritikosh.container"])
     published = podman.lan_ports(config)
     assert 3000 in published and not {5432, 6379, 8080, 8770} & set(published)

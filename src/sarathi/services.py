@@ -38,7 +38,8 @@ files:
     home    sarathi home --port <pages.home_port> [--also-host <dvara.window_host>,
                   when that is one address: people sign in from their phones]
     smritikosh  uvicorn smritikosh.api.main:app --port <smritikosh.port>, in its
-                  checkout (its .env is there), after its database container,
+                  checkout (its .env is there), after its database container
+                  and `alembic upgrade head` (new code never meets old tables),
                   with [memory] via = "smritikosh"; then Yantra gets
                   --mcp-config <its server> and YANTRA_MEMORY, YANTRA_USER and
                   SMRITIKOSH_API_KEY, Samay the same for the runs it starts
@@ -337,6 +338,10 @@ def memory_service(config: Config, notes: list[str]) -> Service | None:
             "POSTGRES_URL", "postgresql://smritikosh:smritikosh@localhost:5432/smritikosh"))
         said: list[str] = []
         smritikosh.start_database(kosh, db, said.append)
+        # A pulled checkout may add a column the server's queries name:
+        # its tables are brought up first, and only a step run is said.
+        smritikosh.migrate(checkout, lambda line: said.append(line)
+                           if "step(s) run" in line else None)
         said += smritikosh.start_extras(kosh)      # with [smritikosh] full
         return "\n".join(said) or None
 

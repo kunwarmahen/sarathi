@@ -103,6 +103,17 @@ its checkout. It reads a copy of its `.env` with the database at
 `sarathi-smritikosh-db` and Ollama on the host. Neither unit runs as you
 or mounts any other piece's files.
 
+**ITS TABLES ARE BROUGHT UP BEFORE IT SERVES, ON EVERY START.** A newer
+Smritikosh can add a column its queries name (`events.last_used_at`, for
+a memory in use that should not age: Yantra's note 143). Started on an
+old database, every query would fail on it. So on plain programs `up`
+runs `alembic upgrade head` in the checkout after the database container
+and before the server, and says so only when a step ran (`tables     1
+step(s) run`). On Podman the unit's command is
+`/bin/sh -c "cd /opt/smritikosh && .venv/bin/alembic upgrade head && exec
+.venv/bin/uvicorn …"`: a rebuilt image upgrades the database it finds. A
+migration that fails stops the server rather than serving errors.
+
 A piece already running from an earlier `up`, but with other words on
 its command line, starts again with the new ones. That is what makes
 the switch take effect on the plain road, as a rewritten unit already

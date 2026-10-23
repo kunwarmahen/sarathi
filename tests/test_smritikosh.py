@@ -246,6 +246,37 @@ def test_on_the_process_road_smritikosh_starts_first_and_yantra_is_pointed_at_it
     assert "sk-mine" not in config_file.read_text()
 
 
+def test_on_the_process_road_its_tables_are_brought_up_before_it_serves(world, kosh,
+                                                                      monkeypatch):
+    # A pulled checkout can name a column the database has not got yet;
+    # every query would fail on it, so the upgrade runs first, every time.
+    order: list[str] = []
+    monkeypatch.setattr(smritikosh, "start_database",
+                        lambda kosh, db, say: order.append("database"))
+    monkeypatch.setattr(smritikosh, "start_extras", lambda kosh: [])
+
+    def migrate(checkout, say):
+        order.append("tables")
+        say("tables     1 step(s) run")
+    monkeypatch.setattr(smritikosh, "migrate", migrate)
+    planned, _ = services.plan(kosh, found(world))
+
+    said = planned[0].prepare()
+
+    assert order == ["database", "tables"]
+    assert said == "tables     1 step(s) run"
+
+
+def test_up_to_date_tables_say_nothing_on_every_up(world, kosh, monkeypatch):
+    monkeypatch.setattr(smritikosh, "start_database", lambda kosh, db, say: None)
+    monkeypatch.setattr(smritikosh, "start_extras", lambda kosh: [])
+    monkeypatch.setattr(smritikosh, "migrate",
+                        lambda checkout, say: say("tables     up to date"))
+    planned, _ = services.plan(kosh, found(world))
+
+    assert planned[0].prepare() is None
+
+
 def test_your_key_reaches_what_runs_as_you_and_no_other_piece(world, kosh):
     planned, _ = services.plan(kosh, found(world))
     for service in planned:

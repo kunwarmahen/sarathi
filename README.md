@@ -298,7 +298,9 @@ with `--full`, Neo4j, MongoDB and Redis, below), its
 tables, your account (named as Yantra knows you) with its own key, and
 an account and key for each person in Dvara's actors file. Then
 `sarathi up` starts Smritikosh before Yantra and Dvara and hands each the
-way to reach it, on either road.
+way to reach it, on either road, bringing its tables up first
+(`alembic upgrade head`), so a newer Smritikosh never meets an older
+database ([note 13](notes/13-a-memory-by-meaning.md)).
 
 **A Smritikosh you already have is used, not replaced.** With its
 database container already here, Sarathi looks for the checkout whose

@@ -133,7 +133,9 @@ servers on one data folder would ruin it. Its server
 in it when ``[smritikosh] checkout`` names one, and reads its own
 ``.env`` from a file of its own (``units/sarathi-smritikosh.env``) with
 the database's address made the database container's name, and
-Ollama's the host's. Neither mounts anything of the other pieces'.
+Ollama's the host's. It runs ``alembic upgrade head`` before it serves:
+a rebuilt image may carry a column the database has not got yet, and
+every query would fail on it. Neither mounts anything of the other pieces'.
 With ``[smritikosh] full``, Neo4j, MongoDB and Redis are a unit each
 (``sarathi-smritikosh-neo4j`` and so on), COPIED FROM THE CONTAINER THAT
 HOLDS THEIR DATA: the same image, by its id (a ``latest`` tag would pull
@@ -965,8 +967,9 @@ def memory_units(config: Config) -> dict[str, str]:
 
     kosh = config.smritikosh
     db, api = UNITS["smritikosh-db"], UNITS["smritikosh"]
-    serve = (f"/opt/smritikosh/.venv/bin/uvicorn smritikosh.api.main:app "
-             f"--host 0.0.0.0 --port {SMRITIKOSH_PORT}")
+    serve = ('/bin/sh -c "cd /opt/smritikosh && .venv/bin/alembic upgrade head && '
+             'exec .venv/bin/uvicorn smritikosh.api.main:app '
+             f'--host 0.0.0.0 --port {SMRITIKOSH_PORT}"')
     extras = extra_units(config)
     after = "".join(f"Wants={UNITS[n]}.service\nAfter={UNITS[n]}.service\n"
                     for n in ("smritikosh-db", *(f"smritikosh-{e}" for e in
