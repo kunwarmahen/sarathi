@@ -26,7 +26,7 @@ from test_up import run, seen
 def door_args(**given) -> argparse.Namespace:
     return argparse.Namespace(**{**dict(telegram=None, telegram_id=None, port=None,
                                         window_host=None, window_port=None, window_url=None,
-                                        off=False), **given})
+                                        off=False, voices=None), **given})
 
 
 @pytest.fixture
@@ -202,3 +202,59 @@ def test_the_door_command_keeps_the_window_address(world, home, dvara_checkout):
              interactive=False)
     assert load().door.window_env() == {"SETU_WINDOW_HOST": "100.101.102.103",
                                         "SETU_WINDOW_URL": "https://door.example.net"}
+
+
+# ---- voices for answers read aloud (Dvara's spoken.py) -------------------------
+
+
+def test_voices_read_back_as_written_and_a_wrong_name_is_refused():
+    chosen = config.Config("ollama", door=Door(voices=("en_US-lessac-medium",
+                                                       "hi_IN-pratham-medium")))
+    assert config.parse(config.render(chosen)) == chosen
+    assert config.parse(config.render(config.Config("ollama", door=Door()))).door.voices == (
+        "en_US-lessac-medium",)
+    with pytest.raises(config.ConfigError, match="dvara.voices must be a list of Piper"):
+        config.parse('[model]\nprovider = "ollama"\n[dvara]\non = true\n'
+                     'voices = ["../../etc/passwd"]\n')
+
+
+def test_a_voice_is_fetched_from_where_the_image_fetches_it():
+    assert door.voice_url("hi_IN-pratham-medium", ".onnx") == (
+        "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/"
+        "hi/hi_IN/pratham/medium/hi_IN-pratham-medium.onnx")
+
+
+def test_voices_are_fetched_once_and_a_missing_one_is_said(tmp_path):
+    import io
+    import urllib.error
+
+    asked = []
+
+    def opener(url, timeout):
+        asked.append(url)
+        if "xx_XX" in url:
+            raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+        return io.BytesIO(b"{}" if url.endswith(".json") else b"model")
+
+    said = door.fetch_voices(("hi_IN-pratham-medium", "xx_XX-nobody-medium"), tmp_path,
+                             opener=opener)
+    assert (tmp_path / "hi_IN-pratham-medium.onnx").read_bytes() == b"model"
+    assert said[0].startswith("fetched the voice hi_IN-pratham-medium")
+    assert "xx_XX-nobody-medium couldn't be fetched" in said[1]
+    asked.clear()
+    door.fetch_voices(("hi_IN-pratham-medium",), tmp_path, opener=opener)
+    assert asked == []                                   # already here
+
+
+def test_the_door_command_sets_voices_and_fetches_them_on_plain_programs(
+        world, home, dvara_checkout, monkeypatch, capsys):
+    settings(world, {"web": 8321, "clock": 8780})
+    got = []
+    monkeypatch.setattr(door, "fetch_voices", lambda names: got.append(names) or [])
+    door.run(door_args(telegram="", voices="en_US-lessac-medium, hi_IN-pratham-medium"),
+             dvara_checkout, interactive=False)
+    assert load().door.voices == ("en_US-lessac-medium", "hi_IN-pratham-medium")
+    assert got == [("en_US-lessac-medium", "hi_IN-pratham-medium")]
+    assert door.run(door_args(telegram="", voices="hindi"), dvara_checkout,
+                    interactive=False) == 2
+    assert "not a voice's name" in capsys.readouterr().err

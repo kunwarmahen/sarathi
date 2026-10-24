@@ -533,8 +533,25 @@ for one you typed. The voice is made on this computer by Piper, a small
 voice model (it's in the image on the Podman road; on plain programs,
 `pipx install piper-tts` and a voice, as Dvara's TUTORIAL step 29
 shows). Code, links and tables aren't read out, and a long answer stops
-with "The rest is in the message." To hear every answer, send
-`/voice always`; `/voice off` for never; `/voice` says which you have.
+with "The rest is in the message." To hear every answer, and what's
+sent to you unasked like the morning brief, send `/voice always`;
+`/voice off` for never; `/voice` says which you have.
+
+**In Hindi too (or another language).** Out of the box there's one
+English voice. To have Hindi answers read in a Hindi voice, add one:
+
+```
+sarathi dvara --voices en_US-lessac-medium,hi_IN-pratham-medium
+sarathi image && sarathi down && sarathi up     # containers; plain programs: just restart
+```
+
+(or **Settings → Sarathi → Dvara → Voices for answers read aloud**, then
+the same `sarathi image` line). Now an answer written in Hindi is read by the Hindi voice
+and an English one by the English voice, whoever asked. Other voices are
+listed at huggingface.co/rhasspy/piper-voices (`hi_IN-priyamvada-medium`
+is a second Hindi one). Someone who wants every answer in one voice of
+their own sends `/voice use 2`, or you pick it for them under **Their
+voice** in Settings → People.
 
 ---
 
@@ -871,7 +888,9 @@ limits; give a child an agent made for them.
 
 **Answers read aloud**, on the same form, is for anyone: *When they sent
 a voice note* (the usual), *Every answer* (someone who'd rather listen
-than read), or *Never*. They can change it themselves with `/voice`.
+than read, including a schedule's answer), or *Never*. **Their voice**
+is whose: one of the voices this house has. They can change both
+themselves with `/voice` and `/voice use`.
 
 **Things everyone should know.** **Settings → Household** is a short
 list every agent is told, whoever it's talking to: the wifi, bin day,
@@ -1747,7 +1766,8 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | What an agent noticed about someone, waiting for their `/remember` | `~/dvara/state/offered.json` (only you) |
 | The key each person's ntfy topic is made from | `~/dvara/state/ntfy.key` (only you) |
 | Which stopped sign-ins people were already told about | `~/dvara/state/signins.json` (only you) |
-| Who chose to hear answers read aloud (`/voice`) | `~/dvara/state/voice.json` (only you) |
+| Who chose to hear answers read aloud, and in whose voice (`/voice`) | `~/dvara/state/voice.json` (only you) |
+| The voices answers are read in (plain programs) | `~/.local/share/piper/voices/` |
 | What Sarathi started, and what each printed | `~/.local/share/sarathi/` |
 | Your backups | `~/sarathi-backups/` (or `[backup] folder`); each a `.sarathi-backup` file only your passphrase opens |
 | The backups' key (the private half sealed by your passphrase) | `~/.config/sarathi/backup-key.json` (only you) |

@@ -279,23 +279,26 @@ def test_a_newer_chrome_here_rebuilds_the_image_s_browser(host, monkeypatch):
     assert "HOST_BROWSER=155.0.8059.39" in built[0]
 
 
-def test_the_image_has_a_voice_and_another_can_be_named(host, monkeypatch):
+def test_the_image_has_the_voices_sarathi_toml_names(host, monkeypatch):
     """Answers read aloud need Piper and a voice file in the image, where
-    Dvara looks for one; SARATHI_PIPER_VOICE builds with another."""
+    Dvara looks for one; [dvara] voices names which, English when unset."""
     text = Path(podman.__file__).with_name("Containerfile").read_text()
-    assert "ARG PIPER_VOICE=en_US-lessac-medium" in text
+    assert 'ARG PIPER_VOICES="en_US-lessac-medium"' in text
     assert "piper-tts==" in text and "/usr/share/piper/voices" in text
+    assert "for v in $PIPER_VOICES" in text
     built = []
     monkeypatch.setattr(podman, "stage", lambda into, env=None, config=None: [])
     monkeypatch.setattr(podman.shutil, "which", lambda name: None)
     monkeypatch.setattr(podman.subprocess, "run",
                         lambda argv, **kw: built.append(argv) or
                         subprocess.CompletedProcess(argv, 0))
-    monkeypatch.delenv(podman.VOICE_ENV, raising=False)
-    assert podman.build() == 0 and not any("PIPER_VOICE" in a for a in built[0])
-    monkeypatch.setenv(podman.VOICE_ENV, "de_DE-thorsten-medium")
+    assert podman.build() == 0 and "PIPER_VOICES=en_US-lessac-medium" in built[0]
+    from sarathi.config import Config, Door
+
     built.clear()
-    assert podman.build() == 0 and "PIPER_VOICE=de_DE-thorsten-medium" in built[0]
+    two = Config("ollama", door=Door(voices=("en_US-lessac-medium", "hi_IN-pratham-medium")))
+    assert podman.build(config=two) == 0
+    assert "PIPER_VOICES=en_US-lessac-medium hi_IN-pratham-medium" in built[0]
 
 
 def test_the_image_is_built_for_this_machine_whatever_the_base_tags_hold(host, monkeypatch):

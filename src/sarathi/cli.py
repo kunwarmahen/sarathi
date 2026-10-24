@@ -127,6 +127,10 @@ def build_parser() -> argparse.ArgumentParser:
                                "ntfy app (--no-ntfy: stop starting it)")
     door_cmd.add_argument("--ntfy-port", dest="ntfy_port", type=int, metavar="PORT",
                           help="ntfy's port (default 8793)")
+    door_cmd.add_argument("--voices", metavar="NAME,NAME",
+                          help="Piper voices to read answers aloud in, e.g. "
+                               "en_US-lessac-medium,hi_IN-pratham-medium (fetched here "
+                               "on plain programs; `sarathi image` on Podman)")
     door_cmd.add_argument("--off", action="store_true", help="stop starting Dvara")
 
     phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for Dvara's "

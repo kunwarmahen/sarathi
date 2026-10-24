@@ -138,6 +138,16 @@ def test_sarathis_own_file_is_checked_and_the_old_one_kept(owner_page):
     assert settings_mod.load().model == "gemma4:12b"
 
 
+def test_voices_are_typed_with_commas_and_a_wrong_name_is_refused(owner_page):
+    status, _ = send(owner_page, "/api/settings/sarathi",
+                     {"dvara": {"on": True, "voices": "en_US-lessac-medium, hi_IN-pratham-medium"}})
+    assert status == 200
+    assert settings_mod.load().door.voices == ("en_US-lessac-medium", "hi_IN-pratham-medium")
+    status, got = send(owner_page, "/api/settings/sarathi",
+                       {"dvara": {"on": True, "voices": "Hindi please"}})
+    assert status == 400 and "not a voice's name" in got["detail"]
+
+
 def test_the_house_is_set_and_cleared_from_the_page(owner_page):
     status, _ = send(owner_page, "/api/settings/sarathi",
                      {"house": {"name": "beast.local", "address": ""}})

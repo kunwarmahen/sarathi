@@ -178,6 +178,7 @@ from urllib.parse import urlsplit, urlunsplit
 from sarathi import services
 from sarathi.config import (
     BOT_TOKEN,
+    DEFAULT_VOICES,
     DOOR_TOKEN,
     KEY_NAMES,
     NOT_ONE_ADDRESS,
@@ -305,11 +306,6 @@ def stage(into: Path, env: dict[str, str] | None = None,
     return lines
 
 
-#: Another Piper voice for the image than the Containerfile's, by name
-#: (``de_DE-thorsten-medium``); empty for none.
-VOICE_ENV = "SARATHI_PIPER_VOICE"
-
-
 def platform() -> str:
     """This machine's own platform, named the way podman names one. Asked
     for on every build: an arm64 build on this machine had left arm64
@@ -327,9 +323,9 @@ def build(engine: str = "podman", config: Config | None = None) -> int:
             print(f"  {line}")
         print(flush=True)
         here = browser_version([BROWSER, "--version"]) if shutil.which(BROWSER) else None
-        # another voice to read answers aloud with (Dvara's spoken.py)
-        voice = ["--build-arg", f"PIPER_VOICE={os.environ[VOICE_ENV]}"] \
-            if VOICE_ENV in os.environ else []
+        # the voices to read answers aloud with: [dvara] voices (Dvara's spoken.py)
+        voices = config.door.voices if config is not None and config.door else DEFAULT_VOICES
+        voice = ["--build-arg", f"PIPER_VOICES={' '.join(voices)}"]
         code = subprocess.run([engine, "build", "--platform", platform(), "-t", IMAGE,
                                "--build-arg",
                                f"HOST_BROWSER={'.'.join(map(str, here or ()))}", *voice, tmp],
@@ -341,7 +337,7 @@ def build(engine: str = "podman", config: Config | None = None) -> int:
         voices = (run([engine, "run", "--rm", "--entrypoint", "/bin/ls", IMAGE,
                        "/usr/share/piper/voices"]).stdout or "").split()
         said = [v.removesuffix(".onnx") for v in voices if v.endswith(".onnx")]
-        print(f"voice in the image:   {', '.join(said) or 'none (answers stay words)'}")
+        print(f"voices in the image:  {', '.join(said) or 'none (answers stay words)'}")
     return code
 
 

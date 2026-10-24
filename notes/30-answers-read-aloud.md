@@ -14,24 +14,20 @@ for one. That's about 290 MB: onnxruntime is most of it, the voice 61 MB.
 ffmpeg was already there for hearing voice notes; it now also turns
 Piper's WAV into the OGG Opus Telegram shows as a voice note.
 
-Another voice is a name from
-[rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices):
-
-```
-SARATHI_PIPER_VOICE=de_DE-thorsten-medium sarathi image
-SARATHI_PIPER_VOICE= sarathi image            # none: answers stay words
-```
-
-`sarathi image` passes it as the build's `PIPER_VOICE` and says, after
-the browser line, which voice the image ended up with:
+Which voices is `[dvara] voices` in sarathi.toml, names from
+[rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices),
+English alone unless you add more (`voices = []`: none, answers stay
+words). `sarathi image` passes them as the build's `PIPER_VOICES` and
+says, after the browser line, which voices the image ended up with:
 
 ```
 browser in the image: Google Chrome 155.0.8059.39
-voice in the image:   en_US-lessac-medium
+voices in the image:  en_US-lessac-medium, hi_IN-pratham-medium
 ```
 
 On the process road Dvara uses your own Piper (`pipx install piper-tts`)
-and a voice in `~/.local/share/piper/voices`.
+and the voices in `~/.local/share/piper/voices`, which
+`sarathi dvara --voices` fetches ([notes/31](31-a-voice-for-each-language.md)).
 
 ## A choice per person
 
@@ -87,9 +83,8 @@ play by itself; pressing its ▶ did, and the button went back to
 
 ## What the tests hold
 
-`tests/test_podman.py`: the Containerfile installs Piper and a voice
-where Dvara looks, a build without `SARATHI_PIPER_VOICE` passes no voice,
-and one with it passes `PIPER_VOICE`. `tests/test_home.py`: an answer
+`tests/test_podman.py`: the Containerfile installs Piper and every voice
+named where Dvara looks, English when sarathi.toml names none. `tests/test_home.py`: an answer
 read aloud comes through as `audio/wav`, asked of Dvara as you, and not
 without your key; the page's policy allows audio from `blob:`.
 
@@ -98,7 +93,7 @@ without your key; the page's policy allows audio from `blob:`.
 * **The image built with it.** The step was run in a container from the
   current image, not as part of a full `sarathi image`; that's the next
   rebuild.
-* **A voice per person.** One voice for the house; Settings has no box
-  for it.
+* ~~**A voice per person.**~~ Settings → People → **Their voice**, and
+  voices for other languages ([notes/31](31-a-voice-for-each-language.md)).
 * **The doctor asking about it.** `sarathi doctor` doesn't yet say
   whether Dvara can speak; `/voice` in the chat does.

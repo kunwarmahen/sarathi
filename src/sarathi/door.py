@@ -10,11 +10,15 @@ that say what was chosen.
     sarathi dvara --telegram greeter      the same, without asking
     sarathi dvara --telegram-id 8675309   you, in a new actors file, on Telegram
     sarathi dvara --window-host 100.101.102.103   Amazon/X sign-ins streamed to phones
+    sarathi dvara --voices en_US-lessac-medium,hi_IN-pratham-medium   voices to read aloud in
     sarathi dvara --off                   stop starting it
 
 WHAT IT WRITES, AND WHERE.
 
-* ``[dvara]`` in sarathi.toml: on, its port, the bot's agent.
+* ``[dvara]`` in sarathi.toml: on, its port, the bot's agent, and the
+  voices answers are read aloud in (``voices``). On plain programs those
+  voices are fetched to ``~/.local/share/piper/voices``, where Dvara
+  looks; on the Podman road ``sarathi image`` puts them in the image.
 * secrets.env: ``DVARA_TOKEN``, made here (dvara refuses to serve
   without one, and nobody should have to invent 48 hex digits), and
   ``TELEGRAM_TOKEN``, typed at a hidden prompt -- BotFather's token for
@@ -36,6 +40,7 @@ from __future__ import annotations
 
 import getpass
 import os
+import urllib.request
 import secrets as random
 import shutil
 import sys
@@ -48,6 +53,7 @@ from sarathi.config import (
     DEFAULT_DOOR_PORT,
     DEFAULT_NTFY_PORT,
     DOOR_TOKEN,
+    VOICE_NAME,
     ConfigError,
     Door,
     load,
@@ -60,6 +66,44 @@ from sarathi.siblings import Found
 
 #: How the door writes down a stranger, in its log (dvara's telegram.py).
 STRANGER = "is not in the actors file"
+#: Where a voice is fetched from (the image fetches from the same place),
+#: and where Dvara looks for one on this computer.
+VOICES_AT = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
+VOICES_HERE = Path("~/.local/share/piper/voices")
+
+
+def voice_url(name: str, suffix: str) -> str:
+    """``hi_IN-pratham-medium`` -> .../hi/hi_IN/pratham/medium/<name><suffix>."""
+    place, rest = name.split("-", 1)
+    who, quality = rest.rsplit("-", 1)
+    return f"{VOICES_AT}/{place.split('_')[0]}/{place}/{who}/{quality}/{name}{suffix}"
+
+
+def fetch_voices(names: tuple[str, ...], folder: Path | None = None,
+                 *, opener=urllib.request.urlopen) -> list[str]:
+    """Each voice not already in ``folder``, fetched there; what was done,
+    a line each. A voice that can't be fetched is said, not raised: the
+    rest still read aloud."""
+    folder = (folder or VOICES_HERE).expanduser()
+    said = []
+    for name in names:
+        model = folder / f"{name}.onnx"
+        if model.is_file() and model.with_name(model.name + ".json").is_file():
+            continue
+        folder.mkdir(parents=True, exist_ok=True)
+        try:
+            for suffix in (".onnx.json", ".onnx"):      # the card first: it's small
+                with opener(voice_url(name, suffix), timeout=300) as answer:
+                    data = answer.read()
+                spare = folder / f".{name}{suffix}.part"
+                spare.write_bytes(data)
+                spare.replace(folder / f"{name}{suffix}")
+        except OSError as exc:
+            said.append(f"the voice {name} couldn't be fetched ({exc}); is the name "
+                        f"right? https://huggingface.co/rhasspy/piper-voices lists them")
+            continue
+        said.append(f"fetched the voice {name} to {folder}")
+    return said
 
 
 def starter_actors(telegram_id: str | None) -> str:
@@ -135,6 +179,22 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
                    window_host=getattr(args, "window_host", None) or door.window_host,
                    window_port=getattr(args, "window_port", None) or door.window_port,
                    window_url=getattr(args, "window_url", None) or door.window_url)
+    asked = getattr(args, "voices", None)
+    if asked is not None:
+        names = tuple(dict.fromkeys(v.strip() for v in asked.split(",") if v.strip()))
+        wrong = [v for v in names if not VOICE_NAME.match(v)]
+        if wrong:
+            print(f"error: {', '.join(wrong)}: not a voice's name, like "
+                  "hi_IN-pratham-medium (https://huggingface.co/rhasspy/piper-voices)",
+                  file=sys.stderr)
+            return 2
+        door = replace(door, voices=names)
+        if config.road == "podman":
+            said.append(f"voices: {', '.join(names) or 'none'} -- `sarathi image` puts "
+                        "them in the image")
+        else:
+            said.extend(fetch_voices(names))
+            said.append(f"voices: {', '.join(names) or 'none'}")
     ntfy = getattr(args, "ntfy", None)
     if ntfy is not None or getattr(args, "ntfy_port", None):
         door = replace(door, ntfy_port=None if ntfy is False else

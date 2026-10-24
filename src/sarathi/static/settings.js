@@ -171,6 +171,7 @@ function drawPeopleTab() {
                   p.approver ? `${p.approver} says yes to changes` : null,
                   p.speak === "off" ? "answers not read aloud"
                     : p.speak === "always" ? "every answer read aloud" : null,
+                  p.voice ? `read in ${p.voice}` : null,
                   p.telegram.length ? `Telegram ${p.telegram.join(", ")}` : "no Telegram",
                   p.phones ? `phones: ${p.phones.join(", ")}`
                     : p.phone ? "the phone" : null].filter(Boolean);
@@ -216,6 +217,14 @@ function personForm(p, isNew) {
                            .map((x) => [x.id, x.id + (x.id === sets.data.sarathi.dvara?.owner
                                                       ? " (you)" : "")])],
                         p.approver || "");
+  // Whose voice (Dvara's voice =): the voices Dvara finds here, and on the
+  // Podman road the image's ([dvara] voices); blank is the house's.
+  const known = [...new Set([...(d.voices || []).map((v) => v.name),
+                             ...(sets.data.sarathi?.dvara?.voices || [])])];
+  const ownVoice = pick([["", "The house's (the first voice)"],
+                         ...known.map((n) => [n, n]),
+                         ...(p.voice && !known.includes(p.voice) ? [[p.voice, `${p.voice} (not here)`]] : [])],
+                        p.voice || "");
   // Dvara's speak (spoken.py); blank is its default, when they spoke.
   const speak = pick([["", "When they sent a voice note"], ["always", "Every answer"],
                       ["off", "Never"]], p.speak === "when-spoken" ? "" : (p.speak || ""));
@@ -243,6 +252,7 @@ function personForm(p, isNew) {
       max_usd_per_turn: numOr(turn), receipt: receipt.value || null,
       hours: hours.value.trim() || null, max_turns_per_day: numOr(turns),
       approver: approver.value || null, speak: speak.value || null,
+      voice: ownVoice.value || null,
       phone: named.length ? false : phone.checked,
       phones: named.length ? phoneBoxes.map((l) => l.querySelector("input"))
         .filter((c) => c.checked).map((c) => c.dataset.phone) : null,
@@ -266,7 +276,10 @@ function personForm(p, isNew) {
     field("Who says yes to changes", approver, "Someone else, and the question goes to them " +
           "(a parent for a child) — a spend too. Pair it with Asked before anything changes."),
     field("Answers read aloud", speak, "A voice note after the words, made on this " +
-          "computer; on the home page a ▶ on every answer. They can change it with /voice."),
+          "computer; on the home page a ▶ on every answer. Every answer includes what's " +
+          "sent unasked, like a morning brief. They can change it with /voice."),
+    field("Their voice", ownVoice, "An answer in another language is read in a voice for " +
+          "it, when there's one. They can change it with /voice use."),
     field("Telegram ids", telegram, "Their numbers, comma-separated. Someone who messages the " +
           "bot and isn't on the list shows above, to add."),
     named.length
@@ -606,6 +619,8 @@ function drawSarathiTab() {
                      dv.owner || "owner");
   const house = text(dv.window_host || "", { placeholder: "192.168.1.44" });
   const ntfy = check(dv.ntfy);
+  const voices = text((dv.voices || ["en_US-lessac-medium"]).join(", "),
+                      { autocapitalize: "none", placeholder: "none: answers stay words" });
   const lanName = text(s.house?.name || "", { placeholder: "beast.local" });
   const lanAt = text(s.house?.address || "", { placeholder: "what the name finds" });
   const phoneOn = check(!!s.phone);
@@ -634,6 +649,7 @@ function drawSarathiTab() {
              dvara_port: ports.dvaraPage.value },
     dvara: dvaraOn.checked ? { on: true, telegram: bot.value, owner: owner.value,
                                window_host: house.value.trim(), ntfy: ntfy.checked,
+                               voices: voices.value,
                                port: ports.dvara.value, ntfy_port: ports.ntfy.value }
                            : { on: false },
     phone: phoneOn.checked ? { on: true, address: phoneAt.value.trim(),
@@ -653,7 +669,12 @@ function drawSarathiTab() {
       field("You, in the people list", owner),
       field("This computer's address at home", house, "Phones at home reach the home page, " +
             "Setu's page and ntfy here. Your home network's address, or Tailscale's."),
-      h("label.inline", {}, ntfy, " Notices on phones, through ntfy in the house")),
+      h("label.inline", {}, ntfy, " Notices on phones, through ntfy in the house"),
+      field("Voices for answers read aloud", voices, "Names from " +
+            "huggingface.co/rhasspy/piper-voices, with commas: en_US-lessac-medium, " +
+            "hi_IN-pratham-medium. An answer is read in a voice for its language. " +
+            "Containers: `sarathi image` after a change; plain programs: " +
+            "`sarathi dvara --voices …` fetches them.")),
     h("div.card.form", {}, h("h3", {}, "Every page on your home network"),
       field("This computer's name at home", lanName, "Every page opens from your other " +
             "devices too, and every link says this name: <hostname>.local, or your " +

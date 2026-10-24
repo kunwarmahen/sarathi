@@ -71,6 +71,10 @@ DEFAULT_WATCH_PORT = 8782
 DEFAULT_DOOR_PORT = 8770
 #: ntfy, the push server Dvara's notices reach phones through (`dvara.ntfy`).
 DEFAULT_NTFY_PORT = 8793
+#: The voices answers are read aloud in (Dvara's spoken.py): Piper's names,
+#: from https://huggingface.co/rhasspy/piper-voices.
+DEFAULT_VOICES = ("en_US-lessac-medium",)
+VOICE_NAME = re.compile(r"^[a-z]{2,3}_[A-Z]{2}-[A-Za-z0-9_]+-(x_low|low|medium|high)$")
 #: Each program's own page, and the home page linking them (`[pages]`).
 DEFAULT_HOME_PORT, DEFAULT_SETU_PAGE_PORT, DEFAULT_DOOR_PAGE_PORT = 8760, 8775, 8785
 #: Window addresses that are not one address a phone can be sent to.
@@ -88,7 +92,7 @@ KNOWN: dict[str, set[str]] = {
     "prahari": {"on", "port", "inlet_port", "public_url", "people"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
-             "window_port", "window_url", "owner", "ntfy", "ntfy_port"},
+             "window_port", "window_url", "owner", "ntfy", "ntfy_port", "voices"},
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
     "phone": {"on", "address", "wda", "awake"},
     "memory": {"via"},
@@ -388,6 +392,9 @@ class Door:
     #: ntfy's port, when the house runs one for notices on phones (dvara's
     #: push.py); None: no ntfy, notices wait on the page and go to Telegram.
     ntfy_port: int | None = None
+    #: Piper's voices for answers read aloud: in the image, and fetched to
+    #: this computer by `sarathi dvara --voices` (Dvara's spoken.py).
+    voices: tuple[str, ...] = DEFAULT_VOICES
 
     def window_env(self) -> dict[str, str]:
         """Setu's own names for the window settings."""
@@ -503,6 +510,11 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
             raise ConfigError(f"{where}: dvara.{key} must be text")
     if not isinstance(door_table.get("ntfy", False), bool):
         raise ConfigError(f"{where}: dvara.ntfy must be true or false")
+    voices = door_table.get("voices", list(DEFAULT_VOICES))
+    if not isinstance(voices, list) or not all(isinstance(v, str) and VOICE_NAME.match(v)
+                                               for v in voices):
+        raise ConfigError(f'{where}: dvara.voices must be a list of Piper voice names, like '
+                          f'["en_US-lessac-medium", "hi_IN-pratham-medium"]')
     door = Door(port=_port(door_table, "port", DEFAULT_DOOR_PORT, "dvara"),
                 telegram=door_table.get("telegram") or None,
                 root=door_table.get("root") or DOOR_ROOT,
@@ -514,7 +526,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                 window_url=door_table.get("window_url") or None,
                 owner=door_table.get("owner") or "owner",
                 ntfy_port=_port(door_table, "ntfy_port", DEFAULT_NTFY_PORT, "dvara")
-                if door_table.get("ntfy", False) else None) \
+                if door_table.get("ntfy", False) else None,
+                voices=tuple(dict.fromkeys(voices))) \
         if door_table.get("on", False) else None
     pages_table = data.get("pages", {})
     if not isinstance(pages_table.get("on", True), bool):
@@ -895,7 +908,12 @@ port = {door.port}
 # ntfy: a push server here, so a schedule's answer (or a sign-in that ran
 # out) shows on a phone with the ntfy app, while it can reach this house.
 # `sarathi dvara --ntfy` turns it on.
-{ntfy}"""
+{ntfy}
+# Voices for answers read aloud, from https://huggingface.co/rhasspy/piper-voices:
+# the image has these; `sarathi dvara --voices a,b` fetches them here too.
+# An answer is read in a voice for its language when one is in this list.
+voices = {json.dumps(list(door.voices))}
+"""
 
 
 def write_private(path: Path, text: str) -> None:

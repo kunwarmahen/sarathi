@@ -55,6 +55,7 @@ from sarathi.config import (
     PHONE_NAME,
     PROVIDERS,
     ROADS,
+    VOICE_NAME,
     Config,
     ConfigError,
     Door,
@@ -238,7 +239,8 @@ def sarathi_view(config: Config) -> dict:
             "port": door.port, "telegram": door.telegram, "owner": door.owner,
             "window_host": door.window_host, "window_port": door.window_port,
             "window_url": door.window_url, "ntfy": door.ntfy_port is not None,
-            "ntfy_port": door.ntfy_port or DEFAULT_NTFY_PORT},
+            "ntfy_port": door.ntfy_port or DEFAULT_NTFY_PORT,
+            "voices": list(door.voices)},
         "phone": None if phone is None else {
             "address": phone.address, "wda": phone.wda, "awake": phone.awake,
             "named": [{"name": p.name, "kind": p.kind, "where": p.where, "awake": p.awake}
@@ -248,6 +250,21 @@ def sarathi_view(config: Config) -> dict:
                                                     "address": config.house.address},
         "keys": {k: k in have for k in KEYS},
     }
+
+
+def _voices(value, before: tuple[str, ...]) -> tuple[str, ...]:
+    """Piper voices, from a list or "a, b" as typed; refused by name."""
+    if value is None:
+        return before
+    names = value.split(",") if isinstance(value, str) else value
+    if not isinstance(names, list):
+        raise EditError(400, "voices are names, with commas")
+    names = [str(v).strip() for v in names if str(v).strip()]
+    wrong = [v for v in names if not VOICE_NAME.match(v)]
+    if wrong:
+        raise EditError(400, f"{', '.join(wrong)}: not a voice's name, like "
+                             "hi_IN-pratham-medium (huggingface.co/rhasspy/piper-voices)")
+    return tuple(dict.fromkeys(names))
 
 
 def _num(value, what: str, *, low: int = 1, high: int = 65535) -> int | None:
@@ -324,7 +341,8 @@ def sarathi_apply(changes: dict) -> Config:
                 window_port=_num(d.get("window_port", door.window_port), "the window's port"),
                 window_url=d.get("window_url", door.window_url) or None,
                 ntfy_port=(_num(d.get("ntfy_port"), "ntfy's port") or door.ntfy_port
-                           or DEFAULT_NTFY_PORT) if ntfy else None))
+                           or DEFAULT_NTFY_PORT) if ntfy else None,
+                voices=_voices(d.get("voices"), door.voices)))
     if "phone" in changes:
         ph = changes["phone"]
         named = config.phone.named if config.phone else ()
