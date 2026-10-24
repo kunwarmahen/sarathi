@@ -1668,6 +1668,21 @@ Your morning might say *"gmail:personal: Google ends this sign-in Sun
 25 Oct"* with what to do, while a phone you left unplugged all week
 is mentioned only once.
 
+**Everyone else gets their own check.** Anyone in the house can send
+`/doctor` to the bot (or in the home page's chat). They get only what's
+theirs, red first, each line with the fix they can use:
+
+```
+Your check: 1 amber
+🟠 gmail:personal: Google ends this sign-in Sun 22:44
+   → sign in again before then: /connect gmail as personal
+🟢 $0.12 of your $1.00 today
+```
+
+A schedule of theirs that failed this morning, a watch that paused, a
+phone of theirs not connected all show there. Nobody sees anyone
+else's.
+
 **Restarting in the middle of a job is safe.** Every step of a job is
 saved as it happens. If you `sarathi down && sarathi up` (or the
 computer restarts) while the agent is six taps into returning a parcel,

@@ -876,6 +876,12 @@ on its doctor road: it asks the doctor with a key that opens that one
 answer and nothing else, and tells you only what's newly wrong (Samay's
 notes/09).
 
+Everyone else in the house has a check of their own: `/doctor` in their
+chat (Telegram, or the home page) answers in the same red, amber and
+green about only what is theirs: their accounts, their schedules' runs,
+their watches, their phones, and today's allowance and hours, each
+with a fix they can use from the chat (Dvara's notes/67).
+
 ### The house in one file: `sarathi backup`, `sarathi restore`
 
 ```

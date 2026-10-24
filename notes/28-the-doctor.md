@@ -112,6 +112,10 @@ at phone width in dark mode, and refused anyone without the token (401).
   a big connection won't fit. Selection on many tools (Yantra's note 106)
   handles the rest.
 * ~~**Not on a schedule.**~~ Built: *Every morning* below.
+* ~~**Nothing for a person in the house.**~~ Built in Dvara: `/doctor` in
+  any chat is that person's own check (their accounts, schedules,
+  watches, phones and limits, with fixes they can use), and nobody
+  else's lines (Dvara's notes/67). This page stays the owner's.
 
 ## Buttons
 
