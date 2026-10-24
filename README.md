@@ -1075,7 +1075,8 @@ every file you'd otherwise edit by hand, in tabs: **People** (Dvara's
 actors file: who, which agents, accounts, allowance, Telegram ids, and
 anyone who messaged the bot unlisted; for a child, the hours their
 agents answer, messages a day, and who says yes to their changes,
-Dvara's notes/61), **Household** (what every agent is told whoever it's
+Dvara's notes/61; for someone far away, their own time zone, Dvara's
+notes/66), **Household** (what every agent is told whoever it's
 talking to: kept by you, offered by anyone with `/remember for everyone`,
 Dvara's notes/62), **Agents** (each agent's model,
 memory, tools as checkboxes in plain words, each marked *asks you first*

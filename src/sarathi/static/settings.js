@@ -167,6 +167,7 @@ function drawPeopleTab() {
     const bits = [agents, accounts,
                   p.max_usd_per_day != null ? `$${p.max_usd_per_day} a day` : "no daily limit",
                   p.hours ? `answers ${p.hours}` : null,
+                  p.zone ? `on ${p.zone} time` : null,
                   p.max_turns_per_day != null ? `${p.max_turns_per_day} messages a day` : null,
                   p.approver ? `${p.approver} says yes to changes` : null,
                   p.speak === "off" ? "answers not read aloud"
@@ -212,6 +213,12 @@ function personForm(p, isNew) {
   const receipt = pick([["", "Nothing"], ["cost", "What it cost"], ["remaining", "What's left today"]],
                        p.receipt || "");
   const hours = text(p.hours || "", { placeholder: "every hour (or 07:00-21:00)" });
+  // Dvara's zone =: their clock, for someone who isn't where this computer
+  // is. The browser knows every zone's name; Dvara checks the one typed.
+  const zone = text(p.zone || "", { autocapitalize: "none", list: "zones",
+                                    placeholder: "this computer's" });
+  const zones = h("datalist", { id: "zones" }, ...(Intl.supportedValuesOf
+    ? Intl.supportedValuesOf("timeZone") : []).map((z) => h("option", { value: z })));
   const turns = text(p.max_turns_per_day ?? "", { inputmode: "numeric", placeholder: "no limit" });
   const approver = pick([["", "They do"], ...d.people.filter((x) => x.id !== p.id)
                            .map((x) => [x.id, x.id + (x.id === sets.data.sarathi.dvara?.owner
@@ -250,7 +257,8 @@ function personForm(p, isNew) {
       agents, setu: setu.value, setu_manage: setu.value !== "own" && setu.value !== "none"
         && manage.checked, permissions: rung.value || null, max_usd_per_day: numOr(day),
       max_usd_per_turn: numOr(turn), receipt: receipt.value || null,
-      hours: hours.value.trim() || null, max_turns_per_day: numOr(turns),
+      hours: hours.value.trim() || null, zone: zone.value.trim() || null,
+      max_turns_per_day: numOr(turns),
       approver: approver.value || null, speak: speak.value || null,
       voice: ownVoice.value || null,
       phone: named.length ? false : phone.checked,
@@ -269,7 +277,10 @@ function personForm(p, isNew) {
     field("Daily allowance (US dollars)", day),
     field("Most per message (US dollars)", turn),
     field("Under each answer", receipt),
-    field("Hours their agents answer", hours, "On this computer's clock, like 07:00-21:00; " +
+    field("Their time zone", zone, "For someone who isn't where this computer is, like " +
+          "Europe/London: the time their agents are told, when their schedules run, and " +
+          "their hours. Blank: this computer's."), zones,
+    field("Hours their agents answer", hours, "On their clock, like 07:00-21:00; " +
           "a schedule of theirs outside them doesn't run. Blank: every hour."),
     field("Messages a day", turns, "What they send that reaches an agent; schedules don't " +
           "count. Blank: no limit."),

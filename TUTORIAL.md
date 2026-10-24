@@ -870,8 +870,8 @@ own, so you could read them. Tell them that.
 **For a child.** On their **Change** form in **Settings → People**,
 three boxes besides the allowance:
 
-* **Hours their agents answer**: `07:00-21:00`, on this computer's
-  clock. Outside them they're told *"I'm not answering now -- your hours
+* **Hours their agents answer**: `07:00-21:00`, on their clock (see
+  *Their time zone*, below). Outside them they're told *"I'm not answering now -- your hours
   here are 07:00-21:00"*, and a schedule of theirs set for 2 am doesn't
   run either.
 * **Messages a day**: `40`, say. What they send that reaches an agent
@@ -891,6 +891,14 @@ a voice note* (the usual), *Every answer* (someone who'd rather listen
 than read, including a schedule's answer), or *Never*. **Their voice**
 is whose: one of the voices this house has. They can change both
 themselves with `/voice` and `/voice use`.
+
+**Someone far away.** **Their time zone**, on the same form, is for a
+person who isn't where this computer is: type `Europe/London` (the box
+suggests every zone as you type). Their agent is told the time where
+they are, a schedule of theirs "every day at 7" runs at 7 their time,
+and their hours open and close on their clock. Blank is this
+computer's. A name that isn't a zone is refused when you Save (Dvara's
+notes/66).
 
 **Things everyone should know.** **Settings → Household** is a short
 list every agent is told, whoever it's talking to: the wifi, bin day,
