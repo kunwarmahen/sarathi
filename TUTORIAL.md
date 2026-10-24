@@ -526,6 +526,16 @@ if a name was misheard. Your phone's browser can't record from the home
 page over plain `http://` (browsers allow the microphone only on this
 computer or over https); Telegram has no such limit.
 
+Talk to it and it talks back. After the written answer comes the same
+answer read aloud: a voice note on Telegram, and on the home page it
+plays by itself. Every answer on the home page also has **▶ Listen**,
+for one you typed. The voice is made on this computer by Piper, a small
+voice model (it's in the image on the Podman road; on plain programs,
+`pipx install piper-tts` and a voice, as Dvara's TUTORIAL step 29
+shows). Code, links and tables aren't read out, and a long answer stops
+with "The rest is in the message." To hear every answer, send
+`/voice always`; `/voice off` for never; `/voice` says which you have.
+
 ---
 
 **Changing a setting later.** Everything you chose here, and everything
@@ -586,7 +596,7 @@ restarted if they crash, started again when you log in.
 
 ```bash
 sarathi road podman               # use containers from now on
-sarathi image                     # builds the container image (a few minutes, ~1.3 GB)
+sarathi image                     # builds the container image (a few minutes, ~2.6 GB)
 sarathi up
 ```
 
@@ -858,6 +868,10 @@ three boxes besides the allowance:
 
 *Agents they may use* and *Accounts their agents use* are the other two
 limits; give a child an agent made for them.
+
+**Answers read aloud**, on the same form, is for anyone: *When they sent
+a voice note* (the usual), *Every answer* (someone who'd rather listen
+than read), or *Never*. They can change it themselves with `/voice`.
 
 **Things everyone should know.** **Settings → Household** is a short
 list every agent is told, whoever it's talking to: the wifi, bin day,
@@ -1733,6 +1747,7 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | What an agent noticed about someone, waiting for their `/remember` | `~/dvara/state/offered.json` (only you) |
 | The key each person's ntfy topic is made from | `~/dvara/state/ntfy.key` (only you) |
 | Which stopped sign-ins people were already told about | `~/dvara/state/signins.json` (only you) |
+| Who chose to hear answers read aloud (`/voice`) | `~/dvara/state/voice.json` (only you) |
 | What Sarathi started, and what each printed | `~/.local/share/sarathi/` |
 | Your backups | `~/sarathi-backups/` (or `[backup] folder`); each a `.sarathi-backup` file only your passphrase opens |
 | The backups' key (the private half sealed by your passphrase) | `~/.config/sarathi/backup-key.json` (only you) |

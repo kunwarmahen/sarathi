@@ -305,6 +305,11 @@ def stage(into: Path, env: dict[str, str] | None = None,
     return lines
 
 
+#: Another Piper voice for the image than the Containerfile's, by name
+#: (``de_DE-thorsten-medium``); empty for none.
+VOICE_ENV = "SARATHI_PIPER_VOICE"
+
+
 def platform() -> str:
     """This machine's own platform, named the way podman names one. Asked
     for on every build: an arm64 build on this machine had left arm64
@@ -322,14 +327,21 @@ def build(engine: str = "podman", config: Config | None = None) -> int:
             print(f"  {line}")
         print(flush=True)
         here = browser_version([BROWSER, "--version"]) if shutil.which(BROWSER) else None
+        # another voice to read answers aloud with (Dvara's spoken.py)
+        voice = ["--build-arg", f"PIPER_VOICE={os.environ[VOICE_ENV]}"] \
+            if VOICE_ENV in os.environ else []
         code = subprocess.run([engine, "build", "--platform", platform(), "-t", IMAGE,
                                "--build-arg",
-                               f"HOST_BROWSER={'.'.join(map(str, here or ()))}", tmp],
+                               f"HOST_BROWSER={'.'.join(map(str, here or ()))}", *voice, tmp],
                               check=False).returncode
     if code == 0:
         inside = run([engine, "run", "--rm", "--entrypoint", "/usr/local/bin/sarathi-browser",
                       IMAGE, "--version"]).stdout.strip()
         print(f"\nbrowser in the image: {inside or 'none found'}")
+        voices = (run([engine, "run", "--rm", "--entrypoint", "/bin/ls", IMAGE,
+                       "/usr/share/piper/voices"]).stdout or "").split()
+        said = [v.removesuffix(".onnx") for v in voices if v.endswith(".onnx")]
+        print(f"voice in the image:   {', '.join(said) or 'none (answers stay words)'}")
     return code
 
 

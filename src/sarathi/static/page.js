@@ -516,7 +516,7 @@ async function drawPeople() {
 const CHAT_EVERY = 3000;
 const CHAT_BUSY_EVERY = 700;
 const chat = { on: false, last: 0, timer: null, agents: [], sending: false, busy: false,
-               lessons: [] };
+               lessons: [], voice: false };
 
 function api(path, body) {
   const init = { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" };
@@ -560,6 +560,49 @@ async function download(line, n, name) {
   } catch (err) {
     problem(`Couldn't get ${name}: ${err.message}`);
   }
+}
+
+// An answer read aloud (Dvara's spoken.py), made on the home computer the
+// first time it's asked for: ▶ plays it, ■ stops it, one at a time. An
+// answer the person asked to hear (a voice note sent, or "always") plays
+// by itself when it arrives -- never one already there when the page opened.
+const playing = { audio: null, button: null, url: null };
+
+function stopVoice() {
+  if (playing.audio) playing.audio.pause();
+  if (playing.button) playing.button.textContent = "▶ Listen";
+  if (playing.url) URL.revokeObjectURL(playing.url);
+  playing.audio = playing.button = playing.url = null;
+}
+
+async function playVoice(line, button) {
+  const again = playing.button === button;
+  stopVoice();
+  if (again) return;
+  playing.button = button;
+  button.textContent = "… reading it";
+  try {
+    const res = await fetch(`/api/chat/spoken?line=${line}`,
+                            { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.status);
+    const url = URL.createObjectURL(await res.blob());
+    if (playing.button !== button) { URL.revokeObjectURL(url); return; }
+    playing.url = url;
+    playing.audio = new Audio(url);
+    playing.audio.addEventListener("ended", () => { if (playing.button === button) stopVoice(); });
+    button.textContent = "■ Stop";
+    await playing.audio.play();
+  } catch (err) {
+    if (playing.button === button) stopVoice();
+    // a browser that won't play before a tap says NotAllowedError: the button stays
+    if (err.name !== "NotAllowedError") problem(`Couldn't read it aloud: ${err.message}`);
+  }
+}
+
+function listenButton(ln) {
+  const b = h("button.listen", { type: "button" }, "▶ Listen");
+  b.addEventListener("click", () => playVoice(ln.id, b));
+  return b;
 }
 
 // A picture an answer carries (/phone's screen) is shown, not only offered:
@@ -645,6 +688,7 @@ function lineView(ln) {
     ln.transcript ? transcriptView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
+    chat.voice && ln.who !== "you" && ln.text && !ln.transcript ? listenButton(ln) : null,
     (ln.files || []).map((name, n) => {
       if (PICTURE.test(name)) return picture(ln.id, n, name);
       const b = h("button.file", { type: "button" }, `⤓ ${name}`);
@@ -705,6 +749,7 @@ function draw(data) {
     if (data.agents.includes(was)) picker.value = was;
     picker.hidden = data.agents.length < 2;
   }
+  chat.voice = Boolean(data.voice);
   const box = document.getElementById("lines");
   const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   const live = document.getElementById("live") || h("div", { id: "live" });
@@ -712,8 +757,14 @@ function draw(data) {
   if (!chat.last && !data.lines.length && !running.length) {
     box.replaceChildren(h("div.empty", {}, "Nothing yet. Say hello."), live);
   } else if (data.lines.length) {
+    const fresh = Boolean(chat.last);   // lines that came while the page was open
     if (!chat.last) box.replaceChildren(live);
-    for (const ln of data.lines) box.insertBefore(lineView(ln), live);
+    for (const ln of data.lines) {
+      const view = lineView(ln);
+      box.insertBefore(view, live);
+      const listen = view.querySelector("button.listen");
+      if (fresh && ln.speak && listen) playVoice(ln.id, listen);
+    }
     chat.last = data.lines[data.lines.length - 1].id;
   }
   if (!live.isConnected) box.append(live);

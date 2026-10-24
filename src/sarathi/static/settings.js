@@ -169,6 +169,8 @@ function drawPeopleTab() {
                   p.hours ? `answers ${p.hours}` : null,
                   p.max_turns_per_day != null ? `${p.max_turns_per_day} messages a day` : null,
                   p.approver ? `${p.approver} says yes to changes` : null,
+                  p.speak === "off" ? "answers not read aloud"
+                    : p.speak === "always" ? "every answer read aloud" : null,
                   p.telegram.length ? `Telegram ${p.telegram.join(", ")}` : "no Telegram",
                   p.phones ? `phones: ${p.phones.join(", ")}`
                     : p.phone ? "the phone" : null].filter(Boolean);
@@ -214,6 +216,9 @@ function personForm(p, isNew) {
                            .map((x) => [x.id, x.id + (x.id === sets.data.sarathi.dvara?.owner
                                                       ? " (you)" : "")])],
                         p.approver || "");
+  // Dvara's speak (spoken.py); blank is its default, when they spoke.
+  const speak = pick([["", "When they sent a voice note"], ["always", "Every answer"],
+                      ["off", "Never"]], p.speak === "when-spoken" ? "" : (p.speak || ""));
   const phone = check(p.phone);
   // With several phones named (Settings → Sarathi → Your phone), a box
   // for each: whose each is, said here (Dvara's phones = [...]).
@@ -237,7 +242,7 @@ function personForm(p, isNew) {
         && manage.checked, permissions: rung.value || null, max_usd_per_day: numOr(day),
       max_usd_per_turn: numOr(turn), receipt: receipt.value || null,
       hours: hours.value.trim() || null, max_turns_per_day: numOr(turns),
-      approver: approver.value || null,
+      approver: approver.value || null, speak: speak.value || null,
       phone: named.length ? false : phone.checked,
       phones: named.length ? phoneBoxes.map((l) => l.querySelector("input"))
         .filter((c) => c.checked).map((c) => c.dataset.phone) : null,
@@ -260,6 +265,8 @@ function personForm(p, isNew) {
           "count. Blank: no limit."),
     field("Who says yes to changes", approver, "Someone else, and the question goes to them " +
           "(a parent for a child) — a spend too. Pair it with Asked before anything changes."),
+    field("Answers read aloud", speak, "A voice note after the words, made on this " +
+          "computer; on the home page a ▶ on every answer. They can change it with /voice."),
     field("Telegram ids", telegram, "Their numbers, comma-separated. Someone who messages the " +
           "bot and isn't on the list shows above, to add."),
     named.length

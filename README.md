@@ -683,11 +683,12 @@ would otherwise start again at your next login. It starts nothing new;
 |---|---|---|
 | how it starts | `sarathi up`, from your session | systemd units, also at every login |
 | after a crash, a reboot, logging out | gone until the next `sarathi up` | started again on its own |
-| what it needs | the checkouts (or installs) of each piece | Podman, and `sarathi image` (~1.3 GB) |
+| what it needs | the checkouts (or installs) of each piece | Podman, and `sarathi image` (~2.6 GB) |
 | after `git pull` in a checkout | nothing: it runs the checkout | `sarathi image` again, then `sarathi up` |
 | Amazon and X | your own Chrome | Chrome in the image |
 | connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
 | voice notes heard | your ffmpeg (`sudo apt install ffmpeg`) and an Ollama model listing "audio" | ffmpeg in the image; the model in your Ollama |
+| answers read aloud | your Piper (`pipx install piper-tts`) and a voice in `~/.local/share/piper/voices` | Piper and `en_US-lessac-medium` in the image (`SARATHI_PIPER_VOICE` for another) |
 | Dvara's streamed window | listens on `window_host` itself | published from Dvara's container |
 | Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |
 | Yantra's page's streamed window | with `[house]`, on the house address, any free port | published from Yantra's container on the port after that (8792): on the house address with `[house]`, else on `127.0.0.1` for you (in its container even your own browser is "another device") |
@@ -706,7 +707,7 @@ piece on either road, with the setting that moves it.
 
 ```bash
 sarathi road podman            # or  sarathi init --podman
-sarathi image                  # build the image (a few minutes, once per update; ~1.3 GB)
+sarathi image                  # build the image (a few minutes, once per update; ~2.6 GB)
 sarathi up
 ```
 
@@ -732,8 +733,10 @@ What goes into the containers:
   `/usr/bin/google-chrome`, where a desktop has it, so the Amazon and X
   profiles Setu already recorded open with the browser that wrote them;
   Xvfb for a site that wants a real window; bubblewrap, so Setu's
-  connectors are walled off here as on your desktop; and ffmpeg, so a
-  voice note can be heard. Chrome refuses a
+  connectors are walled off here as on your desktop; ffmpeg, so a
+  voice note can be heard; and Piper with one voice, so an answer can be
+  read aloud (`SARATHI_PIPER_VOICE=de_DE-thorsten-medium sarathi image`
+  for another; [notes/30](notes/30-answers-read-aloud.md)). Chrome refuses a
   profile a newer Chrome wrote, so `up` says when your computer's Chrome
   has got ahead of the image's (`sarathi image` catches up: it tells the
   build which Chrome is here, so that step isn't taken from the cache;
@@ -1028,7 +1031,9 @@ same) (Dvara's
 [notes/49](https://github.com/kunwarmahen/dvara/blob/main/notes/49-a-job-taught-step-by-step.md);
 [notes/24](notes/24-teach-from-the-chat.md)). 🎤 records a voice note (on this computer, or a
 page served over https), heard into words by a local model that can
-hear, and shown back as *I heard: "…"*. The paperclip beside **Send** adds pictures or
+hear, and shown back as *I heard: "…"*. **▶ Listen** under an answer reads it aloud, made on
+this computer by Piper; an answer to a voice note plays by itself (Settings → People →
+**Answers read aloud** sets who hears what; [notes/30](notes/30-answers-read-aloud.md)). The paperclip beside **Send** adds pictures or
 files to your next message (up to 20 MB together): Dvara keeps them in
 your folder with that agent, and shows a picture to a model that can
 see. When an answer tells you to send `/connect gmail`, it's a button
@@ -1146,7 +1151,8 @@ src/sarathi/
                 ntfy's own container  (notes/15); sarathi-adb, this
                 computer's adb lent to the containers by a file  (notes/20);
                 a second PublishPort on the house address for every
-                page, and the firewall line naming them  (notes/23)
+                page, and the firewall line naming them  (notes/23); the
+                image's voice, SARATHI_PIPER_VOICE, said after a build  (notes/30)
   doctor.py     sarathi doctor: what's wrong, green / amber / red, each
                 with its fix, from each sibling's own status, what `up`
                 started, the image's age, the firewall, the disk; the
@@ -1171,6 +1177,7 @@ src/sarathi/
                 for its tests road once  (notes/27);
                 the phone's card, which opens Yantra's page  (notes/07); the
                 chat, passed through to Dvara's web channel as you  (notes/12),
+                ▶ Listen, an answer read aloud through it  (notes/30),
                 showing each step and the answer as it comes, md.js for
                 the answers, skills to keep  (notes/18),
                 or as the person signed in  (notes/14); My accounts and
@@ -1232,7 +1239,10 @@ a real Nexus 6P ([notes/17](notes/17-the-phone-from-the-page.md)).
 `sarathi backup` and `restore` were run end to end on a house made by
 hand: restored into an empty home, memories brought back into a database
 that had been deleted, and a night's backup made by Samay's backup road
-([notes/29](notes/29-the-house-in-one-file.md)).
+([notes/29](notes/29-the-house-in-one-file.md)). An answer read aloud was
+played on a scratch home page in Chrome, its microphone fed a recorded
+question, and the image's Piper step run in a container from the current
+image ([notes/30](notes/30-answers-read-aloud.md)).
 
 ## Tests
 

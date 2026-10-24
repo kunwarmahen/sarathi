@@ -202,6 +202,8 @@ def test_a_picture_an_answer_carries_may_be_shown(served):
     # /phone's screen is fetched with the token and shown as a blob: URL
     policy = get(served, "/", token=None).headers["content-security-policy"]
     assert "img-src 'self' data: blob:;" in policy
+    # and an answer read aloud is played from one (spoken.py through Dvara)
+    assert "media-src blob:;" in policy
 
 
 def test_the_home_token_is_made_once_and_kept_for_you_alone(world, monkeypatch, tmp_path):
@@ -314,6 +316,14 @@ def door():
                 self.send_header("Content-Type", "text/markdown; charset=utf-8")
                 self.send_header("Content-Disposition",
                                  "attachment; filename*=UTF-8''2026-10-18-the-boiler.md")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+                return
+            if self.path.startswith("/web/spoken"):
+                raw = b"RIFF a voice"
+                self.send_response(200)
+                self.send_header("Content-Type", "audio/wav")
                 self.send_header("Content-Length", str(len(raw)))
                 self.end_headers()
                 self.wfile.write(raw)
@@ -431,6 +441,15 @@ def test_history_passes_a_conversation_on_as_a_file_to_share(chatting, door):
     assert path.split("?")[0] == "/web/chats/abc123/export" and "actor=mahen" in path
     assert DOOR_KEY not in got.text
     assert ask(chatting, "/api/chat/chats/abc123/export", token="wrong").status_code == 401
+
+
+def test_an_answer_read_aloud_comes_through_as_audio_for_you_alone(chatting, door):
+    got = ask(chatting, "/api/chat/spoken?line=7&actor=guest")
+    assert got.status_code == 200 and got.text == "RIFF a voice"
+    assert got.headers["content-type"] == "audio/wav"
+    _, path, headers = door.heard[-1]
+    assert path.split("?")[0] == "/web/spoken" and "line=7" in path and "actor=mahen" in path
+    assert ask(chatting, "/api/chat/spoken?line=7", token="wrong").status_code == 401
 
 
 def test_history_deletes_through_dvara_and_its_refusal_comes_back(chatting, door):

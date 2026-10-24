@@ -190,7 +190,7 @@ button.open:disabled { opacity: .55; cursor: progress; }
 .line .tag { color: var(--ink-3); font-size: 12px; }
 .line.you .tag { text-align: right; }
 .line .receipt { color: var(--ink-3); font-size: 12px; }
-.line .file {
+.line .file, .line .listen {
   align-self: flex-start; font: inherit; font-size: 13px; color: var(--accent);
   background: none; border: 1px solid var(--line); border-radius: 8px; padding: 2px 10px;
   cursor: pointer;

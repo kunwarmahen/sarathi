@@ -46,6 +46,7 @@ reaches the browser, the way Dvara's own page keeps it:
     POST /api/chat/asks/ID        {"approve": true|false}
     POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}}
     GET  /api/chat/file?line=&n=  a file an answer carried
+    GET  /api/chat/spoken?line=   an answer read aloud (WAV)
     POST /api/chat/accounts-page  {}: a one-time link to your own Setu page
     GET  /api/chat/push           your ntfy server and topic, for notices on a phone
 
@@ -181,8 +182,8 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 
 POLICY = ("default-src 'none'; script-src 'self'; style-src 'self'; "
-          "connect-src 'self'; img-src 'self' data: blob:; base-uri 'none'; "
-          "form-action 'none'; frame-ancestors 'none'")
+          "connect-src 'self'; img-src 'self' data: blob:; media-src blob:; "
+          "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 
 
 @dataclass(frozen=True)
@@ -935,7 +936,7 @@ def _handler(server: HomeServer):
             if url.path.startswith("/api/chat/chats"):
                 return self._past(url)
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
-                                "/api/people", "/api/chat/push"):
+                                "/api/people", "/api/chat/push", "/api/chat/spoken"):
                 return self._json(404, {"detail": "not found"})
             who = self._owner() if url.path in ("/api/pieces", "/api/people") \
                 else self._who()
@@ -952,6 +953,23 @@ def _handler(server: HomeServer):
             if url.path == "/api/chat":
                 return self._chat(who, "GET", "/web",
                                   query={"after": query.get("after", "0")})
+            if url.path == "/api/chat/spoken":
+                # an answer read aloud, as WAV (Dvara's spoken.py)
+                if server.chat is None:
+                    return self._json(404, {"detail": "no chat here"})
+                try:
+                    raw, _ = server.chat.call("GET", "/web/spoken", query={
+                        "line": query.get("line", "0")}, actor=who.actor)
+                except ChatError as exc:
+                    return self._json(exc.status, {"detail": str(exc)})
+                self.send_response(200)
+                self.send_header("Content-Type", "audio/wav")
+                self.send_header("Content-Length", str(len(raw)))
+                self.send_header("Cache-Control", "private, max-age=86400")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                self.wfile.write(raw)
+                return None
             if url.path == "/api/chat/file":
                 if server.chat is None:
                     return self._json(404, {"detail": "no chat here"})
