@@ -12,6 +12,7 @@ git is real; podman is answered by hand.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -50,6 +51,45 @@ def checkouts(world, monkeypatch):
 
 def label_of(into: Path) -> dict:
     return json.loads((into / podman.BUILD_FILE).read_text())
+
+
+def test_a_version_is_the_day_of_the_commit_and_its_place_in_that_day(world, monkeypatch):
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    repo = world / "one"
+    repo.mkdir()
+    git(repo, "init", "-q")
+    for words, when in (("a", "2026-10-24T22:00:00+05:30"), ("b", "2026-10-25T09:00:00+05:30"),
+                        ("c", "2026-10-25T23:30:00+05:30")):
+        (repo / "kept.txt").write_text(words)
+        git(repo, "add", ".")
+        subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t",
+                        "commit", "-qm", words], check=True, capture_output=True,
+                       env={**os.environ, "GIT_COMMITTER_DATE": when, "GIT_AUTHOR_DATE": when})
+    assert version.dated(repo) == "2026.10.25.2"
+    assert version.dated(repo, "HEAD~2") == "2026.10.24.1"
+
+
+def test_the_image_gets_a_version_file_for_each_program_to_read(checkouts, tmp_path):
+    into = tmp_path / "context"
+    podman.stage(into)
+    number, at = (into / "yantra" / "VERSION").read_text().split()
+    assert number == version.dated(checkouts / "yantra")
+    assert at == git(checkouts / "yantra", "rev-parse", "--short", "HEAD")
+    assert label_of(into)["projects"]["yantra"]["version"] == number
+    assert not (checkouts / "yantra" / "VERSION").exists()     # never in the checkout
+
+
+def test_an_image_stamped_without_versions_has_them_worked_out(checkouts, tmp_path,
+                                                               monkeypatch):
+    into = tmp_path / "context"
+    podman.stage(into)
+    stamp = label_of(into)
+    for p in stamp["projects"].values():
+        del p["version"]
+    answer_podman(monkeypatch, {version.LABEL: json.dumps(stamp)})
+    got = version.report(Config("ollama", road="podman", pages=Pages(on=False)))
+    samay = next(p for p in got["projects"] if p["name"] == "samay")
+    assert samay["running"]["version"] == version.dated(checkouts / "samay")
 
 
 def test_the_build_writes_down_each_commit_and_what_it_left_out(checkouts, tmp_path):
@@ -155,6 +195,7 @@ def test_the_home_page_says_it_to_the_owner_alone(keys):  # noqa: F811
         got = ask(server, "/api/version")
         assert got.status_code == 200
         assert got.json()["said"] == "Sarathi 0.1.0, plain programs from their checkouts"
+        # (the report's own number; a real one is the day of Sarathi's last commit)
         assert ask(server, "/api/version", token=None).status_code == 401
         assert ask(server, "/api/version", token="wrong-token-of-a-good-length"
                    ).status_code == 401

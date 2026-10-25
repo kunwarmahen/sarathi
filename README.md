@@ -784,7 +784,7 @@ APIs, Amazon and X through your own Chrome or the one in the image
 $ sarathi status
 yantra      ~/agent/yantra/.venv/bin/yantra  (beside)
             the machine: the agent itself
-            yantra 0.1.0; would ask ollama for qwen3.8:latest
+            yantra 2026.10.25.1; would ask ollama for qwen3.8:latest
 setu        ~/.local/bin/setu  (path)
             the bridge: your accounts, signed in once
             2 accounts connected: gmail:mine, homeassistant:home
@@ -886,28 +886,33 @@ with a fix they can use from the chat (Dvara's notes/67).
 
 ### Which code is running: `sarathi version`
 
-Every project says `0.1.0`; the version that answers "is my fix in
-there?" is each one's last commit:
+A version here is worked out from the history, never bumped by hand:
+`YEAR.MONTH.DAY.N`, the day of the last commit and that day's count
+(`2026.10.25.3` is the third commit of 25 October), with the commit
+beside it:
 
 ```
 $ sarathi version
-Sarathi 0.1.0, containers from the image of Sun 25 Oct 12:09
-  yantra     d73c5b8  25 Oct  docs(notes): a PDF where there is no print window, made by …
-  dvara      a65654e  25 Oct  feat(remembering,telegram,printed): take back a "not", pict…  -- 1 newer in the checkout
+Sarathi 2026.10.25.7, containers from the image of Sun 25 Oct 12:09
+  yantra     2026.10.25.1  d73c5b8  docs(notes): a PDF where there is no print window…
+  dvara      2026.10.25.1  a65654e  feat(remembering,telegram,printed): take back a "…  -- 1 newer in the checkout
   ...
-  sarathi    acbd84b  25 Oct  feat(chat): Turned down, what you said no to, with an Undo …
 the next `sarathi image && sarathi up` takes in the newer commits
+$ dvara --version
+dvara 2026.10.25.1 (a65654e)
 ```
 
-On the containers' road the commits are the image's own: `sarathi
-image` writes what it built from as a label on the image
-(`sarathi.build`), read back with no container started, and each
-checkout's commit is shown against it ("2 newer in the checkout"). An
-image built before the label says so. On plain programs, each checkout
-as it is, uncommitted changes counted. `--json` prints
-`sarathi.version.v1`. The home page shows the first line in its footer
-and a **Version** card in Settings → Check, with **Rebuild and
-restart** when the checkouts have moved on
+Every program says its own the same way, in `--version` and as
+`"version"` and `"commit"` in its `status --json`. On the containers'
+road the versions are the image's own: `sarathi image` writes what it
+built from as a label on the image (`sarathi.build`), read back with no
+container started, and each checkout is shown against it ("1 newer in
+the checkout"). The image has no git, so the build also puts a `VERSION`
+file at the top of each project in it, which each program reads there.
+On plain programs, each checkout as it is (`+dirty` with uncommitted
+changes). `--json` prints `sarathi.version.v1`. The home page shows the
+first line in its footer and a **Version** card in Settings → Check,
+with **Rebuild and restart** when the checkouts have moved on
 ([notes/32](notes/32-the-version-is-a-commit.md)).
 
 ### The house in one file: `sarathi backup`, `sarathi restore`
@@ -1196,7 +1201,8 @@ src/sarathi/
                 a second PublishPort on the house address for every
                 page, and the firewall line naming them  (notes/23); the
                 image's voices, [dvara] voices, said after a build  (notes/30, notes/31);
-                each checkout's commit as the image's label  (notes/32)
+                each checkout's version and commit as the image's label,
+                and a VERSION file in each project for its --version  (notes/32)
   doctor.py     sarathi doctor: what's wrong, green / amber / red, each
                 with its fix, from each sibling's own status, what `up`
                 started, the image's age, the firewall, the disk; the
@@ -1206,9 +1212,11 @@ src/sarathi/
                 copied whole, Smritikosh's pg_dump; restore under this
                 home, what was there moved aside; the Backups card and
                 Samay's backup road  (notes/29)
-  version.py    sarathi version: each project's commit running, the
-                image's label against each checkout now; the footer's
-                line and the Version card in Settings → Check  (notes/32)
+  version.py    sarathi version: each project's version (the day of its
+                last commit and that day's count) and commit running, the
+                image's label against each checkout now; `sarathi
+                --version`; the footer's line and the Version card in
+                Settings → Check  (notes/32)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04); --voices, Piper's
                 voices fetched here on plain programs  (notes/31)

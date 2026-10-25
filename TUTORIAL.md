@@ -1694,9 +1694,12 @@ Setu's page**). Other fixes, like opening the firewall, you type.
 
 **Is my fix in there?** `sarathi version` (or the line at the bottom of
 the home page, which opens **Settings → Check → Version**) shows which
-commit of each project is running. On containers it's what the image
-was built from, and "2 newer in the checkout" means you committed since:
-**Rebuild and restart** takes them in.
+version of each project is running. A version is the day of the last
+commit and that day's count: `2026.10.25.3` is the third change made on
+25 October. On containers it's what the image was built from, and "2
+newer in the checkout" means you changed things since: **Rebuild and
+restart** takes them in. Each program also answers `--version`, for
+example `dvara --version`.
 
 **Check every morning** (next to it) has Samay ask the doctor at 07:30
 each day, and you get a message only when something is newly wrong.

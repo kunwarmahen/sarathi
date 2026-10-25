@@ -1,8 +1,12 @@
 """`sarathi version`: which code is running here, project by project.
 
-"Is my fix in there?" is a question about commits, and every project
-here says ``0.1.0``. So the version Sarathi shows is each project's last
-commit: its short id, its day and its first line.
+"Is my fix in there?" is a question about commits, so a version here is
+worked out from them, never bumped by hand: ``YEAR.MONTH.DAY.N``, the day
+of the last commit (in the time zone it was made in) and N the commits
+made that day up to it. ``2026.10.25.3`` is the third commit of 25
+October; the commit beside it says exactly which. Each sibling's
+``--version`` and ``status --json`` say the same (their own version.py),
+and Sarathi's does here.
 
 ON THE PODMAN ROAD, THE IMAGE SAYS. ``sarathi image`` builds from each
 checkout's committed code (podman.py), and it writes down what it built
@@ -13,7 +17,10 @@ after. Against it, each checkout's commit now: "3 newer" means three
 commits since the build, which the next ``sarathi image`` takes in. A
 container still on an older image than the newest built is named too:
 ``sarathi up`` restarts it on the new one. An image built before images
-carried the label says only when it was built.
+carried the label says only when it was built. The image has no git,
+so the build also writes a ``VERSION`` file at the top of each project
+in it (``YEAR.MONTH.DAY.N COMMIT``), which each program's own
+``--version`` reads there.
 
 ON THE PLAIN-PROGRAMS ROAD, THE CHECKOUTS SAY. Each program runs from its
 checkout, so what runs is what is checked out, uncommitted changes and
@@ -32,7 +39,11 @@ first line.
 
 from __future__ import annotations
 
+import argparse
+import functools
 import json
+import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -46,22 +57,45 @@ LABEL = "sarathi.build"
 BUILD_FORMAT = "sarathi.build.v1"
 
 
+#: Commits looked back through to count a day's (the siblings' version.py).
+LOOK = 500
+
+
+def _git(argv: list[str]) -> subprocess.CompletedProcess:
+    """git, or a failed answer where there is no git (an install with none)."""
+    try:
+        return podman.run(argv)
+    except OSError as exc:
+        return subprocess.CompletedProcess(argv, 127, "", str(exc))
+
+
+def dated(repo: Path, rev: str = "HEAD") -> str | None:
+    """``YEAR.MONTH.DAY.N`` of a commit: its day, and its place in that day."""
+    said = _git(["git", "-C", str(repo), "log", f"-{LOOK}", "--format=%cd",
+                       "--date=format:%Y.%m.%d", rev])
+    days = said.stdout.split()
+    if said.returncode != 0 or not days:
+        return None
+    count = next((i for i, day in enumerate(days) if day != days[0]), len(days))
+    return f"{days[0]}.{count}"
+
+
 def commit(repo: Path) -> dict[str, Any] | None:
-    """A checkout's last commit and its uncommitted changes, or None
-    when it isn't a git checkout."""
-    said = podman.run(["git", "-C", str(repo), "log", "-1", "--format=%h%x00%ct%x00%s"])
+    """A checkout's last commit, its version, and its uncommitted
+    changes, or None when it isn't a git checkout."""
+    said = _git(["git", "-C", str(repo), "log", "-1", "--format=%h%x00%ct%x00%s"])
     parts = said.stdout.strip().split("\0")
     if said.returncode != 0 or len(parts) != 3 or not parts[1].isdigit():
         return None
-    dirty = podman.run(["git", "-C", str(repo), "status", "--porcelain"]).stdout
-    return {"commit": parts[0], "date": int(parts[1]), "subject": parts[2],
-            "left_out": len(dirty.splitlines())}
+    dirty = _git(["git", "-C", str(repo), "status", "--porcelain"]).stdout
+    return {"commit": parts[0], "version": dated(repo) or "", "date": int(parts[1]),
+            "subject": parts[2], "left_out": len(dirty.splitlines())}
 
 
 def newer(repo: Path, since: str) -> int | None:
     """Commits in the checkout after ``since``; None when the checkout
     doesn't have it (another branch, or history rewritten)."""
-    said = podman.run(["git", "-C", str(repo), "rev-list", "--count", f"{since}..HEAD"])
+    said = _git(["git", "-C", str(repo), "rev-list", "--count", f"{since}..HEAD"])
     out = said.stdout.strip()
     return int(out) if said.returncode == 0 and out.isdigit() else None
 
@@ -113,6 +147,37 @@ def own_checkout() -> Path | None:
     return here if (here / ".git").exists() else None
 
 
+@functools.lru_cache(maxsize=1)
+def own() -> tuple[str, str]:
+    """(version, commit) of this Sarathi: its checkout's, ``+dirty`` with
+    uncommitted changes; else the package's own number and no commit."""
+    mine = own_checkout()
+    found = commit(mine) if mine else None
+    if not found or not found["version"]:
+        return __version__, ""
+    dirty = _git(["git", "-C", str(mine), "status", "--porcelain",
+                        "--untracked-files=no"]).stdout.strip()
+    return found["version"] + ("+dirty" if dirty else ""), found["commit"]
+
+
+def own_line() -> str:
+    number, at = own()
+    return f"{number} ({at})" if at else number
+
+
+class Show(argparse.Action):
+    """``sarathi --version``, worked out only when asked."""
+
+    def __init__(self, option_strings, dest=argparse.SUPPRESS, default=argparse.SUPPRESS,
+                 help="the version: the day of the last commit, that day's count, "
+                      "and the commit"):
+        super().__init__(option_strings, dest=dest, default=default, nargs=0, help=help)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        sys.stdout.write(f"{parser.prog} {own_line()}\n")      # where argparse's own prints
+        parser.exit()
+
+
 def behind() -> list[str]:
     """Containers from Sarathi's image still on an older one than the newest."""
     newest = podman.image_id(podman.IMAGE)
@@ -149,6 +214,9 @@ def report(config: Any) -> dict[str, Any]:
         now = commit(repo) if repo is not None else None
         if road == "podman":
             running = built.get(name)
+            if running and not running.get("version") and repo is not None:
+                # an image from before versions were stamped: its commit says
+                running = {**running, "version": dated(repo, running["commit"]) or ""}
             count = newer(repo, running["commit"]) \
                 if running and repo is not None and now else None
         else:
@@ -157,7 +225,7 @@ def report(config: Any) -> dict[str, Any]:
     mine = own_checkout()
     projects.append({"name": "sarathi", "running": commit(mine) if mine else None,
                      "now": None, "newer": None, "here": True})
-    return {"format": FORMAT, "sarathi": __version__, "road": road, "image": image,
+    return {"format": FORMAT, "sarathi": own()[0], "road": road, "image": image,
             "projects": projects}
 
 
@@ -196,9 +264,9 @@ def text(got: dict[str, Any]) -> str:
                              + ("not in the image" if got["road"] == "podman"
                                 else "no checkout"))
             continue
-        subject = run["subject"] if len(run["subject"]) <= 60 else run["subject"][:59] + "…"
-        line = (f"  {p['name']:<11}{run['commit']:<9}"
-                f"{time.strftime('%d %b', time.localtime(run['date']))}  {subject}")
+        subject = run["subject"] if len(run["subject"]) <= 50 else run["subject"][:49] + "…"
+        line = (f"  {p['name']:<11}{run.get('version') or '?':<14}{run['commit']:<9}"
+                f"{subject}")
         if run.get("left_out"):
             line += (f"  ({run['left_out']} uncommitted change(s) left out)"
                      if got["road"] == "podman" and not p.get("here") else

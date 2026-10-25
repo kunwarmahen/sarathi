@@ -58,7 +58,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from sarathi import __version__, door, first_run, podman, services
+from sarathi import door, first_run, podman, services, version
 from sarathi.services import WIDTH
 from sarathi.config import AWAKE, PROVIDERS, ConfigError, load, render, settings_path
 from sarathi.siblings import SIBLINGS, Found, env_name, find, find_all, locate
@@ -69,7 +69,7 @@ FORMAT = "sarathi.status.v1"
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sarathi", description="Yantra and its siblings, found and started together.")
-    parser.add_argument("--version", action="version", version=f"sarathi {__version__}")
+    parser.add_argument("--version", action=version.Show)
     subs = parser.add_subparsers(dest="command", required=True)
 
     init = subs.add_parser("init", help="which model answers; writes sarathi.toml")
@@ -188,8 +188,8 @@ def build_parser() -> argparse.ArgumentParser:
     doctor = subs.add_parser("doctor", help="what's wrong, and the line that fixes it")
     doctor.add_argument("--json", dest="json_out", action="store_true",
                         help="print sarathi.doctor.v1 instead of lines")
-    version = subs.add_parser("version", help="which commit of each project is running")
-    version.add_argument("--json", dest="json_out", action="store_true",
+    shown = subs.add_parser("version", help="which commit of each project is running")
+    shown.add_argument("--json", dest="json_out", action="store_true",
                          help="print sarathi.version.v1 instead of lines")
     backup = subs.add_parser("backup", help="everything here in one locked file")
     backup.add_argument("--to", metavar="FOLDER",
@@ -705,8 +705,6 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "image":
             return podman.build(config=_settings_or_none())
         if args.command == "version":
-            from sarathi import version
-
             got = version.report(_settings_or_none())
             print(json.dumps(got) if args.json_out else version.text(got))
             return 0
@@ -746,7 +744,8 @@ def main(argv: list[str] | None = None) -> int:
             print(doctor.text(lines, colour=sys.stdout.isatty()))
         return 0 if doctor.report(lines)["ok"] else 1
     if args.json_out:
-        print(json.dumps({"format": FORMAT, "version": __version__, "ok": _ok(found),
+        print(json.dumps({"format": FORMAT, "version": version.own()[0],
+                          "commit": version.own()[1], "ok": _ok(found),
                           "siblings": [f.as_json() for f in found], "started": started,
                           "memory": memory}))
     else:

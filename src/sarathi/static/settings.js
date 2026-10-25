@@ -847,7 +847,8 @@ function versionCard() {
   const body = h("div", { "aria-live": "polite" }, h("p.meta", {}, "…"));
   showVersion(body);
   return h("div.card.form", {}, h("h3", {}, "Version"),
-    h("p.meta", {}, "Each project's last commit is its version. On containers, what the " +
+    h("p.meta", {}, "A version is the day of a project's last commit and that day's " +
+      "count: 2026.10.25.3 is the third commit of 25 October. On containers, what the " +
       "image was built from, against each checkout now: newer commits are in the next " +
       "rebuild. On plain programs, each checkout as it is. The same as ",
       h("code", {}, "sarathi version"), " in a terminal."),
@@ -875,7 +876,6 @@ async function showVersion(body) {
         h("span.version-note", {}, unsaid ? `the image doesn't say; the checkout is on ${p.now.commit} now`
           : podmanRoad ? "not in the image" : "no checkout here"));
     }
-    const day = new Date(run.date * 1000).toLocaleDateString([], { day: "numeric", month: "short" });
     const extra = [];
     if (run.left_out) {
       extra.push(podmanRoad && !p.here ? `${run.left_out} uncommitted change(s) left out`
@@ -884,7 +884,7 @@ async function showVersion(body) {
     if (p.newer) extra.push(`${p.newer} newer in the checkout`);
     if (p.here) extra.push("this page, run from its checkout");
     return h("div.version-row", {}, h("strong", {}, p.name),
-      h("code", {}, run.commit), h("span.meta", {}, day),
+      h("code.version-number", {}, run.version || "?"), h("code.meta", {}, run.commit),
       h("span.version-subject", {}, run.subject),
       extra.length ? h("span.version-note", {}, extra.join(" · ")) : null);
   });

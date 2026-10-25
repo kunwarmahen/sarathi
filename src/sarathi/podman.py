@@ -295,6 +295,10 @@ def stage(into: Path, env: dict[str, str] | None = None,
                 raise ConfigError(f"git archive failed in {repo}: {done.stderr.strip()}")
             with tarfile.open(tar) as t:
                 t.extractall(into / name, filter="data")
+        # the image has no git: each program's --version reads this instead
+        from sarathi.version import dated
+
+        (into / name / "VERSION").write_text(f"{dated(repo) or 'unknown'} {head}\n")
         note = f"{name:<7} {head}"
         if dirty:
             note += f"  ({len(dirty)} uncommitted change(s) left out: commit to include them)"
