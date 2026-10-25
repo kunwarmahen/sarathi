@@ -17,18 +17,20 @@ beside it says exactly which. Nothing is bumped, nothing is tagged, and
 ```
 $ sarathi version
 Sarathi 2026.10.25.7, containers from the image of Sun 25 Oct 12:09
-  yantra     2026.10.25.1  d73c5b8  docs(notes): a PDF where there is no print window…
-  setu       2026.10.25.1  203f861  feat(own,page): a server's tools marked read or w…
-  samay      2026.10.23.8  6ca3c52  feat(backup): the house backed up every night, an…
-  prahari    2026.10.23.1  fc4f36c  feat(keeps): where the watches are kept, said for…
-  dvara      2026.10.25.1  a65654e  feat(remembering,telegram,printed): take back a "…
-  sparsh     2026.10.23.3  485e162  feat(keeps): where your phone rules and adb's key…
+  yantra     2026.10.25.1  d73c5b8  docs(notes): a PDF where there is no print window…  -- 1 newer in the checkout
+  setu       2026.10.25.1  203f861  feat(own,page): a server's tools marked read or w…  -- 1 newer in the checkout
+  samay      2026.10.23.8  6ca3c52  feat(backup): the house backed up every night, an…  -- 1 newer in the checkout
+  prahari    2026.10.23.1  fc4f36c  feat(keeps): where the watches are kept, said for…  -- 2 newer in the checkout
+  dvara      2026.10.25.1  a65654e  feat(remembering,telegram,printed): take back a "…  -- 1 newer in the checkout
+  sparsh     2026.10.23.3  485e162  feat(keeps): where your phone rules and adb's key…  -- 1 newer in the checkout
   smritikosh 2026.10.23.1  540ab4f  feat(memory): a memory in use does not age; fact …
-  sarathi    2026.10.25.7  …        (this page, from its checkout)
+  sarathi    2026.10.25.7  031d8a6  feat(version): every project's version is the day…
+the next `sarathi image && sarathi up` takes in the newer commits
 ```
 
-After a commit to Dvara, its line ends `-- 1 newer in the checkout`, and
-a last line says the next `sarathi image && sarathi up` takes it in.
+(This house, the first time: the image was built before the siblings
+knew their versions, so each was worked out from the commit it names,
+and each sibling's version.py commit is the newer one.)
 
 Every program says its own the same way:
 
