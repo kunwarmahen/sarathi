@@ -891,7 +891,7 @@ there?" is each one's last commit:
 
 ```
 $ sarathi version
-Sarathi 0.1.0, containers from the image of Sun 25 Oct 12:20
+Sarathi 0.1.0, containers from the image of Sun 25 Oct 12:09
   yantra     d73c5b8  25 Oct  docs(notes): a PDF where there is no print window, made by …
   dvara      a65654e  25 Oct  feat(remembering,telegram,printed): take back a "not", pict…  -- 1 newer in the checkout
   ...

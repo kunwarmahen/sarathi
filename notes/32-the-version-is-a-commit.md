@@ -9,7 +9,7 @@ its first line.
 
 ```
 $ sarathi version
-Sarathi 0.1.0, containers from the image of Sun 25 Oct 12:20
+Sarathi 0.1.0, containers from the image of Sun 25 Oct 12:09
   yantra     d73c5b8  25 Oct  docs(notes): a PDF where there is no print window, made by …
   setu       203f861  25 Oct  feat(own,page): a server's tools marked read or write from …
   samay      6ca3c52  23 Oct  feat(backup): the house backed up every night, and where th…
@@ -17,12 +17,12 @@ Sarathi 0.1.0, containers from the image of Sun 25 Oct 12:20
   dvara      a65654e  25 Oct  feat(remembering,telegram,printed): take back a "not", pict…
   sparsh     485e162  23 Oct  feat(keeps): where your phone rules and adb's key are, for …
   smritikosh 540ab4f  23 Oct  feat(memory): a memory in use does not age; fact decay adds…
-  sarathi    acbd84b  25 Oct  feat(chat): Turned down, what you said no to, with an Undo …
+  sarathi    bd7129e  25 Oct  feat(version): which commit of each project is running, on …
 ```
 
-(The label this house's checkouts make, read back as an image's. After
-a commit to Dvara, its line ends `-- 1 newer in the checkout`, and a
-last line says the next `sarathi image && sarathi up` takes it in.)
+(This house, from the first image built with the label. After a commit
+to Dvara, its line ends `-- 1 newer in the checkout`, and a last line
+says the next `sarathi image && sarathi up` takes it in.)
 
 The home page shows the same: the first line in its footer, for the
 owner, and a **Version** card in Settings → Check, with **Rebuild and
@@ -100,6 +100,10 @@ Sarathi 0.1.0, containers from the image of Sun 25 Oct 10:43
   smritikosh ?        the checkout is on 540ab4f now
   sarathi    acbd84b  25 Oct  feat(chat): Turned down, what you said no to, with an Undo …  (+9 uncommitted change(s))
 ```
+
+After the rebuild, the house's own home page (8760) answered `GET
+/api/version` with the image stamped, every project's commit, none
+newer and no container behind, and 401 without its token.
 
 The Version card on a scratch home page (port 8797) drew the same rows,
 with **Rebuild and restart** under them, and the footer said *Sarathi
