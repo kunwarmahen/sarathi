@@ -574,8 +574,10 @@ are Yantra's own tools, Samay and the phone. A Setu account, your own
 server included, reaches a Telegram agent through *Accounts it needs*
 (**Settings → Agents → Change**): `"*:read"` already gives it every
 account's reading tools, and a line like `docs:write` adds that server's
-writing ones. Which tools count as reading is in Setu's file for the
-server: `setu site file docs` shows it, and `--set` replaces it.
+writing ones. Which tools count as reading is Setu's to say, and yours
+to change: on Setu's page (Your pages → Setu), the server's card has
+**Its tools: which only read**, a switch for each tool; or `setu site
+tools docs NAME=read` in a terminal.
 
 Adding accounts never needs a change to the agent for the model's sake.
 Past twenty tools, each message is sent only the ones it points at, plus
