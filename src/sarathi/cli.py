@@ -21,6 +21,8 @@
     sarathi status --json     the same, as sarathi.status.v1
     sarathi doctor            what's wrong, green / amber / red, and the line
                               that fixes each (--json: sarathi.doctor.v1)
+    sarathi version           which commit of each project is running: the
+                              image's, on the podman road (--json: sarathi.version.v1)
     sarathi home              one page linking every program's page, with status,
                               and a chat with your agents
     sarathi invite NAME       a one-time link for someone in Dvara's actors file:
@@ -186,6 +188,9 @@ def build_parser() -> argparse.ArgumentParser:
     doctor = subs.add_parser("doctor", help="what's wrong, and the line that fixes it")
     doctor.add_argument("--json", dest="json_out", action="store_true",
                         help="print sarathi.doctor.v1 instead of lines")
+    version = subs.add_parser("version", help="which commit of each project is running")
+    version.add_argument("--json", dest="json_out", action="store_true",
+                         help="print sarathi.version.v1 instead of lines")
     backup = subs.add_parser("backup", help="everything here in one locked file")
     backup.add_argument("--to", metavar="FOLDER",
                         help="where to write it (default: [backup] folder)")
@@ -699,6 +704,12 @@ def main(argv: list[str] | None = None) -> int:
             return switch_road(args.road)
         if args.command == "image":
             return podman.build(config=_settings_or_none())
+        if args.command == "version":
+            from sarathi import version
+
+            got = version.report(_settings_or_none())
+            print(json.dumps(got) if args.json_out else version.text(got))
+            return 0
         if args.command == "down":
             config = _settings_or_none()
             on_podman = config is not None and config.road == "podman"

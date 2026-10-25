@@ -822,7 +822,92 @@ function drawCheckTab() {
     "It takes a few seconds. Every morning: Samay asks the same at 07:30 and tells " +
     "you only what's new.");
   if (sets.checked) drawCheck(out, sets.checked);
-  return [intro, row(go, morning), out, backupsCard()];
+  return [intro, row(go, morning), out, versionCard(), backupsCard()];
+}
+
+// ---- Version: `sarathi version`, which commit of each project runs -----------------
+
+// The footer's one line, owner only; pressing it opens the card below.
+async function drawVersionLine() {
+  const line = document.getElementById("version");
+  try {
+    line.textContent = (await api("/api/version")).said;
+    line.hidden = false;
+  } catch (_) { line.hidden = true; return; }
+  if (line.dataset.wired) return;
+  line.dataset.wired = "1";
+  line.addEventListener("click", () => {
+    sets.tab = "check";
+    location.hash = "#settings";
+    if (sets.data) drawTabs();
+  });
+}
+
+function versionCard() {
+  const body = h("div", { "aria-live": "polite" }, h("p.meta", {}, "…"));
+  showVersion(body);
+  return h("div.card.form", {}, h("h3", {}, "Version"),
+    h("p.meta", {}, "Each project's last commit is its version. On containers, what the " +
+      "image was built from, against each checkout now: newer commits are in the next " +
+      "rebuild. On plain programs, each checkout as it is. The same as ",
+      h("code", {}, "sarathi version"), " in a terminal."),
+    body);
+}
+
+async function showVersion(body) {
+  let got;
+  try { got = await api("/api/version"); }
+  catch (err) { body.replaceChildren(h("p.warn", {}, err.message)); return; }
+  const podmanRoad = got.road === "podman";
+  const notes = [];
+  if (got.image && got.image.exists && !got.image.stamped) {
+    notes.push(h("p.meta", {}, "This image was built before images said their " +
+                 "commits: rebuild once to see them."));
+  }
+  if (got.image && got.image.behind && got.image.behind.length) {
+    notes.push(h("p.warn", {}, `Still on an older image: ${got.image.behind.join(", ")}.`));
+  }
+  const rows = got.projects.map((p) => {
+    const run = p.running;
+    if (!run) {
+      const unsaid = got.image && got.image.exists && !got.image.stamped && p.now;
+      return h("div.version-row", {}, h("strong", {}, p.name),
+        h("span.version-note", {}, unsaid ? `the image doesn't say; the checkout is on ${p.now.commit} now`
+          : podmanRoad ? "not in the image" : "no checkout here"));
+    }
+    const day = new Date(run.date * 1000).toLocaleDateString([], { day: "numeric", month: "short" });
+    const extra = [];
+    if (run.left_out) {
+      extra.push(podmanRoad && !p.here ? `${run.left_out} uncommitted change(s) left out`
+                            : `+${run.left_out} uncommitted change(s)`);
+    }
+    if (p.newer) extra.push(`${p.newer} newer in the checkout`);
+    if (p.here) extra.push("this page, run from its checkout");
+    return h("div.version-row", {}, h("strong", {}, p.name),
+      h("code", {}, run.commit), h("span.meta", {}, day),
+      h("span.version-subject", {}, run.subject),
+      extra.length ? h("span.version-note", {}, extra.join(" · ")) : null);
+  });
+  const acts = [];
+  if (podmanRoad && (got.projects.some((p) => p.newer) || (got.image && !got.image.exists)
+                     || (got.image && got.image.exists && !got.image.stamped))) {
+    const re = button("Rebuild and restart (minutes)", async () => {
+      re.disabled = true;
+      try { said((await api("/api/settings/image", {})).said); }
+      catch (err) { said(err.message, true); re.disabled = false; }
+    });
+    acts.push(re);
+  }
+  if (got.image && got.image.behind && got.image.behind.length) {
+    const up = button("Restart them on the newest image", async () => {
+      up.disabled = true;
+      try { said((await api("/api/settings/apply", {})).said); }
+      catch (err) { said(err.message, true); up.disabled = false; }
+    }, "quiet");
+    acts.push(up);
+  }
+  body.replaceChildren(h("p.doctor-head", {}, got.said), ...notes,
+    h("div.versions", {}, ...rows), acts.length ? row(...acts) : null);
 }
 
 // ---- Backups: `sarathi backup`, from here -------------------------------------------

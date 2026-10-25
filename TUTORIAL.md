@@ -1692,6 +1692,12 @@ itself. Under a line the page can fix, there's a button (**Start
 everything again**, **Rebuild and restart**, **Bring it back**, **Open
 Setu's page**). Other fixes, like opening the firewall, you type.
 
+**Is my fix in there?** `sarathi version` (or the line at the bottom of
+the home page, which opens **Settings → Check → Version**) shows which
+commit of each project is running. On containers it's what the image
+was built from, and "2 newer in the checkout" means you committed since:
+**Rebuild and restart** takes them in.
+
 **Check every morning** (next to it) has Samay ask the doctor at 07:30
 each day, and you get a message only when something is newly wrong.
 Your morning might say *"gmail:personal: Google ends this sign-in Sun

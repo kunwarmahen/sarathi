@@ -15,7 +15,9 @@ BUILT FROM WHAT IS COMMITTED. The image is built from ``git archive HEAD``
 of each checkout, not from the working tree. Two builds of the same
 commits are the same image, and a half-finished edit never ships by
 accident. Uncommitted changes are named when the image is built, so a
-"why isn't my fix in there?" has its answer on the screen.
+"why isn't my fix in there?" has its answer on the screen. The image
+keeps that answer too, as its ``sarathi.build`` label: each project's
+commit, read back by ``sarathi version`` and the home page (version.py).
 
 THE DATA STAYS WHERE IT IS, AT THE SAME PATH. Each project keeps its own
 files (Samay's ``~/.samay``, Setu's ``~/.local/state/setu``, Yantra's
@@ -204,6 +206,8 @@ CHECKOUTS = ("yantra", "setu", "samay")
 OPTIONAL_CHECKOUTS = ("dvara", "sparsh", "prahari")
 #: Built in from where sarathi.toml says, when it says (``[smritikosh]``).
 MEMORY_CHECKOUT = "smritikosh"
+#: What a build is from, beside the Containerfile; the image's label (version.py).
+BUILD_FILE = "build.json"
 #: Ports inside the containers; the host ports come from sarathi.toml.
 PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
 #: Prahari's page, its API and its inlet, inside its container.
@@ -303,6 +307,10 @@ def stage(into: Path, env: dict[str, str] | None = None,
         (into / MEMORY_CHECKOUT).mkdir(parents=True)
         lines.append(f"{MEMORY_CHECKOUT} not set up (`sarathi smritikosh`): built without it")
     shutil.copy(Path(__file__).with_name("Containerfile"), into / "Containerfile")
+    # what this build is from, for the image's label (version.py)
+    from sarathi.version import build_label
+
+    (into / BUILD_FILE).write_text(json.dumps(build_label(found)))
     return lines
 
 
@@ -326,9 +334,14 @@ def build(engine: str = "podman", config: Config | None = None) -> int:
         # the voices to read answers aloud with: [dvara] voices (Dvara's spoken.py)
         voices = config.door.voices if config is not None and config.door else DEFAULT_VOICES
         voice = ["--build-arg", f"PIPER_VOICES={' '.join(voices)}"]
+        # each project's commit, on the image itself: `sarathi version` and
+        # the home page read it back without starting a container
+        stamp = Path(tmp) / BUILD_FILE
+        label = ["--label", f"sarathi.build={stamp.read_text()}"] if stamp.exists() else []
         code = subprocess.run([engine, "build", "--platform", platform(), "-t", IMAGE,
                                "--build-arg",
-                               f"HOST_BROWSER={'.'.join(map(str, here or ()))}", *voice, tmp],
+                               f"HOST_BROWSER={'.'.join(map(str, here or ()))}", *voice,
+                               *label, tmp],
                               check=False).returncode
     if code == 0:
         inside = run([engine, "run", "--rm", "--entrypoint", "/usr/local/bin/sarathi-browser",

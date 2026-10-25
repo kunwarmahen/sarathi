@@ -71,6 +71,8 @@ EVERY SETTINGS FILE, THE OWNER'S ALONE (editing.py). Each program checks
 and writes its own file; a person signed in gets 403:
 
     GET  /api/settings                     every file's settings and text
+    GET  /api/version                      `sarathi version --json`: which commit of each
+                                           project runs (the image's, on the podman road)
     GET  /api/doctor[?news=1]              `sarathi doctor --json`: what's wrong, and its
                                            fix; with news, what's new since the last
                                            such ask (Samay's doctor road, by the
@@ -446,7 +448,8 @@ class Home:
                  ask_samay: Callable[..., Any] | None = None,
                  doctor: Callable[[], dict[str, Any]] | None = None,
                  rebuild: Callable[[], None] = run_image,
-                 backup: Callable[[], dict[str, Any]] | None = None) -> None:
+                 backup: Callable[[], dict[str, Any]] | None = None,
+                 version: Callable[[Config], dict[str, Any]] | None = None) -> None:
         self.config = config
         self._said = said
         self._up = up
@@ -461,6 +464,8 @@ class Home:
         self._rebuild = rebuild
         self._backup = backup
         self._backing_up = threading.Lock()
+        self._version = version
+        self._version_cache: tuple[float, dict[str, Any]] | None = None
         self._lock = threading.Lock()
 
     def doctor(self, news: bool = False) -> tuple[int, dict[str, Any]]:
@@ -532,6 +537,18 @@ class Home:
         return ("Rebuilding the image, then starting everything again: several "
                 "minutes, and this page restarts at the end. Its log: "
                 f"{state_dir() / 'logs' / 'rebuild.log'}")
+
+    def version(self) -> dict[str, Any]:
+        """``sarathi version --json`` with the footer's line, asked at most
+        every ``every`` seconds: it is a git or two per project."""
+        from sarathi import version
+
+        with self._lock:
+            now = time.monotonic()
+            if self._version_cache is None or now - self._version_cache[0] > self._every:
+                got = (self._version or version.report)(self.config)
+                self._version_cache = (now, {**got, "said": version.headline(got)})
+            return self._version_cache[1]
 
     def tests(self) -> dict[str, Any]:
         return (self._tests or kept_tests_status)(self.config)
@@ -935,6 +952,13 @@ def _handler(server: HomeServer):
                 if self._owner() is None:
                     return None
                 return self._json(200, server.home.backups())
+            if url.path == "/api/version":
+                if self._owner() is None:
+                    return None
+                try:
+                    return self._json(200, server.home.version())
+                except Exception as exc:     # a bug is a 500 that says what, not a hang
+                    return self._json(500, {"detail": f"{type(exc).__name__}: {exc}"})
             if url.path.startswith("/api/chat/chats"):
                 return self._past(url)
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",

@@ -107,6 +107,10 @@ at phone width in dark mode, and refused anyone without the token (401).
   as `ends` in its status), so in the last three days it's an amber
   line. A published app says so once (`setu config google-published
   on`) and is never warned.
+* **Which commit runs, the doctor says only "older".** Its image line
+  names the checkouts that came after the build; `sarathi version` and
+  the Version card under the Check list say each project's commit, the
+  image's own (notes/32).
 * **No exact tool-token count.** The window check compares what the
   model holds with what Yantra plans for, plus a floor (16k) under which
   a big connection won't fit. Selection on many tools (Yantra's note 106)

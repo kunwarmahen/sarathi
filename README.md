@@ -884,6 +884,32 @@ green about only what is theirs: their accounts, their schedules' runs,
 their watches, their phones, and today's allowance and hours, each
 with a fix they can use from the chat (Dvara's notes/67).
 
+### Which code is running: `sarathi version`
+
+Every project says `0.1.0`; the version that answers "is my fix in
+there?" is each one's last commit:
+
+```
+$ sarathi version
+Sarathi 0.1.0, containers from the image of Sun 25 Oct 12:20
+  yantra     d73c5b8  25 Oct  docs(notes): a PDF where there is no print window, made by …
+  dvara      a65654e  25 Oct  feat(remembering,telegram,printed): take back a "not", pict…  -- 1 newer in the checkout
+  ...
+  sarathi    acbd84b  25 Oct  feat(chat): Turned down, what you said no to, with an Undo …
+the next `sarathi image && sarathi up` takes in the newer commits
+```
+
+On the containers' road the commits are the image's own: `sarathi
+image` writes what it built from as a label on the image
+(`sarathi.build`), read back with no container started, and each
+checkout's commit is shown against it ("2 newer in the checkout"). An
+image built before the label says so. On plain programs, each checkout
+as it is, uncommitted changes counted. `--json` prints
+`sarathi.version.v1`. The home page shows the first line in its footer
+and a **Version** card in Settings → Check, with **Rebuild and
+restart** when the checkouts have moved on
+([notes/32](notes/32-the-version-is-a-commit.md)).
+
 ### The house in one file: `sarathi backup`, `sarathi restore`
 
 ```
@@ -1169,7 +1195,8 @@ src/sarathi/
                 computer's adb lent to the containers by a file  (notes/20);
                 a second PublishPort on the house address for every
                 page, and the firewall line naming them  (notes/23); the
-                image's voices, [dvara] voices, said after a build  (notes/30, notes/31)
+                image's voices, [dvara] voices, said after a build  (notes/30, notes/31);
+                each checkout's commit as the image's label  (notes/32)
   doctor.py     sarathi doctor: what's wrong, green / amber / red, each
                 with its fix, from each sibling's own status, what `up`
                 started, the image's age, the firewall, the disk; the
@@ -1179,6 +1206,9 @@ src/sarathi/
                 copied whole, Smritikosh's pg_dump; restore under this
                 home, what was there moved aside; the Backups card and
                 Samay's backup road  (notes/29)
+  version.py    sarathi version: each project's commit running, the
+                image's label against each checkout now; the footer's
+                line and the Version card in Settings → Check  (notes/32)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,
                 and who messaged unlisted  (notes/04); --voices, Piper's
                 voices fetched here on plain programs  (notes/31)
@@ -1217,11 +1247,12 @@ src/sarathi/
                 started; its line in status, its card on the home page  (notes/13)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | dvara | phone | smritikosh | road | image | up | down |
-                status [--json] | doctor | backup | restore | home | invite | people
+                status [--json] | doctor | version | backup | restore | home | invite |
+                people
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
   test_pages_up.py  test_phone.py  test_phones_named.py  test_names.py  test_smritikosh.py  test_people.py
-  test_house.py  test_prahari.py  test_doctor.py  test_backup.py
+  test_house.py  test_prahari.py  test_doctor.py  test_backup.py  test_version.py
 ```
 
 ## Status

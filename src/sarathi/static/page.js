@@ -301,6 +301,7 @@ async function refresh() {
   if (!sets.data && !document.getElementById("settings").dataset.asked) {
     document.getElementById("settings").dataset.asked = "1";
     drawSettings();
+    drawVersionLine();
   }
   drawView();
   document.getElementById("updated").textContent =
