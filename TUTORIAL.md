@@ -177,7 +177,9 @@ doctor` (and Settings → Check) warns you with the day it ends, so you can
 sign in again before it does. If it ends anyway, you'll see it in `sarathi status`
 (`SIGN-IN EXPIRED, sign in again: setu connect gmail --as personal`), in
 `setu list`, and from the helper itself when you ask about mail. Run that
-command, and the helper has Gmail again on your next message; nothing
+command (away from the computer: **My accounts** on the home page, then
+**Sign in again** on Gmail's card, or `/connect gmail as personal` to the
+bot), and the helper has Gmail again on your next message; nothing
 needs restarting, containers included. To stop it happening, publish your
 Google app once (Setu's README, *Testing mode signs you out weekly*), then
 tell Setu with `setu config google-published on` so the warning stops.
@@ -1789,7 +1791,7 @@ moment it happens. The messages you're most likely to meet:
 | `I couldn't start that sign-in: no client file at …client_secret….json` | containers from an older Sarathi: Google's client file wasn't mounted | the same: update, then `sarathi up` |
 | `dvara cannot start: the image has no dvara` | Podman road, image built without dvara | put dvara's folder beside the others, then `sarathi image` |
 | `a Smritikosh database is already here … made with another setup's .env` | your own Smritikosh is somewhere Sarathi didn't look | `SARATHI_SMRITIKOSH=/path/to/smritikosh/.venv/bin/smritikosh-mcp sarathi smritikosh` |
-| `SIGN-IN EXPIRED, sign in again: setu connect gmail --as …` | Google expired the sign-in (apps in Testing: every 7 days) | that command; publish your Google app to stop it (Step 2) |
+| `SIGN-IN EXPIRED, sign in again: setu connect gmail --as …` | Google expired the sign-in (apps in Testing: every 7 days) | that command, or **Sign in again** on its card on Setu's page; publish your Google app to stop it (Step 2) |
 | `mcp server 'gmail-…' exited unexpectedly (code 2)` | an older Yantra hiding the reason (usually the line above) | `setu list` shows the reason; `sarathi image`, then `sarathi up`, for the newer Yantra |
 | `dashboard  not built: no npm here` | Node.js isn't installed | install Node.js 20 or newer, then `sarathi smritikosh` again |
 | the dashboard signs you in, then shows the login page again | it was opened as `127.0.0.1:3000` | open `http://localhost:3000/dashboard/memories` instead |
