@@ -250,7 +250,13 @@ which only the pieces talk to.
 Every link the pieces hand out says the name: a person's `/accounts
 page` link, a sign-in window, an invite, ntfy, Samay's address.
 `<hostname>.local` works on most home networks (Avahi answers it), and so
-does your router's name for the computer. On the plain-programs road the
+does your router's name for the computer. **Over a VPN, use the router's
+name**: `.local` is found by asking around on the Wi-Fi itself, so a phone
+coming in through the VPN never finds it, and every link it was handed
+hangs. A router whose DNS serves the house (`resolvectl query
+<hostname>.<its domain>` says *protocol DNS*) answers its name on the
+Wi-Fi and through the VPN alike, so that one name works in both places
+(here `linux-al-ml-beast.singhs`). On the plain-programs road the
 pages listen on every address, and the firewall line below narrows
 that. **Yantra's page then wants its token** (it runs a shell): Sarathi
 keeps one in secrets.env (`YANTRA_WEB_TOKEN`), and the home page's

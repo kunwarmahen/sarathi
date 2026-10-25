@@ -28,7 +28,8 @@ piece listens on this computer alone (127.0.0.1), and only the few a
 phone must reach -- the home page, Setu's page, the sign-in windows,
 ntfy -- also on Dvara's ``window_host``. With ``[house] name`` (the name
 the house knows this computer by: ``beast.local`` from Avahi, a router's
-DNS name, a Tailscale name), every page you open in a browser is ALSO
+DNS name, a Tailscale name -- not ``.local`` for a phone on a VPN, which
+only the Wi-Fi itself answers), every page you open in a browser is ALSO
 published on the house address (``address``, or what the name finds);
 what only the pieces talk to (Dvara's own port, Smritikosh's server and
 databases) stays here. Every link a piece

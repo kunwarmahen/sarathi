@@ -975,7 +975,11 @@ name = "linux-al-ml-beast.local"   # your computer's name + ".local"
 ```
 
 (`hostname` prints the first part. Or set it under **Settings → Every
-page on your home network** on the home page.) Then:
+page on your home network** on the home page.) If you reach home over a
+VPN, use your router's name for the computer instead (ours:
+`linux-al-ml-beast.singhs`): the `.local` name is only found on the
+Wi-Fi itself, and a sign-in window's link that says it hangs on a phone
+coming in through the VPN. Then:
 
 ```bash
 sarathi down && sarathi up
