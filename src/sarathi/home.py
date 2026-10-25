@@ -939,7 +939,8 @@ def _handler(server: HomeServer):
                 return self._past(url)
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
                                 "/api/people", "/api/chat/push", "/api/chat/spoken",
-                                "/api/chat/steps", "/api/chat/steps/export"):
+                                "/api/chat/steps", "/api/chat/steps/export",
+                                "/api/chat/declined"):
                 return self._json(404, {"detail": "not found"})
             who = self._owner() if url.path in ("/api/pieces", "/api/people") \
                 else self._who()
@@ -956,6 +957,9 @@ def _handler(server: HomeServer):
             if url.path == "/api/chat":
                 return self._chat(who, "GET", "/web",
                                   query={"after": query.get("after", "0")})
+            if url.path == "/api/chat/declined":
+                # what they turned down with /remember not (Dvara's remembering.py)
+                return self._chat(who, "GET", "/web/declined")
             if url.path == "/api/chat/steps":
                 # what an answer's own turn did, step by step (Dvara's runsteps)
                 return self._chat(who, "GET", "/web/steps",
@@ -1288,6 +1292,15 @@ def _handler(server: HomeServer):
                 if who is None:
                     return None
                 return self._chat(who, "POST", "/web/accounts-page", {})
+            if parts == ["api", "chat", "declined"]:
+                # one they turned down, offered again (not kept); only their own
+                who = self._who()
+                if who is None:
+                    return None
+                body = self._body(MAX_BODY)
+                if body is None:
+                    return None
+                return self._chat(who, "POST", "/web/declined", {"undo": body.get("undo")})
             if parts[:3] == ["api", "chat", "chats"] and len(parts) == 5 \
                     and parts[4] == "delete":
                 # deleted for good, by Dvara; only ever the person's own

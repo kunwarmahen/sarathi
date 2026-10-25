@@ -1024,7 +1024,9 @@ It shows the work as it happens, as Yantra's page does: each step as a
 line under the agent's name, then the answer as it is written, drawn as
 formatted text. After a job of several steps it may offer to keep how
 it was done, with **Keep** and **Not now**, saved for you alone. A row
-of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory**, **Phone** (its
+of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory**, **Turned down** (what the person
+said no to with `/remember not`, each with an **Undo** that puts it back on their list, not kept; Dvara's
+[notes/68](https://github.com/kunwarmahen/dvara/blob/main/notes/68-what-you-turned-down.md)), **Phone** (its
 screen and last steps, for the phone's person),
 **New chat** to Dvara as the words they are, **History** opens every
 conversation the person has had, searched by its words, read again,

@@ -394,7 +394,7 @@ Give it a job of a few steps and watch: each step shows as a line while
 it runs, then the answer appears as it's written. The buttons under the
 chat ask without typing: **Skills** (what your agent has learned, and
 anything it offers to keep), **Tools** (what it could use on your last
-message), **Schedules**, **Memory**, **Phone** (if the phone is yours:
+message), **Schedules**, **Memory**, **Turned down**, **Phone** (if the phone is yours:
 its screen now, and what was last done on it), **New chat**, and
 **History**. After a job of four
 steps or more, an agent whose package has skills may offer to keep how
@@ -1054,6 +1054,20 @@ gets a message saying so, with what to send to fix it. And when a
 conversation goes quiet for half an hour, an agent that remembers sends
 what it noticed about you (*"Lives in Raleigh"*), and keeps it only if
 you answer `/remember 1`.
+
+**Said no by mistake?** `/remember not 2` means "never offer that
+again", and the numbers move as you keep things, so it's easy to turn
+down the wrong one. Press **Turned down** under the chat: everything
+you said no to, newest first, each with an **Undo**. Undo doesn't keep
+it; it puts it back on your list, and `/remember` keeps it from there.
+On Telegram it's `/remember declined`, then `/remember undo 1`.
+
+**Pictures and PDFs on Telegram.** A picture your agent sends (a
+screenshot, a chart) arrives as a photo in the chat, not a file to open.
+`/file NAME` still sends the original. To share a conversation from
+Telegram as something any phone opens, send `/chats export 1 pdf` (the
+number from `/chats`): Dvara prints it with the Chrome already in its
+image, so Hindi and emoji come out right.
 
 To turn Dvara off again: `sarathi dvara --off`, then
 `sarathi down && sarathi up`.

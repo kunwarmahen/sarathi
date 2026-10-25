@@ -82,6 +82,7 @@
         <button type="button" data-word="/tools">Tools</button>
         <button type="button" data-word="/schedules">Schedules</button>
         <button type="button" data-word="/memory">Memory</button>
+        <button type="button" id="declined-open" title="What you turned down with /remember not, to take back">Turned down</button>
         <button type="button" data-word="/phone" title="Your phone's screen now">Phone</button>
         <button type="button" data-word="/new">New chat</button>
         <button type="button" id="history-open" title="Every conversation you've had, to search, read again, carry on or delete">History</button>
@@ -133,6 +134,18 @@
     <div id="history-rows" class="history-rows" aria-live="polite"></div>
     <div id="history-read" class="history-read" hidden></div>
     <div id="history-said" class="warn" role="alert" hidden></div>
+  </dialog>
+
+  <dialog id="declined" class="history" aria-labelledby="h-declined">
+    <div class="history-head">
+      <h2 id="h-declined">Turned down</h2>
+      <button type="button" id="declined-close" class="quiet">Close</button>
+    </div>
+    <p class="lede">What you said no to when your agent offered to remember it
+      (<code>/remember not 2</code>), newest first. It isn't offered again. Undo puts
+      one back on your list, not kept: send <code>/remember</code> to keep it.</p>
+    <div id="declined-rows" class="history-rows" aria-live="polite"></div>
+    <div id="declined-said" class="warn" role="alert" hidden></div>
   </dialog>
 
   <section id="pages" aria-labelledby="h-pages" hidden>

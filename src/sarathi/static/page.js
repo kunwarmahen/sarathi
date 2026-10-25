@@ -1202,7 +1202,57 @@ function printPast(d) {
   window.print();
 }
 
+/* -- turned down: what /remember not said no to, kept by Dvara so it isn't
+   offered again (remembering.py). Undo is by the words, not a number, so a
+   list drawn a minute ago can't undo the wrong one; it puts the fact back
+   on their list, and only /remember keeps it. */
+
+function declinedSaid(text) {
+  const el = document.getElementById("declined-said");
+  el.hidden = !text;
+  el.textContent = text || "";
+}
+
+async function openDeclined() {
+  const box = document.getElementById("declined");
+  if (!box.open) box.showModal();
+  declinedSaid("");
+  let data;
+  try { data = await api("/api/chat/declined"); }
+  catch (err) { drawDeclined([]); declinedSaid(err.message); return; }
+  drawDeclined(data.declined);
+}
+
+function drawDeclined(declined) {
+  const rows = document.getElementById("declined-rows");
+  if (!declined.length) {
+    rows.replaceChildren(h("p.meta", {}, "Nothing turned down. When your agent lists what it "
+      + "noticed about you, /remember not 2 turns one down for good, and it shows here."));
+    return;
+  }
+  rows.replaceChildren(...declined.map((fact) => {
+    const undo = h("button.quiet", { type: "button",
+      title: "Offer it again: back on your list, not kept" }, "Undo");
+    undo.addEventListener("click", async () => {
+      undo.disabled = true;
+      try {
+        const data = await api("/api/chat/declined", { undo: [fact] });
+        drawDeclined(data.declined);
+        declinedSaid("");
+        const n = data.waiting;
+        document.getElementById("declined-rows").prepend(h("p.meta", {},
+          `Back on your list, not kept yet: “${fact.replace(/\.\s*$/, "")}”. ${n} waiting: `
+          + "send /remember to see them, and /remember with a number to keep one."));
+      } catch (err) { undo.disabled = false; declinedSaid(err.message); }
+    });
+    return h("div.hrow", {}, h("div", {}, h("div.title", {}, fact)), undo);
+  }));
+}
+
 function startHistory() {
+  document.getElementById("declined-open").addEventListener("click", openDeclined);
+  document.getElementById("declined-close").addEventListener("click",
+    () => document.getElementById("declined").close());
   document.getElementById("history-open").addEventListener("click", openHistory);
   document.getElementById("history-close").addEventListener("click",
     () => document.getElementById("history").close());

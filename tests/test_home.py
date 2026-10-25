@@ -475,6 +475,21 @@ def test_history_deletes_through_dvara_and_its_refusal_comes_back(chatting, door
     assert send(chatting, "/api/chat/chats/abc123/delete", {}, token="wrong")[0] == 401
 
 
+def test_what_you_turned_down_is_yours_alone_to_see_and_undo(chatting, door):
+    got = ask(chatting, "/api/chat/declined?actor=guest")
+    assert got.status_code == 200
+    method, path, _ = door.heard[-1]
+    assert (method, path.split("?")[0]) == ("GET", "/web/declined") and "actor=mahen" in path
+    status, _ = send(chatting, "/api/chat/declined",
+                     {"undo": ["Lives in Pune"], "actor": "guest"})
+    assert status == 200
+    method, path, body = door.heard[-1]
+    # the page's undo, and who it is for set here, never by the browser
+    assert (method, path.split("?")[0]) == ("POST", "/web/declined")
+    assert body == {"undo": ["Lives in Pune"], "actor": "mahen"}
+    assert ask(chatting, "/api/chat/declined", token="wrong").status_code == 401
+
+
 def test_dvara_down_is_said_not_hung(keys):
     home = Home(config(keys), lambda: {})
     server = HomeServer(home, GOOD, port=0, chat=Chat("http://127.0.0.1:9", DOOR_KEY, "mahen"))
