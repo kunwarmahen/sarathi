@@ -537,6 +537,22 @@ with "The rest is in the message." To hear every answer, and what's
 sent to you unasked like the morning brief, send `/voice always`;
 `/voice off` for never; `/voice` says which you have.
 
+**What did it just do?** Under every answer on the home page is a small
+**Steps**. Open it to see each tool the agent used for that answer,
+when, how long it waited for your yes and how long it ran, and a line
+of what came back:
+
+```
+1 step · 19s · end_turn
+1. web_fetch 18:37:08 · refused (unattended)
+→ web_fetch was denied: this session runs unattended …
+```
+
+**File for a bug report** saves the whole turn as a file. It holds what
+the tools read (a page, a mail), and says so at its top, so read it
+before you send it anywhere. Everyone sees only their own answers'
+steps. On Telegram, `/steps` says the same in words.
+
 **In Hindi too (or another language).** Out of the box there's one
 English voice. To have Hindi answers read in a Hindi voice, add one:
 

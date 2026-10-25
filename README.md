@@ -1041,7 +1041,11 @@ page served over https), heard into words by a local model that can
 hear, and shown back as *I heard: "…"*. **▶ Listen** under an answer reads it aloud, made on
 this computer by Piper; an answer to a voice note plays by itself (Settings → People →
 **Answers read aloud** sets who hears what, **Their voice** in whose; [notes/30](notes/30-answers-read-aloud.md),
-[notes/31](notes/31-a-voice-for-each-language.md)). The paperclip beside **Send** adds pictures or
+[notes/31](notes/31-a-voice-for-each-language.md)). **Steps** under an answer opens what its
+turn did: each tool, when, how long it waited for a yes and ran, a line of
+what came back, and **File for a bug report** (the person's own run only;
+Dvara's [notes/60](https://github.com/kunwarmahen/dvara/blob/main/notes/60-a-run-step-by-step.md)).
+`/doctor` in the chat is the person's own check (Dvara's notes/67). The paperclip beside **Send** adds pictures or
 files to your next message (up to 20 MB together): Dvara keeps them in
 your folder with that agent, and shows a picture to a model that can
 see. When an answer tells you to send `/connect gmail`, it's a button

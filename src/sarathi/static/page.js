@@ -670,6 +670,53 @@ function transcriptView(ln) {
     h("summary", {}, `The conversation (${ln.transcript.length} messages)`), ...rows);
 }
 
+// What an answer's turn did, step by step (Dvara's runsteps): folded under
+// the answer, fetched the first time it's opened. Each step is the tool,
+// when, how long it waited for a yes and ran, and a line of what came back;
+// the file holds the rest, and says so before anyone sends it.
+function stepsView(ln) {
+  const box = h("details.steps", {}, h("summary", {}, "Steps"));
+  const body = h("div.steps-body", {}, h("div.meta", {}, "…"));
+  box.append(body);
+  box.addEventListener("toggle", async () => {
+    if (!box.open || box.dataset.got) return;
+    box.dataset.got = "1";
+    try {
+      const d = await api(`/api/chat/steps?line=${ln.id}`);
+      const head = `${d.steps.length} step${d.steps.length === 1 ? "" : "s"}`
+        + (d.seconds != null ? ` · ${d.seconds}s` : "") + (d.outcome ? ` · ${d.outcome}` : "");
+      const rows = d.steps.map((st, i) => h("div.step", {},
+        h("div.step-head", {}, d.said[i] || st.tool),
+        st.short ? h("div.step-said", {}, `→ ${st.short}`) : null));
+      const file = h("button.file", { type: "button" }, "⤓ File for a bug report");
+      file.addEventListener("click", () => saveSteps(ln.id));
+      body.replaceChildren(h("div.meta", {}, head),
+        ...(rows.length ? rows : [h("div.meta", {}, "No tools: it answered from what it knew.")]),
+        file);
+    } catch (err) {
+      body.replaceChildren(h("div.meta", {}, err.message));
+      delete box.dataset.got;
+    }
+  });
+  return box;
+}
+
+async function saveSteps(line) {
+  try {
+    const res = await fetch(`/api/chat/steps/export?line=${line}`,
+                            { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.status);
+    const url = URL.createObjectURL(await res.blob());
+    const a = h("a", { href: url, download: `steps-${line}.md` });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch (err) {
+    problem(`Couldn't make the file: ${err.message}`);
+  }
+}
+
 function lineView(ln) {
   const failed = ln.who === "agent" && ln.stop_reason
     && !["held", "skills", "seen", "memory", "new", "files", "accounts", "phone"]
@@ -688,6 +735,7 @@ function lineView(ln) {
     ln.transcript ? transcriptView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
+    ln.steps && ln.who === "agent" ? stepsView(ln) : null,
     chat.voice && ln.who !== "you" && ln.text && !ln.transcript ? listenButton(ln) : null,
     (ln.files || []).map((name, n) => {
       if (PICTURE.test(name)) return picture(ln.id, n, name);

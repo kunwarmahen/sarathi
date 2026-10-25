@@ -452,6 +452,19 @@ def test_an_answer_read_aloud_comes_through_as_audio_for_you_alone(chatting, doo
     assert ask(chatting, "/api/chat/spoken?line=7", token="wrong").status_code == 401
 
 
+def test_an_answers_steps_come_through_for_you_alone_and_as_a_file(chatting, door):
+    got = ask(chatting, "/api/chat/steps?line=7&actor=guest")
+    assert got.status_code == 200
+    _, path, _ = door.heard[-1]
+    assert path.split("?")[0] == "/web/steps" and "line=7" in path and "actor=mahen" in path
+    made = ask(chatting, "/api/chat/steps/export?line=7")
+    assert made.status_code == 200 and made.headers["content-type"].startswith("text/markdown")
+    _, path, _ = door.heard[-1]
+    assert path.split("?")[0] == "/web/steps/export" and "actor=mahen" in path
+    assert DOOR_KEY not in made.text
+    assert ask(chatting, "/api/chat/steps?line=7", token="wrong").status_code == 401
+
+
 def test_history_deletes_through_dvara_and_its_refusal_comes_back(chatting, door):
     status, said = send(chatting, "/api/chat/chats/abc123/delete", {"actor": "guest"})
     assert status == 200 and said == {"deleted": "abc123"}
