@@ -906,8 +906,9 @@ async function showVersion(body) {
     }, "quiet");
     acts.push(up);
   }
+  // replaceChildren, unlike h(), would print a null as the word "null"
   body.replaceChildren(h("p.doctor-head", {}, got.said), ...notes,
-    h("div.versions", {}, ...rows), acts.length ? row(...acts) : null);
+    h("div.versions", {}, ...rows), ...(acts.length ? [row(...acts)] : []));
 }
 
 // ---- Backups: `sarathi backup`, from here -------------------------------------------
