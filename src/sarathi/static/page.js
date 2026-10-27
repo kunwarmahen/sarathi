@@ -809,6 +809,8 @@ function draw(data) {
     const fresh = Boolean(chat.last);   // lines that came while the page was open
     if (!chat.last) box.replaceChildren(live);
     for (const ln of data.lines) {
+      // /new's answer: the conversation before it is in History, not here
+      if (ln.fresh) { stopVoice(); box.replaceChildren(live); }
       const view = lineView(ln);
       box.insertBefore(view, live);
       const listen = view.querySelector("button.listen");

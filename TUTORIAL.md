@@ -430,8 +430,9 @@ so read it before you send it.
 The same works by typing: `/chats boiler` finds, `/chats 2` goes back
 into the second, `/chats export 2` sends it to you as a file,
 `/chats delete 2` deletes it, and `/keep test` keeps a good answer as
-a test (Step 9). Deleting clears your
-history. Your chat window here keeps its own recent lines until they age
+a test (Step 9). `/new` starts over: the chat window clears, and
+what you said before is under **History**. Deleting clears your
+history. Dvara keeps its own copy of the chat window's lines until they age
 out, and the owner's record of what each message cost (`dvara runs`)
 keeps them too; that is on purpose, so the owner's record stays whole.
 
