@@ -328,7 +328,8 @@ def sarathi_view(config: Config) -> dict:
             "window_host": door.window_host, "window_port": door.window_port,
             "window_url": door.window_url, "ntfy": door.ntfy_port is not None,
             "ntfy_port": door.ntfy_port or DEFAULT_NTFY_PORT,
-            "voices": list(door.voices), "whisper": door.whisper or ""},
+            "voices": list(door.voices), "whisper": door.whisper or "",
+            "yolo": door.yolo},
         "phone": None if phone is None else {
             "address": phone.address, "wda": phone.wda, "awake": phone.awake,
             "named": [{"name": p.name, "kind": p.kind, "where": p.where, "awake": p.awake}
@@ -448,7 +449,8 @@ def sarathi_apply(changes: dict) -> Config:
                 ntfy_port=(_num(d.get("ntfy_port"), "ntfy's port") or door.ntfy_port
                            or DEFAULT_NTFY_PORT) if ntfy else None,
                 voices=_voices(d.get("voices"), door.voices),
-                whisper=_address(d.get("whisper", door.whisper), "Whisper's address")))
+                whisper=_address(d.get("whisper", door.whisper), "Whisper's address"),
+                yolo=d.get("yolo", door.yolo) is True))
     if "phone" in changes:
         ph = changes["phone"]
         named = config.phone.named if config.phone else ()

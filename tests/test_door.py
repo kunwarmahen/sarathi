@@ -131,6 +131,16 @@ class TestStartedTogether:
         assert gate["env"]["TELEGRAM_TOKEN"] == "123:bot"
         assert gate["env"]["OLLAMA_MODEL"] == "gemma4:12b"
 
+    def test_let_never_asked_work_starts_dvara_with_yolo(self, stage, home, capsys):
+        door_on(stage, home)
+        path = stage["world"] / "config" / "sarathi.toml"
+        path.write_text(path.read_text().replace("[dvara]\non = true\n",
+                                                 "[dvara]\non = true\nyolo = true\n"))
+        code, out = run(capsys, "up")
+        assert code == 0, out
+        argv = seen(stage, "dvara")["argv"]
+        assert argv[argv.index("--ask") + 1] == "--yolo"
+
     def test_the_bots_token_reaches_the_door_and_nothing_else(self, stage, home, capsys):
         door_on(stage, home)
         run(capsys, "up")

@@ -407,7 +407,23 @@ the chat apps you know:
 The button at the top right of the list hides it, for a wider chat; ☰
 brings it back. On a phone the list is hidden until you tap ☰, and goes
 away once you pick something. When an agent wants a yes, a card with
-**Yes** and **No** appears just above the box.
+**Yes** and **No** appears just above the box. If it's asking only
+because the agent read something you didn't write (a page, an email),
+there's a third button, **Yes to all for this task**: the rest of that
+job's questions like it are then not asked, unless the agent reads
+something new. A purchase is still asked every time.
+
+**Asked too often?** Three places to look, in **Settings**
+([notes/34](notes/34-never-asked-means-it.md)):
+
+* **Sarathi → Dvara → Let "Never asked" work.** Until it's ticked,
+  Dvara asks before every change, whatever the next two say. Press
+  **Apply** after.
+* **People → Change → Asking before changes**: *Never asked* for
+  yourself. Someone left at *Not set* is asked.
+* **People → Change → Sources they trust**: `samay, homeassistant-home`
+  (the names after `mcp__` in a tool's name). Reading your own schedules
+  or lights then asks nothing new. Never put your mail here.
 
 Give it a job of a few steps and watch: each step shows as a line while
 it runs, then the answer appears as it's written. The **+** beside the

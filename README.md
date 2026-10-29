@@ -588,7 +588,7 @@ in that order:
 
 ```
 dvara  dvara --root ~/dvara/agents --actors ~/dvara/actors.toml --state ~/dvara/state
-             --ask --provider <model.provider> --model <model.model> --samay <samay>
+             --ask [--yolo] --provider <model.provider> --model <model.model> --samay <samay>
              [--prahari <prahari> [--prahari-for <prahari.people>]]
              serve --port <dvara.port> --web [--telegram <dvara.telegram>]
 ```
@@ -607,6 +607,13 @@ What a person would otherwise wire by hand in two places:
   being refused (Samay's notes/07).
 * **A chat on the home page.** Dvara starts with `--web`, its web
   channel, and the home page shows it (below).
+* **"Never asked" works only when you say so.** Dvara takes the
+  strictest of the house, the person and the agent, and `--ask` alone
+  makes the house "ask": every change is asked, whatever the People form
+  says. `[dvara] yolo = true` (*Let "Never asked" work* on the home page)
+  adds `--yolo`; someone saved with no setting of their own is then
+  written as "ask", so nobody is lifted by it quietly
+  ([notes/34](notes/34-never-asked-means-it.md)).
 * **Tokens.** `DVARA_TOKEN` is made for you; `TELEGRAM_TOKEN` (from
   @BotFather) is typed at a hidden prompt. Both go to `secrets.env`, and
   from there **to Dvara alone**: the page never holds the bot's token,
@@ -1130,7 +1137,9 @@ out as a chat app: your conversations listed at the left, the one you're
 in beside them, the box to write in at the foot. Pick an agent, write,
 and the answer comes back a few seconds later. A question an agent asks
 shows as a card with **Yes** and **No** above the box (and goes to
-Telegram as well; the first answer counts). The chat holds no logic:
+Telegram as well; the first answer counts). One asked only because the
+agent read something you didn't write has **Yes to all for this task**
+too (Dvara's notes/72). The chat holds no logic:
 every word goes to Dvara's web channel and back, as you, the `[dvara]
 owner`, with the same rules and allowance as on Telegram. Dvara's token
 stays in the home page's process, never in the browser.

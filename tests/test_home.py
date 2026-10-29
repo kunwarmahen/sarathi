@@ -420,6 +420,13 @@ def test_an_answer_passes_on_and_dvaras_refusal_comes_back_in_its_words(chatting
     assert status == 200 and door.heard[-1][2] == {"answers": {"c": True}, "actor": "mahen"}
 
 
+def test_yes_to_all_for_the_task_passes_on_and_nothing_else_does(chatting, door):
+    send(chatting, "/api/chat/asks/a1", {"approve": True, "for_turn": True})
+    assert door.heard[-1][2] == {"approve": True, "for_turn": True, "actor": "mahen"}
+    send(chatting, "/api/chat/asks/a1", {"approve": True, "for_turn": "yes"})
+    assert door.heard[-1][2] == {"approve": True, "actor": "mahen"}
+
+
 def test_the_chat_needs_the_home_token_and_takes_no_other_post(chatting, door):
     assert send(chatting, "/api/chat", {"agent": "greeter", "text": "hi"},
                 token="wrong")[0] == 401

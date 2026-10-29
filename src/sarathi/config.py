@@ -98,7 +98,7 @@ KNOWN: dict[str, set[str]] = {
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner", "ntfy", "ntfy_port", "voices",
-              "whisper"},
+              "whisper", "yolo"},
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
     "phone": {"on", "address", "wda", "awake"},
     "memory": {"via"},
@@ -411,6 +411,11 @@ class Door:
     #: A Whisper server's address (the OpenAI transcription road): voice
     #: notes and the home page's 🎤 are heard there first (Dvara's heard.py).
     whisper: str | None = None
+    #: Dvara started with --yolo: a person or agent set to "don't ask"
+    #: (actors.toml, agent.toml) is then not asked. Off, Dvara asks before
+    #: every change whatever those files say. A person saved from the page
+    #: with no setting of their own is written as "ask" while this is on.
+    yolo: bool = False
 
     def window_env(self) -> dict[str, str]:
         """Setu's own names for the window settings."""
@@ -530,6 +535,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
             raise ConfigError(f"{where}: dvara.{key} must be text")
     if not isinstance(door_table.get("ntfy", False), bool):
         raise ConfigError(f"{where}: dvara.ntfy must be true or false")
+    if not isinstance(door_table.get("yolo", False), bool):
+        raise ConfigError(f"{where}: dvara.yolo must be true or false")
     voices = door_table.get("voices", list(DEFAULT_VOICES))
     if not isinstance(voices, list) or not all(isinstance(v, str) and VOICE_NAME.match(v)
                                                for v in voices):
@@ -548,7 +555,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                 ntfy_port=_port(door_table, "ntfy_port", DEFAULT_NTFY_PORT, "dvara")
                 if door_table.get("ntfy", False) else None,
                 voices=tuple(dict.fromkeys(voices)),
-                whisper=str(door_table.get("whisper") or "").strip().rstrip("/") or None) \
+                whisper=str(door_table.get("whisper") or "").strip().rstrip("/") or None,
+                yolo=door_table.get("yolo", False)) \
         if door_table.get("on", False) else None
     pages_table = data.get("pages", {})
     if not isinstance(pages_table.get("on", True), bool):
@@ -953,6 +961,11 @@ voices = {json.dumps(list(door.voices))}
 # the home page's microphone are heard there first. Unset: a local Ollama
 # model that can hear.
 {f'whisper = "{door.whisper}"' if door.whisper else '# whisper = "http://127.0.0.1:11435"'}
+# Let "don't ask" work: Dvara starts with --yolo, so a person or agent set
+# to yolo in the actors file or its agent.toml isn't asked before changes.
+# Off: every change is asked about, whatever those files say. A person
+# saved from the home page with no setting of their own gets "ask".
+yolo = {"true" if door.yolo else "false"}
 """
 
 

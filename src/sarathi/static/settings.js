@@ -11,7 +11,7 @@ const TABS = [["people", "People"], ["household", "Household"], ["agents", "Agen
               ["accounts", "Accounts"], ["sarathi", "Sarathi"], ["keys", "Keys"],
               ["vaani", "Vaani"], ["check", "Check"]];
 
-const RUNGS = { "": "Dvara's default (read only)", read_only: "Read only: never asked",
+const RUNGS = { "": "Not set: asked before anything changes", read_only: "Read only: never asked",
                 ask: "Asked before anything changes", yolo: "Never asked: anything" };
 
 function said(text, bad) {
@@ -193,6 +193,7 @@ function drawPeopleTab() {
                   p.zone ? `on ${p.zone} time` : null,
                   p.max_turns_per_day != null ? `${p.max_turns_per_day} messages a day` : null,
                   p.approver ? `${p.approver} says yes to changes` : null,
+                  p.trusted ? `trusts ${p.trusted.join(", ")}` : null,
                   p.speak === "off" ? "answers not read aloud"
                     : p.speak === "always" ? "every answer read aloud" : null,
                   p.voice ? `read in ${p.voice}` : null,
@@ -268,6 +269,11 @@ function personForm(p, isNew) {
     c.dataset.phone = n.name;
     return h("label.inline", {}, c, ` ${n.name} (${n.kind})`);
   });
+  // Dvara's trusted =: servers whose answers are their own words (their
+  // schedules, their lights), so a change after reading one isn't asked
+  // about again. Dvara checks the names; a wildcard is refused there.
+  const trusted = text((p.trusted || []).join(", "), { autocapitalize: "none",
+                                                       placeholder: "samay, homeassistant" });
   const telegram = text((p.telegram || []).join(", "), { inputmode: "numeric",
                                                           placeholder: "8675309" });
   const go = button(isNew ? "Add" : "Save", () => {
@@ -283,7 +289,7 @@ function personForm(p, isNew) {
       hours: hours.value.trim() || null, zone: zone.value.trim() || null,
       max_turns_per_day: numOr(turns),
       approver: approver.value || null, speak: speak.value || null,
-      voice: ownVoice.value || null,
+      voice: ownVoice.value || null, trusted: listOf(trusted),
       phone: named.length ? false : phone.checked,
       phones: named.length ? phoneBoxes.map((l) => l.querySelector("input"))
         .filter((c) => c.checked).map((c) => c.dataset.phone) : null,
@@ -314,6 +320,10 @@ function personForm(p, isNew) {
           "sent unasked, like a morning brief. They can change it with /voice."),
     field("Their voice", ownVoice, "An answer in another language is read in a voice for " +
           "it, when there's one. They can change it with /voice use."),
+    field("Sources they trust", trusted, "Servers whose answers are their own words, " +
+          "comma-separated: samay (their schedules), homeassistant (their lights). After " +
+          "reading one, a change isn't asked about again. Never anything that reads the " +
+          "web or someone else's mail. Blank: trust nothing."),
     field("Telegram ids", telegram, "Their numbers, comma-separated. Someone who messages the " +
           "bot and isn't on the list shows above, to add."),
     named.length
@@ -657,6 +667,7 @@ function drawSarathiTab() {
                      dv.owner || "owner");
   const house = text(dv.window_host || "", { placeholder: "192.168.1.44" });
   const ntfy = check(dv.ntfy);
+  const yolo = check(dv.yolo);
   const whisper = text(dv.whisper || "", { placeholder: "http://127.0.0.1:11435" });
   const voices = text((dv.voices || ["en_US-lessac-medium"]).join(", "),
                       { autocapitalize: "none", placeholder: "none: answers stay words" });
@@ -692,6 +703,7 @@ function drawSarathiTab() {
     dvara: dvaraOn.checked ? { on: true, telegram: bot.value, owner: owner.value,
                                window_host: house.value.trim(), ntfy: ntfy.checked,
                                voices: voices.value, whisper: whisper.value.trim(),
+                               yolo: yolo.checked,
                                port: ports.dvara.value, ntfy_port: ports.ntfy.value }
                            : { on: false },
     phone: phoneOn.checked ? { on: true, address: phoneAt.value.trim(),
@@ -712,6 +724,11 @@ function drawSarathiTab() {
       field("This computer's address at home", house, "Phones at home reach the home page, " +
             "Setu's page and ntfy here. Your home network's address, or Tailscale's."),
       h("label.inline", {}, ntfy, " Notices on phones, through ntfy in the house"),
+      h("label.inline", {}, yolo, " Let \"Never asked\" work"),
+      h("p.meta", {}, "Off, Dvara asks you before every change, whatever a person's " +
+        "\"Asking before changes\" or an agent says. On, someone set to Never asked " +
+        "isn't asked; someone not set is asked. A spend, and a change after reading " +
+        "something you didn't write, are asked about either way. Needs Apply."),
       field("Voices for answers read aloud", voices, "Names from " +
             "huggingface.co/rhasspy/piper-voices, with commas: en_US-lessac-medium, " +
             "hi_IN-pratham-medium. An answer is read in a voice for its language. " +

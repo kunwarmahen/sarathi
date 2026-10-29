@@ -904,7 +904,9 @@ def units(config: Config) -> dict[str, str]:
         door, after = config.door, ""
         door_exec = (f"{IN_IMAGE}/dvara --root {door.path('root')} --actors "
                      f"{door.path('actors')} --state {door.path('state')} --ask "
-                     f"--owner {door.owner} --provider {config.provider} "
+                     # "don't ask" in the actors file means it ([dvara] yolo)
+                     + ("--yolo " if door.yolo else "")
+                     + f"--owner {door.owner} --provider {config.provider} "
                      + (f"--model {config.model} " if config.model else "")
                      + (f"--samay {IN_IMAGE}/samay " if config.clock_on else "--samay off ")
                      # each person's watch looks with their own accounts

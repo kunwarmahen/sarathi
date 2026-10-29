@@ -858,17 +858,20 @@ function lineView(ln) {
     }));
 }
 
-function buttons(onYes, onNo, yes = "Yes", no = "No") {
+function buttons(onYes, onNo, yes = "Yes", no = "No", onAll = null) {
   const y = h("button.yes", { type: "button" }, yes);
   const n = h("button.no", { type: "button" }, no);
+  const a = onAll ? h("button.yes", { type: "button" }, "Yes to all for this task") : null;
+  const all = [y, n, a].filter(Boolean);
   const go = (fn) => async () => {
-    y.disabled = n.disabled = true;
+    all.forEach((b) => { b.disabled = true; });
     try { await fn(); problem(""); } catch (err) { problem(err.message); }
     look();
   };
   y.addEventListener("click", go(onYes));
   n.addEventListener("click", go(onNo));
-  return h("div.buttons", {}, y, n);
+  if (a) a.addEventListener("click", go(onAll));
+  return h("div.buttons", {}, ...all);
 }
 
 function askView(a) {
@@ -877,8 +880,13 @@ function askView(a) {
     h("div.what", {}, `${a.tool}: ${a.summary}`),
     a.picture ? h("img", { src: `data:image/png;base64,${a.picture}`,
                            alt: "The phone's screen, what it would tap ringed" }) : null,
+    // a.for_turn: asked only because the agent read something you didn't
+    // write; one yes can cover the rest of this task (Dvara's gate.put)
     buttons(() => api(`/api/chat/asks/${encodeURIComponent(a.id)}`, { approve: true }),
-            () => api(`/api/chat/asks/${encodeURIComponent(a.id)}`, { approve: false })));
+            () => api(`/api/chat/asks/${encodeURIComponent(a.id)}`, { approve: false }),
+            "Yes", "No",
+            a.for_turn ? () => api(`/api/chat/asks/${encodeURIComponent(a.id)}`,
+                                   { approve: true, for_turn: true }) : null));
 }
 
 function holdView(hd) {

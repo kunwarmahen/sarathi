@@ -613,6 +613,8 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
     assert dvara is not None
     argv = [dvara, "--root", str(door.path("root")), "--actors", str(door.path("actors")),
             "--state", str(door.path("state")), "--ask",
+            # "don't ask" in the actors file means it ([dvara] yolo)
+            *(["--yolo"] if door.yolo else []),
             # whose word keeps a fact for everyone's agents (dvara household.py)
             "--owner", door.owner]
     # the same model as the page, overruling a package that names another

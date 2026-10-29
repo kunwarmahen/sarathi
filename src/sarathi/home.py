@@ -44,7 +44,7 @@ reaches the browser, the way Dvara's own page keeps it:
 
     GET  /api/chat?after=N        your lines since N, agents, questions
     POST /api/chat                {"agent", "text", "files"?: [{"name", "data"}]}
-    POST /api/chat/asks/ID        {"approve": true|false}
+    POST /api/chat/asks/ID        {"approve": true|false, "for_turn"?: true}
     POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}}
     GET  /api/chat/file?line=&n=  a file an answer carried
     GET  /api/chat/spoken?line=   an answer read aloud (WAV)
@@ -1246,6 +1246,11 @@ def _handler(server: HomeServer):
                         said = f"{name} removed, and signed out everywhere."
                     else:
                         fields = {k: v for k, v in body.items() if k != "remove"}
+                        if config.door and config.door.yolo and not fields.get("permissions"):
+                            # Dvara reads a person with no setting as "no
+                            # ceiling of their own": under --yolo that is
+                            # whatever their agent says. Written as asked.
+                            fields["permissions"] = "ask"
                         editing.dvara(config, ["person", name], fields)
                         said = f"{name} saved. Dvara uses it from their next message."
                 elif what == "household":
@@ -1431,7 +1436,9 @@ def _handler(server: HomeServer):
             if parts[2] == "asks":
                 return self._chat(who, "POST",
                                   f"/web/asks/{urllib.parse.quote(parts[3])}",
-                                  {"approve": body.get("approve")})
+                                  {"approve": body.get("approve"),
+                                   **({"for_turn": True}
+                                      if body.get("for_turn") is True else {})})
             return self._chat(who, "POST", f"/web/holds/{urllib.parse.quote(parts[3])}",
                               {"answers": body.get("answers")})
 
