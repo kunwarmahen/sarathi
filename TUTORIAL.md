@@ -1757,42 +1757,50 @@ house. The program that does it is **Vaani**; it answers through Dvara
    Sarathi where: `sarathi dvara --whisper http://127.0.0.1:11435`.
 4. **Take the puck out of Home Assistant**: Settings → Devices &
    services → ESPHome → the puck → ⋮ → Delete. A puck listens to one
-   helper at a time.
+   helper at a time. (Deleting it there also wipes the puck's key.
+   Vaani gives it a new one the first time it reaches it; you don't do
+   anything.)
 5. **Turn Vaani on**: **Settings → Sarathi → The rest → Vaani**, Save
    (or `[vaani] on = true` in `sarathi.toml`), then `sarathi image &&
    sarathi down && sarathi up` on the containers' road, or `sarathi
    down && sarathi up` on plain programs. Run the firewall line `up`
    prints: it now names 8799, where the puck fetches each answer (and,
-   with `[house]`, 8797 for Vaani's page).
+   with `[house]`, 8797 for Vaani's page). **Settings → Check** then
+   says *Vaani is listening (kitchen)*.
 6. **Talk to it.** *"Okay Nabu… what's on my calendar tomorrow?"* The
    ring spins while your helper works, then the puck says the answer.
-   If the answer asks you something back, just reply: the puck listens
-   again by itself. *"Okay Nabu… new conversation"* starts afresh, and so
-   does 30 minutes with no questions (change it in Settings → Vaani).
-   The wake word (*Okay Nabu*, *Hey Jarvis* or *Hey Mycroft*) is chosen
-   there too, per puck; the puck switches within a minute.
-   When your agent needs your yes (a browser, sending something), the
-   puck asks you and listens; your phone has the question too. A long
-   job is finished by the puck saying the answer by itself.
-   Only your voice counts as your yes (say *"yes, go ahead"*), and
-   buying or sending needs your spoken PIN: set one on Vaani's page,
-   under PINs.
-   **Settings → Check** says *Vaani is listening (kitchen)*. (When you
-   delete the puck from Home Assistant, its key is wiped too. Vaani
-   gives it a new one the first time it reaches it; you don't do
-   anything.)
+   * **It asks you something back?** Just reply: the puck listens again
+     by itself, no wake word.
+   * **A fresh start:** *"Okay Nabu… new conversation"*. It also starts
+     over by itself after 30 quiet minutes (change that in Settings →
+     Vaani).
+   * **When your agent needs your yes** (to open a browser, send
+     something), the puck asks you out loud and listens. Your phone gets
+     the same question; answer either. Once the puck knows your voice
+     (step 8), only your voice counts: say *"yes, go ahead"*.
+   * **Buying, sending, or acting on what a web page said** needs your
+     spoken PIN, one digit at a time. Set it on Vaani's page under
+     **PINs**; until you do, those steps are asked on your phone.
+   * **A long job** (more than a minute): the puck says it's still
+     working and goes quiet, then says the answer when it's ready.
+     Every question is in **History** from the moment you ask it.
+   * **The wake word** is chosen per puck in **Settings → Vaani**:
+     *Okay Nabu*, *Hey Jarvis* or *Hey Mycroft*. (Hey Jarvis switched on
+     but never woke our puck; if one doesn't work, go back.)
 7. **Watch it work: the Vaani card.** Under **Your pages** there's a
    Vaani card. Its line says how things stand, e.g. *kitchen listening ·
    last question 2 min ago, played*. Open it for Vaani's own page:
    * **Each puck**: green while it's listening, red with the reason.
+   * **A question still being worked on**, on top: *7 min so far ·
+     agent still working…* or *waiting for your yes*.
    * **The last questions**, newest first, each with its steps:
      *woken → heard 0.8s → as owner (the puck's person) → agent 47s →
      spoken 0.4s → played*. The step that failed is red, so a puck that
      said nothing shows you where it stopped. *never fetched* means the
      puck didn't come for the answer, which is usually the firewall.
+   * **Voices** and **PINs**, set and forgotten there.
    A question shows up the moment the puck wakes and fills in as each
-   step ends (*hearing… → agent working… → speaking… → played*), so you
-   can ask at the puck and watch.
+   step ends, so you can ask at the puck and watch.
 8. **Everyone in the house, each their own.**
    * **Settings → Vaani** (it appears once Vaani is on), **The kitchen
      puck**: tick the people it may tell apart, and pick who it answers
@@ -1804,6 +1812,8 @@ house. The program that does it is **Vaani**; it answers through Dvara
      **Learn their voice**. That person says the wake word and any
      sentence at the puck, three times; the puck counts down and the
      page shows how many are left. **Forget** deletes a voice.
+   * **Vaani's page → PINs**: each person's own PIN, for the steps in
+     step 6 that need one.
 
    After that, *"what's on my calendar?"* is answered from the calendar
    of whoever asked. When the puck isn't sure, it says so and answers

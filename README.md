@@ -262,20 +262,20 @@ What `up` wires for you:
   tells them apart; the speaker model is fetched once to this computer
   (`vaani voices fetch`) and mounted, with its settings and voice prints.
 * **The firewall line** names its port: the puck fetches each answer
-  from there.
+  from there (and, with `[house]`, the page's).
 * **`sarathi status`** and **Settings → Check** say whether it's
   running and whether each puck is listening: a puck Vaani can't hold
   is red, with why (a puck with no key file is amber).
-* **A backup** takes its settings folder: the pucks, their keys and
-  Dvara's token.
+* **A backup** takes its settings folder: the pucks, their keys,
+  Dvara's token, the voice prints and the PIN hashes.
 
 Settings → Sarathi has it under *The rest* (on/off) and *Ports*
 (`port`, the answers'; `page_port`, 8797, its page's).
 
 * **Vaani's own page** has a card under Your pages: each puck listening
   or why not, the last questions step by step (woken, heard, whose, the
-  agent's time, played or never fetched), and voices learned and
-  forgotten. `vaani serve` serves it; the card opens it with the key
+  agent's time, played or never fetched), a question still being worked
+  on, voices learned and forgotten, and each person's spoken PIN. `vaani serve` serves it; the card opens it with the key
   Vaani keeps (`~/.local/state/vaani/page.token`). On 127.0.0.1, and on
   the house address too with `[house]`. The card's line is Vaani's own
   status: *kitchen listening · last question 2 min ago, played*.
@@ -283,6 +283,13 @@ Settings → Sarathi has it under *The rest* (on/off) and *Ports*
   tells apart, its wake word (from the ones the puck itself offers), and
   after how many quiet minutes its conversations start over, through
   `vaani puck`, which writes vaani.toml itself.
+
+At the puck, your agent's questions are asked out loud: a yes counts in
+the asker's voice once the puck knows it, and buying, sending, or
+acting on what a web page said needs their spoken PIN (Dvara's waiting
+questions say which, as `always_ask`). A long job is finished by the
+puck saying the answer when it's ready, and every question is in
+History as soon as it's asked.
 
 ### Every page on your home network: `[house]`
 
