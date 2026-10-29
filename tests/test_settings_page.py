@@ -293,7 +293,11 @@ import json, sys
 argv = sys.argv[1:]
 with open({log!r}, "a") as out:
     out.write(json.dumps(argv) + "\\n")
-if argv[0] == "runs":
+if argv[0] == "status":
+    print(json.dumps({{"format": "vaani.status.v1", "serving": True, "pucks": [
+        {{"name": "kitchen", "wake_words": {{"offers": ["Okay Nabu", "Hey Jarvis"],
+                                            "on": ["Hey Jarvis"]}}}}]}}))
+elif argv[0] == "runs":
     print(json.dumps({{"format": "vaani.runs.v1", "runs": [{{"heard": "what day"}}],
                       "pucks": [{{"name": "kitchen", "person": "owner", "people": []}}],
                       "voices": [{{"person": "owner", "samples": 3}}], "enrolling": None}}))
@@ -321,6 +325,7 @@ def test_the_vaani_tab_has_the_pucks_and_voices_but_not_the_questions(with_vaani
     got = ask(with_vaani, "/api/vaani").json()
     assert got["pucks"][0]["name"] == "kitchen" and got["voices"][0]["person"] == "owner"
     assert "runs" not in got                       # those are on Vaani's own page
+    assert got["pucks"][0]["wake_words"]["on"] == ["Hey Jarvis"]
 
 
 def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
@@ -336,6 +341,10 @@ def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
     assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "../k"})[0] == 400
     assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
                                            "fresh_after": "45"})[0] == 200
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                           "wake_word": "Hey Jarvis"})[0] == 200
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                           "wake_word": "x; rm -rf"})[0] == 400
     for wrong in (-1, "soon", 99999, True):
         assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
                                                "fresh_after": wrong})[0] == 400
@@ -344,6 +353,7 @@ def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
     asked = [json.loads(line) for line in with_vaani.vaani_log.read_text().splitlines()]
     assert ["puck", "kitchen", "--person", "house", "--people", "owner,asha"] in asked
     assert ["puck", "kitchen", "--fresh-after", "45"] in asked
+    assert ["puck", "kitchen", "--wake-word", "Hey Jarvis"] in asked
     assert not any("--x" in ",".join(a) or "../k" in a for a in asked)
 
 

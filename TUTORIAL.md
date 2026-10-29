@@ -1769,6 +1769,8 @@ house. The program that does it is **Vaani**; it answers through Dvara
    If the answer asks you something back, just reply: the puck listens
    again by itself. *"Okay Nabu… new conversation"* starts afresh, and so
    does 30 minutes with no questions (change it in Settings → Vaani).
+   The wake word (*Okay Nabu*, *Hey Jarvis* or *Hey Mycroft*) is chosen
+   there too, per puck; the puck switches within a minute.
    **Settings → Check** says *Vaani is listening (kitchen)*. (When you
    delete the puck from Home Assistant, its key is wiped too. Vaani
    gives it a new one the first time it reaches it; you don't do

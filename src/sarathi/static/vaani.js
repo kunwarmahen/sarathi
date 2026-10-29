@@ -32,6 +32,12 @@ function puckForm(p, voiced) {
   const unsure = pick(people.map((x) => [x, x]), p.person);
   const agent = pick([["", "Vaani's default"], ...agents], p.agent || "");
   const quiet = text(p.fresh_after ?? 30, { inputmode: "numeric", size: "5" });
+  // the puck's own wake words, as it told Vaani; none known while it's away
+  const offers = p.wake_words?.offers || [];
+  const on = (p.wake_words?.on || [])[0] || "";
+  const wake = offers.length ? pick(offers.map((w) => [w, w]),
+    offers.find((w) => [w.toLowerCase(), w.toLowerCase().replace(/ /g, "_")]
+      .includes((p.wake_word || "").toLowerCase())) || on) : null;
   const boxes = people.map((x) => {
     const c = check((p.people || []).includes(x));
     c.value = x;
@@ -41,6 +47,7 @@ function puckForm(p, voiced) {
   const go = button("Save", () => vaaniSave({
     do: "puck", puck: p.name, person: unsure.value, agent: agent.value,
     fresh_after: quiet.value.trim(),
+    ...(wake ? { wake_word: wake.value } : {}),
     people: boxes.map((b) => b.querySelector("input")).filter((c) => c.checked).map((c) => c.value),
   }));
   return h("div.card.form", {}, h("h3", {}, `The ${p.name} puck`),
@@ -51,6 +58,10 @@ function puckForm(p, voiced) {
           "Best: a person with only the house's accounts, so one person's mail is never " +
           "read to another. The puck says it wasn't sure."),
     field("Agent", agent),
+    wake ? field("Wake word", wake, `What you say to wake it. Now: ${on || "not known"}. ` +
+                 "A change reaches the puck within a minute.")
+         : h("p.meta", {}, "Wake word: the puck hasn't told Vaani its wake words yet " +
+                           "(is it listening? See Vaani's page)."),
     field("Start a new conversation after this many minutes quiet", quiet,
           "Until then, everything someone asks at this puck is one conversation, so " +
           "“and the one before?” works. After it, the next question starts afresh (the " +

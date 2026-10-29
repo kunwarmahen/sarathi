@@ -242,11 +242,17 @@ def vaani_view(config: Config) -> dict:
     if not config.voice_on:
         return {"on": False}
     got = _vaani_json(["runs", "--limit", "1"])
-    return {"on": True, "pucks": got.get("pucks", []), "voices": got.get("voices", [])}
+    # each puck's wake words, as the puck itself told the running Vaani
+    wakes = {p.get("name"): p.get("wake_words") or {}
+             for p in _vaani_json(["status"]).get("pucks", [])}
+    return {"on": True, "voices": got.get("voices", []),
+            "pucks": [{**p, "wake_words": wakes.get(p.get("name"), {})}
+                      for p in got.get("pucks", [])]}
 
 
 def vaani_do(config: Config, body: dict) -> str:
-    """{"do": "puck", "puck", "person"?, "agent"?, "people"?, "fresh_after"?}:
+    """{"do": "puck", "puck", "person"?, "agent"?, "people"?, "fresh_after"?,
+    "wake_word"?}:
     done by Vaani."""
     if not config.voice_on:
         raise EditError(409, "Vaani is off: turn it on under Settings → Sarathi first")
@@ -262,6 +268,11 @@ def vaani_do(config: Config, body: dict) -> str:
         for key in ("person", "agent"):
             if body.get(key) is not None:
                 argv += [f"--{key}", str(body[key])]
+        if body.get("wake_word") is not None:
+            word = str(body["wake_word"]).strip()
+            if not re.fullmatch(r"[A-Za-z0-9 _-]{1,40}", word):
+                raise EditError(400, "a wake word the puck offers, like Hey Jarvis")
+            argv += ["--wake-word", word]
         if body.get("fresh_after") is not None:
             quiet = body["fresh_after"]
             if isinstance(quiet, str) and quiet.strip().isdigit():

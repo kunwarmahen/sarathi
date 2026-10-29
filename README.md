@@ -280,8 +280,9 @@ Settings → Sarathi has it under *The rest* (on/off) and *Ports*
   the house address too with `[house]`. The card's line is Vaani's own
   status: *kitchen listening · last question 2 min ago, played*.
 * **Settings → Vaani** sets who each puck answers, which people it
-  tells apart, and after how many quiet minutes its conversations start
-  over, through `vaani puck`, which writes vaani.toml itself.
+  tells apart, its wake word (from the ones the puck itself offers), and
+  after how many quiet minutes its conversations start over, through
+  `vaani puck`, which writes vaani.toml itself.
 
 ### Every page on your home network: `[house]`
 
