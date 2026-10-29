@@ -1774,6 +1774,9 @@ house. The program that does it is **Vaani**; it answers through Dvara
    When your agent needs your yes (a browser, sending something), the
    puck asks you and listens; your phone has the question too. A long
    job is finished by the puck saying the answer by itself.
+   Only your voice counts as your yes (say *"yes, go ahead"*), and
+   buying or sending needs your spoken PIN: set one on Vaani's page,
+   under PINs.
    **Settings → Check** says *Vaani is listening (kitchen)*. (When you
    delete the puck from Home Assistant, its key is wiped too. Vaani
    gives it a new one the first time it reaches it; you don't do
@@ -1807,7 +1810,6 @@ house. The program that does it is **Vaani**; it answers through Dvara
    for the "house" person. Starting with *"This is Asha, …"* always
    works.
 
-A spoken PIN for money, at the puck, is next.
 
 ---
 
