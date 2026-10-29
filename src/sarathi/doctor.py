@@ -323,7 +323,14 @@ def _vaani(data: dict, config: Any) -> list[Line]:
     if not data.get("serving"):
         lines.insert(0, Line("red", "vaani", "Vaani isn't listening: the pucks light up "
                              "and nobody answers", "sarathi up", act=UP))
-    elif not lines:
+        return lines
+    # running is not listening: each puck says whether it is held, and why not
+    lines += [Line("red", "vaani", f"the {p['name']} puck isn't listening: "
+                   f"{p.get('problem') or 'not reached'}",
+                   "if Home Assistant still has it, delete it there; else "
+                   "`podman logs sarathi-vaani`")
+              for p in data.get("pucks") or [] if p.get("listening") is False]
+    if not lines:
         names = ", ".join(p["name"] for p in data.get("pucks") or [])
         lines.append(Line("green", "vaani", f"Vaani is listening ({names})"))
     return lines

@@ -84,6 +84,11 @@ class TestAProblemAlreadyKnownIsSaid:
         well = lines(world(vaani={"serving": True, "pucks": [
             {"name": "kitchen", "key": "readable"}]}), config=voiced)
         assert level(well, "vaani") == ["green"]
+        refused = lines(world(vaani={"serving": True, "pucks": [
+            {"name": "kitchen", "key": "readable", "listening": False,
+             "problem": "The device is using plaintext protocol"}]}), config=voiced)
+        assert level(refused, "vaani") == ["red"]                # running isn't listening
+        assert any("kitchen puck isn't listening" in line.said for line in refused)
         assert level(lines(world(vaani={"serving": False})), "vaani") == []   # off
 
     def test_an_expired_sign_in_is_red_with_the_command(self):
