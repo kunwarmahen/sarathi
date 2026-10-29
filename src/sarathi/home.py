@@ -82,6 +82,7 @@ and writes its own file; a person signed in gets 403:
     POST /api/backup                       `sarathi backup`, now (and Samay's backup road,
                                            by the backup key, which opens this alone)
     POST /api/backup/nightly               Samay asked once to back up every night
+    GET  /api/schedules/house              which of those three Samay already has
     POST /api/settings/image               `sarathi image && sarathi up`, behind the answer
     POST /api/settings/sarathi             {table: {key: value}}: sarathi.toml
     POST /api/settings/key/NAME            {"value"}: a key into secrets.env
@@ -559,6 +560,29 @@ class Home:
                               "Every night at 03:00 Samay replays your kept tests. "
                               "You hear about it only when one breaks.")
 
+    def house_schedules(self) -> dict[str, Any]:
+        """Which of the house's own runs Samay has (doctor, backup, tests),
+        each as ``{"when": ...}`` or None: the Settings buttons say so
+        instead of looking as if nobody pressed them."""
+        out: dict[str, Any] = {"samay": False, "doctor": None, "backup": None, "tests": None}
+        if not self.config.clock_on:
+            return out
+        try:
+            listed = (self._ask_samay or _samay)(self.config, "GET", "schedules")
+        except (OSError, ValueError, urllib.error.URLError):
+            return out
+        rows = listed.get("schedules", listed) if isinstance(listed, dict) else listed
+        out["samay"] = True
+        for runner in ("doctor", "backup", "tests"):
+            row = next((r for r in rows or [] if r.get("runner") == runner), None)
+            if row is not None:
+                # Samay's own words for it: "every day at 07:30"
+                out[runner] = {"id": row.get("id"), "state": row.get("state", "active"),
+                               "when": row.get("sentence") or "every day " + {
+                                   "doctor": MORNING, "backup": BACKUP_NIGHTLY,
+                                   "tests": NIGHTLY}[runner]["when"]}
+        return out
+
     def _ask_once(self, schedule: dict[str, Any], runner: str, already: str,
                   done: str) -> tuple[int, str]:
         """Samay asked for ``schedule`` -- unless one on ``runner`` is there."""
@@ -952,6 +976,10 @@ def _handler(server: HomeServer):
                 if self._owner() is None:
                     return None
                 return self._json(200, server.home.backups())
+            if url.path == "/api/schedules/house":
+                if self._owner() is None:
+                    return None
+                return self._json(200, server.home.house_schedules())
             if url.path == "/api/version":
                 if self._owner() is None:
                     return None

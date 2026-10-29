@@ -272,6 +272,9 @@ button.open:disabled { opacity: .55; cursor: progress; }
 #settings .buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 #settings .buttons .open { margin-top: 0; }
 #settings-said { margin-top: 10px; overflow-wrap: anywhere; }
+/* every answer a Settings button gets is seen, however far down the tab is */
+#settings-said:not(:empty) { position: sticky; bottom: 0; padding: 8px 10px;
+  background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; }
 .apply { margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px;
         border-bottom: 1px solid var(--line); }

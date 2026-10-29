@@ -351,6 +351,22 @@ class TestTheMorningRoad:
         assert asked[1] == ("POST", doctor_home_morning())
         assert "already" in home.morning()[1]
 
+    def test_the_page_can_see_the_morning_check_is_already_on(self, tmp_path):
+        from test_home import config
+
+        def samay(cfg, method, path, body=None):
+            return {"schedules": [{"id": "bfaea182", "runner": "doctor", "state": "active",
+                                   "sentence": "every day at 07:30"}]}
+        got = Home(config(tmp_path), lambda: {}, ask_samay=samay).house_schedules()
+        assert got["samay"] and got["doctor"] == {"id": "bfaea182", "state": "active",
+                                                  "when": "every day at 07:30"}
+        assert got["backup"] is None and got["tests"] is None
+
+        def gone(cfg, method, path, body=None):
+            raise OSError("refused")
+        home = Home(config(tmp_path), lambda: {}, ask_samay=gone)
+        assert home.house_schedules()["samay"] is False
+
     def test_samay_is_told_where_and_with_which_key(self, tmp_path, monkeypatch):
         from sarathi import services
         from sarathi.config import Pages

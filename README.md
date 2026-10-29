@@ -882,7 +882,10 @@ disk and the iPhone's signature need root or a Mac, so they stay lines
 to type. **Check every morning** asks Samay, once, for a 07:30 schedule
 on its doctor road: it asks the doctor with a key that opens that one
 answer and nothing else, and tells you only what's newly wrong (Samay's
-notes/09).
+notes/09). Both it and **Back up every night** ask `GET
+/api/schedules/house` when the tab opens and say so on the button once
+Samay has the schedule, with the answer to a press beside it; any other
+Settings answer stays in view at the foot of the window.
 
 Everyone else in the house has a check of their own: `/doctor` in their
 chat (Telegram, or the home page) answers in the same red, amber and

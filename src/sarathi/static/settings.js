@@ -810,19 +810,15 @@ const CHECK_WORDS = { red: "Needs fixing", amber: "Worth a look", green: "Fine" 
 function drawCheckTab() {
   const out = h("div.doctor", { "aria-live": "polite" });
   const go = button("Check everything", () => runCheck(go, out));
-  const morning = button("Check every morning", async () => {
-    morning.disabled = true;
-    try { said((await api("/api/doctor/morning", {})).said); }
-    catch (err) { said(err.message, true); }
-    finally { morning.disabled = false; }
-  }, "quiet");
+  const morning = houseRun("doctor", "Check every morning", "Checked by Samay",
+                           "/api/doctor/morning");
   const intro = h("p.meta", {}, "Asks every program how it's doing: what's running, " +
     "the image, the firewall, your accounts and when a Google sign-in ends, phones, " +
     "the model, last day's schedules, disk. Nothing changes until you press a fix. " +
     "It takes a few seconds. Every morning: Samay asks the same at 07:30 and tells " +
     "you only what's new.");
   if (sets.checked) drawCheck(out, sets.checked);
-  return [intro, row(go, morning), out, versionCard(), backupsCard()];
+  return [intro, row(go, ...morning), out, versionCard(), backupsCard()];
 }
 
 // ---- Version: `sarathi version`, which commit of each project runs -----------------
@@ -911,6 +907,33 @@ async function showVersion(body) {
     h("div.versions", {}, ...rows), ...(acts.length ? [row(...acts)] : []));
 }
 
+// ---- A run of the house's own that Samay keeps (the morning check, the night's
+// backup): the button says when it's on already, and its answer is said beside
+// it -- the Settings line at the foot of the page is off screen from here.
+
+function houseRun(runner, label, onWords, path) {
+  const b = button(label, async () => {
+    b.disabled = true;
+    try { note.textContent = (await api(path, {})).said; note.classList.remove("warn"); }
+    catch (err) { note.textContent = err.message; note.classList.add("warn"); }
+    b.disabled = false;
+    showHouseRun(runner, b, onWords);
+  }, "quiet");
+  const note = h("span.meta", { role: "status" });
+  showHouseRun(runner, b, onWords);
+  return [b, note];
+}
+
+async function showHouseRun(runner, b, onWords) {
+  let got;
+  try { got = await api("/api/schedules/house"); } catch { return; }
+  const run = got[runner];
+  if (run && run.state === "active") {
+    b.textContent = `✓ ${onWords}, ${run.when}`;
+    b.title = `Samay's schedule ${run.id}: stop or change it on Samay's page`;
+  }
+}
+
 // ---- Backups: `sarathi backup`, from here -------------------------------------------
 
 function backupsCard() {
@@ -925,12 +948,8 @@ function backupsCard() {
     } catch (err) { said(err.message, true); }
     finally { now.disabled = false; showBackups(state); }
   });
-  const nightly = button("Back up every night", async () => {
-    nightly.disabled = true;
-    try { said((await api("/api/backup/nightly", {})).said); }
-    catch (err) { said(err.message, true); }
-    finally { nightly.disabled = false; }
-  }, "quiet");
+  const nightly = houseRun("backup", "Back up every night", "Backed up by Samay",
+                           "/api/backup/nightly");
   showBackups(state);
   return h("div.card.form", {}, h("h3", {}, "Backups"),
     h("p.meta", {}, "One locked file of everything here: your accounts and sign-ins, " +
@@ -938,7 +957,7 @@ function backupsCard() {
       "memories and every setting. Only your backup passphrase opens it; ",
       h("code", {}, "sarathi restore FILE"), " puts it all back, here or on a new " +
       "computer. Where it goes and how many are kept: Settings → Sarathi, [backup]."),
-    state, row(now, nightly));
+    state, row(now, ...nightly));
 }
 
 async function showBackups(state) {
