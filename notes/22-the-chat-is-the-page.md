@@ -98,6 +98,6 @@ width.
   they ran, their schedules and files, and you read it from top to
   bottom. Splitting it would hide the questions waiting for you behind a
   click.
-* **History stays a button in the chat**, not an icon at the top. It is
-  about the chat (search what you said, carry one on), so it sits with
-  the other words under the messages.
+* ~~**History stays a button in the chat**, not an icon at the top.~~
+  It became the list beside the chat, and the icons at the top became a
+  menu from your name at its foot ([note 33](33-a-list-beside-the-chat.md)).

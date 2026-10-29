@@ -6,15 +6,18 @@
 // referrer. Someone else in the house signs in instead (an invite link,
 // "#invite=", once; then their name and password) and gets their own chat,
 // nothing else: the server holds that line, this script only draws it.
-// The chat is the page; Your pages and Settings are views of their own,
-// behind the icons at the top, each at its own address (#pages, #settings)
-// so a reload stays put.
+// The page is a chat app: your conversations listed at the left (every
+// road's: this page, Telegram, a puck), the one you're in beside them.
+// Notices, Your pages and Settings are views of the same pane, each at
+// its own address (#notices, #pages, #settings) so a reload stays put;
+// Your pages and Settings open from your name at the foot of the list.
 "use strict";
 
 const KEY = "sarathi.home.token";
 const SESSION = "sarathi.home.session";
 const EVERY = 20000;
-const VIEWS = ["chat", "pages", "settings"];
+const VIEWS = ["chat", "notices", "pages", "settings"];
+const SIDE = "sarathi.side";
 
 function keep(name, value) {
   try {
@@ -194,40 +197,131 @@ async function switchMemory(via) {
 
 function show(id, on) { document.getElementById(id).hidden = !on; }
 
-// ---- the three views -----------------------------------------------------------
+// ---- the views ------------------------------------------------------------------
 // Each section keeps its own `hidden` (whether there is anything to show);
 // which view is on is body[data-view], read by the stylesheet. Someone in
-// the house has only the chat; the owner with Dvara off has no chat, so
-// their page opens on Your pages instead.
+// the house has the chat and their notices; the owner with Dvara off has
+// no chat, so their page opens on Your pages instead.
 
 function wantedView() {
   const asked = location.hash.slice(1);
   return VIEWS.includes(asked) ? asked : "chat";
 }
 
+const TITLES = { notices: "Notices", pages: "Your pages", settings: "Settings" };
+
 function drawView() {
   if (!me) {
     document.body.dataset.view = "signin";
-    show("views", false);
+    show("side", false);
+    show("bar", false);
     return;
   }
-  let view = me.owner ? wantedView() : "chat";
-  if (view === "chat" && me.owner && !chat.on) view = "pages";
+  show("side", true);
+  show("bar", true);
+  let view = wantedView();
+  if (!me.owner && (view === "pages" || view === "settings")) view = "chat";
+  if (view === "chat" && !chat.on && me.owner) view = "pages";
   const was = document.body.dataset.view;
   document.body.dataset.view = view;
-  show("views", me.owner);
-  for (const a of document.querySelectorAll(".view-icon")) {
-    if (a.dataset.view === view) a.setAttribute("aria-current", "page");
-    else a.removeAttribute("aria-current");
-    a.hidden = a.dataset.view === "chat" && !chat.on;
-  }
-  // with no chat there is nothing to go back to
-  show("back-row", view !== "chat" && chat.on);
+  const bell = document.getElementById("bell");
+  if (view === "notices") bell.setAttribute("aria-current", "page");
+  else bell.removeAttribute("aria-current");
+  bell.hidden = !chat.on;
+  document.getElementById("bar-title").textContent =
+    view === "chat" ? chatTitle() : TITLES[view];
+  if (view === "notices" && was !== "notices") drawNotices(true);
   if (view === "chat" && was !== "chat") {
-    const box = document.getElementById("lines");
+    const box = document.getElementById(chat.reading ? "past" : "lines");
     box.scrollTop = box.scrollHeight;
+    if (chat.on) fitText();
   }
-  if (view !== was && was) window.scrollTo(0, 0);
+  if (view !== was && was) document.querySelector(".pane > main").scrollTop = 0;
+  drawConvsMark();
+}
+
+/* -- the list at the left: shown, hidden, and on a phone slid over --------- */
+
+const phone = window.matchMedia("(max-width: 760px)");
+
+function openSide() {
+  if (phone.matches) {
+    document.body.classList.add("side-shown");
+    show("scrim", true);
+  } else {
+    document.body.classList.remove("side-closed");
+    keep(SIDE, "");
+  }
+}
+
+function closeSide() {
+  if (phone.matches) {
+    document.body.classList.remove("side-shown");
+    show("scrim", false);
+  } else {
+    document.body.classList.add("side-closed");
+    keep(SIDE, "closed");
+  }
+}
+
+// on a phone the list goes once something in it is picked
+function sideDone() { if (phone.matches) closeSide(); }
+
+/* -- your name at the foot of the list: the rest of the page, and out ------ */
+
+const account = { setu: null };
+
+function menuItem(label, hint, onClick, cls = "") {
+  const b = h(`button${cls ? "." + cls : ""}`, { type: "button", role: "menuitem" },
+    h("span", {}, label), hint ? h("span.hint", {}, hint) : null);
+  b.addEventListener("click", (e) => { e.stopPropagation(); closeMenus(); onClick(b); });
+  return b;
+}
+
+function go(view) { location.hash = view; sideDone(); }
+
+function drawAccount() {
+  document.getElementById("account-name").textContent = me.owner ? `${me.name} (runs this house)` : me.name;
+  document.getElementById("account-avatar").textContent = (me.name || "?").slice(0, 1).toUpperCase();
+  const items = [];
+  if (me.owner) {
+    items.push(menuItem("Your pages", "Each program's own page, already signed in", () => go("pages")));
+    items.push(menuItem("Settings", "Every settings file, and the people in the house", () => go("settings")));
+  }
+  if (chat.on) {
+    items.push(menuItem("Notices", "What was sent to you, and on your phone", () => go("notices")));
+    items.push(menuItem("Turned down", "What you said no to remembering", openDeclined));
+  }
+  if (me.owner && account.setu) {
+    items.push(menuItem("My accounts", "Your sign-ins, on Setu's page", () => window.open(account.setu, "_blank", "noopener,noreferrer")));
+  } else if (!me.owner && me.chat) {
+    items.push(menuItem("My accounts", "A link to your own sign-ins page", askAccounts));
+  }
+  if (!me.owner) {
+    items.push(h("hr"));
+    items.push(menuItem("Sign out", null, async () => {
+      try { await api("/api/sign-out", {}); } catch (_) { /* gone already */ }
+      keep(SESSION, "");
+      location.reload();
+    }));
+  }
+  document.getElementById("account-menu").replaceChildren(...items);
+}
+
+function closeMenus(except) {
+  for (const m of document.querySelectorAll(".menu:not([hidden])")) {
+    if (m !== except) m.hidden = true;
+  }
+  for (const b of document.querySelectorAll('[aria-expanded="true"]')) {
+    if (!except || !except.parentElement.contains(b)) b.setAttribute("aria-expanded", "false");
+  }
+}
+
+function toggleMenu(button, menu) {
+  const opening = menu.hidden;
+  closeMenus(opening ? menu : undefined);
+  menu.hidden = !opening;
+  button.setAttribute("aria-expanded", String(opening));
 }
 
 function signedOut(said) {
@@ -238,7 +332,6 @@ function signedOut(said) {
   me = null;
   for (const id of ["chat", "pages", "people"]) show(id, false);
   drawView();
-  document.getElementById("facts").replaceChildren();
   signInForm(invite && !said ? "invite" : "sign-in", said);
 }
 
@@ -286,18 +379,18 @@ async function refresh() {
   }
   show("pages", true);
   const up = body.pieces.filter((p) => p.up).length;
+  // your own accounts: Setu's page for your own folder, already signed in
   const setu = body.pieces.find((p) => p.name === "setu" && p.up);
-  document.getElementById("facts").replaceChildren(
-    h("span", {}, `${up} of ${body.pieces.length} running`),
-    // your own accounts: Setu's page for your own folder, already signed in
-    setu ? h("a", { href: setu.open, target: "_blank", rel: "noopener noreferrer" },
-             "My accounts") : null);
+  account.setu = setu ? setu.open : null;
+  document.getElementById("facts").textContent = `${up} of ${body.pieces.length} running`;
   const cards = body.pieces.map(card);
   if (body.memory) cards.push(memoryCard(body.memory));
   if (body.tests) cards.push(testsCard(body.tests, body.pieces.find((p) => p.name === "yantra")));
   document.getElementById("pieces").replaceChildren(...cards);
   if (body.people) drawPeople();
   if (body.chat && !chat.on) { startChat(); drawPush(); }
+  drawAccount();
+  if (chat.on) lookNotices();
   if (!sets.data && !document.getElementById("settings").dataset.asked) {
     document.getElementById("settings").dataset.asked = "1";
     drawSettings();
@@ -311,54 +404,43 @@ async function refresh() {
 // ---- someone in the house: their chat, and a way out ---------------------------
 
 function drawPerson() {
-  const out = h("button.linkish", { type: "button" }, "Sign out");
-  out.addEventListener("click", async () => {
-    try { await api("/api/sign-out", {}); } catch (_) { /* gone already */ }
-    keep(SESSION, "");
-    location.reload();
-  });
-  document.getElementById("facts").replaceChildren(
-    h("span", {}, `Signed in as ${me.name}`), ...(me.chat ? [accountsButton()] : []), out);
-  document.getElementById("h-chat").textContent = "Talk to your agents";
   document.getElementById("foot-said").textContent =
     "Your chat goes to Dvara as you, with your own allowance and rules. " +
     "The person running this house sees which agent you used and what it cost, " +
     "never what you said.";
+  if (me.chat && !chat.on) { startChat(); drawPush(); }
+  drawAccount();
   drawView();
   if (!me.chat) {
-    document.getElementById("updated").textContent =
-      "Dvara isn't running right now, so there's no chat. Try again later.";
+    problem("Dvara isn't running right now, so there's no chat. Try again later.");
+    show("chat", true);
     return;
   }
-  if (!chat.on) { startChat(); drawPush(); }
+  lookNotices();
   document.getElementById("updated").textContent =
     `Updated ${new Date().toLocaleTimeString()}`;
 }
 
 // Their own Setu page, by the one-time link Dvara makes for /accounts page.
-// Fetched on the press and shown as a link to tap, since a phone blocks a
-// window opened after a wait.
-function accountsButton() {
-  const button = h("button.linkish", { type: "button" }, "My accounts");
-  const said = h("span.accounts-said", { role: "status" });
-  button.addEventListener("click", async () => {
-    button.disabled = true;
-    said.textContent = "Asking for your link…";
-    try {
-      const got = await api("/api/chat/accounts-page", {});
-      if (got.url) {
-        said.replaceChildren(
-          h("a", { href: got.url, target: "_blank", rel: "noopener" }, "Open my accounts page"),
-          " (works once, on this device, for 10 minutes)");
-      } else {
-        said.textContent = got.said;
-      }
-    } catch (err) {
-      said.textContent = `That didn't work: ${err.message}`;
+// Fetched on the press and shown in the menu as a link to tap, since a
+// phone blocks a window opened after a wait.
+async function askAccounts() {
+  const menu = document.getElementById("account-menu");
+  const said = h("div.said", { role: "status" }, "Asking for your link…");
+  menu.append(said);
+  menu.hidden = false;
+  try {
+    const got = await api("/api/chat/accounts-page", {});
+    if (got.url) {
+      said.replaceChildren(
+        h("a", { href: got.url, target: "_blank", rel: "noopener" }, "Open my accounts page"),
+        h("span.hint", {}, "Works once, on this device, for 10 minutes"));
+    } else {
+      said.textContent = got.said;
     }
-    button.disabled = false;
-  });
-  return h("span.accounts", {}, button, said);
+  } catch (err) {
+    said.textContent = `That didn't work: ${err.message}`;
+  }
 }
 
 // Notices on a phone: the house's ntfy server and this person's own topic.
@@ -513,11 +595,15 @@ async function drawPeople() {
 // Answers are drawn as markdown (md.js, escaped first, the same file Yantra's
 // page uses). Every button here sends words Dvara answers on every channel:
 // /skills, /tools, /schedules, /memory, /new, /skills keep N.
+// THE WINDOW IS THE CONVERSATION YOU'RE IN. /new's answer empties it (and
+// draws nothing: the greeting shows instead), and a conversation opened
+// again starts it over with that conversation's own words. What was sent
+// to you unasked goes to the bell (Notices), not between your words.
 
 const CHAT_EVERY = 3000;
 const CHAT_BUSY_EVERY = 700;
 const chat = { on: false, last: 0, timer: null, agents: [], sending: false, busy: false,
-               lessons: [], voice: false };
+               lessons: [], voice: false, reading: null, title: "", waiting: 0 };
 
 function api(path, body) {
   const init = { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" };
@@ -687,15 +773,16 @@ function tapsView(ln) {
   }));
 }
 
-// A conversation opened again (/chats N): its own words, folded under the
-// answer that says you're back in it -- open by default, so it reads as
-// the conversation you're now in.
+// A conversation opened again (/chats N): a mark that you're back in it,
+// then its own words as the chat they were, so it reads as the
+// conversation you're now in.
 function transcriptView(ln) {
-  const rows = ln.transcript.map((t) => h(`div.tline.${t.who}`, {},
-    h("span.tag", {}, t.who === "you" ? "You" : (ln.agent || "Agent")),
-    bubble(t.text, t.who)));
-  return h("details.transcript", { open: "" },
-    h("summary", {}, `The conversation (${ln.transcript.length} messages)`), ...rows);
+  const title = ln.text.split("\n")[0].replace(/^Back in:\s*/, "");
+  return [h("div.line.back", {}, h("span.tag", {}, `Back in · ${when(ln.at)}`)),
+          ...ln.transcript.map((t) => h(`div.line.${t.who}`, {},
+            t.who === "you" ? null : h("span.tag", {}, h("span.who", {}, ln.agent || "Agent")),
+            bubble(t.text, t.who))),
+          title];
 }
 
 // What an answer's turn did, step by step (Dvara's runsteps): folded under
@@ -749,22 +836,20 @@ function lineView(ln) {
   const failed = ln.who === "agent" && ln.stop_reason
     && !["held", "skills", "seen", "memory", "new", "files", "accounts", "phone"]
       .includes(ln.stop_reason);
-  const label = ln.who === "you" ? `You${chat.agents.length > 1 ? " → " + ln.agent : ""}`
-    : ln.who === "notice" ? "Sent to you"
-    : (ln.agent || "Agent");
+  const tag = ln.who === "you"
+    ? (chat.agents.length > 1 ? h("span.tag", {}, `to ${ln.agent} · ${when(ln.at)}`) : null)
+    : h("span.tag", {}, h("span.who", {}, ln.agent || "Agent"), ` · ${when(ln.at)}`);
   return h(`div.line.${ln.who}${failed ? ".failed" : ""}`, {},
-    h("span.tag", {}, `${label} · ${when(ln.at)}`),
-    // a reopened conversation shows itself below: only "Back in: …" here
-    ln.text ? bubble(ln.transcript ? ln.text.split("\n")[0] : ln.text, ln.who) : null,
+    tag,
+    ln.text ? bubble(ln.text, ln.who) : null,
     ln.sent ? h("div.sent", {}, `📎 ${ln.sent.join(", ")}`) : null,
     ln.offer ? offerView(ln.offer) : null,
     ln.heard ? h("div.heard", {}, `I heard: "${ln.heard}"`) : null,
     ln.taps ? tapsView(ln) : null,
-    ln.transcript ? transcriptView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
     ln.steps && ln.who === "agent" ? stepsView(ln) : null,
-    chat.voice && ln.who !== "you" && ln.text && !ln.transcript ? listenButton(ln) : null,
+    chat.voice && ln.who !== "you" && ln.text ? listenButton(ln) : null,
     (ln.files || []).map((name, n) => {
       if (PICTURE.test(name)) return picture(ln.id, n, name);
       const b = h("button.file", { type: "button" }, `⤓ ${name}`);
@@ -830,14 +915,27 @@ function draw(data) {
   const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   const live = document.getElementById("live") || h("div", { id: "live" });
   const running = data.live || [];
-  if (!chat.last && !data.lines.length && !running.length) {
-    box.replaceChildren(h("div.empty", {}, "Nothing yet. Say hello."), live);
-  } else if (data.lines.length) {
+  let changed = false;
+  if (!chat.last) { box.replaceChildren(live); chat.title = ""; }
+  if (data.lines.length) {
     const fresh = Boolean(chat.last);   // lines that came while the page was open
-    if (!chat.last) box.replaceChildren(live);
     for (const ln of data.lines) {
-      // /new's answer: the conversation before it is in History, not here
-      if (ln.fresh) { queued.length = 0; stopVoice(); box.replaceChildren(live); }
+      if (ln.who === "notice") { lookNotices(); continue; }   // the bell's
+      changed = true;
+      // /new's answer: the window starts over, and says nothing itself
+      if (ln.fresh) {
+        queued.length = 0; stopVoice(); box.replaceChildren(live); chat.title = "";
+        continue;
+      }
+      if (ln.transcript) {
+        // back in an old one: its words are the window now
+        box.replaceChildren(live);
+        const [...views] = transcriptView(ln);
+        chat.title = views.pop();
+        for (const v of views) box.insertBefore(v, live);
+        continue;
+      }
+      if (ln.who === "you" && !chat.title) chat.title = (ln.text || "").split("\n")[0].slice(0, 80);
       const view = lineView(ln);
       box.insertBefore(view, live);
       const listen = view.querySelector("button.listen");
@@ -850,11 +948,49 @@ function draw(data) {
   if (atEnd || data.lines.some((l) => l.who === "you")) box.scrollTop = box.scrollHeight;
   document.getElementById("waiting").replaceChildren(
     ...data.asks.map(askView), ...data.holds.map(holdView));
+  chat.waiting = data.asks.length + data.holds.length;
+  drawBell();
   chat.lessons = data.lessons || [];
   drawLesson();
   document.getElementById("chat-state").textContent =
     data.busy.length ? `${data.busy.join(", ")} is working…` : "";
+  const wasBusy = chat.busy;
   chat.busy = data.busy.length > 0;
+  drawHello();
+  if (document.body.dataset.view === "chat") {
+    document.getElementById("bar-title").textContent = chatTitle();
+  }
+  // a new conversation shows in the list once it has an answer
+  if (changed && (wasBusy && !chat.busy || data.lines.some((l) => l.who === "agent"))) lookConvs();
+}
+
+function chatTitle() {
+  if (chat.reading) return chat.reading.title;
+  // Dvara's own title when it has one (a name you gave it, too)
+  const here = chat.title ? openHere() : null;
+  return (here && here.title) || chat.title || "New chat";
+}
+
+// The greeting, on a chat with nothing in it yet.
+function drawHello() {
+  const empty = !chat.reading && !document.querySelector("#lines > .line")
+    && !document.querySelector("#live > *");
+  show("hello", empty);
+}
+
+const SUGGEST = [
+  ["What can you do for me?", null],
+  ["Show my skills", "/skills"],
+  ["What's on my schedule?", "/schedules"],
+  ["What do you remember about me?", "/memory"],
+];
+
+function drawSuggest() {
+  document.getElementById("suggest").replaceChildren(...SUGGEST.map(([words, word]) => {
+    const b = h("button", { type: "button" }, words);
+    b.addEventListener("click", () => send(word || words));
+    return b;
+  }));
 }
 
 // One look at a time: two at once (the timer's, and the one after a send)
@@ -955,9 +1091,24 @@ async function send(text) {
   const button = document.querySelector("#say .send");
   button.disabled = true;
   try {
+    // writing under one from the list carries it on: it's opened here
+    // first (it stays open where else it was), then the words go to it
+    const row = chat.reading;
+    if (row && !row.here) {
+      await api("/api/chat", { agent: row.agent, text: `/chats open ${row.id}` });
+    }
+    const to = row ? row.agent : agent;
+    if (row && row.here) {
+      // the window goes on from its words, which only the reading had
+      const box = document.getElementById("lines");
+      const live = document.getElementById("live");
+      for (const ln of document.querySelectorAll("#past > .line")) box.insertBefore(ln, live);
+      chat.title = row.title;
+    }
+    stopReading();
     const files = await Promise.all(chosen.map(async (f) => ({ name: f.name,
                                                                data: await asBase64(f) })));
-    await api("/api/chat", files.length ? { agent, text, files } : { agent, text });
+    await api("/api/chat", files.length ? { agent: to, text, files } : { agent: to, text });
     chosen.length = 0;
     drawChosen();
     problem("");
@@ -992,19 +1143,22 @@ function drawLesson() {
     `${how} ${agent}: ${lesson.task}. ${lesson.told} step(s) so far; ${next}.`;
 }
 
+function openTeach() {
+  const box = document.getElementById("teach");
+  const what = document.getElementById("teach-what");
+  if ((chat.lessons || []).some((l) => l.agent === document.getElementById("agent").value)) {
+    problem("A lesson is open with this agent: press Done or Stop first.");
+    return;
+  }
+  what.value = "";
+  box.returnValue = "";        // Escape leaves the last open's answer otherwise
+  box.showModal();
+  what.focus();
+}
+
 function startTeach() {
   const box = document.getElementById("teach");
   const what = document.getElementById("teach-what");
-  document.getElementById("teach-open").addEventListener("click", () => {
-    if ((chat.lessons || []).some((l) => l.agent === document.getElementById("agent").value)) {
-      problem("A lesson is open with this agent: press Done or Stop first.");
-      return;
-    }
-    what.value = "";
-    box.returnValue = "";        // Escape leaves the last open's answer otherwise
-    box.showModal();
-    what.focus();
-  });
   box.addEventListener("close", () => {
     const how = document.querySelector('input[name="teach-how"]:checked')?.value;
     const task = what.value.trim();
@@ -1013,21 +1167,162 @@ function startTeach() {
   });
   document.getElementById("lesson-done").addEventListener("click", () => send("/learn done"));
   document.getElementById("lesson-stop").addEventListener("click", () => send("/learn stop"));
-  document.getElementById("agent").addEventListener("change", drawLesson);
+  document.getElementById("agent").addEventListener("change", () => { drawLesson(); drawConvsMark(); });
 }
 
 async function say(event) {
   event.preventDefault();
   const text = document.getElementById("text");
-  if (await send(text.value)) text.value = "";
+  if (await send(text.value)) { text.value = ""; fitText(); }
 }
 
-/* -- history: every conversation, kept by Dvara as it goes (past.py) ----------
-   Searched by any words in it (Dvara's full-text index, every conversation
-   and not only the rows drawn), read the way it looked, carried on in this
-   chat, or deleted for good. */
+// The box grows with what's written, up to a few lines.
+function fitText() {
+  const text = document.getElementById("text");
+  text.style.height = "auto";
+  // not drawn yet (the chat still hidden): its own one row, measured later
+  text.style.height = text.scrollHeight ? `${text.scrollHeight}px` : "";
+}
 
-const past = { q: "", timer: null };
+/* -- the words your agent answers: behind + and typed after / -----------------
+   Each sends what a person would type on Telegram. Teach and Turned down
+   open their own boxes. The / list narrows as you type and goes away when
+   nothing matches, so a word it doesn't know is still sent as written. */
+
+const WORDS = [
+  ["/skills", "Skills", "What it has learned, and what's on offer"],
+  ["/learn", "Learn this", "Keep what it just did as a skill"],
+  ["teach", "Teach…", "A job one step at a time, by telling or showing"],
+  ["/tools", "Tools", "What it can use"],
+  ["/schedules", "Schedules", "What it does by itself, and when"],
+  ["/memory", "Memory", "What it remembers about you"],
+  ["declined", "Turned down…", "What you said no to remembering"],
+  ["/phone", "Phone screen", "Your phone's screen now"],
+  ["/doctor", "Check what's mine", "Accounts, schedules, watches, phones, limits"],
+  ["/chats", "Conversations", "Every one, as a list in the chat"],
+];
+
+function useWord(word) {
+  closeMenus();
+  if (word === "teach") return openTeach();
+  if (word === "declined") return openDeclined();
+  const text = document.getElementById("text");
+  text.value = "";
+  fitText();
+  send(word);
+}
+
+function drawPlus() {
+  document.getElementById("plus-menu").replaceChildren(...WORDS.map(([word, label, hint]) =>
+    menuItem(label, hint, () => useWord(word))));
+}
+
+const slash = { at: 0, shown: [] };
+
+function drawSlash() {
+  const text = document.getElementById("text");
+  const menu = document.getElementById("slash");
+  const typed = text.value;
+  if (!/^\/\S*$/.test(typed)) { menu.hidden = true; return; }
+  slash.shown = WORDS.filter(([word]) => word.startsWith("/") && word.startsWith(typed.toLowerCase()));
+  if (!slash.shown.length) { menu.hidden = true; return; }
+  slash.at = Math.min(slash.at, slash.shown.length - 1);
+  menu.replaceChildren(...slash.shown.map(([word, label, hint], i) => {
+    const b = h("button", { type: "button", role: "option",
+      "aria-selected": String(i === slash.at) }, h("span", {}, `${word} — ${label}`), h("span.hint", {}, hint));
+    b.addEventListener("mousedown", (e) => { e.preventDefault(); useWord(word); });
+    return b;
+  }));
+  menu.hidden = false;
+}
+
+function slashKeys(e) {
+  const menu = document.getElementById("slash");
+  if (menu.hidden) return false;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const n = slash.shown.length;
+    slash.at = (slash.at + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+    drawSlash();
+    return true;
+  }
+  if ((e.key === "Enter" && !e.shiftKey) || e.key === "Tab") {
+    e.preventDefault();
+    useWord(slash.shown[slash.at][0]);
+    return true;
+  }
+  if (e.key === "Escape") { e.preventDefault(); menu.hidden = true; return true; }
+  return false;
+}
+
+/* -- the bell: what was sent to you unasked, and questions waiting ----------
+   Dvara keeps what was sent to you (a schedule's answer, a watch, a sign-in
+   that stopped) whatever New chat cleared; this browser remembers how far
+   you've read. The count adds the questions waiting for your yes, which
+   stay in the chat that asked. */
+
+const notices = { rows: [], looking: false };
+
+function readKey() { return `sarathi.notices.read.${me ? me.name : ""}`; }
+
+async function lookNotices() {
+  if (notices.looking || !chat.on) return;
+  notices.looking = true;
+  try {
+    notices.rows = (await api("/api/chat/notices")).notices;
+    drawBell();
+    if (document.body.dataset.view === "notices") drawNotices(false);
+  } catch (_) { /* the bell waits for the next look */ }
+  notices.looking = false;
+}
+
+function unread() {
+  const seen = Number(kept(readKey()) || 0);
+  return notices.rows.filter((n) => n.id > seen).length;
+}
+
+function drawBell() {
+  const n = unread() + chat.waiting;
+  const count = document.getElementById("bell-count");
+  count.hidden = !n;
+  count.textContent = n > 99 ? "99+" : String(n);
+  document.title = n ? `(${n}) Sarathi` : "Sarathi";
+}
+
+function drawNotices(opening) {
+  const seen = Number(kept(readKey()) || 0);
+  const rows = notices.rows.map((n) => h(`article.notice${n.id > seen ? ".unread" : ""}`, {},
+    h("div.meta", {}, `${when(n.at)}${n.agent ? ` · ${n.agent}` : ""}`),
+    (() => { const b = bubble(n.text, "notice"); b.classList.add("notice-text"); return b; })(),
+    (n.files || []).map((name, i) => {
+      const b = h("button.file.quiet", { type: "button" }, `⤓ ${name}`);
+      b.addEventListener("click", () => download(n.id, i, name));
+      return b;
+    })));
+  document.getElementById("notices-rows").replaceChildren(...(rows.length ? rows
+    : [h("p.empty", {}, "Nothing yet. What a schedule or a watch sends you shows here.")]));
+  const waiting = chat.waiting;
+  const toChat = h("button.yes", { type: "button" }, "Go to the chat");
+  toChat.addEventListener("click", () => go("chat"));
+  document.getElementById("notices-waiting").replaceChildren(...(waiting
+    ? [h("div.ask", {}, h("div.q", {}, `${waiting} question${waiting === 1 ? "" : "s"} waiting for your yes`),
+         h("div.buttons", {}, toChat))] : []));
+  // opened, they're read; the marks stay until you next come back
+  if (opening && notices.rows.length) {
+    keep(readKey(), String(notices.rows[0].id));
+    drawBell();
+  }
+}
+
+/* -- the list: every conversation, kept by Dvara as it goes (past.py) -------
+   Every road's, newest first under Pinned / Today / Yesterday / Previous 7
+   days / Older, each marked by where it went on (this page, Telegram, a
+   puck). Searched by any words in it (Dvara's full-text index, every
+   conversation and not only the rows drawn). Picked, one is read in the
+   chat's place; writing under it carries it on. Its ⋯ renames, pins,
+   shares or deletes it for good. */
+
+const past = { q: "", timer: null, rows: [], looking: null };
 
 function marked(text, q) {
   // the words searched for, marked in what is drawn; text nodes only
@@ -1053,117 +1348,261 @@ function snippetView(snip) {
   return out;
 }
 
-function historySaid(text) {
-  const el = document.getElementById("history-said");
-  el.hidden = !text;
-  el.textContent = text || "";
+// Where it went on, as a mark: 💬 this page, ✈ Telegram, 🔊 a puck.
+function roadMark(road) {
+  if (road === "the page") return "💬";
+  if (road === "Telegram") return "✈";
+  if (/ puck$/.test(road)) return "🔊";
+  return "•";
 }
 
-function historyList(on) {
-  document.getElementById("history-rows").hidden = !on;
-  document.getElementById("history-q").hidden = !on;
-  document.getElementById("history-lede").hidden = !on;
-  document.getElementById("history-read").hidden = on;
-  document.getElementById("history-back").hidden = on;
+function roadsSaid(r) {
+  const roads = r.roads && r.roads.length ? r.roads : [r.road];
+  return roads.map((x) => `${roadMark(x)} ${x.replace(/^the /, "")}`).join(" · ");
 }
 
-async function openHistory() {
-  const box = document.getElementById("history");
-  if (!box.open) box.showModal();
-  historyList(true);
-  historySaid("");
-  await drawHistory();
-  document.getElementById("history-q").focus();
+function groupOf(r) {
+  if (r.pinned) return "Pinned";
+  const d = new Date(r.updated_at);
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const ago = Math.round((day(new Date()) - day(d)) / 86400000);
+  return ago <= 0 ? "Today" : ago === 1 ? "Yesterday" : ago < 7 ? "Previous 7 days"
+    : ago < 30 ? "Previous 30 days" : "Older";
 }
 
-async function drawHistory() {
-  const rows = document.getElementById("history-rows");
-  let data;
-  try {
-    data = await api(`/api/chat/chats?q=${encodeURIComponent(past.q)}`);
-  } catch (err) {
-    rows.replaceChildren(h("p.meta", {}, err.message));
-    return;
-  }
-  if (!data.rows.length) {
-    rows.replaceChildren(h("p.meta", {}, past.q
-      ? `None of your conversations say “${past.q}”.`
-      : "Nothing yet. Each conversation is kept here as you talk."));
-    return;
-  }
-  rows.replaceChildren(...data.rows.map((r) => {
-    const row = h("div.hrow", { tabindex: "0", role: "button" },
-      h("div", {},
-        h("div.title", {}, r.title, r.open ? h("span.now", {}, "open in a chat") : null),
-        h("div.meta", {}, `${when(r.updated_at)} · ${r.agent} · on ${r.road} · `
-          + `${r.turns} message${r.turns === 1 ? "" : "s"}`)),
-      deleteButton(r),
-      r.snippet ? snippetView(r.snippet) : null);
-    row.addEventListener("click", (e) => { if (!e.target.closest("button")) readHistory(r.id); });
-    row.addEventListener("keydown", (e) => { if (e.key === "Enter") readHistory(r.id); });
-    return row;
-  }));
-}
-
-function deleteButton(r) {
-  const b = h("button.quiet.danger", { type: "button" }, "Delete");
-  if (r.open) {
-    b.disabled = true;
-    b.title = "It's open in a chat now. Start a new chat there first.";
-  }
-  b.addEventListener("click", async (e) => {
-    e.stopPropagation();
-    if (!confirm(`Delete “${r.title}” for good? It can't be brought back.`)) return;
+// One look at a time, like the chat's.
+async function lookConvs() {
+  if (past.looking) return past.looking;
+  past.looking = (async () => {
     try {
-      await api(`/api/chat/chats/${encodeURIComponent(r.id)}/delete`, {});
-      historyList(true);
-      historySaid("");
-      await drawHistory();
-    } catch (err) { historySaid(err.message); }
-  });
-  return b;
+      past.rows = (await api(`/api/chat/chats?q=${encodeURIComponent(past.q)}`)).rows;
+      drawConvs();
+      if (document.body.dataset.view === "chat") {
+        document.getElementById("bar-title").textContent = chatTitle();
+      }
+      // Dvara can be in a conversation the window no longer shows (its lines
+      // aged out, or it was opened elsewhere): shown, so nothing written
+      // lands in a conversation the page called new
+      const here = openHere();
+      if (here && !past.q && !chat.reading && !chat.sending
+          && !document.querySelector("#lines > .line") && !document.querySelector("#live > *")) {
+        openPast(here);
+      }
+    } catch (err) {
+      document.getElementById("convs").replaceChildren(h("p.empty", {}, err.message));
+    }
+  })();
+  try { await past.looking; } finally { past.looking = null; }
 }
 
-async function readHistory(id) {
-  let d;
-  try { d = await api(`/api/chat/chats/${encodeURIComponent(id)}`); }
-  catch (err) { historySaid(err.message); return; }
-  historyList(false);
-  historySaid("");
-  const carry = h("button.quiet", { type: "button" }, d.open ? "Open in a chat now" : "Carry on in the chat");
-  carry.disabled = d.open;
-  carry.addEventListener("click", async () => {
-    const pick = document.getElementById("agent");
-    if ([...pick.options].some((o) => o.value === d.agent)) pick.value = d.agent;
-    document.getElementById("history").close();
-    try { await api("/api/chat", { agent: d.agent, text: `/chats open ${d.id}` }); problem(""); }
-    catch (err) { problem(err.message); }
-    chat.busy = true;
-    look();
+function drawConvs() {
+  const box = document.getElementById("convs");
+  if (!past.rows.length) {
+    box.replaceChildren(h("p.empty", {}, past.q
+      ? `None of your conversations say “${past.q}”.`
+      : "Your conversations show here as you talk."));
+    return;
+  }
+  const out = [];
+  let group = null;
+  for (const r of past.rows) {
+    const g = groupOf(r);
+    if (g !== group) { out.push(h("div.group", {}, g)); group = g; }
+    out.push(convRow(r));
+  }
+  box.replaceChildren(...out);
+  drawConvsMark();
+}
+
+// The one you're in (or reading) is marked in the list.
+function drawConvsMark() {
+  const agent = document.getElementById("agent").value;
+  const onChat = document.body.dataset.view === "chat";
+  for (const el of document.querySelectorAll(".conv")) {
+    const r = past.rows.find((x) => x.id === el.dataset.id);
+    const current = onChat && r && (chat.reading ? chat.reading.id === r.id
+      : r.here && r.agent === agent && Boolean(chat.title));
+    el.setAttribute("aria-current", String(Boolean(current)));
+  }
+}
+
+function convRow(r) {
+  const open = h("button.conv-open", { type: "button", title: r.title },
+    h("span.conv-title", {}, r.title || "(no words)"),
+    h("span.conv-meta", {}, roadsSaid(r) + (chat.agents.length > 1 ? ` · ${r.agent}` : "")));
+  open.addEventListener("click", () => openPast(r));
+  const more = h("button.conv-more", { type: "button", "aria-haspopup": "menu",
+    "aria-expanded": "false", "aria-label": `More for “${r.title}”` }, "⋯");
+  const menu = h("div.menu", { role: "menu", hidden: "" });
+  more.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.replaceChildren(...rowMenu(r, row));
+    toggleMenu(more, menu);
   });
+  const row = h("div.conv", { "data-id": r.id }, open, more, menu,
+    r.snippet ? snippetView(r.snippet) : null);
+  return row;
+}
+
+function rowMenu(r, row) {
+  const items = [
+    menuItem("Rename", null, () => renameRow(r, row)),
+    menuItem(r.pinned ? "Unpin" : "Pin to top", null, async () => {
+      try { await api(`/api/chat/chats/${encodeURIComponent(r.id)}/pin`, { pinned: !r.pinned }); }
+      catch (err) { problem(err.message); }
+      lookConvs();
+    }),
+    menuItem("Save as PDF", "Opens the print window: pick Save as PDF", async () => {
+      try { printPast(await pastRead(r.id)); } catch (err) { problem(err.message); }
+    }),
+    menuItem("Download", "A Markdown file: any notes app opens it", async () => {
+      try {
+        const made = await pastFile(r);
+        const url = URL.createObjectURL(made);
+        const a = h("a", { href: url, download: made.name });
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } catch (err) { problem(`Couldn't download it: ${err.message}`); }
+    }),
+  ];
+  if (navigator.canShare) {
+    items.push(menuItem("Send…", "WhatsApp, email, …", async () => {
+      try {
+        const made = await pastFile(r);
+        if (navigator.canShare({ files: [made] })) await navigator.share({ files: [made], title: r.title });
+        else await navigator.share({ title: r.title, text: await made.text() });
+      } catch (err) { if (err.name !== "AbortError") problem(`Not sent: ${err.message}`); }
+    }));
+  }
+  items.push(h("hr"));
+  const del = menuItem("Delete", r.open ? "It's open in a chat now: start a new chat there first" : null,
+    async () => {
+      if (!confirm(`Delete “${r.title}” for good? It can't be brought back.`)) return;
+      try {
+        await api(`/api/chat/chats/${encodeURIComponent(r.id)}/delete`, {});
+        if (chat.reading && chat.reading.id === r.id) stopReading();
+        problem("");
+      } catch (err) { problem(err.message); }
+      lookConvs();
+    }, "danger");
+  del.disabled = r.open;
+  items.push(del);
+  return items;
+}
+
+// Renamed in place: Enter keeps it, Escape leaves it, empty gives its first words back.
+function renameRow(r, row) {
+  const input = h("input.rename", { value: r.title, "aria-label": "A name for it", maxlength: "80" });
+  row.replaceChildren(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    if (save && input.value.trim() !== r.title) {
+      try {
+        await api(`/api/chat/chats/${encodeURIComponent(r.id)}/rename`, { title: input.value });
+      } catch (err) { problem(err.message); }
+    }
+    lookConvs();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); }
+  });
+  input.addEventListener("blur", () => finish(true));
+}
+
+async function pastRead(id) {
+  return api(`/api/chat/chats/${encodeURIComponent(id)}`);
+}
+
+// One from the list, read in the chat's place. The one open here already is
+// the chat itself; any other is read, and writing under it carries it on.
+async function openPast(r) {
+  sideDone();
+  if (location.hash.slice(1) !== "chat" && wantedView() !== "chat") location.hash = "chat";
+  const agent = document.getElementById("agent").value;
+  if (r.here && r.agent === agent && document.querySelector("#lines > .line")) {
+    stopReading();
+    return;
+  }
+  let d;
+  try { d = await pastRead(r.id); } catch (err) { problem(err.message); return; }
+  chat.reading = { ...r, title: d.title || r.title };
+  const box = document.getElementById("past");
   const lines = d.entries.map((e) => {
     if (e.who === "tool") {
       return h("details.tool", {},
         h("summary", {}, `· ${e.name}${e.error ? " (failed)" : ""}`),
         h("pre", {}, e.args), e.result ? h("pre", {}, `→ ${e.result}`) : null);
     }
-    const said = e.who === "you" ? h("div.bubble", {}, marked(e.text, past.q)) : bubble(e.text, "agent");
-    if (e.who !== "you" && past.q) {
-      // markdown drawn first, then the words marked inside it
-      const walk = document.createTreeWalker(said, NodeFilter.SHOW_TEXT);
-      const nodes = [];
-      while (walk.nextNode()) nodes.push(walk.currentNode);
-      for (const n of nodes) n.replaceWith(marked(n.nodeValue, past.q));
-    }
-    return h(`div.tline.${e.who}`, {}, h("span.tag", {}, e.who === "you" ? "You" : d.agent), said);
+    return h(`div.line.${e.who}`, {},
+      e.who === "you" ? null : h("span.tag", {}, h("span.who", {}, d.agent)),
+      bubble(e.text, e.who));
   });
-  document.getElementById("history-read").replaceChildren(
-    h("div", {}, h("div.title", {}, h("strong", {}, d.title)),
-      h("div.meta", {}, `${when(d.started_at)} · ${d.agent} · on ${d.road}`
+  box.replaceChildren(
+    h("div.past-head", {}, h("h2", {}, chat.reading.title),
+      h("div.meta", {}, `${when(d.started_at)} · ${d.agent} · ${roadsSaid(r)}`
         + (d.model ? ` · ${d.model}` : ""))),
-    h("div.acts", {}, carry, ...shareButtons(d), deleteButton(d)),
     ...lines);
-  document.querySelector("#history-read mark.hit")?.scrollIntoView({ block: "center" });
+  const back = r.here ? null : h("button.quiet", { type: "button" }, "Back to the chat you're in");
+  if (back) back.addEventListener("click", stopReading);
+  const elsewhere = (r.roads || [r.road]).filter((x) => x !== "the page");
+  document.getElementById("carry").replaceChildren(
+    h("span", {}, r.here ? "You're in this conversation. Write below to carry it on."
+      : "Write below to carry this conversation on here" +
+        (elsewhere.length && r.open ? ` (it stays open on ${elsewhere.join(" and ")} too).` : ".")),
+    ...(back ? [back] : []));
+  show("carry", true);
+  show("past", true);
+  show("lines", false);
+  const pick = document.getElementById("agent");
+  if ([...pick.options].some((o) => o.value === r.agent)) pick.value = r.agent;
+  drawLesson();
+  drawHello();
+  box.scrollTop = box.scrollHeight;
+  document.getElementById("bar-title").textContent = chatTitle();
+  drawConvsMark();
+  document.getElementById("text").focus();
+}
+
+function stopReading() {
+  if (!chat.reading) return;
+  chat.reading = null;
+  show("past", false);
+  show("carry", false);
+  show("lines", true);
+  drawHello();
+  const box = document.getElementById("lines");
+  box.scrollTop = box.scrollHeight;
+  if (document.body.dataset.view === "chat") {
+    document.getElementById("bar-title").textContent = chatTitle();
+  }
+  drawConvsMark();
+}
+
+// The conversation Dvara has open on this page with the agent picked.
+function openHere() {
+  const agent = document.getElementById("agent").value;
+  return past.rows.find((r) => r.here && r.agent === agent) || null;
+}
+
+// New chat: the window empties (Dvara keeps the one before, in the list).
+async function newChat() {
+  sideDone();
+  if (wantedView() !== "chat") location.hash = "chat";
+  const wasHere = openHere();
+  stopReading();
+  const text = document.getElementById("text");
+  if (document.querySelector("#lines > .line") || wasHere) {
+    await send("/new");
+    await lookConvs();
+  }
+  text.focus();
 }
 
 /* Sharing one. A PDF is the browser's own "Save as PDF" over a print layout
@@ -1181,42 +1620,12 @@ async function pastFile(d) {
                   { type: "text/markdown" });
 }
 
-function shareButtons(d) {
-  const pdf = h("button.quiet", { type: "button", title: "Opens the print window: pick Save as PDF" }, "Save as PDF");
-  pdf.addEventListener("click", () => printPast(d));
-  const file = h("button.quiet", { type: "button", title: "A Markdown file: any notes app opens it" }, "Download");
-  file.addEventListener("click", async () => {
-    try {
-      const made = await pastFile(d);
-      const url = URL.createObjectURL(made);
-      const a = h("a", { href: url, download: made.name });
-      document.body.append(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
-    } catch (err) { historySaid(`Couldn't download it: ${err.message}`); }
-  });
-  const out = [pdf, file];
-  if (navigator.canShare) {
-    const send = h("button.quiet", { type: "button", title: "WhatsApp, email, …" }, "Send…");
-    send.addEventListener("click", async () => {
-      try {
-        const made = await pastFile(d);
-        if (navigator.canShare({ files: [made] })) await navigator.share({ files: [made], title: d.title });
-        else await navigator.share({ title: d.title, text: await made.text() });
-      } catch (err) { if (err.name !== "AbortError") historySaid(`Not sent: ${err.message}`); }
-    });
-    out.push(send);
-  }
-  return out;
-}
-
 function printPast(d) {
   const area = document.getElementById("print-chat");
   const blocks = [h("header", {}, h("h1", {}, d.title),
     // the full date: a printed page outlives "today"
     h("p", {}, `${new Date(d.started_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`
-      + ` · ${d.agent} · on ${d.road}`))];
+      + ` · ${d.agent} · on ${(d.roads && d.roads.length ? d.roads : [d.road]).join(" and ")}`))];
   let tools = [];
   const flush = () => {
     if (tools.length) blocks.push(h("p.print-tools", {}, `Tools used: ${[...new Set(tools)].join(", ")}`));
@@ -1287,26 +1696,26 @@ function drawDeclined(declined) {
   }));
 }
 
-function startHistory() {
-  document.getElementById("declined-open").addEventListener("click", openDeclined);
+function startList() {
   document.getElementById("declined-close").addEventListener("click",
     () => document.getElementById("declined").close());
-  document.getElementById("history-open").addEventListener("click", openHistory);
-  document.getElementById("history-close").addEventListener("click",
-    () => document.getElementById("history").close());
-  document.getElementById("history-back").addEventListener("click", () => {
-    historyList(true);
-    drawHistory();
-  });
-  document.getElementById("history-q").addEventListener("input", (e) => {
+  document.getElementById("new-chat").addEventListener("click", newChat);
+  document.getElementById("convs-q").addEventListener("input", (e) => {
     clearTimeout(past.timer);
-    past.timer = setTimeout(() => { past.q = e.target.value; drawHistory(); }, 200);
+    past.timer = setTimeout(() => { past.q = e.target.value; lookConvs(); }, 200);
   });
+  document.getElementById("notices-read").addEventListener("click", () => {
+    if (notices.rows.length) keep(readKey(), String(notices.rows[0].id));
+    drawNotices(false);
+    drawBell();
+  });
+  lookConvs();
 }
 
 function startChat() {
   chat.on = true;
   document.getElementById("chat").hidden = false;
+  document.getElementById("notices").hidden = false;
   document.getElementById("say").addEventListener("submit", say);
   document.getElementById("record").addEventListener("click", recordToggle);
   document.getElementById("files").addEventListener("change", (event) => {
@@ -1314,24 +1723,46 @@ function startChat() {
     event.target.value = "";
     drawChosen();
   });
-  document.getElementById("text").addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) say(e);
+  const text = document.getElementById("text");
+  text.addEventListener("keydown", (e) => {
+    if (e.isComposing || slashKeys(e)) return;
+    if (e.key === "Enter" && !e.shiftKey) say(e);
   });
-  for (const b of document.querySelectorAll(".words [data-word]")) {
-    b.addEventListener("click", () => send(b.dataset.word));
-  }
-  startHistory();
+  text.addEventListener("input", () => { fitText(); slash.at = 0; drawSlash(); });
+  text.addEventListener("blur", () => { document.getElementById("slash").hidden = true; });
+  const plus = document.getElementById("plus");
+  plus.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu(plus, document.getElementById("plus-menu"));
+  });
+  if (phone.matches) text.placeholder = "Message your agent";
+  fitText();
+  drawPlus();
+  drawSuggest();
+  startList();
   startTeach();
   drawView();
   look().then(lookAgain);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  if (kept(SIDE) === "closed") document.body.classList.add("side-closed");
   drawView();
   window.addEventListener("hashchange", drawView);
-  // Escape leaves Your pages or Settings for the chat (a dialog takes it first)
+  document.getElementById("side-close").addEventListener("click", closeSide);
+  document.getElementById("side-open").addEventListener("click", openSide);
+  document.getElementById("scrim").addEventListener("click", closeSide);
+  const accountOpen = document.getElementById("account-open");
+  accountOpen.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu(accountOpen, document.getElementById("account-menu"));
+  });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".menu")) closeMenus(); });
+  // Escape closes a menu, then leaves another view for the chat (a dialog takes it first)
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || document.querySelector("dialog[open]")) return;
+    if (document.querySelector(".menu:not([hidden])")) { closeMenus(); return; }
+    if (document.body.classList.contains("side-shown")) { closeSide(); return; }
     if (chat.on && document.body.dataset.view !== "chat") location.hash = "chat";
   });
   refresh();

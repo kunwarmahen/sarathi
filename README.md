@@ -288,8 +288,8 @@ At the puck, your agent's questions are asked out loud: a yes counts in
 the asker's voice once the puck knows it, and buying, sending, or
 acting on what a web page said needs their spoken PIN (Dvara's waiting
 questions say which, as `always_ask`). A long job is finished by the
-puck saying the answer when it's ready, and every question is in
-History as soon as it's asked.
+puck saying the answer when it's ready, and every question is in the
+home page's list of conversations, marked 🔊, as soon as it's asked.
 
 ### Every page on your home network: `[house]`
 
@@ -1061,12 +1061,13 @@ on your other devices:
   http://linux-al-ml-beast.local:8760/#token=…
 ```
 
-One page for all of it, in three views. With Dvara on, it opens on the
-chat (below), which fills the window. Two icons at the top right open
-the rest: **Your pages** (four squares) and **Settings** (a gear). Each
-view has its own address (`#pages`, `#settings`), so a reload stays put,
-and **← Back to the chat** or Escape goes back
-([notes/22](notes/22-the-chat-is-the-page.md)). With Dvara off there is
+One page for all of it. With Dvara on, it opens on the chat (below),
+which fills the window beside the list of your conversations. Your name
+at the foot of the list opens the rest: **Your pages**, **Settings**,
+**Notices**. Each view has its own address (`#pages`, `#settings`,
+`#notices`), so a reload stays put, and Escape goes back to the chat
+([notes/22](notes/22-the-chat-is-the-page.md),
+[notes/33](notes/33-a-list-beside-the-chat.md)). With Dvara off there is
 no chat, and the page opens on Your pages.
 
 **Your pages** links to each program's own page: Yantra's, Samay's,
@@ -1122,31 +1123,47 @@ its links carry the other pages' keys, it has a key of its own (after the
 window_host` when that is one address, for the people in the house
 (below). ([notes/06](notes/06-one-bookmark.md))
 
-**Talk to your agents.** With Dvara on, the page opens on a chat: pick an agent, write, and the answer comes back a few seconds
-later. What a schedule sends you waits there too, even with no Telegram.
-A question an agent asks shows as a card with **Yes** and **No** (and
-goes to Telegram as well; the first answer counts). The chat holds no
-logic: every word goes to Dvara's web channel and back, as you, the
-`[dvara] owner`, with the same rules and allowance as on Telegram.
-Dvara's token stays in the home page's process, never in the browser.
-The chat is its own conversation: one on Telegram doesn't continue
-there. ([notes/12](notes/12-a-chat-on-the-home-page.md))
+**Talk to your agents.** With Dvara on, the page opens on a chat, laid
+out as a chat app: your conversations listed at the left, the one you're
+in beside them, the box to write in at the foot. Pick an agent, write,
+and the answer comes back a few seconds later. A question an agent asks
+shows as a card with **Yes** and **No** above the box (and goes to
+Telegram as well; the first answer counts). The chat holds no logic:
+every word goes to Dvara's web channel and back, as you, the `[dvara]
+owner`, with the same rules and allowance as on Telegram. Dvara's token
+stays in the home page's process, never in the browser.
+([notes/12](notes/12-a-chat-on-the-home-page.md))
+
+**The list at the left** is every conversation you've had, with every
+agent, on every road: 💬 this page, ✈ Telegram, 🔊 a puck. It's grouped
+Pinned / Today / Yesterday / Previous 7 days / Older and searched by what
+was said. Pick one to read it in the chat's place; write under it to
+carry it on here. One begun on Telegram stays open there too, and both
+carry it on. Each row's ⋯ renames it, pins it, saves it as a PDF,
+downloads or sends it, or deletes it for good. **New chat** at the top
+starts over with a greeting; the button by the list hides it (kept in
+this browser), and on a phone ☰ slides it over the chat. The 🔔 at the
+top right holds what was sent to you unasked (a schedule's answer, a
+watch, a sign-in that stopped), with a count of what's unread plus the
+questions waiting for your yes. Your pages, Settings, Notices and Turned
+down open from your name at the foot of the list
+([notes/33](notes/33-a-list-beside-the-chat.md); Dvara's
+[notes/50](https://github.com/kunwarmahen/dvara/blob/main/notes/50-every-conversation-kept.md),
+[notes/71](https://github.com/kunwarmahen/dvara/blob/main/notes/71-one-conversation-two-chats.md)).
 
 It shows the work as it happens, as Yantra's page does: each step as a
 line under the agent's name, then the answer as it is written, drawn as
 formatted text. After a job of several steps it may offer to keep how
-it was done, with **Keep** and **Not now**, saved for you alone. A row
-of buttons sends **Skills**, **Learn this**, **Tools**, **Schedules**, **Memory**, **Turned down** (what the person
-said no to with `/remember not`, each with an **Undo** that puts it back on their list, not kept; Dvara's
-[notes/68](https://github.com/kunwarmahen/dvara/blob/main/notes/68-what-you-turned-down.md)), **Phone** (its
-screen and last steps, for the phone's person),
-**New chat** to Dvara as the words they are, **History** opens every
-conversation the person has had, searched by its words, read again,
-carried on, shared (Save as PDF, Download, or the phone's Send…) or
-deleted for good (Dvara's
-[notes/50](https://github.com/kunwarmahen/dvara/blob/main/notes/50-every-conversation-kept.md);
-[notes/21](notes/21-history.md)). On a phone the chat takes the whole screen too. A job can also be taught one step at a time:
-**Teach** in the row of words, or `/learn start <what it's for>` and each step (the agent does only what
+it was done, with **Keep** and **Not now**, saved for you alone. The +
+beside the box sends **Skills**, **Learn this**, **Tools**, **Schedules**,
+**Memory**, **Phone screen** (its screen and last steps, for the phone's
+person), **Check what's mine** and **Conversations** to Dvara as the
+words they are, and opens **Teach…** and **Turned down…** (what the
+person said no to with `/remember not`, each with an **Undo** that puts
+it back on their list, not kept; Dvara's
+[notes/68](https://github.com/kunwarmahen/dvara/blob/main/notes/68-what-you-turned-down.md)).
+Typing `/` lists the same words as you type. On a phone the chat takes the whole screen too. A job can also be taught one step at a time:
+**Teach…** behind the +, or `/learn start <what it's for>` and each step (the agent does only what
 you say), or `/learn watch` and do each step on your phone yourself,
 saying `next`; while it's open a bar shows how far it got, with
 **Done** (keeps it as one skill) and **Stop** (`/learn clear` does the
@@ -1181,8 +1198,8 @@ then on sign in with their name and that password. They see their chat
 and nothing else: no cards, no keys, no memory switch. Each turn is
 theirs in Dvara, with their own allowance, rules, folder, memories and
 sign-ins. Dvara's page shows you who used which agent and what it cost,
-never their words. **People in the house**, under the gear below the
-Settings tabs, lists
+never their words. **People in the house**, in **Settings** below its
+tabs, lists
 everyone in the actors file with **Invite** (the link to send) and
 **Sign out everywhere**. `sarathi people` lists them in a terminal;
 `--sign-out NAME` ends their devices, `--remove NAME` their sign-in. A
@@ -1196,7 +1213,7 @@ the house runs ntfy (above). Passwords are kept as scrypt,
 links and sessions only as hashes, in `~/.local/share/sarathi/people.json`.
 ([notes/14](notes/14-everyone-in-the-house.md))
 
-**Every setting, on the page.** Behind the gear, **Settings** changes
+**Every setting, on the page.** **Settings** (from your name at the foot of the list) changes
 every file you'd otherwise edit by hand, in tabs: **People** (Dvara's
 actors file: who, which agents, accounts, allowance, Telegram ids, and
 anyone who messaged the bot unlisted; for a child, the hours their
@@ -1321,6 +1338,8 @@ src/sarathi/
                 Notices on this phone, for each person  (notes/15);
                 Settings, routes owner-only  (notes/16); the chat as
                 the page, Your pages and Settings behind icons  (notes/22);
+                the list of conversations beside the chat, rename and
+                pin, the bell's notices  (notes/33);
                 each card linked by the name the page was opened at, and
                 Yantra's with its token  (notes/23)
   editing.py    every settings file from the page: each program checks

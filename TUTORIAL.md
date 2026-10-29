@@ -383,38 +383,61 @@ signed in. Its **Memory** card says where the helper keeps what it
 remembers about you, and once you've done Step 7 it switches between the
 two.
 
-Once Dvara is on (Step 6), the page opens on **Talk to your agents**:
-a chat with the agents behind Dvara, filling the window, with no
-Telegram needed. The cards are then one click away: the four squares at
-the top right open **Your pages**, the gear opens **Settings**, and
-**← Back to the chat** (or Escape) brings you back. A reload stays on
-the one you were on. What a schedule sends you waits there as a line marked
-*Sent to you*, including the answers of schedules you make on Yantra's
-page. When an agent wants a yes, a card with **Yes** and **No** appears
-under the chat.
+Once Dvara is on (Step 6), the page opens on a chat with the agents
+behind Dvara, filling the window, with no Telegram needed. It looks like
+the chat apps you know:
+
+- **At the left, your conversations.** Every one you've had, newest
+  first, under *Pinned*, *Today*, *Yesterday* and so on. A small mark
+  says where each happened: 💬 this page, ✈ Telegram, 🔊 a puck.
+- **In the middle, the one you're in.** Your words on the right, the
+  agent's answers on the left, the box to write in at the bottom.
+- **New chat** at the top of the list starts a fresh conversation. The
+  old one stays in the list.
+- **The bell 🔔** at the top right holds what was sent to you without
+  your asking: a schedule's answer (including schedules you make on
+  Yantra's page), a watch going off, a sign-in that stopped working. Its
+  number is what you haven't read yet, plus any question waiting for
+  your yes.
+- **Your name** at the bottom of the list opens a menu: **Your pages**
+  (the cards), **Settings**, **Notices**, **Turned down**, **My
+  accounts**. Escape brings you back to the chat, and a reload stays
+  where you were.
+
+The button at the top right of the list hides it, for a wider chat; ☰
+brings it back. On a phone the list is hidden until you tap ☰, and goes
+away once you pick something. When an agent wants a yes, a card with
+**Yes** and **No** appears just above the box.
 
 Give it a job of a few steps and watch: each step shows as a line while
-it runs, then the answer appears as it's written. The buttons under the
-chat ask without typing: **Skills** (what your agent has learned, and
-anything it offers to keep), **Tools** (what it could use on your last
-message), **Schedules**, **Memory**, **Turned down**, **Phone** (if the phone is yours:
-its screen now, and what was last done on it), **New chat**, and
-**History**. After a job of four
-steps or more, an agent whose package has skills may offer to keep how
-it was done. Press **Keep** and next time it's one step, for you only.
-For a shorter job, press **Learn this** after it to ask for the same
-offer.
+it runs, then the answer appears as it's written. The **+** beside the
+box asks without typing: **Skills** (what your agent has learned, and
+anything it offers to keep), **Learn this**, **Teach…**, **Tools** (what
+it could use on your last message), **Schedules**, **Memory**, **Turned
+down…**, **Phone screen** (if the phone is yours: its screen now, and
+what was last done on it), **Check what's mine** and **Conversations**.
+Or type `/` and the same list pops up and narrows as you type: pick
+one with the arrows and Enter. After a job of four steps or more, an
+agent whose package has skills may offer to keep how it was done. Press
+**Keep** and next time it's one step, for you only. For a shorter job,
+press **Learn this** after it to ask for the same offer.
 
 **Finding an old conversation.** Every conversation you have with your
 agents is kept by itself as you talk. You don't have to save anything,
-and nobody else in the house can see yours. Press **History** under the
-chat: a list of them, newest first. Type a word you remember, like
-*boiler*, into the box at the top and the list shrinks to the
-conversations that say it, with the word marked. Tap one to read it,
-then:
+and nobody else in the house can see yours. They're all in the list at
+the left. Type a word you remember, like *boiler*, into the search box
+at the top of the list, and it shrinks to the conversations that say it,
+with the word marked. Tap one and it opens in the middle to read. To
+carry it on, just write below it. If it began on Telegram, it stays open
+there too: what you say in either place carries on the same
+conversation.
 
-- **Carry on in the chat** puts it back in the chat, and you go on from
-  where it stopped.
+The **⋯** on each conversation in the list (it shows when you point at
+one) does the rest:
+
+- **Rename** gives it a name of your own: type, then Enter. Clear the
+  name to get its first words back.
+- **Pin to top** keeps it above the newest, under *Pinned*.
 - **Save as PDF** opens your browser's print window with just that
   conversation laid out; pick *Save as PDF* as the printer.
 - **Download** saves it as a Markdown file, which any notes app opens.
@@ -431,8 +454,8 @@ so read it before you send it.
 The same works by typing: `/chats boiler` finds, `/chats 2` goes back
 into the second, `/chats export 2` sends it to you as a file,
 `/chats delete 2` deletes it, and `/keep test` keeps a good answer as
-a test (Step 9). `/new` starts over: the chat window clears, and
-what you said before is under **History**. Deleting clears your
+a test (Step 9). `/new` starts over, like **New chat**: the chat window
+clears, and what you said before is in the list. Deleting clears your
 history. Dvara keeps its own copy of the chat window's lines until they age
 out, and the owner's record of what each message cost (`dvara runs`)
 keeps them too; that is on purpose, so the owner's record stays whole.
@@ -454,9 +477,9 @@ tap Mom                                        (you tap to your portfolio)      
 /learn done      then Keep                     /learn done      then Keep
 ```
 
-Or press **Teach** in the row of words under the chat: pick *Tell it*
+Or press **+** beside the box, then **Teach…**: pick *Tell it*
 or *Show it*, write what the job is for, and press Start. It sends the
-same words for you. While the lesson is open, a bar above the row
+same words for you. While the lesson is open, a bar above the box
 shows how far it got, with **Done** and **Stop**. It shows a lesson you
 started on Telegram too.
 
@@ -585,7 +608,7 @@ voice** in Settings → People.
 
 **Changing a setting later.** Everything you chose here, and everything
 in the steps below, can be changed on the home page, under **Settings**
-(the gear at the top right):
+(your name at the bottom of the list of conversations → **Settings**):
 
 * **People**: who may use your agents, which ones, their daily
   allowance, their accounts, their Telegram id.
@@ -1029,8 +1052,8 @@ once: the phone that opens it first chooses a password, and from then
 on they sign in with their name and that password. They see their own
 chat and nothing else on the page. It runs with their allowance and
 their agents, and you see on Dvara's page what they spent, not what they
-said. The home page has a **People in the house** list (behind the gear,
-under the Settings tabs) that does the
+said. The home page has a **People in the house** list (in **Settings**,
+under its tabs) that does the
 same with buttons: **Invite** shows the link, **Sign out everywhere**
 signs them out on every device. Forgot their password? Invite them
 again: the new link lets them choose a new one. `sarathi people` lists
@@ -1395,7 +1418,7 @@ seat, though the two share no word.
 dashboard, and `sarathi up` starts it: open **http://localhost:3000/dashboard/memories**
 (the bare `localhost:3000` can open blank),
 or **Open Smritikosh's dashboard** on the home page's Memory card
-(under **Your pages**, the four squares at the top). Sign
+(your name at the bottom of the list → **Your pages**). Sign
 in with your Smritikosh username and password. That's not a key: if you
 set Smritikosh up by hand, it's the password you chose then; if Sarathi
 made your account, the password is in
@@ -1783,7 +1806,8 @@ house. The program that does it is **Vaani**; it answers through Dvara
      **PINs**; until you do, those steps are asked on your phone.
    * **A long job** (more than a minute): the puck says it's still
      working and goes quiet, then says the answer when it's ready.
-     Every question is in **History** from the moment you ask it.
+     Every question is in the home page's list of conversations (🔊)
+     from the moment you ask it.
    * **The wake word** is chosen per puck in **Settings → Vaani**:
      *Okay Nabu*, *Hey Jarvis* or *Hey Mycroft*. (Hey Jarvis switched on
      but never woke our puck; if one doesn't work, go back.)
@@ -1962,7 +1986,7 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Sarathi's settings | `~/.config/sarathi/sarathi.toml` |
 | A cloud key, and Dvara's and bot's tokens | `~/.config/sarathi/secrets.env` (only you can read it) |
 | Who may use the bot, and the helpers it offers | `~/dvara/actors.toml`, `~/dvara/agents/` |
-| Their conversations, and their own sign-ins | `~/dvara/state/` (each person's past conversations, for **History** and `/chats`: `~/dvara/state/past/<name>.sqlite`) |
+| Their conversations, and their own sign-ins | `~/dvara/state/` (each person's past conversations, for the home page's list and `/chats`: `~/dvara/state/past/<name>.sqlite`) |
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
 | Your schedules and their history | Samay's folder, `~/.samay/` |
 | What you're watching for, and what each watch saw | Prahari's folder, `~/.prahari/` (its inlet's key: `inlet.token` there, only you) |

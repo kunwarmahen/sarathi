@@ -228,18 +228,27 @@ def test_the_pages_script_parses():
     assert done.returncode == 0, done.stderr
 
 
-def test_the_chat_is_the_page_and_pages_and_settings_are_one_icon_away():
-    # Each view has an icon at its own address (so a reload stays put), and
-    # the stylesheet hides every section but the view's own: a section left
-    # out of a rule would pile up under the chat again.
+def test_the_chat_is_the_page_and_every_other_view_is_one_section_of_the_pane():
+    # Each view is at its own address (so a reload stays put), and the
+    # stylesheet hides every section but the view's own: a section left
+    # out of a rule would pile up under the chat again. The list of
+    # conversations replaced the History dialog; the bell opens Notices.
+    import re
     from importlib.resources import files
     static = files("sarathi").joinpath("static")
     page = static.joinpath("index.html").read_text()
     css = static.joinpath("page.css").read_text()
-    for view in ("chat", "pages", "settings"):
-        assert f'href="#{view}"' in page and f'data-view="{view}"' in page
-        assert f'body[data-view="{view}"]' in css
-    assert 'id="chat-full"' not in page   # the chat already has the window
+    script = static.joinpath("page.js").read_text()
+    sections = ["chat", "notices", "pages", "people", "settings"]
+    for view in ("chat", "notices", "pages", "settings"):
+        assert f'id="{view}"' in page and f'"{view}"' in script
+        rule = re.search(rf'body\[data-view="{view}"\] :is\(([^)]*)\)', css)
+        assert rule, view
+        hidden = {x.strip().lstrip("#") for x in rule.group(1).split(",")}
+        own = {"settings": {"settings", "people"}}.get(view, {view})
+        assert set(sections) - own <= hidden, view
+    assert 'href="#notices"' in page and 'id="convs"' in page and 'id="new-chat"' in page
+    assert 'id="history"' not in page
 
 
 def test_an_answer_is_drawn_as_markdown_and_never_as_its_own_markup():
@@ -473,6 +482,29 @@ def test_history_deletes_through_dvara_and_its_refusal_comes_back(chatting, door
     status, said = send(chatting, "/api/chat/chats/open-now/delete", {})
     assert status == 409 and "open in a chat" in said["detail"]
     assert send(chatting, "/api/chat/chats/abc123/delete", {}, token="wrong")[0] == 401
+
+
+def test_history_renames_and_pins_through_dvara_as_the_person_signed_in(chatting, door):
+    status, _ = send(chatting, "/api/chat/chats/abc123/rename",
+                     {"title": "Holiday", "actor": "guest"})
+    assert status == 200
+    method, path, body = door.heard[-1]
+    assert (method, path.split("?")[0]) == ("POST", "/web/chats/abc123/rename")
+    assert body == {"title": "Holiday", "actor": "mahen"}
+    status, _ = send(chatting, "/api/chat/chats/abc123/pin", {"pinned": True})
+    assert status == 200
+    method, path, body = door.heard[-1]
+    assert path.split("?")[0] == "/web/chats/abc123/pin" and body["pinned"] is True
+    assert send(chatting, "/api/chat/chats/abc123/pin", {"pinned": True},
+                token="wrong")[0] == 401
+
+
+def test_the_bell_asks_dvara_for_your_own_notices(chatting, door):
+    got = ask(chatting, "/api/chat/notices?actor=guest")
+    assert got.status_code == 200
+    _, path, _ = door.heard[-1]
+    assert path.split("?")[0] == "/web/notices" and "actor=mahen" in path
+    assert ask(chatting, "/api/chat/notices", token="wrong").status_code == 401
 
 
 def test_what_you_turned_down_is_yours_alone_to_see_and_undo(chatting, door):

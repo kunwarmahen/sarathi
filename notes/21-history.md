@@ -88,6 +88,9 @@ share sheet.
 * ~~**Its own view.**~~ The chat is now the page, with Your pages and
   Settings behind icons ([note 22](22-the-chat-is-the-page.md)). History
   stayed a button under the chat, since it is about the chat.
+* ~~**A button at all.**~~ History became the list of conversations at
+  the left of the chat, read in the chat's place, with rename and pin
+  ([note 33](33-a-list-beside-the-chat.md)).
 * **The chat scroll above, by choice.** Deleting a conversation clears
   the person's history; the lines it left in this page's chat window
   stay until they age out, and the run ledger keeps its own. Blanking

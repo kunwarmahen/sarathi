@@ -1013,7 +1013,7 @@ def _handler(server: HomeServer):
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
                                 "/api/people", "/api/chat/push", "/api/chat/spoken",
                                 "/api/chat/steps", "/api/chat/steps/export",
-                                "/api/chat/declined"):
+                                "/api/chat/declined", "/api/chat/notices"):
                 return self._json(404, {"detail": "not found"})
             who = self._owner() if url.path in ("/api/pieces", "/api/people") \
                 else self._who()
@@ -1027,6 +1027,9 @@ def _handler(server: HomeServer):
                 return self._people_list()
             if url.path == "/api/chat/push":
                 return self._push(who)
+            if url.path == "/api/chat/notices":
+                # what was sent to them unasked, for the bell; only their own
+                return self._chat(who, "GET", "/web/notices")
             if url.path == "/api/chat":
                 return self._chat(who, "GET", "/web",
                                   query={"after": query.get("after", "0")})
@@ -1386,6 +1389,19 @@ def _handler(server: HomeServer):
                 if body is None:
                     return None
                 return self._chat(who, "POST", "/web/declined", {"undo": body.get("undo")})
+            if parts[:3] == ["api", "chat", "chats"] and len(parts) == 5 \
+                    and parts[4] in ("rename", "pin"):
+                # named or pinned in the person's own list, by Dvara
+                who = self._who()
+                if who is None:
+                    return None
+                body = self._body(MAX_BODY)
+                if body is None:
+                    return None
+                field = "title" if parts[4] == "rename" else "pinned"
+                return self._chat(who, "POST",
+                                  f"/web/chats/{urllib.parse.quote(parts[3], safe='')}/{parts[4]}",
+                                  {field: body.get(field)})
             if parts[:3] == ["api", "chat", "chats"] and len(parts) == 5 \
                     and parts[4] == "delete":
                 # deleted for good, by Dvara; only ever the person's own

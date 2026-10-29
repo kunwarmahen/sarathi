@@ -13,30 +13,48 @@
 <script src="vaani.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <div class="brand">
-    <span class="mark" aria-hidden="true">सारथि</span>
-    <h1>Sarathi</h1>
+<div class="app">
+<aside class="side" id="side" aria-label="Your conversations" hidden>
+  <div class="side-head">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">सारथि</span>
+      <h1>Sarathi</h1>
+    </div>
+    <button type="button" class="icon" id="side-close" title="Hide the list" aria-label="Hide the list">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15"/></svg></button>
   </div>
-  <div class="facts" id="facts" aria-live="polite"></div>
-  <nav class="views" id="views" aria-label="Views" hidden>
-    <a href="#chat" class="view-icon" data-view="chat" title="Chat" aria-label="Chat">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></a>
-    <a href="#pages" class="view-icon" data-view="pages" title="Your pages" aria-label="Your pages">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/>
-        <rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/>
-        <rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></a>
-    <a href="#settings" class="view-icon" data-view="settings" title="Settings" aria-label="Settings">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
-  </nav>
+  <button type="button" class="new-chat" id="new-chat">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> New chat</button>
+  <input type="search" id="convs-q" placeholder="Search your conversations"
+         spellcheck="false" aria-label="Search your conversations">
+  <nav id="convs" class="convs" aria-live="polite"></nav>
+  <div class="account" id="account">
+    <button type="button" class="account-button" id="account-open" aria-haspopup="menu" aria-expanded="false">
+      <span class="avatar" id="account-avatar" aria-hidden="true"></span>
+      <span class="account-name" id="account-name"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14l5-5 5 5"/></svg>
+    </button>
+    <div class="menu up" id="account-menu" role="menu" hidden></div>
+  </div>
+</aside>
+<div class="scrim" id="scrim" hidden></div>
+
+<div class="pane">
+<header class="bar" id="bar" hidden>
+  <button type="button" class="icon" id="side-open" title="Show your conversations" aria-label="Show your conversations">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="bar-title"><span id="bar-title">New chat</span><span class="count" id="chat-state" aria-live="polite"></span></div>
+  <a href="#notices" class="icon bell" id="bell" title="Notices: what was sent to you, and questions waiting for your yes" aria-label="Notices">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+    <span class="bell-count" id="bell-count" hidden></span></a>
 </header>
 
 <main>
-  <div class="back-row" id="back-row">
-    <a href="#chat" class="back" id="back">← Back to the chat</a>
-  </div>
   <section id="signin" class="signin" aria-labelledby="h-signin" hidden>
+    <div class="brand signin-brand">
+      <span class="mark" aria-hidden="true">सारथि</span>
+      <h1>Sarathi</h1>
+    </div>
     <h2 id="h-signin">Sign in</h2>
     <p class="lede" id="signin-lede">To talk to your agents. The person who runs this
       house gave you your name; you chose the password.</p>
@@ -54,20 +72,15 @@
       <code>sarathi home</code> printed, the one ending in <code>#token=…</code>.</p>
   </section>
 
-  <section id="chat" aria-labelledby="h-chat" hidden>
-    <div class="section-head">
-      <h2 id="h-chat">Talk to your agents</h2>
-      <span class="count" id="chat-state" aria-live="polite"></span>
+  <section id="chat" class="chat" aria-label="Chat" hidden>
+    <div id="lines" class="lines" role="log" aria-live="polite" tabindex="0"></div>
+    <div id="past" class="lines past" tabindex="0" hidden></div>
+    <div id="hello" class="hello" hidden>
+      <span class="mark" aria-hidden="true">सारथि</span>
+      <h2 id="hello-words">What can I do for you?</h2>
+      <div class="suggest" id="suggest"></div>
     </div>
-    <p class="lede chat-lede">Through Dvara, as on Telegram: the same rules and allowance. What a
-      schedule sends you waits here too. This chat is its own conversation; one on
-      Telegram doesn't continue here.</p>
-    <details id="push" class="push" hidden>
-      <summary>Notices on this phone</summary>
-      <div id="push-body"></div>
-    </details>
-    <div class="chat">
-      <div id="lines" class="lines" role="log" aria-live="polite" tabindex="0"></div>
+    <div class="dock">
       <div id="waiting" class="waiting"></div>
       <div id="lesson" class="lesson" role="status" hidden>
         <span id="lesson-words"></span>
@@ -76,32 +89,54 @@
           <button type="button" class="no" id="lesson-stop" title="Drop the lesson; nothing is kept (/learn stop)">Stop</button>
         </span>
       </div>
-      <div class="words" role="group" aria-label="Ask your agent">
-        <button type="button" data-word="/skills">Skills</button>
-        <button type="button" data-word="/learn" title="Keep what it just did as a skill">Learn this</button>
-        <button type="button" id="teach-open" title="Teach it a job one step at a time">Teach</button>
-        <button type="button" data-word="/tools">Tools</button>
-        <button type="button" data-word="/schedules">Schedules</button>
-        <button type="button" data-word="/memory">Memory</button>
-        <button type="button" id="declined-open" title="What you turned down with /remember not, to take back">Turned down</button>
-        <button type="button" data-word="/phone" title="Your phone's screen now">Phone</button>
-        <button type="button" data-word="/new">New chat</button>
-        <button type="button" id="history-open" title="Every conversation you've had, to search, read again, carry on or delete">History</button>
-      </div>
+      <div id="carry" class="carry" hidden></div>
       <form id="say" class="say">
-        <label class="sr" for="agent">Agent</label>
-        <select id="agent"></select>
-        <label class="sr" for="text">Message</label>
-        <textarea id="text" rows="2" placeholder="Write to your agent. Enter sends; Shift+Enter for a new line."></textarea>
-        <label class="attach" title="Add a picture or file">📎<span class="sr">Add a picture or file</span>
-          <input type="file" id="files" multiple hidden></label>
-        <button type="button" class="attach" id="record" title="Record a voice note"
-                aria-pressed="false">🎤<span class="sr">Record a voice note</span></button>
-        <button type="submit" class="send">Send</button>
+        <div class="agent-row">
+          <label class="sr" for="agent">Agent</label>
+          <select id="agent" class="agent-chip"></select>
+        </div>
+        <div class="composer">
+          <div class="plus-wrap">
+            <button type="button" class="tool-button" id="plus" title="More: skills, teach, tools, schedules…"
+                    aria-haspopup="menu" aria-expanded="false" aria-label="More">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <div class="menu up" id="plus-menu" role="menu" hidden></div>
+          </div>
+          <div class="text-wrap">
+            <div class="menu up slash" id="slash" role="listbox" aria-label="Words your agent answers" hidden></div>
+            <label class="sr" for="text">Message</label>
+            <textarea id="text" rows="1" placeholder="Message your agent, or type / for its words"></textarea>
+          </div>
+          <label class="tool-button" title="Add a picture or file">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg>
+            <span class="sr">Add a picture or file</span>
+            <input type="file" id="files" multiple hidden></label>
+          <button type="button" class="tool-button" id="record" title="Record a voice note"
+                  aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+            <span class="sr">Record a voice note</span></button>
+          <button type="submit" class="send" title="Send (Enter)" aria-label="Send">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+        </div>
         <div id="attached" class="attached" hidden></div>
       </form>
       <div id="chat-problem" class="warn" hidden></div>
     </div>
+  </section>
+
+  <section id="notices" class="view" aria-labelledby="h-notices" hidden>
+    <div class="section-head">
+      <h2 id="h-notices">Notices</h2>
+      <button type="button" class="quiet" id="notices-read">Mark all read</button>
+    </div>
+    <p class="lede">What your schedules, watches and Dvara sent you without your asking,
+      newest first. A question waiting for your yes stays in the chat that asked it.</p>
+    <div id="notices-waiting"></div>
+    <div id="notices-rows" class="notice-rows" aria-live="polite"></div>
+    <details id="push" class="push" hidden>
+      <summary>Notices on this phone</summary>
+      <div id="push-body"></div>
+    </details>
   </section>
 
   <dialog id="teach" class="teach" aria-labelledby="h-teach">
@@ -122,21 +157,6 @@
     </form>
   </dialog>
 
-  <dialog id="history" class="history" aria-labelledby="h-history">
-    <div class="history-head">
-      <button type="button" id="history-back" class="quiet" hidden>← All</button>
-      <h2 id="h-history">History</h2>
-      <button type="button" id="history-close" class="quiet">Close</button>
-    </div>
-    <p class="lede" id="history-lede">Every conversation you've had with your agents,
-      kept as it goes. Type a word you remember to find one.</p>
-    <input type="search" id="history-q" placeholder="Search your conversations"
-           spellcheck="false" aria-label="Search your conversations">
-    <div id="history-rows" class="history-rows" aria-live="polite"></div>
-    <div id="history-read" class="history-read" hidden></div>
-    <div id="history-said" class="warn" role="alert" hidden></div>
-  </dialog>
-
   <dialog id="declined" class="history" aria-labelledby="h-declined">
     <div class="history-head">
       <h2 id="h-declined">Turned down</h2>
@@ -149,16 +169,17 @@
     <div id="declined-said" class="warn" role="alert" hidden></div>
   </dialog>
 
-  <section id="pages" aria-labelledby="h-pages" hidden>
+  <section id="pages" class="view" aria-labelledby="h-pages" hidden>
     <div class="section-head">
       <h2 id="h-pages">Your pages</h2>
+      <span class="count" id="facts" aria-live="polite"></span>
     </div>
     <p class="lede">Each program has a page of its own. Open one here and it opens
       already signed in.</p>
     <div id="pieces" class="cards"></div>
   </section>
 
-  <section id="settings" aria-labelledby="h-settings" hidden>
+  <section id="settings" class="view" aria-labelledby="h-settings" hidden>
     <div class="section-head">
       <h2 id="h-settings">Settings</h2>
       <span class="count" id="settings-state" aria-live="polite"></span>
@@ -170,7 +191,7 @@
     <div id="settings-body"></div>
     <div id="settings-said" class="meta" role="status"></div>
   </section>
-  <section id="people" aria-labelledby="h-people" hidden>
+  <section id="people" class="view" aria-labelledby="h-people" hidden>
     <div class="section-head">
       <h2 id="h-people">People in the house</h2>
     </div>
@@ -183,13 +204,14 @@
   </section>
 </main>
 
-<!-- one conversation laid out for "Save as PDF" (History) -->
-<article id="print-chat" aria-hidden="true"></article>
-
-<footer class="foot">
+<footer class="foot" id="foot">
   <span id="updated"></span>
   <button type="button" class="linkish" id="version" title="Which commit of each project is running: Settings → Check" hidden></button>
   <span id="foot-said">This page links, passes your chat to Dvara, signs in the people in the house, and changes your settings through the program each one belongs to.</span>
 </footer>
+</div>
+</div>
+<!-- one conversation laid out for "Save as PDF" (a row's menu) -->
+<article id="print-chat" aria-hidden="true"></article>
 </body>
 </html>
