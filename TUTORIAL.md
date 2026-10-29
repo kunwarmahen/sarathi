@@ -1745,8 +1745,11 @@ house. The program that does it is **Vaani**; it answers through Dvara
 
 1. **Get Vaani**, beside the others:
    `cd ~/Documents/ai/agent && git clone https://github.com/kunwarmahen/vaani && (cd vaani && uv sync)`.
-2. **Set up the puck**: Vaani's own TUTORIAL, Steps 2–4. You back the
-   puck up over USB-C (`vaani backup`), take its key from that backup
+2. **Set up the puck**: Vaani's own TUTORIAL, Steps 2–4. You plug the
+   puck in with USB-C and let yourself open its port, either for now
+   (`sudo setfacl -m u:$USER:rw /dev/ttyACM0`, until you unplug it) or
+   for good (`sudo usermod -aG dialout $USER`, after you next log in).
+   Then you back the puck up (`vaani backup`), take its key from that backup
    (`vaani key`), say who it answers as (`vaani init --puck kitchen
    --host <its address> --person <you in Dvara> --agent <one of your
    agents>`), and check (`vaani check`).

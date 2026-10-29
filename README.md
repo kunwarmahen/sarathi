@@ -263,11 +263,18 @@ What `up` wires for you:
 * **The firewall line** names its port: the puck fetches each answer
   from there.
 * **`sarathi status`** and **Settings → Check** say whether it's
-  listening, and which pucks (a puck with no key file is amber).
+  running and whether each puck is listening: a puck Vaani can't hold
+  is red, with why (a puck with no key file is amber).
 * **A backup** takes its settings folder: the pucks, their keys and
   Dvara's token.
 
-Settings → Sarathi has it under *The rest* (on/off) and *Ports*.
+Settings → Sarathi has it under *The rest* (on/off) and *Ports*. Once
+it's on, **Settings → Vaani** shows each puck, its last questions step
+by step (woken, heard, whose, the agent's time, played or never
+fetched), the people each puck may tell apart, and whose voices it
+knows, with *Learn their voice* and *Forget*. All of it is asked of
+`vaani` (`vaani status`, `vaani runs`, `vaani puck`, `vaani voices`),
+which writes its own files.
 
 ### Every page on your home network: `[house]`
 
