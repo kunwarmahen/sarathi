@@ -567,7 +567,17 @@ async function download(line, n, name) {
 // first time it's asked for: ▶ plays it, ■ stops it, one at a time. An
 // answer the person asked to hear (a voice note sent, or "always") plays
 // by itself when it arrives -- never one already there when the page opened.
+//
+// ONE VOICE, EVER. An answer that plays by itself waits for the one being
+// read to finish (``queued``), and is played once however many looks bring
+// it (``played``). A press of ▶ is the person's: it stops what's reading and
+// plays now. Another tab of this page that starts reading stops this one
+// (``voices``), so two open copies never talk over each other.
 const playing = { audio: null, button: null, url: null };
+const queued = [];
+const played = new Set();
+const voices = "BroadcastChannel" in window ? new BroadcastChannel("sarathi-voice") : null;
+if (voices) voices.onmessage = () => { queued.length = 0; stopVoice(); };
 
 function stopVoice() {
   if (playing.audio) playing.audio.pause();
@@ -576,10 +586,25 @@ function stopVoice() {
   playing.audio = playing.button = playing.url = null;
 }
 
+// An answer the person asked to hear, as it arrives: now, or after this one.
+function playByItself(line, button) {
+  if (played.has(line)) return;
+  played.add(line);
+  if (playing.button) queued.push([line, button]);
+  else playVoice(line, button);
+}
+
+function playNext() {
+  const next = queued.shift();
+  if (next && next[1].isConnected) playVoice(...next);
+  else if (next) playNext();
+}
+
 async function playVoice(line, button) {
   const again = playing.button === button;
   stopVoice();
-  if (again) return;
+  if (again) { queued.length = 0; return; }
+  if (voices) voices.postMessage(line);
   playing.button = button;
   button.textContent = "… reading it";
   try {
@@ -590,11 +615,13 @@ async function playVoice(line, button) {
     if (playing.button !== button) { URL.revokeObjectURL(url); return; }
     playing.url = url;
     playing.audio = new Audio(url);
-    playing.audio.addEventListener("ended", () => { if (playing.button === button) stopVoice(); });
+    playing.audio.addEventListener("ended", () => {
+      if (playing.button === button) { stopVoice(); playNext(); }
+    });
     button.textContent = "■ Stop";
     await playing.audio.play();
   } catch (err) {
-    if (playing.button === button) stopVoice();
+    if (playing.button === button) { stopVoice(); playNext(); }
     // a browser that won't play before a tap says NotAllowedError: the button stays
     if (err.name !== "NotAllowedError") problem(`Couldn't read it aloud: ${err.message}`);
   }
@@ -602,7 +629,7 @@ async function playVoice(line, button) {
 
 function listenButton(ln) {
   const b = h("button.listen", { type: "button" }, "▶ Listen");
-  b.addEventListener("click", () => playVoice(ln.id, b));
+  b.addEventListener("click", () => { played.add(ln.id); queued.length = 0; playVoice(ln.id, b); });
   return b;
 }
 
@@ -810,11 +837,11 @@ function draw(data) {
     if (!chat.last) box.replaceChildren(live);
     for (const ln of data.lines) {
       // /new's answer: the conversation before it is in History, not here
-      if (ln.fresh) { stopVoice(); box.replaceChildren(live); }
+      if (ln.fresh) { queued.length = 0; stopVoice(); box.replaceChildren(live); }
       const view = lineView(ln);
       box.insertBefore(view, live);
       const listen = view.querySelector("button.listen");
-      if (fresh && ln.speak && listen) playVoice(ln.id, listen);
+      if (fresh && ln.speak && listen) playByItself(ln.id, listen);
     }
     chat.last = data.lines[data.lines.length - 1].id;
   }
@@ -830,13 +857,21 @@ function draw(data) {
   chat.busy = data.busy.length > 0;
 }
 
+// One look at a time: two at once (the timer's, and the one after a send)
+// both asked "after N" and drew the same new answer twice, read aloud twice.
 async function look() {
-  try {
-    draw(await api(`/api/chat?after=${chat.last}`));
-    if (!chat.sending) problem("");
-  } catch (err) {
-    problem(err.message);
-  }
+  while (chat.looking) await chat.looking;
+  chat.looking = (async () => {
+    try {
+      const data = await api(`/api/chat?after=${chat.last}`);
+      if (chat.last) data.lines = data.lines.filter((ln) => ln.id > chat.last);
+      draw(data);
+      if (!chat.sending) problem("");
+    } catch (err) {
+      problem(err.message);
+    }
+  })();
+  try { await chat.looking; } finally { chat.looking = null; }
 }
 
 function lookAgain() {

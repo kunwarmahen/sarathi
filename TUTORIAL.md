@@ -538,7 +538,10 @@ voice model (it's in the image on the Podman road; on plain programs,
 shows). Code, links and tables aren't read out, and a long answer stops
 with "The rest is in the message." To hear every answer, and what's
 sent to you unasked like the morning brief, send `/voice always`;
-`/voice off` for never; `/voice` says which you have.
+`/voice off` for never; `/voice` says which you have. One voice at a
+time: an answer that comes while another is being read waits for it to
+finish, ▶ on another answer stops the one reading, and a second tab of
+the home page stops reading when this one starts.
 
 **What did it just do?** Under every answer on the home page is a small
 **Steps**. Open it to see each tool the agent used for that answer,
@@ -1648,7 +1651,9 @@ doesn't say what it keeps (an older setu: update it)"* means update that
 program and run it again.
 
 **Every night.** **Settings → Check → Back up every night**: Samay
-makes one at 02:30, and you hear about it only if a night fails. It
+makes one at 02:30, and you hear about it only if a night fails. Once
+it's on, the button says **✓ Backed up by Samay, every day at 02:30**,
+and what it answered is written beside it. It
 needs no passphrase for this. Only opening a backup does.
 
 **Where they go, and how many.** **Settings → Sarathi**, under
@@ -1710,6 +1715,8 @@ example `dvara --version`.
 
 **Check every morning** (next to it) has Samay ask the doctor at 07:30
 each day, and you get a message only when something is newly wrong.
+Once it's on, the button says **✓ Checked by Samay, every day at
+07:30**; to stop it, pause or delete that schedule on Samay's page.
 Your morning might say *"gmail:personal: Google ends this sign-in Sun
 25 Oct"* with what to do, while a phone you left unplugged all week
 is mentioned only once.
