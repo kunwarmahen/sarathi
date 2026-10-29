@@ -284,3 +284,74 @@ def test_a_household_fact_goes_to_dvara_as_the_owner(owner_page):
     assert last["argv"][last["argv"].index("--owner") + 1] == "mahen"
     assert last["argv"][-2:] == ["settings", "household"]
     assert json.loads(last["stdin"]) == {"add": "bins go out Tuesday"}
+
+
+# -- Settings → Vaani: asked of Vaani, which writes its own files ---------------------
+
+VAANI = """#!{python}
+import json, sys
+argv = sys.argv[1:]
+with open({log!r}, "a") as out:
+    out.write(json.dumps(argv) + "\\n")
+if argv[0] == "status":
+    print(json.dumps({{"format": "vaani.status.v1", "serving": True, "pucks": [
+        {{"name": "kitchen", "listening": False, "problem": "plaintext"}}]}}))
+elif argv[0] == "runs":
+    print(json.dumps({{"format": "vaani.runs.v1", "runs": [{{"heard": "what day"}}],
+                      "pucks": [], "voices": [], "enrolling": None}}))
+elif "nobody" in argv:
+    print("error: nobody isn't in the kitchen puck's people", file=sys.stderr)
+    sys.exit(2)
+else:
+    print("Now, at the kitchen puck, asha says the wake word")
+"""
+
+
+@pytest.fixture
+def with_vaani(owner_page, world, tmp_path):
+    from dataclasses import replace
+    log = tmp_path / "vaani.log"
+    vaani = world / "bin" / "vaani"
+    vaani.write_text(VAANI.format(python=sys.executable, log=str(log)))
+    vaani.chmod(vaani.stat().st_mode | stat.S_IXUSR)
+    owner_page.home.config = replace(owner_page.home.config, voice_on=True)
+    owner_page.vaani_log = log
+    return owner_page
+
+
+def test_the_vaani_tab_says_a_puck_isnt_listening_and_its_last_questions(with_vaani):
+    got = ask(with_vaani, "/api/vaani").json()
+    assert got["status"]["pucks"][0]["problem"] == "plaintext"
+    assert got["runs"] == [{"heard": "what day"}]
+
+
+def test_a_voice_is_learned_by_vaani_and_its_refusal_is_the_answer(with_vaani):
+    code, said = send(with_vaani, "/api/vaani", {"do": "enroll", "person": "asha",
+                                                 "puck": "kitchen"})
+    assert code == 200 and "asha says the wake word" in said["said"]
+    code, said = send(with_vaani, "/api/vaani", {"do": "enroll", "person": "nobody",
+                                                 "puck": "kitchen"})
+    assert code == 400 and said["detail"].startswith("nobody isn't")
+    code, _ = send(with_vaani, "/api/vaani", {"do": "forget", "person": "../asha"})
+    assert code == 400
+    code, _ = send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                              "people": ["asha", "--x"]})
+    assert code == 400
+    send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen", "person": "house",
+                                    "people": ["owner", "asha"]})
+    asked = [json.loads(line) for line in with_vaani.vaani_log.read_text().splitlines()]
+    assert ["voices", "enroll", "asha", "--at-puck", "kitchen"] in asked
+    assert ["puck", "kitchen", "--person", "house", "--people", "owner,asha"] in asked
+    assert not any("../asha" in a or "--x" in ",".join(a) for a in asked)
+
+
+def test_vaani_off_or_a_person_signed_in_gets_nothing(with_vaani):
+    from dataclasses import replace
+    link = with_vaani.people_book.invite("priya", ["mahen", "priya"], "mahen")
+    session = send(with_vaani, "/api/claim", {"link": link, "password": "a long password"},
+                   token="")[1]["session"]
+    assert ask(with_vaani, "/api/vaani", token=session).status_code == 403
+    assert send(with_vaani, "/api/vaani", {"do": "stop"}, token=session)[0] == 403
+    with_vaani.home.config = replace(with_vaani.home.config, voice_on=False)
+    assert ask(with_vaani, "/api/vaani").json() == {"on": False}
+    assert send(with_vaani, "/api/vaani", {"do": "stop"})[0] == 409

@@ -212,6 +212,79 @@ def setu_site(site: str, text: str | None = None) -> str:
     return done.stdout
 
 
+# ---- Vaani's ------------------------------------------------------------------------
+# The puck's questions, as Vaani recorded them, and the few things the page
+# changes: who a puck answers, and whose voice is learned. Vaani writes its
+# own files (`vaani puck`, `vaani voices`); the page only asks.
+
+VAANI_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
+
+def _vaani() -> str:
+    found = program("vaani")
+    if found is None:
+        raise EditError(409, "vaani wasn't found on this computer (see `sarathi status`)")
+    return found
+
+
+def _vaani_json(args: list[str]) -> dict:
+    done = _run([_vaani(), *args, "--json"])
+    try:
+        return json.loads(done.stdout)
+    except ValueError:
+        raise EditError(502, (done.stderr or done.stdout).strip()[-400:]
+                        or "vaani said nothing") from None
+
+
+def vaani_view(config: Config) -> dict:
+    """Vaani's tab: each puck held or not, the last questions, the voices."""
+    if not config.voice_on:
+        return {"on": False}
+    return {"on": True, "status": _vaani_json(["status"]),
+            **_vaani_json(["runs", "--limit", "20"])}
+
+
+def vaani_do(config: Config, body: dict) -> str:
+    """{"do": "enroll"|"forget"|"stop"|"puck", ...}: done by Vaani; its words back."""
+    if not config.voice_on:
+        raise EditError(409, "Vaani is off: turn it on under Settings → Sarathi first")
+    do = body.get("do")
+    names = {k: str(body.get(k) or "") for k in ("person", "puck")}
+    for key in [k for k, v in names.items() if v]:
+        if not VAANI_NAME.match(names[key]):
+            raise EditError(400, f"{names[key]!r} isn't a {key}'s name")
+    if do == "enroll":
+        if not names["person"] or not names["puck"]:
+            raise EditError(400, "whose voice, at which puck?")
+        argv = ["voices", "enroll", names["person"], "--at-puck", names["puck"]]
+    elif do == "forget":
+        if not names["person"]:
+            raise EditError(400, "whose voice?")
+        argv = ["voices", "forget", names["person"]]
+    elif do == "stop":
+        argv = ["voices", "stop"]
+    elif do == "puck":
+        if not names["puck"]:
+            raise EditError(400, "which puck?")
+        argv = ["puck", names["puck"]]
+        for key in ("person", "agent"):
+            if body.get(key) is not None:
+                argv += [f"--{key}", str(body[key])]
+        if body.get("people") is not None:
+            people = body["people"]
+            if not isinstance(people, list) or not all(isinstance(x, str) and
+                                                       VAANI_NAME.match(x) for x in people):
+                raise EditError(400, "people is a list of names from People")
+            argv += ["--people", ",".join(people)]
+    else:
+        raise EditError(400, "do: enroll, forget, stop or puck")
+    done = _run([_vaani(), *argv])
+    if done.returncode != 0:
+        raise EditError(400, (done.stderr or done.stdout).strip().removeprefix("error: ")
+                        [-400:] or "vaani said no")
+    return done.stdout.strip().splitlines()[-1] if done.stdout.strip() else "Done."
+
+
 # ---- Sarathi's own -----------------------------------------------------------------
 
 def sarathi_view(config: Config) -> dict:

@@ -1762,12 +1762,36 @@ house. The program that does it is **Vaani**; it answers through Dvara
    prints: it now names 8799, where the puck fetches each answer.
 6. **Talk to it.** *"Okay Nabu… what's on my calendar tomorrow?"* The
    ring spins while your helper works, then the puck says the answer.
-   **Settings → Check** says *Vaani is listening (kitchen)*.
+   **Settings → Check** says *Vaani is listening (kitchen)*. (When you
+   delete the puck from Home Assistant, its key is wiped too. Vaani
+   gives it a new one the first time it reaches it; you don't do
+   anything.)
+7. **Watch it work: Settings → Vaani.** This tab appears once Vaani is
+   on. At the top, each puck is either green (*Listening at …*) or red,
+   with the reason. Below that are the **last questions**, newest
+   first, each with its steps: *woken → heard 0.8s → as owner (the
+   puck's person) → agent 47s → spoken 0.4s → played*. Whichever step
+   failed is in red, so a puck that said nothing shows you where it
+   stopped. For example, *never fetched* means the puck didn't come for
+   the answer, which is usually the firewall. The tab checks again
+   every few seconds while it's open, so you can ask at the puck and
+   watch.
+8. **Everyone in the house, each their own.** Also on that tab:
+   * **The kitchen puck**: tick the people it may tell apart, and pick
+     who it answers as when it isn't sure. Best is a "house" person
+     with only the house's accounts (add one under People first). Save.
+     It applies from the next question; nothing needs restarting.
+   * **Voices**: pick a person and the puck, then press **Learn their
+     voice**. That person says the wake word and any sentence at the
+     puck, three times; the puck counts down and the tab shows how many
+     are left. **Forget** deletes a voice.
 
-Each puck answers as the one person its settings name, for now. Telling
-voices apart, so everyone gets their own accounts from the same puck,
-and saying *yes* to a question (with a PIN for money) at the puck, are
-next.
+   After that, *"what's on my calendar?"* is answered from the calendar
+   of whoever asked. When the puck isn't sure, it says so and answers
+   for the "house" person. Starting with *"This is Asha, …"* always
+   works.
+
+Saying *yes* to a question at the puck (with a PIN for money) is next.
 
 ---
 

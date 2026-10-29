@@ -9,7 +9,7 @@ const sets = { data: null, tab: "people", editing: null, checked: null };
 const TABS = [["people", "People"], ["household", "Household"], ["agents", "Agents"],
               ["rules", "Rules"],
               ["accounts", "Accounts"], ["sarathi", "Sarathi"], ["keys", "Keys"],
-              ["check", "Check"]];
+              ["vaani", "Vaani"], ["check", "Check"]];
 
 const RUNGS = { "": "Dvara's default (read only)", read_only: "Read only: never asked",
                 ask: "Asked before anything changes", yolo: "Never asked: anything" };
@@ -34,7 +34,10 @@ async function drawSettings() {
 
 function drawTabs() {
   const bar = document.getElementById("settings-tabs");
-  bar.replaceChildren(...TABS.map(([id, label]) => {
+  // Vaani's tab only where Vaani is on
+  const tabs = TABS.filter(([id]) => id !== "vaani" || sets.data.sarathi.vaani?.on);
+  if (!tabs.some(([id]) => id === sets.tab)) sets.tab = "people";
+  bar.replaceChildren(...tabs.map(([id, label]) => {
     const b = h("button.tab", { type: "button", role: "tab",
                                 "aria-selected": sets.tab === id ? "true" : "false" }, label);
     b.addEventListener("click", () => { sets.tab = id; sets.editing = null; said(""); drawTabs(); });
@@ -43,7 +46,7 @@ function drawTabs() {
   const draw = { people: drawPeopleTab, household: drawHouseholdTab, agents: drawAgentsTab,
                  rules: drawRulesTab,
                  accounts: drawAccountsTab, sarathi: drawSarathiTab, keys: drawKeysTab,
-                 check: drawCheckTab };
+                 vaani: drawVaaniTab, check: drawCheckTab };
   document.getElementById("settings-body").replaceChildren(
     ...[draw[sets.tab]()].flat().filter((kid) => kid != null));
 }

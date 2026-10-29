@@ -103,6 +103,11 @@ and writes its own file; a person signed in gets 403:
                                            computer, its address saved; with a
                                            name, one of several ([phone.NAME])
     POST /api/settings/apply               `sarathi up`, for what needs a restart
+    GET  /api/vaani                        each puck held or not, its last questions
+                                           (heard, whose, each step's time, fetched),
+                                           the voices it knows
+    POST /api/vaani                        {"do": "enroll"|"forget"|"stop"|"puck"}:
+                                           asked of Vaani, which writes its own files
 
 With ``--also-host`` (the door's window address, when it is one) the page
 listens there too, so a phone at home can open a person's link.
@@ -182,6 +187,7 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/index.html": ("index.html", "text/html; charset=utf-8"),
           "/page.js": ("page.js", "text/javascript; charset=utf-8"),
           "/settings.js": ("settings.js", "text/javascript; charset=utf-8"),
+          "/vaani.js": ("vaani.js", "text/javascript; charset=utf-8"),
           "/md.js": ("md.js", "text/javascript; charset=utf-8"),
           "/page.css": ("page.css", "text/css; charset=utf-8"),
           "/favicon.svg": ("favicon.svg", "image/svg+xml")}
@@ -980,6 +986,14 @@ def _handler(server: HomeServer):
                 if self._owner() is None:
                     return None
                 return self._json(200, server.home.house_schedules())
+            if url.path == "/api/vaani":
+                if self._owner() is None:
+                    return None
+                from sarathi import editing
+                try:
+                    return self._json(200, editing.vaani_view(server.home.config))
+                except editing.EditError as exc:
+                    return self._json(exc.status, {"detail": str(exc)})
             if url.path == "/api/version":
                 if self._owner() is None:
                     return None
@@ -1315,6 +1329,18 @@ def _handler(server: HomeServer):
                     return None
                 code, words = server.home.switch(str(body.get("via")))
                 return self._json(code, {"detail" if code >= 400 else "said": words})
+            if parts == ["api", "vaani"]:
+                if self._owner() is None:
+                    return None
+                body = self._body()
+                if body is None:
+                    return None
+                from sarathi import editing
+                try:
+                    return self._json(200, {"said": editing.vaani_do(server.home.config,
+                                                                     body)})
+                except editing.EditError as exc:
+                    return self._json(exc.status, {"detail": str(exc)})
             if parts == ["api", "doctor", "morning"]:
                 if self._owner() is None:
                     return None
