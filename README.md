@@ -242,6 +242,7 @@ keys and who each answers as are Vaani's own (`vaani init`, `vaani key`,
 [vaani]
 on = true
 port = 8799        # where the puck fetches the spoken answer
+page_port = 8797   # Vaani's own page (its card under Your pages)
 ```
 
 and `sarathi up` (on the containers' road, `sarathi image` first). It is
@@ -268,13 +269,18 @@ What `up` wires for you:
 * **A backup** takes its settings folder: the pucks, their keys and
   Dvara's token.
 
-Settings → Sarathi has it under *The rest* (on/off) and *Ports*. Once
-it's on, **Settings → Vaani** shows each puck, its last questions step
-by step (woken, heard, whose, the agent's time, played or never
-fetched), the people each puck may tell apart, and whose voices it
-knows, with *Learn their voice* and *Forget*. All of it is asked of
-`vaani` (`vaani status`, `vaani runs`, `vaani puck`, `vaani voices`),
-which writes its own files.
+Settings → Sarathi has it under *The rest* (on/off) and *Ports*
+(`port`, the answers'; `page_port`, 8797, its page's).
+
+* **Vaani's own page** has a card under Your pages: each puck listening
+  or why not, the last questions step by step (woken, heard, whose, the
+  agent's time, played or never fetched), and voices learned and
+  forgotten. `vaani serve` serves it; the card opens it with the key
+  Vaani keeps (`~/.local/state/vaani/page.token`). On 127.0.0.1, and on
+  the house address too with `[house]`. The card's line is Vaani's own
+  status: *kitchen listening · last question 2 min ago, played*.
+* **Settings → Vaani** sets who each puck answers and which people it
+  tells apart, through `vaani puck`, which writes vaani.toml itself.
 
 ### Every page on your home network: `[house]`
 

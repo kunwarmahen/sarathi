@@ -71,6 +71,7 @@ DEFAULT_CLOCK_PORT = 8780
 DEFAULT_WATCH_PORT = 8782
 #: Where a voice puck fetches Vaani's spoken answers.
 DEFAULT_VOICE_PORT = 8799
+DEFAULT_VOICE_PAGE_PORT = 8797
 DEFAULT_DOOR_PORT = 8770
 #: ntfy, the push server Dvara's notices reach phones through (`dvara.ntfy`).
 DEFAULT_NTFY_PORT = 8793
@@ -93,7 +94,7 @@ KNOWN: dict[str, set[str]] = {
     "yantra": {"port"},
     "samay": {"on", "port"},
     "prahari": {"on", "port", "inlet_port", "public_url", "people"},
-    "vaani": {"on", "port"},
+    "vaani": {"on", "port", "page_port"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner", "ntfy", "ntfy_port", "voices",
@@ -316,6 +317,8 @@ class Config:
     #: through Dvara, so it needs Dvara on too.
     voice_on: bool = False
     voice_port: int = DEFAULT_VOICE_PORT
+    #: Vaani's own page (each puck, its last questions, the voices)
+    voice_page_port: int = DEFAULT_VOICE_PAGE_PORT
     #: Only these people get watches through Dvara; () for everyone.
     watch_people: tuple[str, ...] = ()
     backup: Backup = Backup()
@@ -645,7 +648,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   watch_inlet_port=watch_inlet, watch_public=watch_public.rstrip("/"),
                   watch_people=tuple(n.strip() for n in watch_people),
                   voice_on=voice.get("on", False),
-                  voice_port=_port(voice, "port", DEFAULT_VOICE_PORT, "vaani"))
+                  voice_port=_port(voice, "port", DEFAULT_VOICE_PORT, "vaani"),
+                  voice_page_port=_port(voice, "page_port", DEFAULT_VOICE_PAGE_PORT,
+                                        "vaani"))
 
 
 def _render_watch_extra(config: Config) -> str:
@@ -714,10 +719,12 @@ port = {config.watch_port}
 # Vaani: a Home Assistant Voice puck that talks to your agents, through
 # Dvara. Its pucks, their keys and who each answers as are in
 # ~/.config/vaani/vaani.toml (`vaani init`, `vaani key`). port: where a
-# puck fetches the spoken answer; open it to your network.
+# puck fetches the spoken answer; open it to your network. page_port:
+# Vaani's own page (its card is under Your pages).
 [vaani]
 on = {"true" if config.voice_on else "false"}
 port = {config.voice_port}
+page_port = {config.voice_page_port}
 
 # How `sarathi up` starts them: process (plain programs on this machine)
 # | podman (containers kept running by systemd; build with `sarathi image`).

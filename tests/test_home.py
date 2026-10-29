@@ -561,3 +561,19 @@ def test_sarathi_home_on_a_port_something_else_holds_is_still_an_error(keys, mon
     finally:
         other.close()
     assert "Address already in use" in capsys.readouterr().err
+
+
+def test_vaani_has_a_card_of_its_own_opened_with_the_key_vaani_keeps(keys, monkeypatch):
+    from dataclasses import replace
+
+    from sarathi import services
+    state = keys / "vaani-state"
+    state.mkdir()
+    (state / "page.token").write_text("vaani-page-key-0123456789\n")
+    monkeypatch.setenv("VAANI_STATE", str(state))
+    monkeypatch.setattr(services, "voicing", lambda config, env=None: True)
+    voiced = replace(config(keys), voice_on=True, voice_page_port=9797)
+    card = next(p for p in pages(voiced) if p.name == "vaani")
+    assert card.port == 9797 and card.token() == "vaani-page-key-0123456789"
+    monkeypatch.setattr(services, "voicing", lambda config, env=None: False)
+    assert "vaani" not in [p.name for p in pages(voiced)]          # off: no card

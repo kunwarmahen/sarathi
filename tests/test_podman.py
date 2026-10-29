@@ -793,5 +793,9 @@ def test_vaani_is_a_container_beside_dvara_its_answers_open_to_the_house(
     assert podman.unit_secrets(voiced)["sarathi-vaani"] == {
         "VAANI_DVARA_TOKEN": "dvara-token"}
     assert 8799 in podman.lan_ports(voiced)
+    # its page: 8797 on this computer; on the house address only with [house]
+    assert "PublishPort=127.0.0.1:8797:8797" in vaani
+    assert "Environment=VAANI_PAGE_HOST=0.0.0.0" in vaani
+    assert 8797 not in podman.lan_ports(voiced)
     off = podman.units(replace(voiced, voice_on=True, door=None))
     assert "sarathi-vaani.container" not in off          # it answers through Dvara

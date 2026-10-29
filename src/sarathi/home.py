@@ -103,11 +103,10 @@ and writes its own file; a person signed in gets 403:
                                            computer, its address saved; with a
                                            name, one of several ([phone.NAME])
     POST /api/settings/apply               `sarathi up`, for what needs a restart
-    GET  /api/vaani                        each puck held or not, its last questions
-                                           (heard, whose, each step's time, fetched),
-                                           the voices it knows
-    POST /api/vaani                        {"do": "enroll"|"forget"|"stop"|"puck"}:
-                                           asked of Vaani, which writes its own files
+    GET  /api/vaani                        each puck's person, agent and people, and
+                                           the voices known (Settings → Vaani)
+    POST /api/vaani                        {"do": "puck", ...}: `vaani puck`, which
+                                           writes its own file
 
 With ``--also-host`` (the door's window address, when it is one) the page
 listens there too, so a phone at home can open a person's link.
@@ -242,6 +241,7 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     if config.clock_on:
         found.append(Page("samay", "Samay", "What runs later, and what each run said.",
                           config.clock_port, "SAMAY_TOKEN", samay_state / "serve.token"))
+    from sarathi.services import voicing as services_voicing
     from sarathi.services import watching
 
     if watching(config, dict(env)):
@@ -250,6 +250,13 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
         found.append(Page("prahari", "Prahari", "What you're waiting for, what each "
                           "watch saw, and the inlet a phone app knocks on.",
                           config.watch_port, "PRAHARI_TOKEN", prahari_state / "serve.token"))
+    if services_voicing(config, env):
+        vaani_state = Path(env.get("VAANI_STATE", "").strip()
+                           or home / ".local" / "state" / "vaani").expanduser()
+        found.append(Page("vaani", "Vaani", "Your pucks: each one listening or not, what "
+                          "it was last asked, step by step, and whose voices it knows.",
+                          config.voice_page_port, "VAANI_PAGE_TOKEN",
+                          vaani_state / "page.token"))
     # started by `sarathi up` when [pages] is on; by hand otherwise
     by_up = config.pages.on
     found.append(Page("setu", "Setu", "Your accounts: what's connected, at what level, "

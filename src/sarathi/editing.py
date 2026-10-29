@@ -213,9 +213,9 @@ def setu_site(site: str, text: str | None = None) -> str:
 
 
 # ---- Vaani's ------------------------------------------------------------------------
-# The puck's questions, as Vaani recorded them, and the few things the page
-# changes: who a puck answers, and whose voice is learned. Vaani writes its
-# own files (`vaani puck`, `vaani voices`); the page only asks.
+# Vaani's settings: who each puck answers, and which people it tells
+# apart. Vaani writes its own file (`vaani puck`); Settings only asks.
+# What the pucks did, and their voices, are on Vaani's own page.
 
 VAANI_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 
@@ -237,15 +237,16 @@ def _vaani_json(args: list[str]) -> dict:
 
 
 def vaani_view(config: Config) -> dict:
-    """Vaani's tab: each puck held or not, the last questions, the voices."""
+    """Settings → Vaani: each puck's person, agent and people, and the
+    voices known (so a person ticked with no voice yet can be said)."""
     if not config.voice_on:
         return {"on": False}
-    return {"on": True, "status": _vaani_json(["status"]),
-            **_vaani_json(["runs", "--limit", "20"])}
+    got = _vaani_json(["runs", "--limit", "1"])
+    return {"on": True, "pucks": got.get("pucks", []), "voices": got.get("voices", [])}
 
 
 def vaani_do(config: Config, body: dict) -> str:
-    """{"do": "enroll"|"forget"|"stop"|"puck", ...}: done by Vaani; its words back."""
+    """{"do": "puck", "puck", "person"?, "agent"?, "people"?}: done by Vaani."""
     if not config.voice_on:
         raise EditError(409, "Vaani is off: turn it on under Settings → Sarathi first")
     do = body.get("do")
@@ -253,17 +254,7 @@ def vaani_do(config: Config, body: dict) -> str:
     for key in [k for k, v in names.items() if v]:
         if not VAANI_NAME.match(names[key]):
             raise EditError(400, f"{names[key]!r} isn't a {key}'s name")
-    if do == "enroll":
-        if not names["person"] or not names["puck"]:
-            raise EditError(400, "whose voice, at which puck?")
-        argv = ["voices", "enroll", names["person"], "--at-puck", names["puck"]]
-    elif do == "forget":
-        if not names["person"]:
-            raise EditError(400, "whose voice?")
-        argv = ["voices", "forget", names["person"]]
-    elif do == "stop":
-        argv = ["voices", "stop"]
-    elif do == "puck":
+    if do == "puck":
         if not names["puck"]:
             raise EditError(400, "which puck?")
         argv = ["puck", names["puck"]]
@@ -277,7 +268,7 @@ def vaani_do(config: Config, body: dict) -> str:
                 raise EditError(400, "people is a list of names from People")
             argv += ["--people", ",".join(people)]
     else:
-        raise EditError(400, "do: enroll, forget, stop or puck")
+        raise EditError(400, "do: puck (voices are learned on Vaani's own page)")
     done = _run([_vaani(), *argv])
     if done.returncode != 0:
         raise EditError(400, (done.stderr or done.stdout).strip().removeprefix("error: ")
@@ -302,7 +293,8 @@ def sarathi_view(config: Config) -> dict:
                   "base_url": config.base_url, "context_window": config.context_window},
         "yantra": {"port": config.web_port},
         "samay": {"on": config.clock_on, "port": config.clock_port},
-        "vaani": {"on": config.voice_on, "port": config.voice_port},
+        "vaani": {"on": config.voice_on, "port": config.voice_port,
+                  "page_port": config.voice_page_port},
         "prahari": {"on": config.watch_on, "port": config.watch_port,
                     "inlet_port": config.watch_inlet_port,
                     "public_url": config.watch_public,
@@ -406,7 +398,9 @@ def sarathi_apply(changes: dict) -> Config:
     if "vaani" in changes:
         v = changes["vaani"]
         config = replace(config, voice_on=bool(v.get("on", config.voice_on)),
-                         voice_port=_num(v.get("port"), "Vaani's port") or config.voice_port)
+                         voice_port=_num(v.get("port"), "Vaani's port") or config.voice_port,
+                         voice_page_port=_num(v.get("page_port"), "Vaani's page port")
+                         or config.voice_page_port)
     if "run" in changes:
         config = replace(config, road=changes["run"].get("road", config.road))
     if "pages" in changes:

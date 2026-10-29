@@ -650,6 +650,7 @@ def vaani_unit(config: Config) -> str:
         folder.mkdir(parents=True, exist_ok=True)
     env = {"VAANI_DVARA_URL": f"http://{UNITS['dvara']}:{DOOR_PORT}",
            "VAANI_PORT": str(port), "VAANI_LOCALHOST": "host.containers.internal",
+           "VAANI_PAGE_HOST": "0.0.0.0", "VAANI_PAGE_PORT": str(config.voice_page_port),
            "VAANI_ADDRESS": services.lan_address(config),
            "VAANI_CONFIG": str(folders[0]), "VAANI_STATE": str(folders[1]),
            "VAANI_MODELS": str(folders[2])}
@@ -658,7 +659,10 @@ def vaani_unit(config: Config) -> str:
     return _unit("Sarathi: Vaani", UNITS["vaani"], f"{IN_IMAGE}/vaani serve",
                  f"{port}:{port}", config,
                  f"Wants={UNITS['dvara']}.service\nAfter={UNITS['dvara']}.service\n",
-                 extra_container="".join(f"Environment={k}={v}\n" for k, v in env.items()),
+                 extra_container="".join(f"Environment={k}={v}\n" for k, v in env.items())
+                 # its page: on this computer, and on the house address with [house]
+                 + f"PublishPort=127.0.0.1:{config.voice_page_port}:{config.voice_page_port}\n"
+                 + lan(config, config.voice_page_port, config.voice_page_port),
                  more_volumes=folders)
 
 
@@ -770,8 +774,10 @@ def lan_ports(config: Config) -> list[int]:
         ports += [int(shown[1])] if shown else []
     if config.remembers_in_smritikosh and kosh.dashboard:
         ports.append(kosh.dashboard_port)
-    # where a voice puck fetches Vaani's spoken answers
-    ports += [config.voice_port] if services.voicing(config) else []
+    # where a voice puck fetches Vaani's spoken answers, and Vaani's page
+    # (on the house address only with [house])
+    if services.voicing(config):
+        ports += [config.voice_port] + ([config.voice_page_port] if config.house else [])
     return ports
 
 
@@ -1466,7 +1472,8 @@ def up(config: Config) -> tuple[list[str], bool]:
         if config.door.ntfy_port:
             wanted.append(("ntfy", config.door.ntfy_port))
         wanted.append(("dvara", config.door.port))
-        wanted += [("vaani", config.voice_port)] if services.voicing(config) else []
+        wanted += [("vaani", config.voice_port), ("vaani", config.voice_page_port)] \
+            if services.voicing(config) else []
     wanted.append(("yantra", config.web_port))
     if config.pages.on:
         wanted.append(("setu", config.pages.setu_port))

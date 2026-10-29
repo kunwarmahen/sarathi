@@ -321,3 +321,16 @@ def test_a_sign_in_setu_found_expired_is_said_with_how_to_sign_in_again():
         {"ref": "homeassistant:home", "connector": "homeassistant", "account": "home"}]})
     assert said == ("2 accounts connected: gmail:mine, homeassistant:home; SIGN-IN EXPIRED, "
                     "sign in again: setu connect gmail --as mine")
+
+
+def test_vaanis_line_says_each_puck_and_how_the_last_question_ended():
+    import time
+
+    from sarathi.siblings import _say_vaani
+    line = _say_vaani({"serving": True, "pucks": [
+        {"name": "kitchen", "listening": True}, {"name": "study", "listening": False}],
+        "last": {"at": time.time() - 120, "puck": "kitchen", "outcome": "played"}})
+    assert line == "kitchen listening, study NOT listening · last question 2 min ago, played"
+    assert _say_vaani({"serving": False, "pucks": [{"name": "kitchen"}]}) == \
+        "not running: kitchen"
+    assert _say_vaani({"serving": True, "pucks": []}).startswith("no pucks yet")

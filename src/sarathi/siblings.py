@@ -185,12 +185,34 @@ def _say_samay(data: dict[str, Any]) -> str:
 
 
 def _say_vaani(data: dict[str, Any]) -> str:
+    """Each puck listening or not, then the newest question and how it
+    ended: "kitchen listening · last question 2 min ago, played"."""
     if data.get("problem"):
         return str(data["problem"])
     pucks = data.get("pucks") or []
-    named = ", ".join(f"{p.get('name')} (as {p.get('person')})" for p in pucks) \
-        or "no pucks yet (`vaani init`)"
-    return f"{'listening' if data.get('serving') else 'not running'}: {named}"
+    if not pucks:
+        return "no pucks yet (`vaani init`)"
+    if not data.get("serving"):
+        return "not running: " + ", ".join(str(p.get("name")) for p in pucks)
+    held = ", ".join(f"{p.get('name')} " + ("listening" if p.get("listening", True)
+                                            else "NOT listening") for p in pucks)
+    last = data.get("last") or {}
+    if not isinstance(last.get("at"), (int, float)):
+        return held
+    return f"{held} · last question {_ago(float(last['at']))}, {last.get('outcome')}"
+
+
+def _ago(at: float) -> str:
+    import time
+
+    seconds = max(0, int(time.time() - at))
+    if seconds < 90:
+        return "just now"
+    if seconds < 5400:
+        return f"{round(seconds / 60)} min ago"
+    if seconds < 129600:
+        return f"{round(seconds / 3600)} h ago"
+    return f"{round(seconds / 86400)} days ago"
 
 
 def _say_prahari(data: dict[str, Any]) -> str:

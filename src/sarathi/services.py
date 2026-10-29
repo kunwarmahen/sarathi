@@ -26,7 +26,8 @@ files:
                   [--sparsh <sparsh>, with [phone] on]
                   serve --port <dvara.port> --web [--telegram <dvara.telegram>]
     vaani   vaani serve, with [vaani] on and Dvara on: VAANI_DVARA_URL and
-                  VAANI_DVARA_TOKEN (the door's), VAANI_PORT=<vaani.port>, and
+                  VAANI_DVARA_TOKEN (the door's), VAANI_PORT=<vaani.port>,
+                  VAANI_PAGE_PORT=<vaani.page_port> (on 0.0.0.0 with [house]), and
                   VAANI_HEAR_URL=<dvara.whisper> when that names one; the pucks
                   are ~/.config/vaani/vaani.toml's
     setu    setu serve --port <pages.setu_port>
@@ -524,6 +525,9 @@ def voice_service(config: Config, found: dict[str, Found], door_on: bool,
                    {"VAANI_DVARA_URL": meet["SAMAY_DVARA_URL"],
                     "VAANI_DVARA_TOKEN": meet["SAMAY_DVARA_TOKEN"],
                     "VAANI_PORT": str(config.voice_port),
+                    # its page: this computer alone, or the house with [house]
+                    "VAANI_PAGE_PORT": str(config.voice_page_port),
+                    "VAANI_PAGE_HOST": EVERYWHERE if config.house is not None else HOST,
                     **({"VAANI_HEAR_URL": config.door.whisper} if config.door.whisper
                        else {})})
 

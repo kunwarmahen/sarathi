@@ -286,24 +286,22 @@ def test_a_household_fact_goes_to_dvara_as_the_owner(owner_page):
     assert json.loads(last["stdin"]) == {"add": "bins go out Tuesday"}
 
 
-# -- Settings → Vaani: asked of Vaani, which writes its own files ---------------------
+# -- Settings → Vaani: who each puck answers, asked of Vaani ----------------------------
 
 VAANI = """#!{python}
 import json, sys
 argv = sys.argv[1:]
 with open({log!r}, "a") as out:
     out.write(json.dumps(argv) + "\\n")
-if argv[0] == "status":
-    print(json.dumps({{"format": "vaani.status.v1", "serving": True, "pucks": [
-        {{"name": "kitchen", "listening": False, "problem": "plaintext"}}]}}))
-elif argv[0] == "runs":
+if argv[0] == "runs":
     print(json.dumps({{"format": "vaani.runs.v1", "runs": [{{"heard": "what day"}}],
-                      "pucks": [], "voices": [], "enrolling": None}}))
+                      "pucks": [{{"name": "kitchen", "person": "owner", "people": []}}],
+                      "voices": [{{"person": "owner", "samples": 3}}], "enrolling": None}}))
 elif "nobody" in argv:
-    print("error: nobody isn't in the kitchen puck's people", file=sys.stderr)
+    print("error: no puck called 'nobody' (yours: kitchen)", file=sys.stderr)
     sys.exit(2)
 else:
-    print("Now, at the kitchen puck, asha says the wake word")
+    print("the kitchen puck: person house (from its next question)")
 """
 
 
@@ -319,30 +317,28 @@ def with_vaani(owner_page, world, tmp_path):
     return owner_page
 
 
-def test_the_vaani_tab_says_a_puck_isnt_listening_and_its_last_questions(with_vaani):
+def test_the_vaani_tab_has_the_pucks_and_voices_but_not_the_questions(with_vaani):
     got = ask(with_vaani, "/api/vaani").json()
-    assert got["status"]["pucks"][0]["problem"] == "plaintext"
-    assert got["runs"] == [{"heard": "what day"}]
+    assert got["pucks"][0]["name"] == "kitchen" and got["voices"][0]["person"] == "owner"
+    assert "runs" not in got                       # those are on Vaani's own page
 
 
-def test_a_voice_is_learned_by_vaani_and_its_refusal_is_the_answer(with_vaani):
-    code, said = send(with_vaani, "/api/vaani", {"do": "enroll", "person": "asha",
-                                                 "puck": "kitchen"})
-    assert code == 200 and "asha says the wake word" in said["said"]
-    code, said = send(with_vaani, "/api/vaani", {"do": "enroll", "person": "nobody",
-                                                 "puck": "kitchen"})
-    assert code == 400 and said["detail"].startswith("nobody isn't")
-    code, _ = send(with_vaani, "/api/vaani", {"do": "forget", "person": "../asha"})
-    assert code == 400
-    code, _ = send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
-                                              "people": ["asha", "--x"]})
-    assert code == 400
-    send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen", "person": "house",
-                                    "people": ["owner", "asha"]})
+def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
+    code, said = send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                                 "person": "house",
+                                                 "people": ["owner", "asha"]})
+    assert code == 200 and "person house" in said["said"]
+    code, said = send(with_vaani, "/api/vaani", {"do": "puck", "puck": "nobody",
+                                                 "person": "house"})
+    assert code == 400 and said["detail"].startswith("no puck called")
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                           "people": ["asha", "--x"]})[0] == 400
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "../k"})[0] == 400
+    assert send(with_vaani, "/api/vaani", {"do": "enroll", "person": "asha",
+                                           "puck": "kitchen"})[0] == 400   # Vaani's page
     asked = [json.loads(line) for line in with_vaani.vaani_log.read_text().splitlines()]
-    assert ["voices", "enroll", "asha", "--at-puck", "kitchen"] in asked
     assert ["puck", "kitchen", "--person", "house", "--people", "owner,asha"] in asked
-    assert not any("../asha" in a or "--x" in ",".join(a) for a in asked)
+    assert not any("--x" in ",".join(a) or "../k" in a for a in asked)
 
 
 def test_vaani_off_or_a_person_signed_in_gets_nothing(with_vaani):
@@ -351,7 +347,8 @@ def test_vaani_off_or_a_person_signed_in_gets_nothing(with_vaani):
     session = send(with_vaani, "/api/claim", {"link": link, "password": "a long password"},
                    token="")[1]["session"]
     assert ask(with_vaani, "/api/vaani", token=session).status_code == 403
-    assert send(with_vaani, "/api/vaani", {"do": "stop"}, token=session)[0] == 403
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen"},
+                token=session)[0] == 403
     with_vaani.home.config = replace(with_vaani.home.config, voice_on=False)
     assert ask(with_vaani, "/api/vaani").json() == {"on": False}
-    assert send(with_vaani, "/api/vaani", {"do": "stop"})[0] == 409
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen"})[0] == 409

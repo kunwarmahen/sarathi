@@ -525,13 +525,8 @@ button.danger:hover { color: var(--clay); border-color: var(--clay); }
 .doctor-act { margin-top: 8px; }
 .doctor-fix { display: block; margin-top: 6px; font: 12.5px/1.45 var(--mono);
   background: var(--sunk); padding: 6px 8px; border-radius: 4px; white-space: pre-wrap; }
-/* Settings → Vaani: the pucks' last questions, step by step */
+/* Settings → Vaani: each puck's people */
 .vaani { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-.vrun { padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
-.vrun-head { display: flex; justify-content: space-between; gap: 10px; }
-.vsteps { font-size: 12.5px; margin-top: 4px; }
-.vstep { color: var(--ok); }
-.vstep.bad { color: var(--clay); font-weight: 600; }
 .boxes { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 /* Settings → Check → Version (`sarathi version`) */
 .versions { display: flex; flex-direction: column; margin: 8px 0; }
