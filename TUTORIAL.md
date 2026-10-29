@@ -1771,6 +1771,9 @@ house. The program that does it is **Vaani**; it answers through Dvara
    does 30 minutes with no questions (change it in Settings → Vaani).
    The wake word (*Okay Nabu*, *Hey Jarvis* or *Hey Mycroft*) is chosen
    there too, per puck; the puck switches within a minute.
+   When your agent needs your yes (a browser, sending something), the
+   puck asks you and listens; your phone has the question too. A long
+   job is finished by the puck saying the answer by itself.
    **Settings → Check** says *Vaani is listening (kitchen)*. (When you
    delete the puck from Home Assistant, its key is wiped too. Vaani
    gives it a new one the first time it reaches it; you don't do
@@ -1804,7 +1807,7 @@ house. The program that does it is **Vaani**; it answers through Dvara
    for the "house" person. Starting with *"This is Asha, …"* always
    works.
 
-Saying *yes* to a question at the puck (with a PIN for money) is next.
+A spoken PIN for money, at the puck, is next.
 
 ---
 
