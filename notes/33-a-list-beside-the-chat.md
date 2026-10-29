@@ -144,5 +144,6 @@ list, New chat and the bell in the page and the History dialog gone.
 * **Suggestions from your own skills.** The greeting's four are
   questions every agent answers. Dvara's look doesn't list a person's
   skills yet; when it does, they can be the suggestions.
-* **Vaani's page as a chat.** Its pucks' conversations are in this list
-  already, marked 🔊. Vaani's own page gets the same reading view next.
+* ~~**Vaani's page as a chat.**~~ Its pucks' conversations are in this
+  list, marked 🔊, and Vaani's own page reads them as a chat too
+  (Vaani's notes/03).

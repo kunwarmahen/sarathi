@@ -272,8 +272,10 @@ What `up` wires for you:
 Settings → Sarathi has it under *The rest* (on/off) and *Ports*
 (`port`, the answers'; `page_port`, 8797, its page's).
 
-* **Vaani's own page** has a card under Your pages: each puck listening
-  or why not, the last questions step by step (woken, heard, whose, the
+* **Vaani's own page** has a card under Your pages: the pucks'
+  conversations read as a chat (Vaani's
+  [notes/03](https://github.com/kunwarmahen/vaani/blob/main/notes/03-the-conversations-on-the-page.md)),
+  and under **Setup** each puck listening or why not, the last questions step by step (woken, heard, whose, the
   agent's time, played or never fetched), a question still being worked
   on, voices learned and forgotten, and each person's spoken PIN. `vaani serve` serves it; the card opens it with the key
   Vaani keeps (`~/.local/state/vaani/page.token`). On 127.0.0.1, and on

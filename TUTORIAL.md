@@ -1802,7 +1802,7 @@ house. The program that does it is **Vaani**; it answers through Dvara
      the same question; answer either. Once the puck knows your voice
      (step 8), only your voice counts: say *"yes, go ahead"*.
    * **Buying, sending, or acting on what a web page said** needs your
-     spoken PIN, one digit at a time. Set it on Vaani's page under
+     spoken PIN, one digit at a time. Set it on Vaani's page, Setup, under
      **PINs**; until you do, those steps are asked on your phone.
    * **A long job** (more than a minute): the puck says it's still
      working and goes quiet, then says the answer when it's ready.
@@ -1813,7 +1813,11 @@ house. The program that does it is **Vaani**; it answers through Dvara
      but never woke our puck; if one doesn't work, go back.)
 7. **Watch it work: the Vaani card.** Under **Your pages** there's a
    Vaani card. Its line says how things stand, e.g. *kitchen listening ·
-   last question 2 min ago, played*. Open it for Vaani's own page:
+   last question 2 min ago, played*. Open it for Vaani's own page. It
+   opens on **Conversations**: what was asked at each puck and what was
+   said back, like a chat, one conversation per puck per person. (To
+   carry one on in writing, it's in that person's list on this home
+   page, marked 🔊.) Its **Setup** tab has:
    * **Each puck**: green while it's listening, red with the reason.
    * **A question still being worked on**, on top: *7 min so far ·
      agent still working…* or *waiting for your yes*.
@@ -1832,11 +1836,11 @@ house. The program that does it is **Vaani**; it answers through Dvara
      house's accounts (add one under People first). Save. It applies
      from the next question; nothing needs restarting. A person ticked
      whose voice isn't learned yet says so.
-   * **Vaani's page → Voices**: pick a person and the puck, then press
+   * **Vaani's page → Setup → Voices**: pick a person and the puck, then press
      **Learn their voice**. That person says the wake word and any
      sentence at the puck, three times; the puck counts down and the
      page shows how many are left. **Forget** deletes a voice.
-   * **Vaani's page → PINs**: each person's own PIN, for the steps in
+   * **Vaani's page → Setup → PINs**: each person's own PIN, for the steps in
      step 6 that need one.
 
    After that, *"what's on my calendar?"* is answered from the calendar
