@@ -256,7 +256,10 @@ What `up` wires for you:
   computer's Whisper and Piper as `host.containers.internal`
   (`VAANI_LOCALHOST`), its answers are published on every address at
   that port, and their links carry this computer's address on your
-  network (`[house] address`, else the one it would send from).
+  network (`[house] address`, else the one it would send from). The
+  image carries Vaani's voices extra, so a puck that lists `people`
+  tells them apart; the speaker model is fetched once to this computer
+  (`vaani voices fetch`) and mounted, with its settings and voice prints.
 * **The firewall line** names its port: the puck fetches each answer
   from there.
 * **`sarathi status`** and **Settings → Check** say whether it's

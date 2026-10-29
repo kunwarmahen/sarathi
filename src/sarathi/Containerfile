@@ -130,11 +130,13 @@ RUN if [ -f /opt/prahari/pyproject.toml ]; then \
     fi
 
 # Vaani, a voice puck's listener, when its checkout was there to copy.
-# Its one dependency is ESPHome's own client; Whisper and Piper are this
-# computer's, reached at host.containers.internal.
+# ESPHome's own client, and the voices extra (sherpa-onnx, CPU) that tells
+# who is speaking; its model is fetched to this computer (`vaani voices
+# fetch`) and mounted. Whisper and Piper are this computer's, reached at
+# host.containers.internal.
 COPY vaani/ /opt/vaani/
 RUN if [ -f /opt/vaani/pyproject.toml ]; then \
-      cd /opt/vaani && uv sync --frozen --no-dev && \
+      cd /opt/vaani && uv sync --frozen --no-dev --extra voices && \
       ln -s /opt/vaani/.venv/bin/vaani /usr/local/bin/; \
     fi
 

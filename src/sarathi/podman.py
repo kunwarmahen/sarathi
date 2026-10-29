@@ -645,13 +645,14 @@ def vaani_unit(config: Config) -> str:
     it."""
     assert config.door is not None
     port = config.voice_port
-    folders = [vaani_dirs()[0], vaani_dirs()[1]]
+    folders = list(vaani_dirs())
     for folder in folders:
         folder.mkdir(parents=True, exist_ok=True)
     env = {"VAANI_DVARA_URL": f"http://{UNITS['dvara']}:{DOOR_PORT}",
            "VAANI_PORT": str(port), "VAANI_LOCALHOST": "host.containers.internal",
            "VAANI_ADDRESS": services.lan_address(config),
-           "VAANI_CONFIG": str(folders[0]), "VAANI_STATE": str(folders[1])}
+           "VAANI_CONFIG": str(folders[0]), "VAANI_STATE": str(folders[1]),
+           "VAANI_MODELS": str(folders[2])}
     if config.door.whisper:
         env["VAANI_HEAR_URL"] = from_container(config.door.whisper)
     return _unit("Sarathi: Vaani", UNITS["vaani"], f"{IN_IMAGE}/vaani serve",
@@ -661,12 +662,16 @@ def vaani_unit(config: Config) -> str:
                  more_volumes=folders)
 
 
-def vaani_dirs() -> tuple[Path, Path]:
-    """Vaani's settings (its pucks and their keys) and its state."""
+def vaani_dirs() -> tuple[Path, Path, Path]:
+    """Vaani's settings (its pucks, their keys, the voice prints), its
+    state, and the speaker model `vaani voices fetch` put here."""
     config = os.environ.get("VAANI_CONFIG", "").strip()
     state = os.environ.get("VAANI_STATE", "").strip()
+    models = os.environ.get("VAANI_MODELS", "").strip()
     return (Path(config).expanduser() if config else Path.home() / ".config" / "vaani",
-            Path(state).expanduser() if state else Path.home() / ".local" / "state" / "vaani")
+            Path(state).expanduser() if state else Path.home() / ".local" / "state" / "vaani",
+            Path(models).expanduser() if models
+            else Path.home() / ".local" / "share" / "vaani" / "models")
 
 
 def people_url(config: Config) -> str:

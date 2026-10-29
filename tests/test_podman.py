@@ -786,7 +786,8 @@ def test_vaani_is_a_container_beside_dvara_its_answers_open_to_the_house(
     assert "PublishPort=8799:8799" in vaani and "After=sarathi-dvara.service" in vaani
     for line in ("VAANI_DVARA_URL=http://sarathi-dvara:8765", "VAANI_ADDRESS=192.168.1.20",
                  "VAANI_LOCALHOST=host.containers.internal",
-                 "VAANI_HEAR_URL=http://host.containers.internal:11435"):
+                 "VAANI_HEAR_URL=http://host.containers.internal:11435",
+                 f"VAANI_MODELS={world}/home/.local/share/vaani/models"):
         assert f"Environment={line}" in vaani
     assert "dvara-token" not in vaani                    # the token rides its env file
     assert podman.unit_secrets(voiced)["sarathi-vaani"] == {
