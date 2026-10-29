@@ -15,7 +15,8 @@ the list. This page now does too.
 conversation you've had with your agents, newest first, under
 **Pinned**, **Today**, **Yesterday**, **Previous 7 days**, **Previous
 30 days** and **Older**. Each says where it went on: 💬 this page,
-✈ Telegram, 🔊 a puck (*kitchen puck*), several when it went on several.
+✈ Telegram, 🔊 a puck (*kitchen puck*; one kept before pucks were named
+says only *puck*), several when it went on several.
 The box at the top searches what was said in all of them (Dvara's
 full-text index), with the words marked under each match.
 

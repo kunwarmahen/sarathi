@@ -1348,17 +1348,22 @@ function snippetView(snip) {
   return out;
 }
 
-// Where it went on, as a mark: 💬 this page, ✈ Telegram, 🔊 a puck.
+// Where it went on, as a mark: 💬 this page, ✈ Telegram, 🔊 a puck. A
+// puck's conversation kept before its puck was named says only "vaani".
 function roadMark(road) {
   if (road === "the page") return "💬";
   if (road === "Telegram") return "✈";
-  if (/ puck$/.test(road)) return "🔊";
+  if (road === "vaani" || / puck$/.test(road)) return "🔊";
   return "•";
+}
+
+function roadName(road) {
+  return road === "vaani" ? "puck" : road.replace(/^the /, "");
 }
 
 function roadsSaid(r) {
   const roads = r.roads && r.roads.length ? r.roads : [r.road];
-  return roads.map((x) => `${roadMark(x)} ${x.replace(/^the /, "")}`).join(" · ");
+  return roads.map((x) => `${roadMark(x)} ${roadName(x)}`).join(" · ");
 }
 
 function groupOf(r) {
@@ -1551,7 +1556,7 @@ async function openPast(r) {
     ...lines);
   const back = r.here ? null : h("button.quiet", { type: "button" }, "Back to the chat you're in");
   if (back) back.addEventListener("click", stopReading);
-  const elsewhere = (r.roads || [r.road]).filter((x) => x !== "the page");
+  const elsewhere = (r.roads || [r.road]).filter((x) => x !== "the page").map(roadName);
   document.getElementById("carry").replaceChildren(
     h("span", {}, r.here ? "You're in this conversation. Write below to carry it on."
       : "Write below to carry this conversation on here" +
