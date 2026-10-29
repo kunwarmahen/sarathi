@@ -246,6 +246,8 @@ def sarathi_view(config: Config) -> dict:
             "named": [{"name": p.name, "kind": p.kind, "where": p.where, "awake": p.awake}
                       for p in phone.named]},
         "memory": {"via": config.memory},
+        "backup": {"folder": config.backup.folder, "keep": config.backup.keep,
+                   "also": list(config.backup.also)},
         "house": None if config.house is None else {"name": config.house.name,
                                                     "address": config.house.address},
         "keys": {k: k in have for k in KEYS},
@@ -353,6 +355,20 @@ def sarathi_apply(changes: dict) -> Config:
                                awake=ph.get("awake") or None))
     if "memory" in changes:
         config = replace(config, memory=changes["memory"].get("via", config.memory))
+    if "backup" in changes:
+        b, kept = changes["backup"], config.backup
+        also = list(kept.also)
+        for path in b.get("add_also") or []:
+            if path not in also:
+                also.append(path)
+        also = [a for a in also if a not in (b.get("drop_also") or [])]
+        if "also" in b:
+            also = [str(a).strip() for a in b["also"] or [] if str(a).strip()]
+        folder = str(b.get("folder") or kept.folder).strip()
+        config = replace(config, backup=replace(
+            kept, folder=folder, also=tuple(also),
+            keep=kept.keep if b.get("keep") in (None, "") else
+            _num(b.get("keep"), "how many backups are kept", low=0, high=10_000)))
     if "house" in changes:
         h = changes["house"]
         config = replace(config, house=None if not h or not h.get("name") else

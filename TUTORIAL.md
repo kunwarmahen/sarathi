@@ -1672,6 +1672,40 @@ keep = 7                       # the newest 7 are kept, older ones removed
 also = ["~/keys"]              # anything else of yours to include
 ```
 
+Or from a terminal, without opening the file (no backup is made):
+
+```
+$ sarathi backup set --also ~/keys --folder /media/you/backup-disk/sarathi
+saved [backup] in ~/.config/sarathi/sarathi.toml
+folder: /media/you/backup-disk/sarathi
+keep:   7
+also:   /home/you/keys
+```
+
+`--keep N` too, and `--no-also PATH` takes one off; `sarathi backup set`
+alone shows what you have. With the folder on a USB disk that isn't
+plugged in, it says *"isn't there: is its disk plugged in?"*, and so
+does that night's backup, which then makes nothing rather than filling
+this computer's disk under the USB disk's name.
+
+**Deleting old ones.** `keep` removes the oldest by itself after each
+backup. To delete some yourself:
+
+```
+$ sarathi backup list
+in ~/sarathi-backups, newest first:
+   1  Wed 28 Oct 2026 02:30   412.0 MB  sarathi-beast-20261028-023001.sarathi-backup
+   2  Tue 27 Oct 2026 02:30   410.3 MB  sarathi-beast-20261027-023002.sarathi-backup
+$ sarathi backup delete 2
+  sarathi-beast-20261027-023002.sarathi-backup
+Delete this for good? [y/N] y
+deleted 1: sarathi-beast-20261027-023002.sarathi-backup
+```
+
+By number from the list or by file name, several at once, or
+`--all-but 3` for all but the newest three. Only Sarathi's own backup
+files in that folder are ever touched (`--from FOLDER` for another).
+
 A backup on the same disk doesn't help when that disk dies. Point
 `folder` at a USB disk, or copy the files somewhere else now and then.
 Each file is safe to put anywhere: without the passphrase it's noise.

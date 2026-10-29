@@ -965,6 +965,15 @@ keep = 7                       # the newest N kept there; 0 keeps all
 also = ["~/keys"]              # places of yours no program keeps
 ```
 
+`sarathi backup set --folder F --keep N --also PATH --no-also PATH`
+writes the same table, through the same check as Settings, and makes no
+backup. A folder under `/media`, `/mnt` or `/run/media` whose disk
+isn't mounted is refused at backup time ("is its disk plugged in?")
+instead of being made on this computer's disk. `sarathi backup list`
+numbers what's there, newest first; `sarathi backup delete N|FILE...`
+(or `--all-but N`) deletes after a yes, only `*.sarathi-backup` files,
+only in that folder.
+
 Settings → **Check** has a **Backups** card: the newest file, **Back up
 now**, and **Back up every night**, which asks Samay once for a 02:30
 schedule on its backup road. Samay asks with a key that makes a backup

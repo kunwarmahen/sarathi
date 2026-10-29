@@ -618,6 +618,9 @@ def make(places: list[Place], key: dict[str, Any], folder: Path, *,
     computer's, recorded so a restore elsewhere knows what to replace."""
     start = time.monotonic()
     problems = list(problems or [])
+    gone = missing_disk(folder)
+    if gone:
+        raise BackupError(gone)
     folder.mkdir(mode=0o700, parents=True, exist_ok=True)
     target = folder / file_name()
     partial = target.with_name(target.name + ".part")
@@ -669,6 +672,62 @@ def make(places: list[Place], key: dict[str, Any], folder: Path, *,
 def _db_name(config: Config | None) -> dict[str, str] | None:
     return None if config is None else {"volume": config.smritikosh.volume,
                                         "container": config.smritikosh.database}
+
+
+#: Where removable disks are mounted: a folder under one of these whose
+#: disk isn't mounted is a disk unplugged, not a folder to make.
+DISKS = ("/media/", "/mnt/", "/run/media/", "/Volumes/")
+
+
+def missing_disk(folder: Path) -> str | None:
+    """Why ``folder`` can't take a backup now, or None. A folder on a disk
+    that isn't plugged in is a sentence, never a folder made where the
+    disk would be -- that would put the backup on this computer's own
+    disk, under a name that says it's on the other one."""
+    folder = folder.expanduser()
+    if folder.is_dir():
+        return None if os.access(folder, os.W_OK) else f"{folder} can't be written to"
+    if not str(folder).startswith(DISKS):
+        return None
+    there = next(p for p in folder.parents if p.is_dir())
+    if there.is_mount() and there != Path(there.anchor):
+        return None                      # the disk is in; the folder is made on it
+    return f"{folder} isn't there: is its disk plugged in?"
+
+
+def listing(folder: Path) -> list[dict[str, Any]]:
+    """Every backup ``sarathi backup`` made in ``folder``, newest first and
+    numbered from 1, as ``sarathi backup list`` and ``delete N`` count."""
+    made = sorted((p for p in folder.expanduser().glob(f"sarathi-*{SUFFIX}") if p.is_file()),
+                  key=lambda p: p.stat().st_mtime, reverse=True)
+    return [{"n": n, "name": p.name, "path": str(p), "bytes": p.stat().st_size,
+             "made": time.strftime("%a %d %b %Y %H:%M", time.localtime(p.stat().st_mtime))}
+            for n, p in enumerate(made, 1)]
+
+
+def delete(folder: Path, picks: list[str], *, all_but: int | None = None) -> list[str]:
+    """Backups in ``folder`` deleted: by number (``listing``'s) or file name,
+    or every one but the newest ``all_but``. Only ``sarathi backup``'s own
+    files, and only in that folder: a name with a slash, or one that isn't
+    a backup, is refused before anything goes."""
+    rows = listing(folder)
+    if all_but is not None:
+        if all_but < 1:
+            raise BackupError("--all-but keeps at least the newest one (1 or more)")
+        chosen = rows[all_but:]
+    else:
+        chosen = []
+        for pick in picks:
+            row = (next((r for r in rows if str(r["n"]) == pick), None) if pick.isdigit()
+                   else next((r for r in rows if r["name"] == pick), None))
+            if row is None:
+                raise BackupError(f"no backup {pick!r} in {folder}: `sarathi backup list` "
+                                  "shows their numbers")
+            if row not in chosen:
+                chosen.append(row)
+    for row in chosen:
+        Path(row["path"]).unlink()
+    return [r["name"] for r in chosen]
 
 
 def prune(folder: Path, keep: int) -> list[str]:

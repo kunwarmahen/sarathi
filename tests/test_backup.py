@@ -7,7 +7,9 @@ file cut short that restores half a house, a SQLite file copied mid-write
 (its last hour only in the -wal beside it), caches that make the file
 too big to keep, a program that couldn't say what it keeps and was
 quietly left out, a restore that deleted what was there, and a restore
-onto a new computer that put things under the old one's home.
+onto a new computer that put things under the old one's home. And the
+backups' own upkeep: a delete that takes a file that isn't a backup, and
+a USB disk left unplugged that quietly gets its backup on this computer.
 """
 
 from __future__ import annotations
@@ -417,6 +419,66 @@ class TestTheCommand:
         monkeypatch.setenv(backup.ENV_PASSPHRASE, WORDS)
         assert cli.main(["restore", said["file"], "--list"]) == 0
         assert "sarathi config" in capsys.readouterr().out
+
+
+class TestTheBackupsThere:
+    def _made(self, folder: Path, n: int) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        for i in range(n):
+            f = folder / f"sarathi-host-2026102{i}-000000{backup.SUFFIX}"
+            f.write_bytes(b"x" * (i + 1))
+            os.utime(f, (1_800_000_000 - i * 3600,) * 2)    # 0 is the newest
+        (folder / "notes.txt").write_text("mine")
+
+    def test_listed_newest_first_and_deleted_by_number_or_name_only(self, tmp_path):
+        self._made(tmp_path, 3)
+        rows = backup.listing(tmp_path)
+        assert [r["n"] for r in rows] == [1, 2, 3] and rows[0]["name"].endswith("0-000000"
+                                                                                + backup.SUFFIX)
+        assert backup.delete(tmp_path, ["3"]) == [rows[2]["name"]]
+        for wrong in ("notes.txt", "../notes.txt", "9"):
+            with pytest.raises(backup.BackupError, match="sarathi backup list"):
+                backup.delete(tmp_path, [wrong])
+        assert backup.delete(tmp_path, [], all_but=1) == [rows[1]["name"]]
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["notes.txt", rows[0]["name"]]
+
+    def test_the_command_asks_first_and_a_no_deletes_nothing(self, world, monkeypatch, capsys):
+        (world / "config").mkdir()
+        (world / "config/sarathi.toml").write_text(
+            f'[model]\nprovider = "ollama"\n[backup]\nfolder = "{world}/b"\n')
+        self._made(world / "b", 2)
+        monkeypatch.setattr("builtins.input", lambda _q: "n")
+        assert cli.main(["backup", "delete", "1"]) == 1
+        assert len(backup.listing(world / "b")) == 2
+        monkeypatch.setattr("builtins.input", lambda _q: "y")
+        assert cli.main(["backup", "delete", "1"]) == 0
+        assert cli.main(["backup", "list", "--json"]) == 0
+        listed = json.loads(capsys.readouterr().out.split("deleted 1:")[-1].split("\n", 1)[1])
+        assert [r["n"] for r in listed["backups"]] == [1]
+
+    def test_set_writes_backup_and_keeps_the_rest_of_the_file(self, world, capsys):
+        (world / "config").mkdir()
+        toml = world / "config/sarathi.toml"
+        toml.write_text('[model]\nprovider = "ollama"\nmodel = "qwen3.8"\n')
+        assert cli.main(["backup", "set", "--folder", f"{world}/usb", "--keep", "3",
+                         "--also", "~/keys", "--also", "~/notes"]) == 0
+        assert cli.main(["backup", "set", "--no-also", "~/notes"]) == 0
+        got = parse(toml.read_text())
+        assert (got.backup.folder, got.backup.keep, got.backup.also) == (
+            f"{world}/usb", 3, ("~/keys",))
+        assert got.model == "qwen3.8" and toml.with_suffix(".toml.bak").exists()
+        assert cli.main(["backup", "set", "--keep", "-1"]) == 2
+
+    def test_an_unplugged_disk_makes_no_backup_on_this_computer(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(backup, "DISKS", (str(tmp_path) + "/",))
+        gone = tmp_path / "USB" / "sarathi-backups"
+        assert "plugged in" in backup.missing_disk(gone)
+        with pytest.raises(backup.BackupError, match="plugged in"):
+            backup.make([], {}, gone)
+        assert not (tmp_path / "USB").exists()
+        assert backup.missing_disk(tmp_path / "home-folder") is not None  # same rule
+        monkeypatch.setattr(backup, "DISKS", ("/media/",))
+        assert backup.missing_disk(tmp_path / "anywhere-else") is None
 
 
 class TestANewHome:

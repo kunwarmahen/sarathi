@@ -162,6 +162,16 @@ keep = 7                           # 0 keeps every one
 also = ["~/keys"]                  # yours, no program's
 ```
 
+`sarathi backup set` writes this table from a terminal, through the
+same read-back check as the home page's Settings. **A DISK THAT ISN'T
+THERE IS SAID, NOT MADE.** A folder under `/media`, `/mnt`, `/run/media`
+or `/Volumes` whose disk isn't mounted would otherwise be made by the
+backup, on this computer's own disk, under a name that says it's on the
+USB one: the backup stops and says *"is its disk plugged in?"*, and the
+night's run reports a failure. `sarathi backup list` and `sarathi backup
+delete N|FILE` (or `--all-but N`) look after what's there by hand, after
+a yes, and touch nothing in the folder but backups.
+
 ## Live receipt
 
 A small house made by hand in a scratch home, backed up by the real

@@ -32,6 +32,11 @@
     sarathi backup            everything here in one locked file: each program's
                               own files, the settings, the memories (the first
                               time, it asks for the passphrase that opens it)
+    sarathi backup list       the backups in [backup] folder, newest first, numbered
+    sarathi backup delete N   delete backup N (or a file name; --all-but N keeps
+                              the newest N), after a yes
+    sarathi backup set        [backup] in sarathi.toml: --folder (a USB disk's
+                              folder), --keep N, --also PATH, --no-also PATH
     sarathi restore FILE      put it all back, on this computer or a new one
                               (--list: what's in it; --only NAME,...: some of it)
 
@@ -202,6 +207,31 @@ def build_parser() -> argparse.ArgumentParser:
                              "the one they were made with)")
     backup.add_argument("--json", dest="json_out", action="store_true",
                         help="print sarathi.backup.made.v1")
+    kinds = backup.add_subparsers(dest="backup_cmd", metavar="list|delete|set")
+    listed = kinds.add_parser("list", help="the backups there, newest first, numbered")
+    listed.add_argument("--from", dest="source", metavar="FOLDER",
+                        help="another folder (default: [backup] folder)")
+    listed.add_argument("--json", dest="json_out", action="store_true",
+                        help="print sarathi.backup.list.v1")
+    gone = kinds.add_parser("delete", help="delete backups, by number or file name")
+    gone.add_argument("picks", nargs="*", metavar="N|FILE",
+                      help="numbers from `sarathi backup list`, or file names")
+    gone.add_argument("--all-but", dest="all_but", type=int, metavar="N",
+                      help="delete all but the newest N")
+    gone.add_argument("--from", dest="source", metavar="FOLDER",
+                      help="another folder (default: [backup] folder)")
+    gone.add_argument("--yes", action="store_true", help="don't ask first")
+    gone.add_argument("--json", dest="json_out", action="store_true",
+                      help="print sarathi.backup.deleted.v1")
+    sets = kinds.add_parser("set", help="[backup] in sarathi.toml; no backup is made")
+    sets.add_argument("--folder", metavar="FOLDER",
+                      help="where backups go, like a USB disk's folder")
+    sets.add_argument("--keep", dest="keep_n", type=int, metavar="N",
+                      help="how many are kept there (0: all)")
+    sets.add_argument("--also", action="append", default=[], metavar="PATH",
+                      help="a file or folder of yours to back up too (again for more)")
+    sets.add_argument("--no-also", dest="no_also", action="append", default=[],
+                      metavar="PATH", help="stop backing that one up")
     restore = subs.add_parser("restore", help="put a backup back, here or on a new "
                               "computer")
     restore.add_argument("file", help="the .sarathi-backup file")
@@ -592,6 +622,8 @@ def run_backup(*, to: str | None = None, keep: int | None = None,
 def _backup(args) -> int:
     from sarathi import backup
 
+    if args.backup_cmd:
+        return _backup_kept(args)
     try:
         made = run_backup(to=args.to, keep=args.keep, new_passphrase=args.new_passphrase,
                           say=(lambda _line: None) if args.json_out else
@@ -669,6 +701,81 @@ def _restore(args) -> int:
                   "backup holds what is yours, not the programs)"]
     print("\n".join(lines))
     return code
+
+
+def _backup_kept(args) -> int:
+    """`sarathi backup list | delete | set`: the files that are there, and
+    the settings for the next ones. None of them makes a backup."""
+    from sarathi import backup, editing
+    from sarathi.config import Backup
+
+    config = _settings_or_none()
+    settings = config.backup if config is not None else Backup()
+    if args.backup_cmd == "set":
+        changes = {"folder": args.folder, "keep": args.keep_n,
+                   "add_also": args.also, "drop_also": args.no_also}
+        if any(v not in (None, []) for v in changes.values()):
+            try:
+                settings = editing.sarathi_apply({"backup": changes}).backup
+            except editing.EditError as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 2
+            print(f"saved [backup] in {_home(str(settings_path()))}")
+        also = ", ".join(settings.also) or "nothing else"
+        print(f"folder: {settings.folder}\nkeep:   "
+              f"{settings.keep or 'every one'}\nalso:   {also}")
+        gone = backup.missing_disk(settings.path())
+        if gone:
+            print(f"note: {gone} The next backup says so too, and makes nothing.")
+        return 0
+    folder = Path(args.source).expanduser() if args.source else settings.path()
+    if args.backup_cmd == "list":
+        rows = backup.listing(folder)
+        if args.json_out:
+            print(json.dumps({"format": "sarathi.backup.list.v1", "folder": str(folder),
+                              "backups": rows}, indent=2))
+            return 0
+        if not rows:
+            print(f"no backups in {_home(str(folder))}")
+            return 0
+        print(f"in {_home(str(folder))}, newest first:")
+        for r in rows:
+            print(f"  {r['n']:>2}  {r['made']}  {backup.size(r['bytes']):>9}  {r['name']}")
+        return 0
+    if not args.picks and args.all_but is None:
+        print("error: which? a number from `sarathi backup list`, a file name, or "
+              "--all-but N", file=sys.stderr)
+        return 2
+    rows = backup.listing(folder)
+    try:
+        if not args.yes:
+            names = ([r["name"] for r in rows[args.all_but:]] if args.all_but is not None
+                     else None)
+            if names is None:
+                picked = {p for p in args.picks}
+                names = [r["name"] for r in rows if str(r["n"]) in picked or r["name"] in picked]
+            if not names:
+                print("nothing to delete")
+                return 0
+            print("\n".join(f"  {n}" for n in names))
+            if input(f"Delete {'this' if len(names) == 1 else f'these {len(names)}'} "
+                     "for good? [y/N] ").strip().lower() not in ("y", "yes"):
+                print("nothing deleted")
+                return 1
+        deleted = backup.delete(folder, args.picks, all_but=args.all_but)
+    except backup.BackupError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except EOFError:
+        print("nothing deleted (no one to say yes: --yes)", file=sys.stderr)
+        return 1
+    if args.json_out:
+        print(json.dumps({"format": "sarathi.backup.deleted.v1", "folder": str(folder),
+                          "deleted": deleted}, indent=2))
+    else:
+        print(f"deleted {len(deleted)}: {', '.join(deleted)}" if deleted
+              else "nothing to delete")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
