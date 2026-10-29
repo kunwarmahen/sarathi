@@ -413,17 +413,39 @@ there's a third button, **Yes to all for this task**: the rest of that
 job's questions like it are then not asked, unless the agent reads
 something new. A purchase is still asked every time.
 
-**Asked too often?** Three places to look, in **Settings**
-([notes/34](notes/34-never-asked-means-it.md)):
+**Asked too often?** Three places to look
+([notes/34](notes/34-never-asked-means-it.md)). Open **Settings** from
+the menu under your name, at the bottom of the list on the left.
 
-* **Sarathi → Dvara → Let "Never asked" work.** Until it's ticked,
-  Dvara asks before every change, whatever the next two say. Press
-  **Apply** after.
-* **People → Change → Asking before changes**: *Never asked* for
-  yourself. Someone left at *Not set* is asked.
-* **People → Change → Sources they trust**: `samay, homeassistant-home`
-  (the names after `mcp__` in a tool's name). Reading your own schedules
-  or lights then asks nothing new. Never put your mail here.
+1. **The Sarathi tab → the Dvara card → Let "Never asked" work.** It's
+   a tick box under *Notices on phones*. Until it's ticked, Dvara asks
+   before every change, whatever steps 2 and 3 say. Tick it, press
+   **Save**, then **Apply: start everything again** at the top. Saving
+   alone does nothing yet: the switch is part of how Dvara is started,
+   so it takes effect only once Dvara starts again.
+2. **The People tab → your card → Change → Asking before changes**:
+   *Never asked*. Someone left at *Not set* is asked.
+3. **The same form → Sources they trust**: `samay, homeassistant-home`.
+   Reading your own schedules or lights then asks nothing new. Never put
+   your mail here.
+
+Steps 2 and 3 (and an agent's own *Asking before changes* under
+**Agents**) take effect from your next message, with no restart.
+
+**The names in step 3 must be exact.** Each is a server's name: the part
+between `mcp__` and the next `__` in a tool's full name, which an
+answer's **Steps** shows (`mcp__homeassistant-home__call_service` is
+`homeassistant-home`). A near miss like `homeassistant` isn't an error.
+It just matches nothing, and you're still asked.
+
+**To check step 1 took effect**, on the Podman road:
+
+```bash
+systemctl --user cat sarathi-dvara | grep -o -- "--ask --yolo"
+```
+
+or, with plain programs, `pgrep -af "dvara .*--yolo"`. Nothing printed
+means Dvara is still running as it was: press **Apply**.
 
 Give it a job of a few steps and watch: each step shows as a line while
 it runs, then the answer appears as it's written. The **+** beside the
@@ -1953,6 +1975,8 @@ moment it happens. The messages you're most likely to meet:
 | `setu connect --server …` says `asks for a token (HTTP 401); add one with --ask-token` | the server wants an API key, and has no sign-in page of its own | run it again with `--ask-token` and paste the key when asked (Step 2, *An MCP server of your own*), or put it in the token box on Setu's page |
 | An MCP server you added in Setu isn't among the boxes under *Tools it may use* | those boxes are Yantra's own tools, Samay and the phone; accounts come another way | nothing to tick: its *Accounts it needs* decides. `*:read` gives the server's reading tools; add `yourid:write` for the rest |
 | The agent knows your own server is connected but uses none of its tools | the server marked none of them read-only, so all are `write`, and the agent's need is `:read` | mark the reading ones read on Setu's page (the server's card → **Its tools: which only read**), or `setu site tools yourid NAME=read`; or add `yourid:write` to *Accounts it needs* |
+| Your agent asks before every change, though you're set to *Never asked* | Dvara was started without `--yolo`, so it asks about everything | **Settings → Sarathi → Dvara → Let "Never asked" work**, **Save**, then **Apply** (Step *Asked too often?*) |
+| Still asked after reading your schedules or lights, though they're in *Sources they trust* | a name there isn't the server's exact name | use the name from a tool's full name in **Steps**: `homeassistant-home`, not `homeassistant` |
 | `/memory` answers that the agent doesn't keep memories, and Telegram's `/` menu has no `memory` | its package doesn't remember people | **Settings → Agents**, **Change**, *Memory*: *Remembers each person*; restart Dvara for the menu (**Apply**, or `sarathi down && sarathi up`) |
 | On Telegram the agent reads an email but says it can't open a link in it (a hotel's "View reservation") | the link goes to another site, and the account's tools keep to their own site | ask it what the email itself says (dates, number); to open such links, **Settings → Agents**, **Change**, tick *Open a page in its own browser* (no sign-in there), or tap the address it gives you |
 | A sign-in from the chat: after your password the page never loads | that's the expected `http://127.0.0.1…` page, and Telegram's own browser may not show its address | set `[house]` (or a window address) so the sign-in runs in the window and nothing is copied; or open the link in Chrome, then copy the failing page's whole address back into the chat |

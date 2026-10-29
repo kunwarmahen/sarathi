@@ -29,6 +29,27 @@ A spend, and a change after the agent read something you didn't write,
 are asked about either way (Dvara's notes/58). Off is the default. A new
 house still asks about everything until its owner says otherwise.
 
+## When it takes effect
+
+**Save** writes `yolo = true` to `sarathi.toml`, and that's all. The
+switch is a word on Dvara's start line, and the line is only rewritten
+when Sarathi starts Dvara again: **Apply: start everything again**, or
+`sarathi down && sarathi up`. Until then the running Dvara is the one
+started with `--ask` alone, and everything is still asked. This house
+showed exactly that: the switch saved, the unit file and the running
+Dvara both still `--ask --owner`.
+
+To see which one is running:
+
+```bash
+systemctl --user cat sarathi-dvara | grep -o -- "--ask --yolo"   # Podman road
+pgrep -af "dvara .*--yolo"                                         # plain programs
+```
+
+The other settings that ask less are in Dvara's own files, which it
+rereads before each message: a person's *Asking before changes* and
+*Sources they trust*, and an agent's own mode. Those need no restart.
+
 ## Nobody is lifted by it quietly
 
 Dvara reads a person with no `permissions` as "no ceiling of their
@@ -53,7 +74,10 @@ Both are Dvara's (its notes/72), and both show up here:
   covered.
 * **Sources they trust** on the People form: servers whose answers are
   that person's own words (`samay`, `homeassistant-home`), so reading
-  them asks nothing new.
+  them asks nothing new. The names must be exact: a server's name is
+  the part between `mcp__` and the next `__` in its tools' names, as an
+  answer's Steps show them. This house first had `homeassistant`, which
+  matches nothing and isn't an error, so it was still asked.
 
 ## Tests
 

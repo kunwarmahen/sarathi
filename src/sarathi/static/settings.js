@@ -273,7 +273,7 @@ function personForm(p, isNew) {
   // schedules, their lights), so a change after reading one isn't asked
   // about again. Dvara checks the names; a wildcard is refused there.
   const trusted = text((p.trusted || []).join(", "), { autocapitalize: "none",
-                                                       placeholder: "samay, homeassistant" });
+                                                       placeholder: "samay, homeassistant-home" });
   const telegram = text((p.telegram || []).join(", "), { inputmode: "numeric",
                                                           placeholder: "8675309" });
   const go = button(isNew ? "Add" : "Save", () => {
@@ -321,8 +321,9 @@ function personForm(p, isNew) {
     field("Their voice", ownVoice, "An answer in another language is read in a voice for " +
           "it, when there's one. They can change it with /voice use."),
     field("Sources they trust", trusted, "Servers whose answers are their own words, " +
-          "comma-separated: samay (their schedules), homeassistant (their lights). After " +
-          "reading one, a change isn't asked about again. Never anything that reads the " +
+          "comma-separated: samay (their schedules), homeassistant-home (their lights). " +
+          "Exact names only: the part after mcp__ in a tool's name, as Steps show it; a " +
+          "near miss matches nothing. After reading one, a change isn't asked about again. Never anything that reads the " +
           "web or someone else's mail. Blank: trust nothing."),
     field("Telegram ids", telegram, "Their numbers, comma-separated. Someone who messages the " +
           "bot and isn't on the list shows above, to add."),

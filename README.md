@@ -613,7 +613,9 @@ What a person would otherwise wire by hand in two places:
   says. `[dvara] yolo = true` (*Let "Never asked" work* on the home page)
   adds `--yolo`; someone saved with no setting of their own is then
   written as "ask", so nobody is lifted by it quietly
-  ([notes/34](notes/34-never-asked-means-it.md)).
+  ([notes/34](notes/34-never-asked-means-it.md)). It is part of how Dvara
+  is started, so it takes effect after **Apply** (or `sarathi down &&
+  sarathi up`), not on **Save**.
 * **Tokens.** `DVARA_TOKEN` is made for you; `TELEGRAM_TOKEN` (from
   @BotFather) is typed at a hidden prompt. Both go to `secrets.env`, and
   from there **to Dvara alone**: the page never holds the bot's token,
