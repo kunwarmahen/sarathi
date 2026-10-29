@@ -202,8 +202,8 @@ IMAGE = "localhost/sarathi:latest"
 IN_IMAGE = "/usr/local/bin"
 CHECKOUTS = ("yantra", "setu", "samay")
 #: Built into the image when its checkout is there: the door needs dvara,
-#: the phone needs sparsh, and watches need prahari.
-OPTIONAL_CHECKOUTS = ("dvara", "sparsh", "prahari")
+#: the phone needs sparsh, watches need prahari, and a voice puck vaani.
+OPTIONAL_CHECKOUTS = ("dvara", "sparsh", "prahari", "vaani")
 #: Built in from where sarathi.toml says, when it says (``[smritikosh]``).
 MEMORY_CHECKOUT = "smritikosh"
 #: What a build is from, beside the Containerfile; the image's label (version.py).
@@ -225,6 +225,7 @@ WINDOW_PORT = 8790
 #: The browser in the image, and the one a desktop's Setu records.
 BROWSER = "/usr/bin/google-chrome"
 UNITS = {"samay": "sarathi-samay", "prahari": "sarathi-prahari", "dvara": "sarathi-dvara",
+         "vaani": "sarathi-vaani",
          "yantra": "sarathi-yantra",
          "setu": "sarathi-setu", "dvara-page": "sarathi-dvara-page",
          "sarathi": "sarathi-home", "smritikosh-db": "sarathi-smritikosh-db",
@@ -587,6 +588,9 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
         if config.pages.on and DOOR_TOKEN in held:
             # the owner page passes your answers to the door: its token, nothing else
             out[UNITS["dvara-page"]] = {DOOR_TOKEN: held[DOOR_TOKEN]}
+        if services.voicing(config) and DOOR_TOKEN in held:
+            # a puck's question goes to the door as its person: the door's token
+            out[UNITS["vaani"]] = {"VAANI_DVARA_TOKEN": held[DOOR_TOKEN]}
     return out
 
 
@@ -630,6 +634,39 @@ SuccessExitStatus=143
 [Install]
 WantedBy=default.target
 """
+
+
+def vaani_unit(config: Config) -> str:
+    """Vaani in its container: Dvara by its unit's name, this computer's
+    Whisper and Piper as ``host.containers.internal`` (VAANI_LOCALHOST),
+    and its answers published on every address at the same port, with
+    this computer's own address in their links -- a puck on the house's
+    network fetches them, and a container's own address means nothing to
+    it."""
+    assert config.door is not None
+    port = config.voice_port
+    folders = [vaani_dirs()[0], vaani_dirs()[1]]
+    for folder in folders:
+        folder.mkdir(parents=True, exist_ok=True)
+    env = {"VAANI_DVARA_URL": f"http://{UNITS['dvara']}:{DOOR_PORT}",
+           "VAANI_PORT": str(port), "VAANI_LOCALHOST": "host.containers.internal",
+           "VAANI_ADDRESS": services.lan_address(config),
+           "VAANI_CONFIG": str(folders[0]), "VAANI_STATE": str(folders[1])}
+    if config.door.whisper:
+        env["VAANI_HEAR_URL"] = from_container(config.door.whisper)
+    return _unit("Sarathi: Vaani", UNITS["vaani"], f"{IN_IMAGE}/vaani serve",
+                 f"{port}:{port}", config,
+                 f"Wants={UNITS['dvara']}.service\nAfter={UNITS['dvara']}.service\n",
+                 extra_container="".join(f"Environment={k}={v}\n" for k, v in env.items()),
+                 more_volumes=folders)
+
+
+def vaani_dirs() -> tuple[Path, Path]:
+    """Vaani's settings (its pucks and their keys) and its state."""
+    config = os.environ.get("VAANI_CONFIG", "").strip()
+    state = os.environ.get("VAANI_STATE", "").strip()
+    return (Path(config).expanduser() if config else Path.home() / ".config" / "vaani",
+            Path(state).expanduser() if state else Path.home() / ".local" / "state" / "vaani")
 
 
 def people_url(config: Config) -> str:
@@ -728,6 +765,8 @@ def lan_ports(config: Config) -> list[int]:
         ports += [int(shown[1])] if shown else []
     if config.remembers_in_smritikosh and kosh.dashboard:
         ports.append(kosh.dashboard_port)
+    # where a voice puck fetches Vaani's spoken answers
+    ports += [config.voice_port] if services.voicing(config) else []
     return ports
 
 
@@ -899,6 +938,8 @@ def units(config: Config) -> dict[str, str]:
             more_volumes=door_dirs(config) + phone_dirs(config)
             + ([mcp_dir()] if config.remembers_in_smritikosh else []))
         page_unit += f"After={UNITS['dvara']}.service\n"
+        if services.voicing(config):
+            out[f"{UNITS['vaani']}.container"] = vaani_unit(config)
     if config.phone is not None:
         # auto: no phone answering at the start means no phone tools until
         # you press "use this phone" -- as on the process road
@@ -1420,6 +1461,7 @@ def up(config: Config) -> tuple[list[str], bool]:
         if config.door.ntfy_port:
             wanted.append(("ntfy", config.door.ntfy_port))
         wanted.append(("dvara", config.door.port))
+        wanted += [("vaani", config.voice_port)] if services.voicing(config) else []
     wanted.append(("yantra", config.web_port))
     if config.pages.on:
         wanted.append(("setu", config.pages.setu_port))
@@ -1564,8 +1606,8 @@ def down(remove: bool = False) -> list[str]:
     """Stop the units. They stay installed -- and so start again at the
     next login, which is what they are for -- unless ``remove``."""
     lines = retire_old()
-    for name in ("smritikosh-ui", "sarathi", "dvara-page", "setu", "yantra", "dvara",
-                 "ntfy", "prahari", "samay",
+    for name in ("smritikosh-ui", "sarathi", "dvara-page", "setu", "yantra", "vaani",
+                 "dvara", "ntfy", "prahari", "samay",
                  "smritikosh", "smritikosh-db", "smritikosh-neo4j", "smritikosh-mongodb",
                  "smritikosh-redis"):
         unit = UNITS[name]

@@ -25,6 +25,10 @@ files:
     dvara   dvara --root/--actors/--state <dvara.*> --ask --samay <samay>
                   [--sparsh <sparsh>, with [phone] on]
                   serve --port <dvara.port> --web [--telegram <dvara.telegram>]
+    vaani   vaani serve, with [vaani] on and Dvara on: VAANI_DVARA_URL and
+                  VAANI_DVARA_TOKEN (the door's), VAANI_PORT=<vaani.port>, and
+                  VAANI_HEAR_URL=<dvara.whisper> when that names one; the pucks
+                  are ~/.config/vaani/vaani.toml's
     setu    setu serve --port <pages.setu_port>
                   [--people <dvara.state>/setu, with Dvara on: each person's
                   own folder, for the link /accounts page sends them;
@@ -282,6 +286,9 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
             says_address="page: "))
     if door is not None:
         services.append(door)
+    voice = voice_service(config, found, door is not None, notes)
+    if voice is not None:
+        services.append(voice)
     page_argv = [yantra.program, "--web", "--host", listen, "--port", str(config.web_port)]
     if setu.program is not None:
         page_argv += ["--setu", setu.program]
@@ -468,6 +475,57 @@ def watching(config: Config, env: dict[str, str] | None = None) -> bool:
     if not config.watch_on:
         return False
     return locate(next(s for s in SIBLINGS if s.name == "prahari"), env) is not None
+
+
+def voicing(config: Config, env: dict[str, str] | None = None) -> bool:
+    """Vaani is on in sarathi.toml, Dvara is on (it answers through it),
+    and vaani is on this machine, found the way `status` finds it."""
+    from sarathi.siblings import SIBLINGS, locate
+
+    if not config.voice_on or config.door is None:
+        return False
+    return locate(next(s for s in SIBLINGS if s.name == "vaani"), env) is not None
+
+
+def lan_address(config: Config) -> str:
+    """This computer's address on the house's network, as a device there
+    reaches it: ``[house] address`` when set, else the one the system
+    would send from towards the internet (no packet is sent)."""
+    if config.house is not None and config.house.address:
+        return config.house.address
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+        try:
+            probe.connect(("192.0.2.1", 9))
+            return probe.getsockname()[0]
+        except OSError:
+            return "127.0.0.1"
+
+
+def voice_service(config: Config, found: dict[str, Found], door_on: bool,
+                  notes: list[str]) -> Service | None:
+    """Vaani, when ``[vaani] on``: its pucks are vaani.toml's; Sarathi says
+    where Dvara is, with its token, and where Whisper is when ``[dvara]
+    whisper`` names one. The answers it serves are for the pucks on the
+    house's network, so it listens on every address."""
+    if not config.voice_on:
+        return None
+    vaani = found.get("vaani")
+    if vaani is None or vaani.program is None:
+        notes.append(f"{'vaani':<{WIDTH}} not started: vaani was not found "
+                     "(see `sarathi status`; it's optional)")
+        return None
+    if not door_on or config.door is None:
+        notes.append(f"{'vaani':<{WIDTH}} not started: it answers through Dvara, "
+                     "which is off (`sarathi dvara`)")
+        return None
+    meet = door_env(config)
+    return Service("vaani", "vaani", [vaani.program, "serve"], config.voice_port,
+                   {"VAANI_DVARA_URL": meet["SAMAY_DVARA_URL"],
+                    "VAANI_DVARA_TOKEN": meet["SAMAY_DVARA_TOKEN"],
+                    "VAANI_PORT": str(config.voice_port),
+                    **({"VAANI_HEAR_URL": config.door.whisper} if config.door.whisper
+                       else {})})
 
 
 def watch_door_env(meet: dict[str, str]) -> dict[str, str]:

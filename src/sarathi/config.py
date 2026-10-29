@@ -69,6 +69,8 @@ DEFAULT_WEB_PORT = 8321
 DEFAULT_CLOCK_PORT = 8780
 #: Prahari: its page, its API and its inlet (what a phone app knocks on).
 DEFAULT_WATCH_PORT = 8782
+#: Where a voice puck fetches Vaani's spoken answers.
+DEFAULT_VOICE_PORT = 8799
 DEFAULT_DOOR_PORT = 8770
 #: ntfy, the push server Dvara's notices reach phones through (`dvara.ntfy`).
 DEFAULT_NTFY_PORT = 8793
@@ -91,6 +93,7 @@ KNOWN: dict[str, set[str]] = {
     "yantra": {"port"},
     "samay": {"on", "port"},
     "prahari": {"on", "port", "inlet_port", "public_url", "people"},
+    "vaani": {"on", "port"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner", "ntfy", "ntfy_port", "voices",
@@ -308,6 +311,11 @@ class Config:
     watch_inlet_port: int = 0
     #: Where the internet reaches that inlet (its Tailscale Funnel name).
     watch_public: str = ""
+    #: Vaani, a voice puck's listener: off until ``[vaani] on = true`` (its
+    #: pucks are vaani.toml's, set up with `vaani init`); it answers
+    #: through Dvara, so it needs Dvara on too.
+    voice_on: bool = False
+    voice_port: int = DEFAULT_VOICE_PORT
     #: Only these people get watches through Dvara; () for everyone.
     watch_people: tuple[str, ...] = ()
     backup: Backup = Backup()
@@ -484,6 +492,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     clock = data.get("samay", {})
     if not isinstance(clock.get("on", True), bool):
         raise ConfigError(f"{where}: samay.on must be true or false")
+    voice = data.get("vaani", {})
+    if not isinstance(voice.get("on", False), bool):
+        raise ConfigError(f"{where}: vaani.on must be true or false")
     watch = data.get("prahari", {})
     if not isinstance(watch.get("on", True), bool):
         raise ConfigError(f"{where}: prahari.on must be true or false")
@@ -632,7 +643,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   watch_on=watch.get("on", True),
                   watch_port=_port(watch, "port", DEFAULT_WATCH_PORT, "prahari"),
                   watch_inlet_port=watch_inlet, watch_public=watch_public.rstrip("/"),
-                  watch_people=tuple(n.strip() for n in watch_people))
+                  watch_people=tuple(n.strip() for n in watch_people),
+                  voice_on=voice.get("on", False),
+                  voice_port=_port(voice, "port", DEFAULT_VOICE_PORT, "vaani"))
 
 
 def _render_watch_extra(config: Config) -> str:
@@ -698,6 +711,14 @@ port = {config.clock_port}
 on = {"true" if config.watch_on else "false"}
 port = {config.watch_port}
 {_render_watch_extra(config)}
+# Vaani: a Home Assistant Voice puck that talks to your agents, through
+# Dvara. Its pucks, their keys and who each answers as are in
+# ~/.config/vaani/vaani.toml (`vaani init`, `vaani key`). port: where a
+# puck fetches the spoken answer; open it to your network.
+[vaani]
+on = {"true" if config.voice_on else "false"}
+port = {config.voice_port}
+
 # How `sarathi up` starts them: process (plain programs on this machine)
 # | podman (containers kept running by systemd; build with `sarathi image`).
 [run]

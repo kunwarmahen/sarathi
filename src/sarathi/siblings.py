@@ -78,6 +78,8 @@ SIBLINGS: tuple[Sibling, ...] = (
             status_format="dvara.status.v1", optional=True),
     Sibling("sparsh", "sparsh", "the hands: your phone, worked by number, with a yes "
             "before Send", status_format="sparsh.status.v1", optional=True),
+    Sibling("vaani", "vaani", "the voice: a puck you talk to, answered by your agents",
+            status_format="vaani.status.v1", optional=True),
     Sibling("smritikosh", "smritikosh-mcp",
             "a memory store (Yantra keeps its own without it)", optional=True),
 )
@@ -182,6 +184,15 @@ def _say_samay(data: dict[str, Any]) -> str:
     return f"not running (start it: samay serve); schedules: {tally}"
 
 
+def _say_vaani(data: dict[str, Any]) -> str:
+    if data.get("problem"):
+        return str(data["problem"])
+    pucks = data.get("pucks") or []
+    named = ", ".join(f"{p.get('name')} (as {p.get('person')})" for p in pucks) \
+        or "no pucks yet (`vaani init`)"
+    return f"{'listening' if data.get('serving') else 'not running'}: {named}"
+
+
 def _say_prahari(data: dict[str, Any]) -> str:
     counts = data.get("watches") or {}
     tally = (f"{counts.get('active', 0)} active ({counts.get('listening', 0)} at the "
@@ -271,7 +282,7 @@ def _say_yantra(data: dict[str, Any]) -> str:
 
 SAY = {"yantra": _say_yantra, "setu": _say_setu, "samay": _say_samay,
        "prahari": _say_prahari, "dvara": _say_dvara,
-       "sparsh": _say_sparsh}
+       "sparsh": _say_sparsh, "vaani": _say_vaani}
 
 
 #: A ``before`` that means "do not ask": the door is off in sarathi.toml,

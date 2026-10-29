@@ -12,11 +12,12 @@ job and stand on their own:
 | **Prahari** (प्रहरी, "the sentinel") | tells your agent when something happens — a price, a mail, a phone's notification — looking with no model |
 | **Dvara** (द्वार, "door") | many people and many agents behind one always-on service, e.g. on Telegram |
 | **Sparsh** (स्पर्श, "touch") | your phone, worked by the agent from a numbered list of what's on its screen, with a yes before Send |
+| **Vaani** (वाणी, "speech") | a Home Assistant Voice puck you talk to, answered by your own agents, heard and spoken on this computer |
 | **Smritikosh** (स्मृतिकोश, "store of memories") | a memory store an agent can use instead of Yantra's own |
 
 Each is useful alone. Together they are a helper that knows your
-accounts, remembers you, keeps time, keeps watch and works your phone —
-but only if you know seven names, seven installs, and how they find each
+accounts, remembers you, keeps time, keeps watch, works your phone and
+answers out loud — but only if you know eight names, eight installs, and how they find each
 other. **Sarathi is the
 part you install.** It finds the others, asks you once which model
 should answer, and starts them together.
@@ -228,6 +229,42 @@ What `up` wires for you:
   `deploy/public-inlet-tailscale.sh` gives it a public HTTPS name through
   Tailscale Funnel, and `public_url = "https://…:8443"` tells Prahari
   that name, so its page and your agent show it.
+
+### A puck you talk to: Vaani
+
+With [Vaani](https://github.com/kunwarmahen/vaani) beside the other
+checkouts, a Home Assistant Voice puck answers with your agents: its
+wake word, your question, the answer out of the puck. Its pucks, their
+keys and who each answers as are Vaani's own (`vaani init`, `vaani key`,
+`vaani check`: its TUTORIAL). Then:
+
+```toml
+[vaani]
+on = true
+port = 8799        # where the puck fetches the spoken answer
+```
+
+and `sarathi up` (on the containers' road, `sarathi image` first). It is
+off until you say so, and it needs Dvara: a puck's question goes to the
+puck's person through Dvara, with their agents, accounts and rules.
+
+What `up` wires for you:
+
+* **Vaani** gets Dvara's address and token (`VAANI_DVARA_URL`,
+  `VAANI_DVARA_TOKEN`), its port, and `[dvara] whisper` as its Whisper
+  when that names one. On the containers' road it reaches this
+  computer's Whisper and Piper as `host.containers.internal`
+  (`VAANI_LOCALHOST`), its answers are published on every address at
+  that port, and their links carry this computer's address on your
+  network (`[house] address`, else the one it would send from).
+* **The firewall line** names its port: the puck fetches each answer
+  from there.
+* **`sarathi status`** and **Settings → Check** say whether it's
+  listening, and which pucks (a puck with no key file is amber).
+* **A backup** takes its settings folder: the pucks, their keys and
+  Dvara's token.
+
+Settings → Sarathi has it under *The rest* (on/off) and *Ports*.
 
 ### Every page on your home network: `[house]`
 

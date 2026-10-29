@@ -300,3 +300,27 @@ def test_dvara_is_started_with_its_whisper(world, monkeypatch):
     heard = replace(base, door=replace(base.door, whisper="http://127.0.0.1:11435"))
     assert services.door_service(heard, found, {}, True, []).env["DVARA_WHISPER"] == \
         "http://127.0.0.1:11435"
+
+
+def test_vaani_starts_after_dvara_with_its_address_token_and_whisper(world, monkeypatch):
+    from dataclasses import replace
+
+    from sarathi import services
+    from sarathi.config import Pages
+    from sarathi.siblings import SIBLINGS, Found
+    monkeypatch.setenv("DVARA_TOKEN", "door-token")
+    found = {s.name: Found(s, program=f"/bin/{s.program}") for s in SIBLINGS}
+    base = config.Config("ollama", pages=Pages(on=False), voice_on=True,
+                         door=Door(port=8770, whisper="http://127.0.0.1:11435"))
+    notes: list[str] = []
+    voice = services.voice_service(base, found, True, notes)
+    assert voice.argv == ["/bin/vaani", "serve"] and voice.port == 8799
+    assert voice.env["VAANI_DVARA_URL"].endswith(":8770")
+    assert voice.env["VAANI_DVARA_TOKEN"] == "door-token"
+    assert voice.env["VAANI_HEAR_URL"] == "http://127.0.0.1:11435"
+    assert services.voice_service(replace(base, voice_on=False), found, True, notes) is None
+    assert services.voice_service(base, found, False, notes) is None
+    assert "answers through Dvara" in notes[-1]
+    missing = {**found, "vaani": Found(found["vaani"].sibling)}
+    assert services.voice_service(base, missing, True, notes) is None
+    assert "vaani was not found" in notes[-1]

@@ -13,7 +13,7 @@ you.
 
 ## What you're setting up
 
-Seven small programs, each with one job. You'll use three of them today:
+Eight small programs, each with one job. You'll use three of them today:
 
 ```
    you, in a browser
@@ -53,7 +53,8 @@ starts forgetting things you told it. And Prahari, which tells you when
 something happens — a price drops, a mail comes, Mum messages — is
 Step 8. Step 9 keeps good answers as tests, so a new model can't quietly
 break them. Step 10 sets up a morning brief. Step 11 keeps a copy of
-everything, so a dead disk or a new computer is one command.)
+everything, so a dead disk or a new computer is one command. Step 12
+makes a Home Assistant Voice puck talk to your helper: Vaani.)
 
 ---
 
@@ -1731,6 +1732,42 @@ Anything already in the way is moved aside, never deleted: you'll see
 `--only setu,dvara` puts back only those. If Smritikosh isn't on the new
 computer yet, the restore says so: clone it where it says, then
 `sarathi restore FILE --only smritikosh`.
+
+---
+
+## Step 12 (optional) · A puck you talk to
+
+A Home Assistant Voice puck on the kitchen counter: say its wake word,
+ask, and your own helper answers out loud. It hears with a Whisper on
+this computer and speaks with Piper, so nothing you say leaves the
+house. The program that does it is **Vaani**; it answers through Dvara
+(Step 6), as you.
+
+1. **Get Vaani**, beside the others:
+   `cd ~/Documents/ai/agent && git clone https://github.com/kunwarmahen/vaani && (cd vaani && uv sync)`.
+2. **Set up the puck**: Vaani's own TUTORIAL, Steps 2–4. You back the
+   puck up over USB-C (`vaani backup`), take its key from that backup
+   (`vaani key`), say who it answers as (`vaani init --puck kitchen
+   --host <its address> --person <you in Dvara> --agent <one of your
+   agents>`), and check (`vaani check`).
+3. **A Whisper for it** (and for voice notes): if you have one, tell
+   Sarathi where: `sarathi dvara --whisper http://127.0.0.1:11435`.
+4. **Take the puck out of Home Assistant**: Settings → Devices &
+   services → ESPHome → the puck → ⋮ → Delete. A puck listens to one
+   helper at a time.
+5. **Turn Vaani on**: **Settings → Sarathi → The rest → Vaani**, Save
+   (or `[vaani] on = true` in `sarathi.toml`), then `sarathi image &&
+   sarathi down && sarathi up` on the containers' road, or `sarathi
+   down && sarathi up` on plain programs. Run the firewall line `up`
+   prints: it now names 8799, where the puck fetches each answer.
+6. **Talk to it.** *"Okay Nabu… what's on my calendar tomorrow?"* The
+   ring spins while your helper works, then the puck says the answer.
+   **Settings → Check** says *Vaani is listening (kitchen)*.
+
+Each puck answers as the one person its settings name, for now. Telling
+voices apart, so everyone gets their own accounts from the same puck,
+and saying *yes* to a question (with a PIN for money) at the puck, are
+next.
 
 ---
 

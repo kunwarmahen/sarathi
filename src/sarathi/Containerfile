@@ -1,10 +1,10 @@
-# Sarathi -- Yantra, Setu, Samay and Prahari (and Dvara, Sparsh, Smritikosh) in one image.
+# Sarathi -- Yantra, Setu, Samay and Prahari (and Dvara, Sparsh, Vaani, Smritikosh) in one image.
 #
 # Not built by hand: `sarathi image` puts a clean copy of each project's
 # committed code beside this file and builds from there. The context is
 #
-#   yantra/  setu/  samay/  dvara/  sparsh/  prahari/  smritikosh/ (the last
-#   four maybe empty)  Containerfile
+#   yantra/  setu/  samay/  dvara/  sparsh/  prahari/  vaani/  smritikosh/ (the
+#   last five maybe empty)  Containerfile
 #
 # ONE IMAGE, SEVERAL CONTAINERS. The projects call each other as programs
 # -- the page runs `setu run gmail:mine` and `samay mcp`, the clock runs
@@ -127,6 +127,15 @@ COPY prahari/ /opt/prahari/
 RUN if [ -f /opt/prahari/pyproject.toml ]; then \
       cd /opt/prahari && uv sync --frozen --no-dev && \
       ln -s /opt/prahari/.venv/bin/prahari /usr/local/bin/; \
+    fi
+
+# Vaani, a voice puck's listener, when its checkout was there to copy.
+# Its one dependency is ESPHome's own client; Whisper and Piper are this
+# computer's, reached at host.containers.internal.
+COPY vaani/ /opt/vaani/
+RUN if [ -f /opt/vaani/pyproject.toml ]; then \
+      cd /opt/vaani && uv sync --frozen --no-dev && \
+      ln -s /opt/vaani/.venv/bin/vaani /usr/local/bin/; \
     fi
 
 # dvara, the door, when its checkout was there to copy (an empty folder

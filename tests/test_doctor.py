@@ -76,6 +76,16 @@ class TestAProblemAlreadyKnownIsSaid:
         assert {line.level for line in got} == {"green"}
         assert doctor.report(got)["ok"] is True
 
+    def test_a_puck_nobody_answers_is_red_and_one_with_no_key_amber(self):
+        voiced = replace(CONFIG, voice_on=True)
+        down = lines(world(vaani={"serving": False, "pucks": [
+            {"name": "kitchen", "key": "missing"}]}), config=voiced)
+        assert level(down, "vaani") == ["red", "amber"]
+        well = lines(world(vaani={"serving": True, "pucks": [
+            {"name": "kitchen", "key": "readable"}]}), config=voiced)
+        assert level(well, "vaani") == ["green"]
+        assert level(lines(world(vaani={"serving": False})), "vaani") == []   # off
+
     def test_an_expired_sign_in_is_red_with_the_command(self):
         got = lines(world(setu={"connections": [
             {"ref": "gmail:me", "connector": "gmail", "account": "me",

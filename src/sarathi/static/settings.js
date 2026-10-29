@@ -640,6 +640,7 @@ function drawSarathiTab() {
   const ctx = text(s.model.context_window || "", { inputmode: "numeric", placeholder: "8192" });
   const samayOn = check(s.samay.on);
   const prahariOn = check(s.prahari ? s.prahari.on : true);
+  const vaaniOn = check(s.vaani ? s.vaani.on : false);
   const prahariPublic = text(s.prahari?.public_url || "",
                              { placeholder: "https://beast.tail1234.ts.net:8443" });
   const prahariPeople = text((s.prahari?.people || []).join(", "),
@@ -667,6 +668,7 @@ function drawSarathiTab() {
     yantra: text(s.yantra.port), samay: text(s.samay.port),
     prahari: text(s.prahari ? s.prahari.port : 8782),
     prahariInlet: text(s.prahari?.inlet_port || "", { placeholder: "none" }),
+    vaani: text(s.vaani ? s.vaani.port : 8799),
     home: text(s.pages.sarathi_port),
     setu: text(s.pages.setu_port), dvaraPage: text(s.pages.dvara_port),
     dvara: text(dv.port || 8770), ntfy: text(dv.ntfy_port || 8793),
@@ -679,6 +681,7 @@ function drawSarathiTab() {
     prahari: { on: prahariOn.checked, port: ports.prahari.value,
                inlet_port: ports.prahariInlet.value.trim() || 0,
                public_url: prahariPublic.value.trim(), people: prahariPeople.value },
+    vaani: { on: vaaniOn.checked, port: ports.vaani.value },
     run: { road: road.value },
     pages: { on: pagesOn.checked, sarathi_port: ports.home.value, setu_port: ports.setu.value,
              dvara_port: ports.dvaraPage.value },
@@ -727,6 +730,8 @@ function drawSarathiTab() {
       field("Prahari's inlet from outside", prahariPublic, "Its Tailscale Funnel address " +
             "(Prahari's deploy/public-inlet-tailscale.sh prints it), for a webhook or " +
             "Gmail's push. Needs the inlet's own port, under Ports."),
+      h("label.inline", {}, vaaniOn, " Vaani: a voice puck you talk to (its pucks: " +
+        "`vaani init`; it answers through Dvara)"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
       field("How it runs", road)),
     phoneCard(phoneOn, phoneAt, wdaAt, awake, s.run.road, s.phone?.named || []),
@@ -736,7 +741,8 @@ function drawSarathiTab() {
       field("Prahari's inlet alone (the public road)", ports.prahariInlet),
       field("This home page", ports.home), field("Setu's page", ports.setu),
       field("Dvara's page", ports.dvaraPage), field("Dvara", ports.dvara),
-      field("ntfy", ports.ntfy)),
+      field("ntfy", ports.ntfy),
+      field("Vaani (where a puck fetches the answer; open it to your network)", ports.vaani)),
     h("p.meta", {}, "Memory is switched on the Memory card above."),
     row(go),
     asText("sarathi", "", s.text, "~/.config/sarathi/sarathi.toml"),

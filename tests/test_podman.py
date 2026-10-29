@@ -769,3 +769,28 @@ def test_a_timezone_is_read_by_name_never_as_a_path(monkeypatch):
                         lambda _p: "/usr/share/zoneinfo/Europe/Berlin")
     monkeypatch.setattr(podman.Path, "read_text", lambda self: "")
     assert podman.host_timezone() == "Europe/Berlin"
+
+
+def test_vaani_is_a_container_beside_dvara_its_answers_open_to_the_house(
+        host, world, monkeypatch):
+    from dataclasses import replace
+
+    with_door_secrets(world)
+    monkeypatch.setattr(podman.services, "voicing", lambda config, env=None: True)
+    monkeypatch.setattr(podman.services, "lan_address", lambda config: "192.168.1.20")
+    voiced = replace(DOOR, voice_on=True, voice_port=8799,
+                     door=replace(DOOR.door, whisper="http://127.0.0.1:11435"))
+    made = podman.units(voiced)
+    vaani = made["sarathi-vaani.container"]
+    assert "Exec=/usr/local/bin/vaani serve" in vaani
+    assert "PublishPort=8799:8799" in vaani and "After=sarathi-dvara.service" in vaani
+    for line in ("VAANI_DVARA_URL=http://sarathi-dvara:8765", "VAANI_ADDRESS=192.168.1.20",
+                 "VAANI_LOCALHOST=host.containers.internal",
+                 "VAANI_HEAR_URL=http://host.containers.internal:11435"):
+        assert f"Environment={line}" in vaani
+    assert "dvara-token" not in vaani                    # the token rides its env file
+    assert podman.unit_secrets(voiced)["sarathi-vaani"] == {
+        "VAANI_DVARA_TOKEN": "dvara-token"}
+    assert 8799 in podman.lan_ports(voiced)
+    off = podman.units(replace(voiced, voice_on=True, door=None))
+    assert "sarathi-vaani.container" not in off          # it answers through Dvara

@@ -311,6 +311,24 @@ def _prahari(data: dict, config: Any) -> list[Line]:
     return [Line("green", "prahari", "Prahari is watching")]
 
 
+def _vaani(data: dict, config: Any) -> list[Line]:
+    if config is not None and not getattr(config, "voice_on", False):
+        return []
+    if data.get("problem"):
+        return [Line("red", "vaani", f"Vaani can't start: {data['problem']}",
+                     "vaani init, then vaani key")]
+    lines = [Line("amber", "vaani", f"the {p['name']} puck has no key file",
+                  "vaani key FLASH.bin (from `vaani backup`)")
+             for p in data.get("pucks") or [] if p.get("key") != "readable"]
+    if not data.get("serving"):
+        lines.insert(0, Line("red", "vaani", "Vaani isn't listening: the pucks light up "
+                             "and nobody answers", "sarathi up", act=UP))
+    elif not lines:
+        names = ", ".join(p["name"] for p in data.get("pucks") or [])
+        lines.append(Line("green", "vaani", f"Vaani is listening ({names})"))
+    return lines
+
+
 def _dvara(data: dict, config: Any) -> list[Line]:
     lines = [Line("amber", "dvara", str(p), "") for p in data.get("problems") or []]
     if not data.get("serving"):
@@ -356,7 +374,7 @@ def _sparsh(data: dict, config: Any) -> list[Line]:
 
 READERS: dict[str, Callable[[dict, Any], list[Line]]] = {
     "yantra": _yantra, "setu": _setu, "samay": _samay, "prahari": _prahari,
-    "dvara": _dvara, "sparsh": _sparsh}
+    "dvara": _dvara, "sparsh": _sparsh, "vaani": _vaani}
 
 
 def _epoch(at: Any) -> float | None:
