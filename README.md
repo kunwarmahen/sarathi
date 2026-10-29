@@ -696,7 +696,7 @@ would otherwise start again at your next login. It starts nothing new;
 | after `git pull` in a checkout | nothing: it runs the checkout | `sarathi image` again, then `sarathi up` |
 | Amazon and X | your own Chrome | Chrome in the image |
 | connectors walled off | your bubblewrap (`sudo apt install bubblewrap`) | bubblewrap in the image |
-| voice notes heard | your ffmpeg (`sudo apt install ffmpeg`) and an Ollama model listing "audio" | ffmpeg in the image; the model in your Ollama |
+| voice notes heard | your ffmpeg (`sudo apt install ffmpeg`), and your Whisper when `[dvara] whisper` names one (`sarathi dvara --whisper URL`), else an Ollama model listing "audio" | ffmpeg in the image; Whisper at `[dvara] whisper` (127.0.0.1 becomes `host.containers.internal`), else the model in your Ollama |
 | answers read aloud | your Piper (`pipx install piper-tts`) and the voices in `~/.local/share/piper/voices` (`sarathi dvara --voices` fetches them) | Piper and `[dvara] voices` in the image (English unless you list more) |
 | Dvara's streamed window | listens on `window_host` itself | published from Dvara's container |
 | Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |

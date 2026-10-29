@@ -26,7 +26,7 @@ from test_up import run, seen
 def door_args(**given) -> argparse.Namespace:
     return argparse.Namespace(**{**dict(telegram=None, telegram_id=None, port=None,
                                         window_host=None, window_port=None, window_url=None,
-                                        off=False, voices=None), **given})
+                                        off=False, voices=None, whisper=None), **given})
 
 
 @pytest.fixture
@@ -258,3 +258,45 @@ def test_the_door_command_sets_voices_and_fetches_them_on_plain_programs(
     assert door.run(door_args(telegram="", voices="hindi"), dvara_checkout,
                     interactive=False) == 2
     assert "not a voice's name" in capsys.readouterr().err
+
+
+# ---- a Whisper for voice notes (Dvara's heard.py) ----------------------------------
+
+
+def test_whisper_is_written_read_back_and_reaches_dvara_on_both_roads(
+        world, home, dvara_checkout, capsys):
+    from sarathi import podman
+    settings(world, {"web": 8321, "clock": 8780})
+    assert door.run(door_args(telegram="", whisper="http://127.0.0.1:11435/"),
+                    dvara_checkout, interactive=False) == 0
+    got = load()
+    assert got.door.whisper == "http://127.0.0.1:11435"
+    assert config.parse(config.render(got)).door.whisper == "http://127.0.0.1:11435"
+    assert door.run(door_args(telegram="", whisper="whisper please"), dvara_checkout,
+                    interactive=False) == 2
+    assert "an address like" in capsys.readouterr().err
+    assert podman.from_container(got.door.whisper) == "http://host.containers.internal:11435"
+    assert door.run(door_args(telegram="", whisper=""), dvara_checkout,
+                    interactive=False) == 0
+    assert load().door.whisper is None
+    assert "# whisper = " in config.render(load())
+
+
+def test_dvara_is_started_with_its_whisper(world, monkeypatch):
+    from dataclasses import replace
+
+    from sarathi import services
+    from sarathi.config import Pages
+    from sarathi.siblings import SIBLINGS, Found
+    (world / "agents").mkdir()
+    (world / "actors.toml").write_text("[actor.owner]\n")
+    monkeypatch.setenv("DVARA_TOKEN", "door-token")
+    found = {s.name: Found(s, program=f"/bin/{s.program}") for s in SIBLINGS}
+    base = config.Config("ollama", pages=Pages(on=False), door=Door(
+        root=str(world / "agents"), actors=str(world / "actors.toml"),
+        state=str(world / "state")))
+    plain = services.door_service(base, found, {}, True, [])
+    assert "DVARA_WHISPER" not in plain.env
+    heard = replace(base, door=replace(base.door, whisper="http://127.0.0.1:11435"))
+    assert services.door_service(heard, found, {}, True, []).env["DVARA_WHISPER"] == \
+        "http://127.0.0.1:11435"

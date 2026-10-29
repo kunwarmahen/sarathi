@@ -11,6 +11,7 @@ that say what was chosen.
     sarathi dvara --telegram-id 8675309   you, in a new actors file, on Telegram
     sarathi dvara --window-host 100.101.102.103   Amazon/X sign-ins streamed to phones
     sarathi dvara --voices en_US-lessac-medium,hi_IN-pratham-medium   voices to read aloud in
+    sarathi dvara --whisper http://127.0.0.1:11435   voice notes heard by your Whisper
     sarathi dvara --off                   stop starting it
 
 WHAT IT WRITES, AND WHERE.
@@ -195,6 +196,15 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
         else:
             said.extend(fetch_voices(names))
             said.append(f"voices: {', '.join(names) or 'none'}")
+    whisper = getattr(args, "whisper", None)
+    if whisper is not None:
+        from sarathi.editing import EditError, _address
+        try:
+            door = replace(door, whisper=_address(whisper, "--whisper"))
+        except EditError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        said.append(f"voice notes heard by: {door.whisper or 'a local Ollama model that hears'}")
     ntfy = getattr(args, "ntfy", None)
     if ntfy is not None or getattr(args, "ntfy_port", None):
         door = replace(door, ntfy_port=None if ntfy is False else

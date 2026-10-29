@@ -93,7 +93,8 @@ KNOWN: dict[str, set[str]] = {
     "prahari": {"on", "port", "inlet_port", "public_url", "people"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
-             "window_port", "window_url", "owner", "ntfy", "ntfy_port", "voices"},
+             "window_port", "window_url", "owner", "ntfy", "ntfy_port", "voices",
+              "whisper"},
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
     "phone": {"on", "address", "wda", "awake"},
     "memory": {"via"},
@@ -396,6 +397,9 @@ class Door:
     #: Piper's voices for answers read aloud: in the image, and fetched to
     #: this computer by `sarathi dvara --voices` (Dvara's spoken.py).
     voices: tuple[str, ...] = DEFAULT_VOICES
+    #: A Whisper server's address (the OpenAI transcription road): voice
+    #: notes and the home page's 🎤 are heard there first (Dvara's heard.py).
+    whisper: str | None = None
 
     def window_env(self) -> dict[str, str]:
         """Setu's own names for the window settings."""
@@ -506,7 +510,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     door_table = data.get("dvara", {})
     if not isinstance(door_table.get("on", False), bool):
         raise ConfigError(f"{where}: dvara.on must be true or false")
-    for key in ("telegram", "root", "actors", "state", "window_host", "window_url", "owner"):
+    for key in ("telegram", "root", "actors", "state", "window_host", "window_url", "owner",
+                "whisper"):
         if not isinstance(door_table.get(key, ""), str):
             raise ConfigError(f"{where}: dvara.{key} must be text")
     if not isinstance(door_table.get("ntfy", False), bool):
@@ -528,7 +533,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                 owner=door_table.get("owner") or "owner",
                 ntfy_port=_port(door_table, "ntfy_port", DEFAULT_NTFY_PORT, "dvara")
                 if door_table.get("ntfy", False) else None,
-                voices=tuple(dict.fromkeys(voices))) \
+                voices=tuple(dict.fromkeys(voices)),
+                whisper=str(door_table.get("whisper") or "").strip().rstrip("/") or None) \
         if door_table.get("on", False) else None
     pages_table = data.get("pages", {})
     if not isinstance(pages_table.get("on", True), bool):
@@ -914,6 +920,11 @@ port = {door.port}
 # the image has these; `sarathi dvara --voices a,b` fetches them here too.
 # An answer is read in a voice for its language when one is in this list.
 voices = {json.dumps(list(door.voices))}
+# A Whisper on this computer that writes speech down (any server with the
+# OpenAI transcription road, like faster-whisper-server): voice notes and
+# the home page's microphone are heard there first. Unset: a local Ollama
+# model that can hear.
+{f'whisper = "{door.whisper}"' if door.whisper else '# whisper = "http://127.0.0.1:11435"'}
 """
 
 

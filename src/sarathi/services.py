@@ -589,6 +589,7 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
                     # with [house], a sign-in window (Gmail's page too) on it
                     **(config.setu_window_env() if config.house is not None else {}),
                     **config.people_env(), **phone_env(config),
+                    **({"DVARA_WHISPER": door.whisper} if door.whisper else {}),
                     **(ntfy_click(config) if ntfy else {})})
 
 

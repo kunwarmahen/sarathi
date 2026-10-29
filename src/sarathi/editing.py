@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import replace
@@ -240,7 +241,7 @@ def sarathi_view(config: Config) -> dict:
             "window_host": door.window_host, "window_port": door.window_port,
             "window_url": door.window_url, "ntfy": door.ntfy_port is not None,
             "ntfy_port": door.ntfy_port or DEFAULT_NTFY_PORT,
-            "voices": list(door.voices)},
+            "voices": list(door.voices), "whisper": door.whisper or ""},
         "phone": None if phone is None else {
             "address": phone.address, "wda": phone.wda, "awake": phone.awake,
             "named": [{"name": p.name, "kind": p.kind, "where": p.where, "awake": p.awake}
@@ -267,6 +268,15 @@ def _voices(value, before: tuple[str, ...]) -> tuple[str, ...]:
         raise EditError(400, f"{', '.join(wrong)}: not a voice's name, like "
                              "hi_IN-pratham-medium (huggingface.co/rhasspy/piper-voices)")
     return tuple(dict.fromkeys(names))
+
+
+def _address(value, what: str) -> str | None:
+    """An http(s) address, or None for blank."""
+    text = str(value or "").strip().rstrip("/")
+    if text and not re.match(r"^https?://[^\s/]+(:\d+)?(/\S*)?$", text):
+        raise EditError(400, f"{what} is an address like http://127.0.0.1:11435, "
+                             f"not {text!r}")
+    return text or None
 
 
 def _num(value, what: str, *, low: int = 1, high: int = 65535) -> int | None:
@@ -344,7 +354,8 @@ def sarathi_apply(changes: dict) -> Config:
                 window_url=d.get("window_url", door.window_url) or None,
                 ntfy_port=(_num(d.get("ntfy_port"), "ntfy's port") or door.ntfy_port
                            or DEFAULT_NTFY_PORT) if ntfy else None,
-                voices=_voices(d.get("voices"), door.voices)))
+                voices=_voices(d.get("voices"), door.voices),
+                whisper=_address(d.get("whisper", door.whisper), "Whisper's address")))
     if "phone" in changes:
         ph = changes["phone"]
         named = config.phone.named if config.phone else ()

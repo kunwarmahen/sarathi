@@ -138,6 +138,9 @@ def build_parser() -> argparse.ArgumentParser:
                           help="Piper voices to read answers aloud in, e.g. "
                                "en_US-lessac-medium,hi_IN-pratham-medium (fetched here "
                                "on plain programs; `sarathi image` on Podman)")
+    door_cmd.add_argument("--whisper", metavar="URL",
+                          help="a Whisper server that hears voice notes first, e.g. "
+                               "http://127.0.0.1:11435 (\"\" for none)")
     door_cmd.add_argument("--off", action="store_true", help="stop starting Dvara")
 
     phone_cmd = subs.add_parser("phone", help="your phone, through Sparsh, for Dvara's "

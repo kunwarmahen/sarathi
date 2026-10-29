@@ -893,7 +893,9 @@ def units(config: Config) -> dict[str, str]:
             extra_container=f"Environment=SAMAY_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
                             + (f"Environment=PRAHARI_DVARA_URL=http://127.0.0.1:{DOOR_PORT}\n"
                                if watch else "")
-                            + streamed + people_url(config) + phone_env(config) + push,
+                            + streamed + people_url(config) + phone_env(config) + push
+                            + (f"Environment=DVARA_WHISPER={from_container(door.whisper)}\n"
+                               if door.whisper else ""),
             more_volumes=door_dirs(config) + phone_dirs(config)
             + ([mcp_dir()] if config.remembers_in_smritikosh else []))
         page_unit += f"After={UNITS['dvara']}.service\n"

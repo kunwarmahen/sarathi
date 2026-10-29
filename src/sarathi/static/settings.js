@@ -653,6 +653,7 @@ function drawSarathiTab() {
                      dv.owner || "owner");
   const house = text(dv.window_host || "", { placeholder: "192.168.1.44" });
   const ntfy = check(dv.ntfy);
+  const whisper = text(dv.whisper || "", { placeholder: "http://127.0.0.1:11435" });
   const voices = text((dv.voices || ["en_US-lessac-medium"]).join(", "),
                       { autocapitalize: "none", placeholder: "none: answers stay words" });
   const lanName = text(s.house?.name || "", { placeholder: "beast.local" });
@@ -683,7 +684,7 @@ function drawSarathiTab() {
              dvara_port: ports.dvaraPage.value },
     dvara: dvaraOn.checked ? { on: true, telegram: bot.value, owner: owner.value,
                                window_host: house.value.trim(), ntfy: ntfy.checked,
-                               voices: voices.value,
+                               voices: voices.value, whisper: whisper.value.trim(),
                                port: ports.dvara.value, ntfy_port: ports.ntfy.value }
                            : { on: false },
     phone: phoneOn.checked ? { on: true, address: phoneAt.value.trim(),
@@ -708,7 +709,10 @@ function drawSarathiTab() {
             "huggingface.co/rhasspy/piper-voices, with commas: en_US-lessac-medium, " +
             "hi_IN-pratham-medium. An answer is read in a voice for its language. " +
             "Containers: `sarathi image` after a change; plain programs: " +
-            "`sarathi dvara --voices …` fetches them.")),
+            "`sarathi dvara --voices …` fetches them."),
+      field("Whisper, for voice notes", whisper, "A Whisper here that writes speech down " +
+            "(faster-whisper-server's address): Telegram voice notes and the 🎤 are heard " +
+            "there first. Empty: a local Ollama model that can hear.")),
     h("div.card.form", {}, h("h3", {}, "Every page on your home network"),
       field("This computer's name at home", lanName, "Every page opens from your other " +
             "devices too, and every link says this name: <hostname>.local, or your " +
