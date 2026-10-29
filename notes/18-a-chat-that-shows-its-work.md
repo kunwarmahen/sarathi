@@ -90,7 +90,8 @@ the agent picker, and the box to write in.
   ended, and one can be opened again (Dvara, its notes/45). Opened, its
   own messages show under "Back in: …", in a fold you can close. Now
   **History** instead: every conversation, searched, read, carried on
-  or deleted ([note 21](21-history.md)).
+  or deleted ([note 21](21-history.md)), and now a list beside the chat,
+  with the row of words behind a + ([note 33](33-a-list-beside-the-chat.md)).
 * ~~**Sending a file from the page.**~~ The paperclip beside **Send**:
   pictures and files go with your next message, kept in your folder,
   a picture shown to a model that can see (Dvara, its notes/44).

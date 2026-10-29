@@ -53,6 +53,10 @@ Dvara's side has its own tests (its `tests/test_lessons.py`: the look
 lists a person's open lesson and not another's). Sarathi's 304 tests
 pass unchanged: the page passes Dvara's answer through as it is.
 
+Teach now sits behind the + beside the box, as **Teach…**, with the
+other words ([note 33](33-a-list-beside-the-chat.md)); the bar sits
+above the box.
+
 ## Not done, on purpose
 
 * **No lesson state in Sarathi.** The bar is drawn from Dvara's answer

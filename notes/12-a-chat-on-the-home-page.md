@@ -78,6 +78,10 @@ moving above the box on the narrow screen.
   front of the same channel.
 * ~~**Push to a phone.**~~ With `[dvara] ntfy`, notices also reach the
   ntfy app through a server in the house ([note 15](15-notices-on-a-phone.md)).
+* ~~**One conversation in two places.**~~ A conversation from Telegram
+  opened from the list beside the chat carries on in both, and what was
+  sent to you unasked moved to a bell of its own
+  ([note 33](33-a-list-beside-the-chat.md); Dvara's notes/71).
 * **The Podman road, tried.** The units are written (`--web` on Dvara's,
   `SAMAY_DVARA_ACTOR` on Samay's); the live run above was plain
   programs. The image needs rebuilding (`sarathi image`) for the Dvara

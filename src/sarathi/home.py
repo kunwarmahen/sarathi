@@ -38,7 +38,8 @@ With Dvara on, the page also has a chat: Dvara's web channel (its
 from it -- rules, allowance and questions are Dvara's, exactly as on
 Telegram -- and what a schedule sends you waits there as a line until
 you open the page. The chat keeps its own conversation; one on Telegram
-doesn't continue here. Dvara's token stays in this process and never
+doesn't continue here by itself, but opened from the list it carries on
+in both (Dvara's notes/71). Dvara's token stays in this process and never
 reaches the browser, the way Dvara's own page keeps it:
 
     GET  /api/chat?after=N        your lines since N, agents, questions
