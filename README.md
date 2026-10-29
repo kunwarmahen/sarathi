@@ -582,7 +582,8 @@ server included, reaches a Telegram agent through *Accounts it needs*
 account's reading tools, and a line like `docs:write` adds that server's
 writing ones. Which tools count as reading is Setu's to say, and yours
 to change: on Setu's page (Your pages → Setu), the server's card has
-**Its tools: which only read**, a switch for each tool; or `setu site
+**Its tools: which only read**: open it, set a tool's drop-down to
+*only reads — runs unasked*, press **Save** and say OK; or `setu site
 tools docs NAME=read` in a terminal.
 
 Adding accounts never needs a change to the agent for the model's sake.

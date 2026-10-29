@@ -584,7 +584,9 @@ in the steps below, can be changed on the home page, under **Settings**
 * **People**: who may use your agents, which ones, their daily
   allowance, their accounts, their Telegram id.
 * **Agents**: each agent's model, tools, memory, accounts and
-  instructions. Add one from an example, or remove one. Tools are
+  instructions. Add one from an example (**Add an agent**: a name, and
+  which example to **Start from**); if you can't use it yet, **Let me
+  use it** adds it to your own list. Or remove one. Tools are
   checkboxes: each says what it does and whether it *asks you first* or
   *runs unasked* (open a page in its own browser, remember things about
   you, your schedules, your phone...). Names no box stands for, like
@@ -1588,10 +1590,14 @@ calendar, your positions, your to-dos, your phone's battery and missed
 calls, and how last night's tests went. It only reads, so it can't send
 a mail or place a trade.
 
-1. **Add the agent.** **Settings → Agents**, *New agent from an example*:
-   pick **morning**, name it `morning`, **Add**. Then **Settings →
-   People → Change** on yourself and tick it under *Agents they may
-   use* (or leave *Every agent*).
+1. **Add the agent.** **Settings → Agents**, the **Add an agent** card
+   at the top: type `morning` in **Name**, pick **morning** in **Start
+   from**, press **Add**. The line at the foot of the window says
+   whether you can talk to it yet. If you have *Every agent* under
+   People, you can. If your People entry lists only some agents, it
+   says so with a **Let me use it** button; press it. (That button
+   ticks `morning` for you under **Settings → People → Change** on
+   your row, *Agents they may use*, which you can also do by hand.)
 2. **Connect what it should read** (Step 2): Gmail, Google Calendar,
    Robinhood, Notion, whichever you use. It reads every account you
    connect, read only. What you haven't connected it leaves out.

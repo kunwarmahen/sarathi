@@ -48,6 +48,26 @@ function drawTabs() {
     ...[draw[sets.tab]()].flat().filter((kid) => kid != null));
 }
 
+// After an agent is added: whether you can talk to it already. Dvara lets
+// you use only the agents ticked for you under People, unless you have
+// every agent; one button adds it to your own list, so nobody needs a
+// second trip to People to find that out.
+function offerUse(name) {
+  const d = sets.data.dvara;
+  const owner = sets.data.sarathi.dvara?.owner;
+  const me = d && d.people.find((x) => x.id === owner);
+  if (!me || !me.agents || me.agents.includes(name)) {
+    return said(`${name} is added. Pick it in the chat to talk to it.`);
+  }
+  const el = document.getElementById("settings-said");
+  el.classList.remove("warn");
+  el.replaceChildren(`${name} is added, but you can't talk to it yet: under People, ` +
+    `you may use only ${me.agents.join(", ")}. `,
+    button("Let me use it", () => save(`/api/settings/person/${encodeURIComponent(owner)}`,
+      { agents: [...me.agents, name] },
+      () => said(`You can use ${name} now. Pick it in the chat.`))));
+}
+
 // A change, sent; the result said; everything read again.
 async function save(path, body, after) {
   said("Saving…");
@@ -341,8 +361,11 @@ function drawAgentsTab() {
     out.push(h("div.card", {}, h("h3", {}, "Add an agent"),
       field("Name", newName), field("Start from", example, "One of Dvara's examples, " +
             "copied; change it after."),
-      row(button("Add", () => save(`/api/settings/agent/${encodeURIComponent(
-        newName.value.trim())}`, { from_example: example.value })))));
+      row(button("Add", () => {
+        const name = newName.value.trim();
+        save(`/api/settings/agent/${encodeURIComponent(name)}`, { from_example: example.value },
+             () => offerUse(name));
+      }))));
   }
   for (const a of d.agents) {
     if (sets.editing && sets.editing.name === a.name) { out.push(agentForm(a)); continue; }
