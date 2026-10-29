@@ -1767,7 +1767,8 @@ house. The program that does it is **Vaani**; it answers through Dvara
 6. **Talk to it.** *"Okay Nabu… what's on my calendar tomorrow?"* The
    ring spins while your helper works, then the puck says the answer.
    If the answer asks you something back, just reply: the puck listens
-   again by itself. *"Okay Nabu… new conversation"* starts afresh.
+   again by itself. *"Okay Nabu… new conversation"* starts afresh, and so
+   does 30 minutes with no questions (change it in Settings → Vaani).
    **Settings → Check** says *Vaani is listening (kitchen)*. (When you
    delete the puck from Home Assistant, its key is wiped too. Vaani
    gives it a new one the first time it reaches it; you don't do
@@ -1781,8 +1782,9 @@ house. The program that does it is **Vaani**; it answers through Dvara
      spoken 0.4s → played*. The step that failed is red, so a puck that
      said nothing shows you where it stopped. *never fetched* means the
      puck didn't come for the answer, which is usually the firewall.
-   The page looks again every few seconds, so you can ask at the puck
-   and watch.
+   A question shows up the moment the puck wakes and fills in as each
+   step ends (*hearing… → agent working… → speaking… → played*), so you
+   can ask at the puck and watch.
 8. **Everyone in the house, each their own.**
    * **Settings → Vaani** (it appears once Vaani is on), **The kitchen
      puck**: tick the people it may tell apart, and pick who it answers

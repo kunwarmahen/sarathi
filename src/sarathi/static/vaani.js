@@ -31,6 +31,7 @@ function puckForm(p, voiced) {
   const agents = (sets.data.dvara?.agents || []).map((a) => [a.name, a.name]);
   const unsure = pick(people.map((x) => [x, x]), p.person);
   const agent = pick([["", "Vaani's default"], ...agents], p.agent || "");
+  const quiet = text(p.fresh_after ?? 30, { inputmode: "numeric", size: "5" });
   const boxes = people.map((x) => {
     const c = check((p.people || []).includes(x));
     c.value = x;
@@ -39,6 +40,7 @@ function puckForm(p, voiced) {
   });
   const go = button("Save", () => vaaniSave({
     do: "puck", puck: p.name, person: unsure.value, agent: agent.value,
+    fresh_after: quiet.value.trim(),
     people: boxes.map((b) => b.querySelector("input")).filter((c) => c.checked).map((c) => c.value),
   }));
   return h("div.card.form", {}, h("h3", {}, `The ${p.name} puck`),
@@ -48,7 +50,13 @@ function puckForm(p, voiced) {
     field("When it isn't sure who's asking", unsure,
           "Best: a person with only the house's accounts, so one person's mail is never " +
           "read to another. The puck says it wasn't sure."),
-    field("Agent", agent), row(go));
+    field("Agent", agent),
+    field("Start a new conversation after this many minutes quiet", quiet,
+          "Until then, everything someone asks at this puck is one conversation, so " +
+          "“and the one before?” works. After it, the next question starts afresh (the " +
+          "old one is kept: /chats). 0: never by itself, only when someone says " +
+          "“new conversation”."),
+    row(go));
 }
 
 async function vaaniSave(body) {

@@ -279,8 +279,9 @@ Settings → Sarathi has it under *The rest* (on/off) and *Ports*
   Vaani keeps (`~/.local/state/vaani/page.token`). On 127.0.0.1, and on
   the house address too with `[house]`. The card's line is Vaani's own
   status: *kitchen listening · last question 2 min ago, played*.
-* **Settings → Vaani** sets who each puck answers and which people it
-  tells apart, through `vaani puck`, which writes vaani.toml itself.
+* **Settings → Vaani** sets who each puck answers, which people it
+  tells apart, and after how many quiet minutes its conversations start
+  over, through `vaani puck`, which writes vaani.toml itself.
 
 ### Every page on your home network: `[house]`
 

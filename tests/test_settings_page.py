@@ -334,10 +334,16 @@ def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
     assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
                                            "people": ["asha", "--x"]})[0] == 400
     assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "../k"})[0] == 400
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                           "fresh_after": "45"})[0] == 200
+    for wrong in (-1, "soon", 99999, True):
+        assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                               "fresh_after": wrong})[0] == 400
     assert send(with_vaani, "/api/vaani", {"do": "enroll", "person": "asha",
                                            "puck": "kitchen"})[0] == 400   # Vaani's page
     asked = [json.loads(line) for line in with_vaani.vaani_log.read_text().splitlines()]
     assert ["puck", "kitchen", "--person", "house", "--people", "owner,asha"] in asked
+    assert ["puck", "kitchen", "--fresh-after", "45"] in asked
     assert not any("--x" in ",".join(a) or "../k" in a for a in asked)
 
 

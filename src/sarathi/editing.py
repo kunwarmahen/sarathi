@@ -246,7 +246,8 @@ def vaani_view(config: Config) -> dict:
 
 
 def vaani_do(config: Config, body: dict) -> str:
-    """{"do": "puck", "puck", "person"?, "agent"?, "people"?}: done by Vaani."""
+    """{"do": "puck", "puck", "person"?, "agent"?, "people"?, "fresh_after"?}:
+    done by Vaani."""
     if not config.voice_on:
         raise EditError(409, "Vaani is off: turn it on under Settings → Sarathi first")
     do = body.get("do")
@@ -261,6 +262,15 @@ def vaani_do(config: Config, body: dict) -> str:
         for key in ("person", "agent"):
             if body.get(key) is not None:
                 argv += [f"--{key}", str(body[key])]
+        if body.get("fresh_after") is not None:
+            quiet = body["fresh_after"]
+            if isinstance(quiet, str) and quiet.strip().isdigit():
+                quiet = int(quiet)
+            if isinstance(quiet, bool) or not isinstance(quiet, int) \
+                    or not 0 <= quiet <= 10080:
+                raise EditError(400, "a new conversation after how many minutes? "
+                                "0 (never) to 10080 (a week)")
+            argv += ["--fresh-after", str(quiet)]
         if body.get("people") is not None:
             people = body["people"]
             if not isinstance(people, list) or not all(isinstance(x, str) and
