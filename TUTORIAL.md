@@ -1766,6 +1766,8 @@ house. The program that does it is **Vaani**; it answers through Dvara
    with `[house]`, 8797 for Vaani's page).
 6. **Talk to it.** *"Okay Nabu… what's on my calendar tomorrow?"* The
    ring spins while your helper works, then the puck says the answer.
+   If the answer asks you something back, just reply: the puck listens
+   again by itself. *"Okay Nabu… new conversation"* starts afresh.
    **Settings → Check** says *Vaani is listening (kitchen)*. (When you
    delete the puck from Home Assistant, its key is wiped too. Vaani
    gives it a new one the first time it reaches it; you don't do
