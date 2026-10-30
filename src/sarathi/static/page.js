@@ -603,7 +603,8 @@ async function drawPeople() {
 const CHAT_EVERY = 3000;
 const CHAT_BUSY_EVERY = 700;
 const chat = { on: false, last: 0, timer: null, agents: [], sending: false, busy: false,
-               lessons: [], voice: false, reading: null, title: "", waiting: 0 };
+               lessons: [], voice: false, reading: null, title: "", waiting: 0,
+               carried: false };
 
 function api(path, body) {
   const init = { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" };
@@ -779,10 +780,21 @@ function tapsView(ln) {
 function transcriptView(ln) {
   const title = ln.text.split("\n")[0].replace(/^Back in:\s*/, "");
   return [h("div.line.back", {}, h("span.tag", {}, `Back in · ${when(ln.at)}`)),
-          ...ln.transcript.map((t) => h(`div.line.${t.who}`, {},
-            t.who === "you" ? null : h("span.tag", {}, h("span.who", {}, ln.agent || "Agent")),
-            bubble(t.text, t.who))),
+          ...ln.transcript.map((t) => t.who === "you" ? yoursView(t.text)
+            : h("div.line.agent", {}, h("span.tag", {}, h("span.who", {}, ln.agent || "Agent")),
+                bubble(t.text, t.who))),
           title];
+}
+
+// Your words as the agent was given them: a voice note's are Dvara's
+// (heard.said), shown as what you said, the way the live chat shows them.
+const HEARD_AS = /^([\s\S]*?)\s*\(a voice note, heard as: "([\s\S]*)"\)$/;
+
+function yoursView(text) {
+  const m = HEARD_AS.exec(text || "");
+  if (!m) return h("div.line.you", {}, bubble(text, "you"));
+  return h("div.line.you.voice", { "data-heard": "1" },
+    heardView(m[2]), m[1] ? bubble(m[1], "you") : null);
 }
 
 // What an answer's turn did, step by step (Dvara's runsteps): folded under
@@ -957,7 +969,7 @@ function draw(data) {
   const live = document.getElementById("live") || h("div", { id: "live" });
   const running = data.live || [];
   let changed = false;
-  if (!chat.last) { box.replaceChildren(live); chat.title = ""; }
+  if (!chat.last && !chat.carried) { box.replaceChildren(live); chat.title = ""; }
   if (data.lines.length) {
     const fresh = Boolean(chat.last);   // lines that came while the page was open
     for (const ln of data.lines) {
@@ -969,6 +981,8 @@ function draw(data) {
         continue;
       }
       if (ln.transcript) {
+        // carried on from the list: the reading is already the window
+        if (chat.carried) { chat.carried = false; continue; }
         // back in an old one: its words are the window now
         box.replaceChildren(live);
         const [...views] = transcriptView(ln);
@@ -976,6 +990,8 @@ function draw(data) {
         for (const v of views) box.insertBefore(v, live);
         continue;
       }
+      // the page's own word for carrying one on from the list, not yours
+      if (ln.who === "you" && /^\/chats open \S+$/.test(ln.text || "")) continue;
       if (ln.who === "you" && !chat.title) chat.title = (ln.text || "").split("\n")[0].slice(0, 80);
       const view = lineView(ln);
       box.insertBefore(view, live);
@@ -1140,14 +1156,20 @@ async function send(text) {
     // first (it stays open where else it was), then the words go to it
     const row = chat.reading;
     if (row && !row.here) {
-      await api("/api/chat", { agent: row.agent, text: `/chats open ${row.id}` });
+      // its answer brings a short transcript: the reading below is the whole
+      chat.carried = true;
+      try { await api("/api/chat", { agent: row.agent, text: `/chats open ${row.id}` }); }
+      catch (err) { chat.carried = false; throw err; }
     }
     const to = row ? row.agent : agent;
-    if (row && row.here) {
-      // the window goes on from its words, which only the reading had
+    if (row) {
+      // the window goes on from the reading as it was drawn: its name,
+      // its tools, its answers as written
       const box = document.getElementById("lines");
-      const live = document.getElementById("live");
-      for (const ln of document.querySelectorAll("#past > .line")) box.insertBefore(ln, live);
+      if (!row.here) box.replaceChildren();
+      const live = document.getElementById("live") || h("div", { id: "live" });
+      if (!live.isConnected) box.append(live);
+      for (const el of [...document.getElementById("past").children]) box.insertBefore(el, live);
       chat.title = row.title;
     }
     stopReading();
@@ -1443,6 +1465,8 @@ async function lookConvs() {
     try {
       past.rows = (await api(`/api/chat/chats?q=${encodeURIComponent(past.q)}`)).rows;
       drawConvs();
+      const read = chat.reading && past.rows.find((x) => x.id === chat.reading.id);
+      if (read && read.updated_at !== chat.reading.updated_at) readAgain(read);
       if (document.body.dataset.view === "chat") {
         document.getElementById("bar-title").textContent = chatTitle();
       }
@@ -1599,22 +1623,7 @@ async function openPast(r) {
   let d;
   try { d = await pastRead(r.id); } catch (err) { problem(err.message); return; }
   chat.reading = { ...r, title: d.title || r.title };
-  const box = document.getElementById("past");
-  const lines = d.entries.map((e) => {
-    if (e.who === "tool") {
-      return h("details.tool", {},
-        h("summary", {}, `· ${e.name}${e.error ? " (failed)" : ""}`),
-        h("pre", {}, e.args), e.result ? h("pre", {}, `→ ${e.result}`) : null);
-    }
-    return h(`div.line.${e.who}`, {},
-      e.who === "you" ? null : h("span.tag", {}, h("span.who", {}, d.agent)),
-      bubble(e.text, e.who));
-  });
-  box.replaceChildren(
-    h("div.past-head", {}, h("h2", {}, chat.reading.title),
-      h("div.meta", {}, `${when(d.started_at)} · ${d.agent} · ${roadsSaid(r)}`
-        + (d.model ? ` · ${d.model}` : ""))),
-    ...lines);
+  drawReading(d, r);
   const back = r.here ? null : h("button.quiet", { type: "button" }, "Back to the chat you're in");
   if (back) back.addEventListener("click", stopReading);
   const elsewhere = (r.roads || [r.road]).filter((x) => x !== "the page").map(roadName);
@@ -1630,10 +1639,45 @@ async function openPast(r) {
   if ([...pick.options].some((o) => o.value === r.agent)) pick.value = r.agent;
   drawLesson();
   drawHello();
+  const box = document.getElementById("past");
   box.scrollTop = box.scrollHeight;
   document.getElementById("bar-title").textContent = chatTitle();
   drawConvsMark();
   document.getElementById("text").focus();
+}
+
+function drawReading(d, r) {
+  const box = document.getElementById("past");
+  const lines = d.entries.map((e) => {
+    if (e.who === "tool") {
+      return h("details.tool", {},
+        h("summary", {}, `· ${e.name}${e.error ? " (failed)" : ""}`),
+        h("pre", {}, e.args), e.result ? h("pre", {}, `→ ${e.result}`) : null);
+    }
+    if (e.who === "you") return yoursView(e.text);
+    return h(`div.line.${e.who}`, {}, h("span.tag", {}, h("span.who", {}, d.agent)),
+      bubble(e.text, e.who));
+  });
+  box.replaceChildren(
+    h("div.past-head", {}, h("h2", {}, chat.reading.title),
+      h("div.meta", {}, `${when(d.started_at)} · ${d.agent} · ${roadsSaid(r)}`
+        + (d.model ? ` · ${d.model}` : ""))),
+    ...lines);
+}
+
+// One being read while it goes on elsewhere (Telegram, the puck): drawn
+// again when its row says it moved, staying at the end if you were there
+// and leaving a tool you'd opened alone until then.
+async function readAgain(r) {
+  const box = document.getElementById("past");
+  if (box.querySelector("details[open]")) return;
+  const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  let d;
+  try { d = await pastRead(r.id); } catch (_) { return; }
+  if (!chat.reading || chat.reading.id !== r.id) return;
+  chat.reading = { ...chat.reading, ...r, title: d.title || r.title };
+  drawReading(d, r);
+  if (atEnd) box.scrollTop = box.scrollHeight;
 }
 
 function stopReading() {
@@ -1775,6 +1819,20 @@ function startList() {
     drawNotices(false);
     drawBell();
   });
+  lookConvs();
+  setInterval(lookConvsAgain, CONVS_EVERY);
+  document.addEventListener("visibilitychange", lookConvsAgain);
+}
+
+// Conversations on Telegram or the puck never touch this window's chat, so
+// the list looks again on its own: while the tab is in sight, and when you
+// come back to it. Not while you're renaming one or have its menu open,
+// which a redraw would close under your hand.
+const CONVS_EVERY = 20000;
+
+function lookConvsAgain() {
+  if (document.hidden || !token) return;
+  if (document.querySelector("#convs input.rename, #convs .menu:not([hidden])")) return;
   lookConvs();
 }
 

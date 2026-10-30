@@ -27,6 +27,23 @@ carry this conversation on here*. Writing does: the page sends
 open there too, and both carry it on (Dvara's
 [notes/71](https://github.com/kunwarmahen/dvara/blob/main/notes/71-one-conversation-two-chats.md)).
 
+**CARRIED ON, IT STAYS AS YOU READ IT.** The window goes on from the
+reading as it was drawn: its name and where it went on at the top, each
+tool folded where it ran, every answer with its own lists and bold. The
+answer to `/chats open` brings Dvara's short transcript; the page has
+the whole already, so it draws nothing from it, and `/chats open ID`
+itself never shows as something you said. A voice note's line reads as
+you said it, *🎤 "…"*, in the reading and in the list's names, never
+Dvara's *(a voice note, heard as: "…")*.
+
+**THE LIST LOOKS AGAIN BY ITSELF.** A conversation on Telegram or at a
+puck never touches this window, so nothing here would ask for the list
+again. It looks every 20 seconds while the tab is in sight and when you
+come back to it, but not while you're renaming a row or have its menu
+open, which a redraw would close. A conversation you're reading that
+moved elsewhere is drawn again, at its end if you were there, and not
+while you have one of its tools unfolded.
+
 **⋯ ON EACH ROW**: **Rename** (in place; Enter keeps it, Escape leaves
 it, empty gives its first words back), **Pin to top**, **Save as PDF**,
 **Download**, **Send…** where the browser has a share sheet, and
@@ -140,6 +157,17 @@ greeting over a conversation still open, described above; **Notices**
 drawn empty, because its section started hidden; and the writing box
 measured while the chat was still hidden, so its one line was cut in
 half on a phone.
+
+Carrying on, and the list looking by itself, were run on a scratch
+Dvara (`qwen3.8-64k:latest`, the example agents) and a scratch home page
+in headless Chrome. A voice note's words to minder asking for three
+fruits as a bold numbered list, then `/new`, then the row picked and
+*And one more fruit, same style.* written under it. The reading had 3
+list items and *🎤 "Name three fruits…"* on your line; carried on, the
+window kept the title at its head, had 4 list items, no *Back in* and no
+`/chats open` line. A conversation then begun on a Telegram thread came
+into the open list without a reload, and, read here, grew by its next
+question while Telegram went on. No page errors.
 
 ## Tests
 
