@@ -117,7 +117,7 @@ def examine(config: Any, found: list[Found], started: list[dict],
     lines += _started(started, config)
     if config is not None:
         if config.road == "podman":
-            lines += _image(probes.image(config))
+            lines += _image(probes.image(config), config)
         lines += _firewall(probes.firewall(config))
         lines += _memory(config, memory)
     lines += _disk(probes)
@@ -343,7 +343,31 @@ def _dvara(data: dict, config: Any) -> list[Line]:
                              "home page's chat get no answer", "sarathi up", act=UP))
     elif not lines:
         lines.append(Line("green", "dvara", "Dvara is serving"))
+    # on Podman its voices are the image's (_image); here, this computer's
+    if config is not None and config.road != "podman" and data.get("voice"):
+        lines += _voices_here(data["voice"], _wanted_voices(config))
     return lines
+
+
+def _wanted_voices(config: Any) -> tuple[str, ...]:
+    door = getattr(config, "door", None)
+    return tuple(door.voices) if door is not None else ()
+
+
+def _voices_here(voice: dict, wanted: tuple[str, ...]) -> list[Line]:
+    """Whether Dvara can read answers aloud on this computer, and has
+    every voice `[dvara] voices` asks for. None asked for: nothing said."""
+    if not wanted:
+        return []
+    fix = f"sarathi dvara --voices {','.join(wanted)}"
+    if not voice.get("speaks"):
+        return [Line("amber", "voice", "Dvara can't read answers aloud: "
+                     f"{voice.get('why') or 'no voice here'}", fix)]
+    missing = [v for v in wanted if v not in (voice.get("voices") or [])]
+    if missing:
+        return [Line("amber", "voice", f"Dvara has no {', '.join(missing)} voice here, "
+                     "which [dvara] voices asks for", fix)]
+    return [Line("green", "voice", f"Dvara reads answers aloud ({', '.join(wanted)})")]
 
 
 def _sparsh(data: dict, config: Any) -> list[Line]:
@@ -447,6 +471,10 @@ def image_state(config: Any) -> dict | None:
         made = int(created)
     except ValueError:
         return None
+    # the voices it was built with (a label); an image from before it: unknown
+    label = podman.run(["podman", "image", "inspect", podman.IMAGE, "--format",
+                        '{{index .Config.Labels "sarathi.voices"}}']).stdout.strip()
+    voices = None if label in ("", "<no value>") else label.split()
     newer = []
     try:
         repos = podman.checkouts()
@@ -471,10 +499,11 @@ def image_state(config: Any) -> dict | None:
                                 "{{.ImageName}}"]).stdout.strip()
         if made_from == podman.IMAGE and podman.image_id(unit) not in ("", newest):
             behind.append(name)
-    return {"exists": True, "made": made, "newer": newer, "behind": behind}
+    return {"exists": True, "made": made, "newer": newer, "behind": behind,
+            "voices": voices}
 
 
-def _image(state: dict | None) -> list[Line]:
+def _image(state: dict | None, config: Any = None) -> list[Line]:
     if state is None:
         return [Line("amber", "image", "Podman didn't say when the image was built", "")]
     if not state.get("exists"):
@@ -491,6 +520,14 @@ def _image(state: dict | None) -> list[Line]:
         lines.append(Line("amber", "image", "still running an older image: "
                           + ", ".join(state["behind"]), "sarathi up (it restarts them)",
                           act=UP))
+    wanted = _wanted_voices(config) if config is not None else ()
+    missing = [v for v in wanted if state.get("voices") is not None
+               and v not in state["voices"]]
+    if missing:
+        lines.append(Line("amber", "voice", f"the image has no {', '.join(missing)} "
+                          "voice: [dvara] voices changed after it was built",
+                          "sarathi image && sarathi up",
+                          act={"do": "image", "label": "Rebuild and restart (minutes)"}))
     if not lines:
         built = time.strftime("%a %d %b %H:%M", time.localtime(state["made"]))
         lines.append(Line("green", "image", f"built {built}, newer than every checkout"))

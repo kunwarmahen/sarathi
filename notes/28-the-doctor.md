@@ -43,6 +43,7 @@ Every line comes from the program that knows:
 | a phone not connected, the iPhone's signature | Sparsh's status (`named`, `wda.days_left`) |
 | the model: served, pulled, how much it holds | Yantra's status, which now asks Ollama for the loaded model's context length, else the `num_ctx` it was made with |
 | Dvara's problems | Dvara's status |
+| a voice `[dvara] voices` asks for and Dvara doesn't have | Dvara's status (`voice`: can it speak, why not, which voices) on plain programs; on Podman, the voices the image was built with (its `sarathi.voices` label, set by `sarathi image`) |
 | a piece stopped | what `up` started (systemd or a pid), and the end of its log |
 | the image older than the code | Podman's image date against each checkout's last commit; containers still on an older one |
 | ports shut to phones | `sudo -n ufw status` (or `firewall-cmd --list-ports`) |

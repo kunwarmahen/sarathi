@@ -95,5 +95,11 @@ without your key; the page's policy allows audio from `blob:`.
   rebuild.
 * ~~**A voice per person.**~~ Settings → People → **Their voice**, and
   voices for other languages ([notes/31](31-a-voice-for-each-language.md)).
-* **The doctor asking about it.** `sarathi doctor` doesn't yet say
-  whether Dvara can speak; `/voice` in the chat does.
+* ~~**The doctor asking about it.** `sarathi doctor` doesn't yet say
+  whether Dvara can speak; `/voice` in the chat does.~~ It does: Dvara's
+  status says whether it can speak and which voices it has, and the
+  image is labelled with the voices it was built with, so a voice
+  `[dvara] voices` asks for and Dvara lacks is amber, with
+  `sarathi dvara --voices …` or `sarathi image && sarathi up` as the
+  fix ([notes/28](28-the-doctor.md)). An image built before the label
+  says nothing until it is rebuilt.

@@ -4,8 +4,9 @@ Two biases, pulling against each other:
 
 * **A problem a program already knew, not said.** Setu's expired mark,
   Samay's failed run, a stopped unit, a shut firewall port, an image older
-  than the code, a model that holds less than Yantra plans for: each one
-  must come out red or amber, with a fix to type.
+  than the code, a model that holds less than Yantra plans for, a voice
+  asked for that Dvara doesn't have: each one must come out red or amber,
+  with a fix to type.
 * **A doctor that cries wolf.** A cloud model isn't tried (that costs a
   call), a turned-off piece isn't missing, the memory store's own
   databases aren't "on an old image", rules nobody can read aren't
@@ -140,6 +141,41 @@ class TestAProblemAlreadyKnownIsSaid:
                                      "newer": ["yantra ac1a9a7"], "behind": []})
         amber = next(line for line in got if line.about == "image")
         assert "yantra ac1a9a7" in amber.said and "sarathi image" in amber.fix
+
+    def test_a_voice_asked_for_and_not_here_is_amber_with_the_fetch(self):
+        from sarathi.config import Door
+        wants = replace(CONFIG, door=Door(voices=("en_US-lessac-medium",
+                                                  "hi_IN-pratham-medium")))
+        here = {"serving": True, "problems": [],
+                "voice": {"speaks": True, "why": None, "voices": ["en_US-lessac-medium"]}}
+        line = next(x for x in lines(world(dvara=here), config=wants) if x.about == "voice")
+        assert line.level == "amber" and "no hi_IN-pratham-medium voice here" in line.said
+        assert line.fix == "sarathi dvara --voices en_US-lessac-medium,hi_IN-pratham-medium"
+        mute = {**here, "voice": {"speaks": False, "voices": [],
+                                  "why": "Piper isn't installed here (pip install piper-tts)"}}
+        line = next(x for x in lines(world(dvara=mute), config=wants) if x.about == "voice")
+        assert line.said == ("Dvara can't read answers aloud: Piper isn't installed here "
+                             "(pip install piper-tts)")
+        both = {**here, "voice": {"speaks": True, "why": None,
+                                  "voices": ["en_US-lessac-medium", "hi_IN-pratham-medium"]}}
+        assert level(lines(world(dvara=both), config=wants), "voice") == ["green"]
+
+    def test_on_podman_the_images_voices_count_not_this_computers(self):
+        from sarathi.config import Door
+        wants = replace(CONFIG, road="podman",
+                        door=Door(voices=("en_US-lessac-medium", "hi_IN-pratham-medium")))
+        mute = {"serving": True, "problems": [],
+                "voice": {"speaks": False, "why": "no voice", "voices": []}}
+        built = {"exists": True, "made": 0, "newer": [], "behind": [],
+                 "voices": ["en_US-lessac-medium"]}
+        got = lines(world(dvara=mute), config=wants, image=lambda c: built)
+        line = next(x for x in got if x.about == "voice")        # the image's, once
+        assert "the image has no hi_IN-pratham-medium voice" in line.said
+        assert line.fix == "sarathi image && sarathi up" and level(got, "voice") == ["amber"]
+        # an image from before the label: not known, so nothing said
+        older = {**built, "voices": None}
+        assert level(lines(world(dvara=mute), config=wants, image=lambda c: older),
+                     "voice") == []
 
     def test_no_image_on_the_podman_road_is_red(self):
         got = lines(config=replace(CONFIG, road="podman"),

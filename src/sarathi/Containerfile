@@ -93,6 +93,8 @@ ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never UV_NO_CACHE=1
 # https://huggingface.co/rhasspy/piper-voices, and an answer is read in a
 # voice for its language when one is here. Empty: answers stay words.
 ARG PIPER_VOICES="en_US-lessac-medium"
+# which ones, for `sarathi doctor` to set beside `[dvara] voices`
+LABEL sarathi.voices="$PIPER_VOICES"
 RUN uv venv -q /opt/piper && uv pip install -q --python /opt/piper/bin/python piper-tts==1.3.0 \
  && ln -s /opt/piper/bin/piper /usr/local/bin/piper \
  && mkdir -p /usr/share/piper/voices \

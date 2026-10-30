@@ -941,9 +941,10 @@ Every line comes from the program that knows: each sibling's own
 `status --json` (Setu's stopped sign-ins and the day a Google sign-in
 in Testing will end, Samay's failed runs of the
 last day, Sparsh's phones and the iPhone's signature, Yantra's model and
-how many tokens it really holds, Dvara's problems), what `up` started,
+how many tokens it really holds, Dvara's problems and whether it can
+read answers aloud in every voice `[dvara] voices` asks for), what `up` started,
 Podman's image against each checkout's last commit (and containers still
-on an older one), the firewall's ports for the phones (`sudo -n ufw
+on an older one, and an image built without a voice asked for since), the firewall's ports for the phones (`sudo -n ufw
 status`, which never asks for a password; unreadable is amber, never
 "open"), and free disk. **Red** is broken now, **amber** is worth a
 look, **green** is fine. It changes nothing, and exits 1 when anything
