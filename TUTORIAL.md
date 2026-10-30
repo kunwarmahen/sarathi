@@ -1151,6 +1151,13 @@ conversation goes quiet for half an hour, an agent that remembers sends
 what it noticed about you (*"Lives in Raleigh"*), and keeps it only if
 you answer `/remember 1`.
 
+**Kept without asking, and told.** If your permissions are *Never
+asked* (`yolo`), the agent can keep something you said without asking
+first. The answer then ends with a line saying so, like *(Kept about
+you: Lives near RDU … -- /memory forget 1 to undo.)*. When the chat goes
+quiet, the look back lists what it already kept, rather than saying
+nothing.
+
 **Said no by mistake?** `/remember not 2` means "never offer that
 again", and the numbers move as you keep things, so it's easy to turn
 down the wrong one. Press **Turned down** under the chat: everything
