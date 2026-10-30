@@ -52,6 +52,8 @@ reaches the browser, the way Dvara's own page keeps it:
     GET  /api/chat/steps/export?line=   the same, as a file for a bug report
     POST /api/chat/accounts-page  {}: a one-time link to your own Setu page
     GET  /api/chat/push           your ntfy server and topic, for notices on a phone
+    GET  /api/chat/notices        what was sent to you unasked, and how far you've read
+    POST /api/chat/notices/read   {"upto": N}: read up to there, on every page you open
 
 EVERYONE IN THE HOUSE, EACH THEIR OWN CHAT. The other people in
 Dvara's actors file sign in here too (people.py: an invite from the
@@ -1395,6 +1397,15 @@ def _handler(server: HomeServer):
                 if body is None:
                     return None
                 return self._chat(who, "POST", "/web/declined", {"undo": body.get("undo")})
+            if parts == ["api", "chat", "notices", "read"]:
+                # the bell read up to a line: kept by Dvara, so every page agrees
+                who = self._who()
+                if who is None:
+                    return None
+                body = self._body(MAX_BODY)
+                if body is None:
+                    return None
+                return self._chat(who, "POST", "/web/notices/read", {"upto": body.get("upto")})
             if parts[:3] == ["api", "chat", "chats"] and len(parts) == 5 \
                     and parts[4] in ("rename", "pin"):
                 # named or pinned in the person's own list, by Dvara

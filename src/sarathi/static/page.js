@@ -832,6 +832,36 @@ async function saveSteps(line) {
   }
 }
 
+const VOICE_NOTE = /\.(ogg|oga|opus|mp3|m4a|wav|webm)$/i;
+
+// What a voice note was heard as, on your own line where you said it: as
+// soon as Dvara has heard it (the live turn carries it), and kept there.
+function heardView(words) { return h("div.heard", {}, `🎤 “${words}”`); }
+
+function heardOnYours(words) {
+  const mine = [...document.querySelectorAll("#lines > .line.you.voice")].pop();
+  if (!mine || mine.dataset.heard) return;
+  mine.dataset.heard = "1";
+  const tag = mine.querySelector(".tag");
+  if (tag) tag.after(heardView(words)); else mine.prepend(heardView(words));
+}
+
+// The tools an answer's turn used, between your words and the answer, the
+// way the list draws a conversation read again: each folded, with what it
+// was given and what came back. Fetched once the answer is in.
+async function toolsAbove(ln, view) {
+  let d;
+  try { d = await api(`/api/chat/steps?line=${ln.id}`); } catch (_) { return; }
+  if (!view.isConnected || !d.steps.length) return;
+  for (const st of d.steps) {
+    const args = JSON.stringify(st.arguments || {});
+    view.before(h("details.tool", {},
+      h("summary", {}, `· ${st.tool}${st.error ? " (failed)" : st.refused ? " (refused)" : ""}`),
+      h("pre", {}, args.length > 400 ? `${args.slice(0, 400)}…` : args),
+      st.short ? h("pre", {}, `→ ${st.short}`) : null));
+  }
+}
+
 function lineView(ln) {
   const failed = ln.who === "agent" && ln.stop_reason
     && !["held", "skills", "seen", "memory", "new", "files", "accounts", "phone"]
@@ -839,12 +869,13 @@ function lineView(ln) {
   const tag = ln.who === "you"
     ? (chat.agents.length > 1 ? h("span.tag", {}, `to ${ln.agent} · ${when(ln.at)}`) : null)
     : h("span.tag", {}, h("span.who", {}, ln.agent || "Agent"), ` · ${when(ln.at)}`);
-  return h(`div.line.${ln.who}${failed ? ".failed" : ""}`, {},
+  const voice = ln.who === "you" && !ln.text && (ln.sent || []).some((n) => VOICE_NOTE.test(n));
+  const view = h(`div.line.${ln.who}${failed ? ".failed" : ""}${voice ? ".voice" : ""}`, {},
     tag,
+    voice && ln.heard ? heardView(ln.heard) : null,
     ln.text ? bubble(ln.text, ln.who) : null,
     ln.sent ? h("div.sent", {}, `📎 ${ln.sent.join(", ")}`) : null,
     ln.offer ? offerView(ln.offer) : null,
-    ln.heard ? h("div.heard", {}, `I heard: "${ln.heard}"`) : null,
     ln.taps ? tapsView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
@@ -856,6 +887,8 @@ function lineView(ln) {
       b.addEventListener("click", () => download(ln.id, n, name));
       return b;
     }));
+  if (voice && ln.heard) view.dataset.heard = "1";
+  return view;
 }
 
 function buttons(onYes, onNo, yes = "Yes", no = "No", onAll = null) {
@@ -946,6 +979,9 @@ function draw(data) {
       if (ln.who === "you" && !chat.title) chat.title = (ln.text || "").split("\n")[0].slice(0, 80);
       const view = lineView(ln);
       box.insertBefore(view, live);
+      // an answer from before the words went on your line still says them
+      if (ln.who === "agent" && ln.heard) heardOnYours(ln.heard);
+      if (ln.who === "agent" && ln.steps) toolsAbove(ln, view);
       const listen = view.querySelector("button.listen");
       if (fresh && ln.speak && listen) playByItself(ln.id, listen);
     }
@@ -953,6 +989,7 @@ function draw(data) {
   }
   if (!live.isConnected) box.append(live);
   live.replaceChildren(...running.map(liveView));
+  for (const lv of running) if (lv.heard) heardOnYours(lv.heard);
   if (atEnd || data.lines.some((l) => l.who === "you")) box.scrollTop = box.scrollHeight;
   document.getElementById("waiting").replaceChildren(
     ...data.asks.map(askView), ...data.holds.map(holdView));
@@ -1265,11 +1302,12 @@ function slashKeys(e) {
 
 /* -- the bell: what was sent to you unasked, and questions waiting ----------
    Dvara keeps what was sent to you (a schedule's answer, a watch, a sign-in
-   that stopped) whatever New chat cleared; this browser remembers how far
-   you've read. The count adds the questions waiting for your yes, which
-   stay in the chat that asked. */
+   that stopped) whatever New chat cleared, and how far you've read: the
+   phone, this computer and any address it's opened by agree. The count
+   adds the questions waiting for your yes, which stay in the chat that
+   asked. */
 
-const notices = { rows: [], looking: false };
+const notices = { rows: [], read: 0, looking: false };
 
 function readKey() { return `sarathi.notices.read.${me ? me.name : ""}`; }
 
@@ -1277,16 +1315,31 @@ async function lookNotices() {
   if (notices.looking || !chat.on) return;
   notices.looking = true;
   try {
-    notices.rows = (await api("/api/chat/notices")).notices;
+    const got = await api("/api/chat/notices");
+    notices.rows = got.notices;
+    notices.read = Number(got.read || 0);
+    // read here before Dvara kept it: told once, then Dvara's is the mark
+    const here = Number(kept(readKey()) || 0);
+    if (here > notices.read) markRead(here);
     drawBell();
     if (document.body.dataset.view === "notices") drawNotices(false);
   } catch (_) { /* the bell waits for the next look */ }
   notices.looking = false;
 }
 
+function seenUpTo() { return Math.max(notices.read, Number(kept(readKey()) || 0)); }
+
 function unread() {
-  const seen = Number(kept(readKey()) || 0);
+  const seen = seenUpTo();
   return notices.rows.filter((n) => n.id > seen).length;
+}
+
+async function markRead(upto) {
+  notices.read = Math.max(notices.read, upto);
+  keep(readKey(), String(notices.read));
+  try {
+    notices.read = (await api("/api/chat/notices/read", { upto })).read;
+  } catch (_) { /* kept here; the next look tells Dvara again */ }
 }
 
 function drawBell() {
@@ -1298,7 +1351,7 @@ function drawBell() {
 }
 
 function drawNotices(opening) {
-  const seen = Number(kept(readKey()) || 0);
+  const seen = seenUpTo();
   const rows = notices.rows.map((n) => h(`article.notice${n.id > seen ? ".unread" : ""}`, {},
     h("div.meta", {}, `${when(n.at)}${n.agent ? ` · ${n.agent}` : ""}`),
     (() => { const b = bubble(n.text, "notice"); b.classList.add("notice-text"); return b; })(),
@@ -1317,7 +1370,7 @@ function drawNotices(opening) {
          h("div.buttons", {}, toChat))] : []));
   // opened, they're read; the marks stay until you next come back
   if (opening && notices.rows.length) {
-    keep(readKey(), String(notices.rows[0].id));
+    markRead(notices.rows[0].id);
     drawBell();
   }
 }

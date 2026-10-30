@@ -51,7 +51,12 @@ All of it comes from Dvara (its notes/42); the page only draws it.
   with your words (in base64; this page passes them on, up to 20 MB
   together, and checks nothing about them).
 * **A voice note.** 🎤 records one (MediaRecorder), added like a file.
-  Dvara hears it into words and the answer shows *I heard: "…"*. A
+  Dvara hears it into words, and they go on your own line, 🎤 *"…"*,
+  as soon as they're heard, before the answer (Dvara's notes/47).
+* **The tools above the answer.** Once an answer is in, each tool its
+  turn used sits between your words and it, folded, with what it was
+  given and what came back: the same as the conversation read again
+  from the list. While it runs, each step is a ✓ line, as before. A
   browser allows the microphone only on this computer or over https, so
   a phone on the house address uses Telegram for it.
 * ~~**Full screen.**~~ A button above the chat gave it the whole window,

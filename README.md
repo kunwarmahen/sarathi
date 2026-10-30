@@ -1184,7 +1184,8 @@ same) (Dvara's
 [notes/49](https://github.com/kunwarmahen/dvara/blob/main/notes/49-a-job-taught-step-by-step.md);
 [notes/24](notes/24-teach-from-the-chat.md)). 🎤 records a voice note (on this computer, or a
 page served over https), heard into words by a local model that can
-hear, and shown back as *I heard: "…"*. **▶ Listen** under an answer reads it aloud, made on
+hear, and shown on your own line as 🎤 *"…"* as soon as it's heard. The tools an answer used sit
+folded above it, as in the list. **▶ Listen** under an answer reads it aloud, made on
 this computer by Piper; an answer to a voice note plays by itself (Settings → People →
 **Answers read aloud** sets who hears what, **Their voice** in whose; [notes/30](notes/30-answers-read-aloud.md),
 [notes/31](notes/31-a-voice-for-each-language.md)). **Steps** under an answer opens what its

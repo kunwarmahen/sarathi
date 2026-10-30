@@ -514,6 +514,16 @@ def test_the_bell_asks_dvara_for_your_own_notices(chatting, door):
     assert ask(chatting, "/api/chat/notices", token="wrong").status_code == 401
 
 
+def test_the_bell_read_is_kept_by_dvara_for_you_alone(chatting, door):
+    status, _ = send(chatting, "/api/chat/notices/read", {"upto": 242, "actor": "guest"})
+    assert status == 200
+    method, path, body = door.heard[-1]
+    # every page and address reads the same mark; who it is for is set here
+    assert (method, path.split("?")[0]) == ("POST", "/web/notices/read")
+    assert body == {"upto": 242, "actor": "mahen"}
+    assert send(chatting, "/api/chat/notices/read", {"upto": 1}, token="wrong")[0] == 401
+
+
 def test_what_you_turned_down_is_yours_alone_to_see_and_undo(chatting, door):
     got = ask(chatting, "/api/chat/declined?actor=guest")
     assert got.status_code == 200

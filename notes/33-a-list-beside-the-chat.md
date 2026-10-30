@@ -72,8 +72,10 @@ the questions waiting for your yes, which stay in the chat that asked.
 **Notices** lists them newest first, unread ones marked, with **Go to the
 chat** when a question is waiting. **Notices on this phone** (the ntfy
 steps) moved there too. Dvara keeps the notices whatever **New chat**
-cleared (`GET /web/notices`). This browser remembers how far you've
-read, so another device counts its own.
+cleared (`GET /web/notices`), and how far you've read them: opened on
+the phone, on this computer, or by another address for the same page
+(`localhost` and the house name are two to a browser), the bell counts
+the same. A mark this browser kept from before is handed to Dvara once.
 
 ## Your name at the foot
 
@@ -91,6 +93,7 @@ Three routes, each to Dvara as the person signed in, deciding nothing:
 POST /api/chat/chats/ID/rename  {title}    -> Dvara's /web/chats/ID/rename
 POST /api/chat/chats/ID/pin     {pinned}   -> Dvara's /web/chats/ID/pin
 GET  /api/chat/notices                     -> Dvara's /web/notices
+POST /api/chat/notices/read     {upto}     -> Dvara's /web/notices/read
 ```
 
 Each row of `/api/chat/chats` now carries `roads`, `pinned` and `here`
@@ -127,6 +130,11 @@ conversation*), and *"So is 1.2 bar fine?"* went on from its ten lines.
 On the phone the list slid over the chat and went when a row was
 picked. No page errors.
 
+The read mark, again with a scratch pair: a notice lit the bell with 1
+on `127.0.0.1`; **Notices** opened there; then the same page opened as
+`localhost` (its own storage) showed no count. Before, that second
+address showed every notice unread, which is what a restart seemed to do.
+
 The first runs found three things, all fixed before the commit: the
 greeting over a conversation still open, described above; **Notices**
 drawn empty, because its section started hidden; and the writing box
@@ -137,7 +145,8 @@ half on a phone.
 
 `tests/test_home.py`: rename and pin go through as the person signed
 in, never as an actor the browser named; the bell asks for your own
-notices; and every view hides every other view's sections, with the
+notices, and the bell's read mark goes to Dvara as the person signed
+in; and every view hides every other view's sections, with the
 list, New chat and the bell in the page and the History dialog gone.
 
 ## What is not here yet

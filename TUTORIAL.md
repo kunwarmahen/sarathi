@@ -398,7 +398,7 @@ the chat apps you know:
   your asking: a schedule's answer (including schedules you make on
   Yantra's page), a watch going off, a sign-in that stopped working. Its
   number is what you haven't read yet, plus any question waiting for
-  your yes.
+  your yes. Read on one device, it's read on all of them.
 - **Your name** at the bottom of the list opens a menu: **Your pages**
   (the cards), **Settings**, **Notices**, **Turned down**, **My
   accounts**. Escape brings you back to the chat, and a reload stays
@@ -591,8 +591,9 @@ Dvara where it is and it's used first, faster and more exact:
 Sarathi → Whisper, for voice notes**), then `sarathi down && sarathi up`.
 Otherwise a local model that can hear does it (Dvara picks the smallest
 one in Ollama that lists "audio", such as `gemma4:e4b`; `ollama pull
-gemma4:e4b` if you have none). The answer starts with *I heard: "…"*, so you can see
-if a name was misheard. Your phone's browser can't record from the home
+gemma4:e4b` if you have none). On Telegram the answer starts with *I heard: "…"*; on the
+home page the words show on your own message, 🎤 *"…"*, a moment after you send it. Either
+way you can see if a name was misheard. Your phone's browser can't record from the home
 page over plain `http://` (browsers allow the microphone only on this
 computer or over https); Telegram has no such limit.
 
