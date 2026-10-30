@@ -94,6 +94,14 @@ the phone, on this computer, or by another address for the same page
 (`localhost` and the house name are two to a browser), the bell counts
 the same. A mark this browser kept from before is handed to Dvara once.
 
+**A SKILL OFFERED IS ANSWERED FROM THE NOTICE.** After a job on
+Telegram or at the puck, the offer to keep it as a skill comes as a
+notice. Telegram's has **Keep** and **Not now**; here it does too, under
+the notice: they send the same `/skills keep ID` / `/skills drop ID` the
+chat's buttons do, the notice then says what was sent, with *See its
+answer in the chat*. Pressed once on Telegram and again here, Dvara's
+answer says the offer is gone.
+
 ## Your name at the foot
 
 Your pages, Settings, Notices, Turned down, My accounts and, for
@@ -168,6 +176,12 @@ window kept the title at its head, had 4 list items, no *Back in* and no
 `/chats open` line. A conversation then begun on a Telegram thread came
 into the open list without a reload, and, read here, grew by its next
 question while Telegram went on. No page errors.
+
+Keep on a notice: a skill offer put in a scratch Dvara's notice book
+(as learning.py makes them), the page at 390 px, **Notices**: Keep and
+Not now under its words; Keep, and the notice said *Keep
+robinhood-portfolio-value: sent.*; the chat had minder's answer (the
+example minder has skills off, so *nothing to keep here*).
 
 ## Tests
 

@@ -1377,6 +1377,7 @@ function drawNotices(opening) {
   const rows = notices.rows.map((n) => h(`article.notice${n.id > seen ? ".unread" : ""}`, {},
     h("div.meta", {}, `${when(n.at)}${n.agent ? ` · ${n.agent}` : ""}`),
     (() => { const b = bubble(n.text, "notice"); b.classList.add("notice-text"); return b; })(),
+    n.offer ? noticeOffer(n) : null,
     (n.files || []).map((name, i) => {
       const b = h("button.file.quiet", { type: "button" }, `⤓ ${name}`);
       b.addEventListener("click", () => download(n.id, i, name));
@@ -1395,6 +1396,30 @@ function drawNotices(opening) {
     markRead(notices.rows[0].id);
     drawBell();
   }
+}
+
+// A skill offered after a turn on another road (Telegram, the puck, a
+// schedule) comes here as a notice: Keep and Not now on it, the words the
+// chat's buttons send, so the offer isn't typed. What was pressed stays said
+// while the page is open; the agent's answer is in the chat.
+const offered = new Map();
+
+function noticeOffer(n) {
+  const said = offered.get(n.id);
+  if (said) {
+    const toChat = h("button.quiet", { type: "button" }, "See its answer in the chat");
+    toChat.addEventListener("click", () => go("chat"));
+    return h("div.offer", {}, h("div.what", {}, said), toChat);
+  }
+  const answer = (word, words) => async () => {
+    await api("/api/chat", { agent: n.offer.agent, text: `/skills ${word} ${n.offer.id}` });
+    offered.set(n.id, words);
+    drawNotices(false);
+  };
+  return h("div.offer", {},
+    h("div.what", {}, `${n.offer.name} — test: ${n.offer.test}`),
+    buttons(answer("keep", `Keep ${n.offer.name}: sent.`),
+            answer("drop", "Not now: sent."), "Keep", "Not now"));
 }
 
 /* -- the list: every conversation, kept by Dvara as it goes (past.py) -------
