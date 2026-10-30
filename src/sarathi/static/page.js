@@ -594,7 +594,7 @@ async function drawPeople() {
 // step as a line), and the page looks more often until it is answered.
 // Answers are drawn as markdown (md.js, escaped first, the same file Yantra's
 // page uses). Every button here sends words Dvara answers on every channel:
-// /skills, /tools, /schedules, /memory, /new, /skills keep N.
+// /skills, /tools, /schedules, /watches, /memory, /new, /skills keep N.
 // THE WINDOW IS THE CONVERSATION YOU'RE IN. /new's answer empties it (and
 // draws nothing: the greeting shows instead), and a conversation opened
 // again starts it over with that conversation's own words. What was sent
@@ -1262,6 +1262,7 @@ const WORDS = [
   ["teach", "Teach…", "A job one step at a time, by telling or showing"],
   ["/tools", "Tools", "What it can use"],
   ["/schedules", "Schedules", "What it does by itself, and when"],
+  ["/watches", "Watches", "What it keeps an eye on; /watches every 1 6h"],
   ["/memory", "Memory", "What it remembers about you"],
   ["declined", "Turned down…", "What you said no to remembering"],
   ["/phone", "Phone screen", "Your phone's screen now"],
