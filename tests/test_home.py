@@ -320,7 +320,7 @@ def door():
         def do_GET(self):
             heard.append(("GET", self.path, {"auth": self.headers.get("Authorization")}))
             if "/export" in self.path:
-                raw = "# the boiler\n\n**You**\n\nboiler?\n".encode()
+                raw = b"# the boiler\n\n**You**\n\nboiler?\n"
                 self.send_response(200)
                 self.send_header("Content-Type", "text/markdown; charset=utf-8")
                 self.send_header("Content-Disposition",
