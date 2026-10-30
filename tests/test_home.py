@@ -574,6 +574,17 @@ def test_what_you_turned_down_is_yours_alone_to_see_and_undo(chatting, door):
     assert ask(chatting, "/api/chat/declined", token="wrong").status_code == 401
 
 
+def test_the_undo_beside_what_was_kept_forgets_only_your_own(chatting, door):
+    status, _ = send(chatting, "/api/chat/forget",
+                     {"agent": "minder", "id": "2ad6b855", "line": 41, "actor": "guest"})
+    assert status == 200
+    method, path, body = door.heard[-1]
+    # whose memory it is, set here, never by the browser
+    assert (method, path.split("?")[0]) == ("POST", "/web/forget")
+    assert body == {"agent": "minder", "id": "2ad6b855", "line": 41, "actor": "mahen"}
+    assert send(chatting, "/api/chat/forget", {"id": "x"}, token="wrong")[0] == 401
+
+
 def test_dvara_down_is_said_not_hung(keys):
     home = Home(config(keys), lambda: {})
     server = HomeServer(home, GOOD, port=0, chat=Chat("http://127.0.0.1:9", DOOR_KEY, "mahen"))

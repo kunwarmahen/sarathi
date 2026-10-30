@@ -1452,6 +1452,16 @@ def _handler(server: HomeServer):
                 if body is None:
                     return None
                 return self._chat(who, "POST", "/web/declined", {"undo": body.get("undo")})
+            if parts == ["api", "chat", "forget"]:
+                # the Undo beside what a turn kept on its own; only their own
+                who = self._who()
+                if who is None:
+                    return None
+                body = self._body(MAX_BODY)
+                if body is None:
+                    return None
+                return self._chat(who, "POST", "/web/forget", {
+                    k: body.get(k) for k in ("agent", "id", "line")})
             if parts == ["api", "chat", "notices", "read"]:
                 # the bell read up to a line: kept by Dvara, so every page agrees
                 who = self._who()

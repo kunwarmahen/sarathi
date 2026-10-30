@@ -906,6 +906,7 @@ function lineView(ln) {
     ln.taps ? tapsView(ln) : null,
     ln.held ? h("span.receipt", {}, "Waiting for your yes, below.") : null,
     ln.receipt ? h("span.receipt", {}, ln.receipt) : null,
+    ln.kept ? keptView(ln) : null,
     ln.steps && ln.who === "agent" ? stepsView(ln) : null,
     chat.voice && ln.who !== "you" && ln.text ? listenButton(ln) : null,
     (ln.files || []).map((name, n) => {
@@ -916,6 +917,28 @@ function lineView(ln) {
     }));
   if (voice && ln.heard) view.dataset.heard = "1";
   return view;
+}
+
+// What the agent kept about you on its own (your permissions let it,
+// without asking): each fact as a chip, with Undo to forget it. Dvara
+// marks the line, so a chat drawn again shows it forgotten.
+function keptView(ln) {
+  return h("div.kept", {}, ...ln.kept.map((k) => {
+    if (k.forgot) return h("div.kept-row.gone", {}, h("span", {}, `Forgotten: ${k.statement}`));
+    const undo = h("button.undo", { type: "button", title: "Forget this" }, "Undo");
+    const row = h("div.kept-row", {}, h("span", {}, "🔖 Kept about you: ", h("b", {}, k.statement)), undo);
+    undo.addEventListener("click", async () => {
+      undo.disabled = true;
+      try {
+        const d = await api("/api/chat/forget", { agent: ln.agent, id: k.id, line: ln.id });
+        if (d.forgot) {
+          k.forgot = true;
+          row.replaceWith(h("div.kept-row.gone", {}, h("span", {}, `Forgotten: ${k.statement}`)));
+        } else { undo.disabled = false; problem(d.said); }
+      } catch (err) { undo.disabled = false; problem(err.message); }
+    });
+    return row;
+  }));
 }
 
 function buttons(onYes, onNo, yes = "Yes", no = "No", onAll = null) {

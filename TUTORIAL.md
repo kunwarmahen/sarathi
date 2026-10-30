@@ -1153,10 +1153,11 @@ you answer `/remember 1`.
 
 **Kept without asking, and told.** If your permissions are *Never
 asked* (`yolo`), the agent can keep something you said without asking
-first. The answer then ends with a line saying so, like *(Kept about
-you: Lives near RDU … -- /memory forget 1 to undo.)*. When the chat goes
-quiet, the look back lists what it already kept, rather than saying
-nothing.
+first. On the home page the answer then shows a chip under it,
+*🔖 Kept about you: Lives near RDU …*, with an **Undo** button that
+forgets it (on Telegram it's a line, with the `/memory forget 1` that
+does the same). When the chat goes quiet, the look back lists what it
+already kept, rather than saying nothing.
 
 **Said no by mistake?** `/remember not 2` means "never offer that
 again", and the numbers move as you keep things, so it's easy to turn
