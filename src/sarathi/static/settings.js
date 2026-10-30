@@ -431,6 +431,15 @@ function agentForm(a) {
     if (allow && !allow.length) {
       return said("Tick at least one tool, or \"Every tool it has\".", true);
     }
+    // a package's own list is how a reader agent is kept to reading: taking
+    // it away gives it bash and everything else, so it is asked, not done
+    const had = t.tools?.allow;
+    if (allow === null && Array.isArray(had) && had.length && !confirm(
+        `${a.name} is kept to ${had.length} tool name${had.length > 1 ? "s" : ""} ` +
+        `(${had.join(", ")}). "Every tool it has" takes that list away, so it can ` +
+        "also run commands and change files. Save anyway?")) {
+      return;
+    }
     save(`/api/settings/agent/${encodeURIComponent(a.name)}`, {
     tables: {
       agent: { description: desc.value.trim() || null },
