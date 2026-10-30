@@ -57,6 +57,12 @@ for them. When there is no link to make (the owner turned people's
 pages off, their accounts are in a shared folder), Dvara's words say
 why.
 
+**A BUTTON PRESSED ON THE PHONE.** A skill offered comes with **Keep**
+and **Not now**. The ntfy app presses them at `POST /api/push/answer`
+on the home page, with no sign-in, since it holds none of ours. The page
+passes the press to Dvara as it came, and Dvara takes it only with the
+mark it made for that one offer (Dvara's notes/40).
+
 ## Receipt
 
 ntfy's pinned image started with the unit's own command and answered

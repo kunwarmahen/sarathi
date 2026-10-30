@@ -1123,6 +1123,9 @@ the containers bring their own. Then, on each phone:
 3. Ask for something on a schedule (*"in two minutes, tell me a joke"*),
    lock the phone, and wait. The notice arrives as *Your agents*, and
    tapping it opens the home page.
+4. When the agent offers to keep a job as a skill, the notice has
+   **Keep** and **Not now** under it. Press one right there; the answer
+   is in the chat on the home page.
 
 They hear notices while the phone can reach your house (home Wi-Fi).
 Keep the topic private: whoever has it can read their notices. If

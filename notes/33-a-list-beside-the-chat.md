@@ -100,7 +100,8 @@ notice. Telegram's has **Keep** and **Not now**; here it does too, under
 the notice: they send the same `/skills keep ID` / `/skills drop ID` the
 chat's buttons do, the notice then says what was sent, with *See its
 answer in the chat*. Pressed once on Telegram and again here, Dvara's
-answer says the offer is gone.
+answer says the offer is gone. The phone's ntfy notice has the same
+two buttons (Dvara's notes/40).
 
 ## Your name at the foot
 

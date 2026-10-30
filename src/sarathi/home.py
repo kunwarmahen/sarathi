@@ -54,6 +54,8 @@ reaches the browser, the way Dvara's own page keeps it:
     GET  /api/chat/push           your ntfy server and topic, for notices on a phone
     GET  /api/chat/notices        what was sent to you unasked, and how far you've read
     POST /api/chat/notices/read   {"upto": N}: read up to there, on every page you open
+    POST /api/push/answer         Keep / Not now pressed on a phone's ntfy notice:
+                                  no sign-in, Dvara takes it only with its own mark
 
 EVERYONE IN THE HOUSE, EACH THEIR OWN CHAT. The other people in
 Dvara's actors file sign in here too (people.py: an invite from the
@@ -919,6 +921,22 @@ def _handler(server: HomeServer):
             except ChatError as exc:
                 return self._json(exc.status, {"detail": str(exc)})
 
+        def _push_answer(self) -> None:
+            """A button on a phone's notification (Dvara's push.py): the ntfy
+            app presses it with no sign-in, so it passes through as it came
+            and Dvara decides by the mark, made for that one offer."""
+            if server.chat is None:
+                return self._json(404, {"detail": "no chat here"})
+            body = self._body(4096)
+            if body is None:
+                return None
+            press = {k: str(body.get(k) or "") for k in ("agent", "offer", "word", "mark")}
+            try:
+                return self._json(200, server.chat.json(
+                    "POST", "/push/answer", press, actor=str(body.get("actor") or "")))
+            except ChatError as exc:
+                return self._json(exc.status, {"detail": str(exc)})
+
         def _push(self, who: Who) -> None:
             """How this person subscribes to their notices in the ntfy app:
             the house's ntfy server and their own topic, which Dvara keeps."""
@@ -1333,6 +1351,8 @@ def _handler(server: HomeServer):
         def do_POST(self) -> None:
             url = urlparse(self.path)
             parts = url.path.strip("/").split("/")
+            if parts == ["api", "push", "answer"]:
+                return self._push_answer()
             if parts[:2] == ["api", "settings"]:
                 return self._settings_post(parts)
             if parts in (["api", "sign-in"], ["api", "claim"], ["api", "sign-out"]) or \

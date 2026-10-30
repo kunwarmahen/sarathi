@@ -524,6 +524,19 @@ def test_the_bell_read_is_kept_by_dvara_for_you_alone(chatting, door):
     assert send(chatting, "/api/chat/notices/read", {"upto": 1}, token="wrong")[0] == 401
 
 
+def test_a_phones_keep_button_passes_through_with_no_sign_in_for_dvara_to_judge(chatting,
+                                                                              door):
+    press = {"actor": "priya", "agent": "minder", "offer": "4638", "word": "keep",
+             "mark": "ab" * 16, "extra": "dropped"}
+    # the ntfy app sends no token of ours: the press goes on as it came
+    status, _ = send(chatting, "/api/push/answer", press, token="none")
+    assert status == 200
+    method, path, body = door.heard[-1]
+    assert (method, path.split("?")[0]) == ("POST", "/push/answer")
+    assert body == {"agent": "minder", "offer": "4638", "word": "keep",
+                    "mark": "ab" * 16, "actor": "priya"}
+
+
 def test_what_you_turned_down_is_yours_alone_to_see_and_undo(chatting, door):
     got = ask(chatting, "/api/chat/declined?actor=guest")
     assert got.status_code == 200
