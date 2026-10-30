@@ -1558,6 +1558,22 @@ once when it crosses the line, not every hour while it stays below. If
 a site changes its page and the watch can't find the price any more, it
 pauses and tells you, and *"fix my ALAB watch"* in the chat mends it.
 
+**Every watch keeps your words.** The helper saves what you asked, as
+you said it, with the watch, and every message it sends you ends with
+them and with where it looks:
+
+```
+Phoenix nonstop under $571:
+• the fare is now 540
+You asked: "keep an eye on the nonstop to Phoenix and tell me if it gets cheaper"
+(tells you when the fare is below 571; looks at google.com/travel/flights every 6 hours · watch 9b904bc4)
+```
+
+So you always know what a watch is for, even weeks later. `/watches` in
+the chat shows the same words under each watch's name. Asking twice for
+the same thing doesn't make a second watch: the helper offers to change
+the one you have.
+
 **Your phone can tell Prahari itself.** On an Android phone, the free
 app **MacroDroid** can send Prahari each notification the moment it
 arrives, so a WhatsApp from Mum reaches your helper without anything
