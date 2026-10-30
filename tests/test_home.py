@@ -77,7 +77,7 @@ def ask(server, path, token=GOOD, method="GET"):
                                  method=method)
     try:
         with urllib.request.urlopen(req, timeout=5) as res:
-            return Answer(res.status, res.read().decode(),
+            return Answer(res.status, res.read().decode(errors="replace"),
                           {k.lower(): v for k, v in res.headers.items()})
     except urllib.error.HTTPError as err:
         return Answer(err.code, err.read().decode(),
@@ -329,6 +329,16 @@ def door():
                 self.end_headers()
                 self.wfile.write(raw)
                 return
+            if self.path.startswith("/web/steps/picture"):
+                # a PNG for step 0, and something that isn't a picture for step 1
+                raw = (b"\x89PNG\r\n\x1a\n a screen" if "step=0" in self.path
+                       else b"<script>not a picture</script>")
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+                return
             if self.path.startswith("/web/spoken"):
                 raw = b"RIFF a voice"
                 self.send_response(200)
@@ -479,6 +489,18 @@ def test_an_answers_steps_come_through_for_you_alone_and_as_a_file(chatting, doo
     assert path.split("?")[0] == "/web/steps/export" and "actor=mahen" in path
     assert DOOR_KEY not in made.text
     assert ask(chatting, "/api/chat/steps?line=7", token="wrong").status_code == 401
+
+
+def test_a_steps_picture_comes_through_only_as_a_picture(chatting, door):
+    got = ask(chatting, "/api/chat/steps/picture?line=7&step=0&n=0&actor=guest")
+    assert got.status_code == 200 and got.headers["content-type"] == "image/png"
+    _, path, _ = door.heard[-1]
+    assert path.split("?")[0] == "/web/steps/picture" and "actor=mahen" in path
+    assert "step=0" in path and "n=0" in path
+    # whatever Dvara says it is, bytes that aren't a picture never come through
+    assert ask(chatting, "/api/chat/steps/picture?line=7&step=1&n=0").status_code == 404
+    assert ask(chatting, "/api/chat/steps/picture?line=7&step=0&n=0",
+               token="wrong").status_code == 401
 
 
 def test_history_deletes_through_dvara_and_its_refusal_comes_back(chatting, door):

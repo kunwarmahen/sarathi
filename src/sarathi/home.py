@@ -50,6 +50,7 @@ reaches the browser, the way Dvara's own page keeps it:
     GET  /api/chat/spoken?line=   an answer read aloud (WAV)
     GET  /api/chat/steps?line=    what an answer's turn did, step by step
     GET  /api/chat/steps/export?line=   the same, as a file for a bug report
+    GET  /api/chat/steps/picture?line=&step=&n=   a picture a step's tool returned
     POST /api/chat/accounts-page  {}: a one-time link to your own Setu page
     GET  /api/chat/push           your ntfy server and topic, for notices on a phone
     GET  /api/chat/notices        what was sent to you unasked, and how far you've read
@@ -851,6 +852,19 @@ def _strangers(config: Config) -> list[str]:
         return []
 
 
+def _image_kind(raw: bytes) -> str | None:
+    """A picture's kind from its first bytes (PNG, JPEG, GIF, WebP)."""
+    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if raw.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if raw[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
 def _handler(server: HomeServer):
     class Handler(BaseHTTPRequestHandler):
         server_version = "sarathi"
@@ -1034,6 +1048,7 @@ def _handler(server: HomeServer):
             if url.path not in ("/api/pieces", "/api/chat", "/api/chat/file", "/api/me",
                                 "/api/people", "/api/chat/push", "/api/chat/spoken",
                                 "/api/chat/steps", "/api/chat/steps/export",
+                                "/api/chat/steps/picture",
                                 "/api/chat/declined", "/api/chat/notices"):
                 return self._json(404, {"detail": "not found"})
             who = self._owner() if url.path in ("/api/pieces", "/api/people") \
@@ -1061,6 +1076,26 @@ def _handler(server: HomeServer):
                 # what an answer's own turn did, step by step (Dvara's runsteps)
                 return self._chat(who, "GET", "/web/steps",
                                   query={"line": query.get("line", "0")})
+            if url.path == "/api/chat/steps/picture":
+                if server.chat is None:
+                    return self._json(404, {"detail": "no chat here"})
+                try:
+                    raw, _ = server.chat.call("GET", "/web/steps/picture", query={
+                        k: query.get(k, "0") for k in ("line", "step", "n")},
+                        actor=who.actor)
+                except ChatError as exc:
+                    return self._json(exc.status, {"detail": str(exc)})
+                kind = _image_kind(raw)
+                if kind is None:             # only a picture is ever drawn from here
+                    return self._json(404, {"detail": "not a picture"})
+                self.send_response(200)
+                self.send_header("Content-Type", kind)
+                self.send_header("Content-Length", str(len(raw)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                self.wfile.write(raw)
+                return None
             if url.path == "/api/chat/steps/export":
                 if server.chat is None:
                     return self._json(404, {"detail": "no chat here"})

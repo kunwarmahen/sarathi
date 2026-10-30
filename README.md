@@ -1200,7 +1200,8 @@ this computer by Piper; an answer to a voice note plays by itself (Settings → 
 **Answers read aloud** sets who hears what, **Their voice** in whose; [notes/30](notes/30-answers-read-aloud.md),
 [notes/31](notes/31-a-voice-for-each-language.md)). **Steps** under an answer opens what its
 turn did: each tool, when, how long it waited for a yes and ran, a line of
-what came back, and **File for a bug report** (the person's own run only;
+what came back, any picture its tool returned (a screenshot, the phone's
+screen; tap to open it whole), and **File for a bug report** (the person's own run only;
 Dvara's [notes/60](https://github.com/kunwarmahen/dvara/blob/main/notes/60-a-run-step-by-step.md)).
 `/doctor` in the chat is the person's own check (Dvara's notes/67). The paperclip beside **Send** adds pictures or
 files to your next message (up to 20 MB together): Dvara keeps them in

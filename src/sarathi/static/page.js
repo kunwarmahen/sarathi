@@ -799,7 +799,8 @@ function yoursView(text) {
 
 // What an answer's turn did, step by step (Dvara's runsteps): folded under
 // the answer, fetched the first time it's opened. Each step is the tool,
-// when, how long it waited for a yes and ran, and a line of what came back;
+// when, how long it waited for a yes and ran, a line of what came back, and
+// any picture its tool returned (a screenshot), fetched as the step is drawn;
 // the file holds the rest, and says so before anyone sends it.
 function stepsView(ln) {
   const box = h("details.steps", {}, h("summary", {}, "Steps"));
@@ -814,7 +815,8 @@ function stepsView(ln) {
         + (d.seconds != null ? ` · ${d.seconds}s` : "") + (d.outcome ? ` · ${d.outcome}` : "");
       const rows = d.steps.map((st, i) => h("div.step", {},
         h("div.step-head", {}, d.said[i] || st.tool),
-        st.short ? h("div.step-said", {}, `→ ${st.short}`) : null));
+        st.short ? h("div.step-said", {}, `→ ${st.short}`) : null,
+        ...(st.pictures || []).map((_, n) => stepPicture(ln.id, i, n, st.tool))));
       const file = h("button.file", { type: "button" }, "⤓ File for a bug report");
       file.addEventListener("click", () => saveSteps(ln.id));
       body.replaceChildren(h("div.meta", {}, head),
@@ -826,6 +828,19 @@ function stepsView(ln) {
     }
   });
   return box;
+}
+
+// A step's picture, shown at the width of the steps; a tap opens it whole.
+function stepPicture(line, step, n, tool) {
+  const img = h("img.picture.step-picture", { alt: `what ${tool} saw` });
+  fetch(`/api/chat/steps/picture?line=${line}&step=${step}&n=${n}`,
+        { headers: { Authorization: `Bearer ${token}` } })
+    .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(res.status))))
+    .then((blob) => {
+      img.src = URL.createObjectURL(blob);
+      img.addEventListener("click", () => window.open(img.src, "_blank"));
+    }, () => img.remove());
+  return img;
 }
 
 async function saveSteps(line) {
