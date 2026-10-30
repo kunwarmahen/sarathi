@@ -28,7 +28,8 @@ dialog:
 * **Carry on in the chat** sends `/chats open ID` to that conversation's
   agent, so the answer arrives as the usual *"Back in: …"* line with the
   conversation unfolded under it, and the agent picker moves to that
-  agent.
+  agent. (The list beside the chat, which replaced this panel, carries
+  one on as it was read instead: [note 33](33-a-list-beside-the-chat.md).)
 * **Save as PDF**, **Download** and (on a phone) **Send…** share it.
   Download and Send… use Dvara's Markdown file (`GET /web/chats/ID/export`:
   words, answers, the tools' names, never their output). Send… hands it

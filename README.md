@@ -719,7 +719,10 @@ small push server, before Dvara, which gets `--ntfy <its address>` and
 schedule's answer, a sign-in that ran out, what a look back noticed) also
 goes to their own topic there, for the ntfy app on their phone. Each
 person finds their server and topic under **Notices on this phone** on
-the home page. ntfy listens on `window_host` when that is one address,
+the home page. A skill offered comes with **Keep** and **Not now**,
+pressed on the phone: the ntfy app sends the press to the home page's
+`POST /api/push/answer`, with no sign-in, and Dvara takes it only with
+the mark it made for that one offer. ntfy listens on `window_host` when that is one address,
 so a phone at home reaches it, and otherwise on this computer alone. The
 words never leave the house, so a phone hears them while it can reach
 your house: home Wi-Fi, or Tailscale. On plain programs, install ntfy
@@ -1150,15 +1153,20 @@ stays in the home page's process, never in the browser.
 **The list at the left** is every conversation you've had, with every
 agent, on every road: 💬 this page, ✈ Telegram, 🔊 a puck. It's grouped
 Pinned / Today / Yesterday / Previous 7 days / Older and searched by what
-was said. Pick one to read it in the chat's place; write under it to
-carry it on here. One begun on Telegram stays open there too, and both
-carry it on. Each row's ⋯ renames it, pins it, saves it as a PDF,
+was said, and it keeps up by itself (every 20 seconds while in sight),
+so a conversation on Telegram or at the puck shows without a reload.
+Pick one to read it in the chat's place; write under it to carry it on
+here, and the window goes on as you read it: its name, its tools, its
+answers as written, a voice note as 🎤 "…". One begun on Telegram stays
+open there too, and both carry it on; one you're reading grows as it
+goes on there. Each row's ⋯ renames it, pins it, saves it as a PDF,
 downloads or sends it, or deletes it for good. **New chat** at the top
 starts over with a greeting; the button by the list hides it (kept in
 this browser), and on a phone ☰ slides it over the chat. The 🔔 at the
 top right holds what was sent to you unasked (a schedule's answer, a
 watch, a sign-in that stopped), with a count of what's unread (the same on every device: Dvara
-keeps how far you've read) plus the questions waiting for your yes. Your pages, Settings, Notices and Turned
+keeps how far you've read) plus the questions waiting for your yes; a skill offered there has **Keep** and
+**Not now**. Your pages, Settings, Notices and Turned
 down open from your name at the foot of the list
 ([notes/33](notes/33-a-list-beside-the-chat.md); Dvara's
 [notes/50](https://github.com/kunwarmahen/dvara/blob/main/notes/50-every-conversation-kept.md),

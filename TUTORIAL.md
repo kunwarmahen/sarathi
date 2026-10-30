@@ -458,7 +458,10 @@ Or type `/` and the same list pops up and narrows as you type: pick
 one with the arrows and Enter. After a job of four steps or more, an
 agent whose package has skills may offer to keep how it was done. Press
 **Keep** and next time it's one step, for you only. For a shorter job,
-press **Learn this** after it to ask for the same offer.
+press **Learn this** after it to ask for the same offer. An offer after a
+job on Telegram or at the puck comes under the 🔔 instead (and to your
+phone's ntfy app, if you set it up), with **Keep** and **Not now** there
+too.
 
 **Finding an old conversation.** Every conversation you have with your
 agents is kept by itself as you talk. You don't have to save anything,
@@ -466,9 +469,14 @@ and nobody else in the house can see yours. They're all in the list at
 the left. Type a word you remember, like *boiler*, into the search box
 at the top of the list, and it shrinks to the conversations that say it,
 with the word marked. Tap one and it opens in the middle to read. To
-carry it on, just write below it. If it began on Telegram, it stays open
-there too: what you say in either place carries on the same
-conversation.
+carry it on, just write below it: it stays as you were reading it, with
+its tools folded and its answers' lists and tables kept. If it began on
+Telegram, it stays open there too: what you say in either place carries
+on the same conversation. You don't need to reload the page: a
+conversation on Telegram or at the puck shows in the list within about
+20 seconds, and one you have open grows as it goes on. A voice note
+shows as 🎤 with the words that were heard, in the conversation and as
+its name in the list.
 
 The **⋯** on each conversation in the list (it shows when you point at
 one) does the rest:
