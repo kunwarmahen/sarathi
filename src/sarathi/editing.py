@@ -237,7 +237,8 @@ def _vaani_json(args: list[str]) -> dict:
 
 
 def vaani_view(config: Config) -> dict:
-    """Settings → Vaani: each puck's person, agent and people, and the
+    """Settings → Vaani: each puck's person, agent, people and each
+    person's own agent there, and the
     voices known (so a person ticked with no voice yet can be said)."""
     if not config.voice_on:
         return {"on": False}
@@ -252,8 +253,8 @@ def vaani_view(config: Config) -> dict:
 
 def vaani_do(config: Config, body: dict) -> str:
     """{"do": "puck", "puck", "person"?, "agent"?, "people"?, "fresh_after"?,
-    "wake_word"?}:
-    done by Vaani."""
+    "wake_word"?, "agents"?}: done by Vaani. ``agents`` is {person: agent},
+    "" for the puck's own again, each sent as ``--agent-for``."""
     if not config.voice_on:
         raise EditError(409, "Vaani is off: turn it on under Settings → Sarathi first")
     do = body.get("do")
@@ -288,6 +289,15 @@ def vaani_do(config: Config, body: dict) -> str:
                                                        VAANI_NAME.match(x) for x in people):
                 raise EditError(400, "people is a list of names from People")
             argv += ["--people", ",".join(people)]
+        if body.get("agents") is not None:
+            agents = body["agents"]
+            if not isinstance(agents, dict) or not all(
+                    isinstance(k, str) and VAANI_NAME.match(k) and isinstance(v, str)
+                    and (not v or VAANI_NAME.match(v)) for k, v in agents.items()):
+                raise EditError(400, "agents is {person: agent}, names from People "
+                                "and Agents")
+            for person, agent in agents.items():
+                argv += ["--agent-for", f"{person}={agent}"]
     else:
         raise EditError(400, "do: puck (voices are learned on Vaani's own page)")
     done = _run([_vaani(), *argv])

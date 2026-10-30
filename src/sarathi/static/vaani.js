@@ -1,6 +1,6 @@
 "use strict";
-// Settings → Vaani: who each puck answers, and which people it tells
-// apart -- vaani.toml, changed by Vaani itself (POST /api/vaani, which
+// Settings → Vaani: who each puck answers, which people it tells apart,
+// and the agent each of them asks there -- vaani.toml, changed by Vaani itself (POST /api/vaani, which
 // runs `vaani puck`). What the pucks did, and learning voices, are on
 // Vaani's own page (its card under Your pages). Uses page.js's h(), api()
 // and settings.js's small pieces.
@@ -44,12 +44,24 @@ function puckForm(p, voiced) {
     const no = (p.people || []).includes(x) && !voiced.has(x);
     return h("label.inline", {}, c, ` ${x}`, no ? h("span.meta", {}, " (voice not learned yet)") : null);
   });
-  const go = button("Save", () => vaaniSave({
-    do: "puck", puck: p.name, person: unsure.value, agent: agent.value,
-    fresh_after: quiet.value.trim(),
-    ...(wake ? { wake_word: wake.value } : {}),
-    people: boxes.map((b) => b.querySelector("input")).filter((c) => c.checked).map((c) => c.value),
-  }));
+  // each person's own agent at this puck; "" is the puck's Agent below
+  const own = Object.fromEntries(people.map((x) =>
+    [x, pick([["", "the puck's agent"], ...agents], (p.agents || {})[x] || "")]));
+  const asks = h("div.boxes", {}, ...people.map((x) =>
+    h("label.inline", {}, `${x}\u00a0asks\u00a0`, own[x])));
+  const go = button("Save", () => {
+    const ticked = boxes.map((b) => b.querySelector("input")).filter((c) => c.checked)
+      .map((c) => c.value);
+    // only someone it can hear keeps a line: Vaani refuses one for anyone else
+    const heard = new Set([...ticked, unsure.value]);
+    return vaaniSave({
+      do: "puck", puck: p.name, person: unsure.value, agent: agent.value,
+      fresh_after: quiet.value.trim(),
+      ...(wake ? { wake_word: wake.value } : {}),
+      people: ticked,
+      agents: Object.fromEntries(people.map((x) => [x, heard.has(x) ? own[x].value : ""])),
+    });
+  });
   return h("div.card.form", {}, h("h3", {}, `The ${p.name} puck`),
     field("It may tell apart (by voice, or “this is NAME, …”)", h("div.boxes", {}, ...boxes),
           "Nobody ticked: it always answers as the person below. Each person ticked needs " +
@@ -58,6 +70,10 @@ function puckForm(p, voiced) {
           "Best: a person with only the house's accounts, so one person's mail is never " +
           "read to another. The puck says it wasn't sure."),
     field("Agent", agent),
+    field("Each person's own agent here", asks,
+          "Whoever it heard asks their own: Asha her helper while you ask yours. " +
+          "They must be allowed it under People. Only someone ticked above, or the one " +
+          "when it isn't sure, is ever asked."),
     wake ? field("Wake word", wake, `What you say to wake it. Now: ${on || "not known"}. ` +
                  "A change reaches the puck within a minute.")
          : h("p.meta", {}, "Wake word: the puck hasn't told Vaani its wake words yet " +

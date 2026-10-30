@@ -1888,7 +1888,9 @@ house. The program that does it is **Vaani**; it answers through Dvara
      as when it isn't sure. Best is a "house" person with only the
      house's accounts (add one under People first). Save. It applies
      from the next question; nothing needs restarting. A person ticked
-     whose voice isn't learned yet says so.
+     whose voice isn't learned yet says so. **Each person's own agent
+     here** lets Asha ask her own agent while you ask yours: *asha asks
+     helper*. She must be allowed it under People.
    * **Vaani's page → Setup → Voices**: pick a person and the puck, then press
      **Learn their voice**. That person says the wake word and any
      sentence at the puck, three times; the puck counts down and the

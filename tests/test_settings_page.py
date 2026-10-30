@@ -357,6 +357,20 @@ def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
     assert not any("--x" in ",".join(a) or "../k" in a for a in asked)
 
 
+def test_each_persons_own_agent_goes_to_vaani_as_agent_for(with_vaani):
+    code, _ = send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                              "people": ["owner", "asha"],
+                                              "agents": {"asha": "helper", "owner": ""}})
+    assert code == 200
+    for wrong in ({"asha": "../x"}, {"--x": "helper"}, ["asha"], {"asha": 3}):
+        assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                               "agents": wrong})[0] == 400
+    asked = [json.loads(line) for line in with_vaani.vaani_log.read_text().splitlines()]
+    assert ["puck", "kitchen", "--people", "owner,asha", "--agent-for", "asha=helper",
+            "--agent-for", "owner="] in asked
+    assert not any("../x" in ",".join(a) or "--x=helper" in a for a in asked)
+
+
 def test_vaani_off_or_a_person_signed_in_gets_nothing(with_vaani):
     from dataclasses import replace
     link = with_vaani.people_book.invite("priya", ["mahen", "priya"], "mahen")
