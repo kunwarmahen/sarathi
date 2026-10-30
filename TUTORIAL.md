@@ -624,8 +624,9 @@ folded (· web_fetch): tap one for what it was given and what came
 back, as when you open the conversation again from the list. Under
 every answer on the home page is a small
 **Steps**. Open it to see each tool the agent used for that answer,
-when, how long it waited for your yes and how long it ran, and a line
-of what came back:
+when, how long it waited for your yes and how long it ran, a line
+of what came back, and any picture a tool returned (a screenshot of a
+page, the phone's screen; tap it to see it whole):
 
 ```
 1 step · 19s · end_turn
@@ -648,7 +649,8 @@ sarathi image && sarathi down && sarathi up     # containers; plain programs: ju
 
 (or **Settings → Sarathi → Dvara → Voices for answers read aloud**, then
 the same `sarathi image` line). Now an answer written in Hindi is read by the Hindi voice
-and an English one by the English voice, whoever asked. Other voices are
+and an English one by the English voice, whoever asked. Hindi typed in
+English letters (*"kal kya hai"*) is read by the Hindi voice too. Other voices are
 listed at huggingface.co/rhasspy/piper-voices (`hi_IN-priyamvada-medium`
 is a second Hindi one). Someone who wants every answer in one voice of
 their own sends `/voice use 2`, or you pick it for them under **Their
@@ -1916,7 +1918,9 @@ sarathi doctor
 ```
 
 Or on the home page: **Settings → Check → Check everything**. Red needs
-fixing, amber is worth a look, green is fine. It changes nothing by
+fixing, amber is worth a look, green is fine. A voice you listed for
+answers read aloud that Dvara doesn't have (never fetched, or added
+after the image was built) is amber, with the line that fetches it. It changes nothing by
 itself. Under a line the page can fix, there's a button (**Start
 everything again**, **Rebuild and restart**, **Bring it back**, **Open
 Setu's page**). Other fixes, like opening the firewall, you type.
@@ -1951,7 +1955,9 @@ Your check: 1 amber
 
 A schedule of theirs that failed this morning, a watch that paused, a
 phone of theirs not connected all show there. Nobody sees anyone
-else's.
+else's. `/doctor every morning` checks it for them at 07:30 on their own
+clock and tells them only what's newly wrong, as your morning check
+does for the house.
 
 **Restarting in the middle of a job is safe.** Every step of a job is
 saved as it happens. If you `sarathi down && sarathi up` (or the
