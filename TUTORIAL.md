@@ -1574,6 +1574,18 @@ the chat shows the same words under each watch's name. Asking twice for
 the same thing doesn't make a second watch: the helper offers to change
 the one you have.
 
+**A watch can have its days.** Say them, and the helper sets them:
+
+* *"Keep an eye on the fare for Saturday's flight"* stops after Saturday.
+* *"Watch my flight tomorrow"* starts tomorrow morning and stops once the
+  status says it landed.
+
+When a watch's day is over it tells you (*"Ended: Phoenix nonstop under
+$571 — its end came, as was set"*), stops looking, and is cleared away
+30 days later. To keep one going, just say *"keep it"*. A watch with no
+end asks you once a month whether you still want it; it carries on
+looking until you say.
+
 **Your phone can tell Prahari itself.** On an Android phone, the free
 app **MacroDroid** can send Prahari each notification the moment it
 arrives, so a WhatsApp from Mum reaches your helper without anything
