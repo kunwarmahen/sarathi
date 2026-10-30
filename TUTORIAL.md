@@ -611,7 +611,10 @@ time: an answer that comes while another is being read waits for it to
 finish, ▶ on another answer stops the one reading, and a second tab of
 the home page stops reading when this one starts.
 
-**What did it just do?** Under every answer on the home page is a small
+**What did it just do?** Above each answer, every tool it used sits
+folded (· web_fetch): tap one for what it was given and what came
+back, as when you open the conversation again from the list. Under
+every answer on the home page is a small
 **Steps**. Open it to see each tool the agent used for that answer,
 when, how long it waited for your yes and how long it ran, and a line
 of what came back:

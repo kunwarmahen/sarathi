@@ -1157,8 +1157,8 @@ downloads or sends it, or deletes it for good. **New chat** at the top
 starts over with a greeting; the button by the list hides it (kept in
 this browser), and on a phone ☰ slides it over the chat. The 🔔 at the
 top right holds what was sent to you unasked (a schedule's answer, a
-watch, a sign-in that stopped), with a count of what's unread plus the
-questions waiting for your yes. Your pages, Settings, Notices and Turned
+watch, a sign-in that stopped), with a count of what's unread (the same on every device: Dvara
+keeps how far you've read) plus the questions waiting for your yes. Your pages, Settings, Notices and Turned
 down open from your name at the foot of the list
 ([notes/33](notes/33-a-list-beside-the-chat.md); Dvara's
 [notes/50](https://github.com/kunwarmahen/dvara/blob/main/notes/50-every-conversation-kept.md),
