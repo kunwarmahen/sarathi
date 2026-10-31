@@ -187,3 +187,48 @@ def test_the_home_card_names_each_phone(world, monkeypatch):
                                         phone=TWO)) if p.name == "sparsh")
     assert card.title == "Your phones"
     assert card.purpose.startswith("nexus (Android), iphone (iPhone), and what")
+
+
+# -- a spare phone: a watch may read a page on it unasked ------------------------------
+
+SPARE = NamedPhone(name="drawer", address="192.168.1.70:5555", spare=True)
+
+
+def test_a_spare_phone_is_written_down_and_read_back():
+    config = Config("ollama", phone=Phone(named=(NEXUS, SPARE)))
+    text = render(config)
+    assert "spare = true" in text
+    assert parse(text).phone == Phone(named=(NEXUS, SPARE))
+    assert "spare" not in render(Config("ollama", phone=TWO)).split("[phone]")[1]
+
+
+def test_spare_is_true_or_false():
+    bad = render(Config("ollama", phone=Phone(named=(NEXUS,)))).replace(
+        "[phone.nexus]\n", '[phone.nexus]\nspare = "yes"\n')
+    with pytest.raises(ConfigError, match="spare is true or false"):
+        parse(bad)
+
+
+def test_only_the_spare_phones_reach_sparsh_as_spare(world, monkeypatch):
+    monkeypatch.setenv("HOME", str(world / "home"))
+    config = Config("ollama", road="podman", pages=Pages(on=False),
+                    phone=Phone(named=(NEXUS, SPARE)))
+    assert services.phone_env(config)["SPARSH_SPARE"] == "drawer"
+    assert "Environment=SPARSH_SPARE=drawer\n" in podman.phone_env(config)
+    assert "SPARSH_SPARE" not in services.phone_env(Config("ollama", phone=TWO))
+
+
+def test_the_settings_page_marks_a_phone_spare_and_back(world, settings, monkeypatch):
+    from sarathi import editing
+
+    monkeypatch.setattr("sarathi.siblings.find", lambda *a, **k: Found(
+        next(s for s in SIBLINGS if s.name == "sparsh"), program="/bin/true"))
+    config = Config("ollama", phone=TWO)
+    (world / "config" / "sarathi.toml").write_text(render(config))
+    said, restart = editing.phone_step(config, {"do": "spare", "name": "nexus", "on": True})
+    assert restart and "spare phone" in said
+    assert next(p for p in load().phone.named if p.name == "nexus").spare
+    said, _ = editing.phone_step(load(), {"do": "spare", "name": "nexus", "on": False})
+    assert not next(p for p in load().phone.named if p.name == "nexus").spare
+    with pytest.raises(editing.EditError, match="no phone called"):
+        editing.phone_step(load(), {"do": "spare", "name": "pixel", "on": True})

@@ -200,6 +200,10 @@ class NamedPhone:
     address: str | None = None
     wda: str | None = None
     awake: str | None = None
+    #: A spare phone (one in a drawer, nobody's pocket): a watch may open a
+    #: page on it with no one asked, when this computer's browser is turned
+    #: away (Sparsh's open_url, ``SPARSH_SPARE``). A chat asks every time.
+    spare: bool = False
 
     @property
     def where(self) -> str:
@@ -855,7 +859,7 @@ def without_phone(phone: Phone | None, name: str) -> Phone | None:
 
 #: A phone's name, as Sparsh takes it (its phones.py).
 PHONE_NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,31}")
-PHONE_KEYS = {"serial", "address", "wda", "awake"}
+PHONE_KEYS = {"serial", "address", "wda", "awake", "spare"}
 
 
 def _named_phone(name: str, body: dict, where: str) -> NamedPhone:
@@ -881,7 +885,10 @@ def _named_phone(name: str, body: dict, where: str) -> NamedPhone:
     if awake is not None and awake not in AWAKE:
         raise ConfigError(f"{where}: phone.{name}.awake is one of {', '.join(AWAKE)}, "
                           f"not {awake!r}")
-    return NamedPhone(name=name, awake=awake, **{given[0]: value})
+    spare = body.get("spare", False)
+    if not isinstance(spare, bool):
+        raise ConfigError(f"{where}: phone.{name}.spare is true or false, not {spare!r}")
+    return NamedPhone(name=name, awake=awake, spare=spare, **{given[0]: value})
 
 
 def _render_phone(phone: Phone | None) -> str:
@@ -892,7 +899,9 @@ def _render_phone(phone: Phone | None) -> str:
 # WebDriverAgent's address (`sarathi phone iphone`). Both may be set: the
 # one plugged in, the one that answers, is used. Several at once, each by
 # a name (`sarathi phone add NAME ...`): a [phone.NAME] table for each,
-# and Dvara's actors file says whose (phones = ["NAME"]).
+# and Dvara's actors file says whose (phones = ["NAME"]). `spare = true`
+# on one nobody carries: when this computer's browser is turned away from
+# a page, a watch may read it on that phone without asking (a chat asks).
 [phone]
 """
     if phone is None:
@@ -904,6 +913,8 @@ def _render_phone(phone: Phone | None) -> str:
             out += f"\n[phone.{each.name}]\n{key} = \"{each.where}\"\n"
             if each.awake:
                 out += f'awake = "{each.awake}"\n'
+            if each.spare:
+                out += "spare = true   # a watch may open a page on it unasked\n"
         return out
     address = f'address = "{phone.address}"' if phone.address else \
         '# address = "192.168.1.23:41234"   # its Wireless debugging address'

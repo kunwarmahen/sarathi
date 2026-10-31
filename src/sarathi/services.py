@@ -677,7 +677,8 @@ def phone_env(config: Config) -> dict[str, str]:
 
     Several phones by name (``[phone.NAME]``): ``SPARSH_PHONES``, every
     one as ``NAME=WHERE`` -- Sparsh reconnects a named Wi-Fi address by
-    itself -- and ``SPARSH_AWAKE`` one word per phone that says one."""
+    itself -- ``SPARSH_AWAKE`` one word per phone that says one, and
+    ``SPARSH_SPARE`` the phones a watch may open a page on unasked."""
     phone = config.phone
     if phone is None:
         return {}
@@ -686,6 +687,9 @@ def phone_env(config: Config) -> dict[str, str]:
         awake = ",".join(f"{p.name}={p.awake}" for p in phone.named if p.awake)
         if awake:
             env["SPARSH_AWAKE"] = awake
+        spare = ",".join(p.name for p in phone.named if p.spare)
+        if spare:
+            env["SPARSH_SPARE"] = spare
         return env
     pairs = (("SPARSH_CONNECT", phone.address), ("SPARSH_WDA", phone.wda),
              ("SPARSH_AWAKE", phone.awake))

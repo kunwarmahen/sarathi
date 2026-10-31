@@ -815,14 +815,27 @@ function phoneCard(phoneOn, phoneAt, wdaAt, awake, road, named) {
 // Several phones, each by a name ([phone.NAME]): the list, each one's Remove,
 // and Add -- the same steps as one phone, with a name. Whose each is, People
 // says (editing.py, _named_step).
+// Spare: a phone nobody carries, where a watch may read a page unasked when
+// this computer's browser is turned away (Sparsh's open_url). A chat asks.
 function namedPhonesCard(phoneOn, named, step) {
-  const rows = named.map((n) => h("div.row", { style: "gap: .75rem; align-items: center" },
-    h("span", {}, h("b", {}, n.name), ` — ${n.kind} at `, h("code", {}, n.where),
-      n.awake ? ` · awake ${n.awake}` : ""),
-    step("Remove", () => ({ do: "remove", name: n.name }))));
+  const rows = named.map((n) => {
+    const spare = check(n.spare);
+    spare.addEventListener("change", () =>
+      save("/api/settings/phone", { do: "spare", name: n.name, on: spare.checked }));
+    return h("div.row", { style: "gap: .75rem; align-items: center" },
+      h("span", {}, h("b", {}, n.name), ` — ${n.kind} at `, h("code", {}, n.where),
+        n.awake ? ` · awake ${n.awake}` : ""),
+      h("label.inline", { title: "Nobody carries it: a watch may open a page on it " +
+        "without asking, when this computer's browser is turned away" }, spare, " Spare"),
+      step("Remove", () => ({ do: "remove", name: n.name })));
+  });
   return h("div.card.form", {}, h("h3", {}, "Your phones"),
     h("label.inline", {}, phoneOn, " Your phones, through Sparsh"),
-    ...rows, addPhone(step, false));
+    ...rows,
+    h("p.meta", {}, "Spare: a phone nobody carries. When this computer's browser is " +
+      "turned away from a page, a watch may read it on a spare phone without asking you; " +
+      "in a chat you're always asked first."),
+    addPhone(step, false));
 }
 
 function addPhone(step, first) {

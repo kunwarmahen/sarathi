@@ -520,6 +520,14 @@ sarathi phone list                      # each one, and whether it answers
 sarathi phone remove pixel
 ```
 
+A phone nobody carries (an old one in a drawer) can be marked
+**spare**: `spare = true` in its table, or the *Spare* box beside it in
+**Settings → Sarathi → Your phones**. When this computer's browser is
+turned away from a page, a watch may read that page on a spare phone of
+its person's without asking anyone (Sparsh's `open_url`, passed as
+`SPARSH_SPARE`). In a chat, any of the person's phones can be used,
+and they're asked every time.
+
 Each is a `[phone.NAME]` table with one of `serial`, `address` or
 `wda` (and its own `awake`), handed to Sparsh as `SPARSH_PHONES`, an
 iPhone at `host.containers.internal` inside the containers. In Dvara's

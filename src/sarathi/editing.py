@@ -342,7 +342,8 @@ def sarathi_view(config: Config) -> dict:
             "yolo": door.yolo},
         "phone": None if phone is None else {
             "address": phone.address, "wda": phone.wda, "awake": phone.awake,
-            "named": [{"name": p.name, "kind": p.kind, "where": p.where, "awake": p.awake}
+            "named": [{"name": p.name, "kind": p.kind, "where": p.where, "awake": p.awake,
+                       "spare": p.spare}
                       for p in phone.named]},
         "memory": {"via": config.memory},
         "backup": {"folder": config.backup.folder, "keep": config.backup.keep,
@@ -521,6 +522,19 @@ def phone_step(config: Config, body: dict) -> tuple[str, bool]:
     do = str(body.get("do") or "")
     address = str(body.get("address") or "").strip()
     name = str(body.get("name") or "").strip()
+    if do == "spare":
+        mine = next((p for p in (config.phone.named if config.phone else ())
+                     if p.name == name), None)
+        if mine is None:
+            raise EditError(400, f"there is no phone called {name!r}")
+        on = body.get("on") is True
+        try:
+            sarathi_text(render(replace(config, phone=with_phone(
+                config.phone, replace(mine, spare=on)))))
+        except ConfigError as exc:
+            raise EditError(400, str(exc)) from None
+        return ((f"{name} is a spare phone: a watch may read a page on it unasked. "
+                 if on else f"{name} is not a spare phone. ") + "Apply.", True)
     if do == "remove":
         try:
             sarathi_text(render(replace(config, phone=without_phone(config.phone, name))))
