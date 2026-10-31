@@ -91,6 +91,20 @@ in the middle of it. Three rules keep each copy whole:
 * **Smritikosh's database** goes in as `pg_dump`'s custom format. The
   dump comes from the container that runs it, chosen by the road: the
   unit's on Podman, the plain one on plain programs.
+* **Smritikosh's graph and audit log** (`[smritikosh] full`): Neo4j
+  holds the facts, MongoDB the audit log they were once rebuilt from.
+  Neo4j Community takes no copy while it runs, and a folder copied under
+  a running server is torn; so **EACH IS STOPPED FOR THE SECONDS ITS
+  FOLDER TAKES, AND STARTED AGAIN WHATEVER HAPPENED**. What is copied is
+  what the container mounts under `/data` (not its logs or config), read
+  through `podman unshare`, since the files belong to the container's own
+  user. A volume podman named itself for an image's spare `VOLUME`
+  (MongoDB's `/data/configdb`) is left out: no new container would find
+  it again. **Redis is left out on purpose**: it holds Smritikosh's job
+  queue and rate-limit counts, nothing a restored house wants back. The
+  02:30 backup is the quiet hour for a few seconds without the graph; a
+  **Back up now** in the day stops it too, and Smritikosh's calls in
+  those seconds fail and are tried again.
 
 A place inside another is packed once, as its own. The backups' own
 folder is never packed into itself.
@@ -208,11 +222,41 @@ storage but **not** its own runtime folder (`/run/user/<uid>`).
 containers too, and they had to be restarted. Trials use a uniquely
 named container in the real Podman, and never `system reset`.
 
+Restore puts each store's folder back the same way: a bind folder at its
+path on this home, a volume made when there is none and filled, what was
+there moved aside to `….before-restore-<time>` (inside the volume's own
+folder for a volume). The house is down for a restore; a store's
+container still running by itself is named, and that store left as it
+is.
+
+A run against two throwaway containers (one a folder owned by the
+container's user, mode 600, the other a named volume), with the real
+`podman`:
+
+```
+smritikosh neo4j          /data (stopped for it, started again)
+smritikosh mongodb        /data/db (stopped for it, started again)
+  smritikosh mongodb       its audit log
+  smritikosh neo4j         its facts (the graph)
+written: …/bk/sarathi-linux-al-ml-beast-20261031-193226.sarathi-backup (40.6 KB, 21s)
+running after: ['scratch-kosh-neo4j', 'scratch-kosh-mongo']
+store now: the-facts          (it had been changed to a-wrong-fact before the restore)
+aside: a-wrong-fact
+```
+
+The 21 seconds are the stand-in containers' own: a shell that ignores
+`SIGTERM` waits out podman's ten seconds, twice. The run found the
+image's spare volume being taken too, which is why such volumes are now
+left out. The house's own Neo4j and MongoDB weren't stopped for this:
+the first night's backup after the rebuild is their first.
+
 ## What is not here
 
-* **Neo4j, MongoDB and Redis** (`sarathi smritikosh --full`) aren't in
-  a backup. Yantra uses PostgreSQL alone, and the others' contents are
-  Smritikosh's extras.
+* ~~**Neo4j, MongoDB and Redis** aren't in a backup.~~ Neo4j and
+  MongoDB are, as their folders (above). **Redis isn't**, by choice.
+* **A copy of the graph with no pause.** Neo4j's online backup is its
+  Enterprise edition's; a Cypher export of every node and link would
+  need APOC or a reader of its own, and its restore a writer.
 * **The programs themselves.** A backup holds what is yours. A new
   computer installs them first (the tutorial's Step 1), then restores.
 * **Paths inside other programs' files** are not rewritten on a new

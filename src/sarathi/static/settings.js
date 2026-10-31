@@ -741,7 +741,8 @@ function drawSarathiTab() {
         "something you didn't write, are asked about either way. Needs Apply."),
       field("Voices for answers read aloud", voices, "Names from " +
             "huggingface.co/rhasspy/piper-voices, with commas: en_US-lessac-medium, " +
-            "hi_IN-pratham-medium. An answer is read in a voice for its language. " +
+            "hi_IN-pratham-medium, es_MX-claude-high. An answer is read in a voice for " +
+            "its language. " +
             "Containers: `sarathi image` after a change; plain programs: " +
             "`sarathi dvara --voices …` fetches them."),
       field("Whisper, for voice notes", whisper, "A Whisper here that writes speech down " +
@@ -888,15 +889,19 @@ const CHECK_WORDS = { red: "Needs fixing", amber: "Worth a look", green: "Fine" 
 function drawCheckTab() {
   const out = h("div.doctor", { "aria-live": "polite" });
   const go = button("Check everything", () => runCheck(go, out));
-  const morning = houseRun("doctor", "Check every morning", "Checked by Samay",
-                           "/api/doctor/morning");
+  const at = h("input", { type: "time", value: "07:30",
+                          "aria-label": "Time of the morning check" });
+  const morning = houseRun("doctor", "Check every morning at", "Checked by Samay",
+                           "/api/doctor/morning", at);
   const intro = h("p.meta", {}, "Asks every program how it's doing: what's running, " +
     "the image, the firewall, your accounts and when a Google sign-in ends, phones, " +
     "the model, last day's schedules, disk. Nothing changes until you press a fix. " +
-    "It takes a few seconds. Every morning: Samay asks the same at 07:30 and tells " +
-    "you only what's new.");
+    "It takes a few seconds. Every morning: Samay asks the same at the time beside " +
+    "the button (07:30 unless you change it) and tells you only what's new. To move " +
+    "it, change the time and press the button again.");
   if (sets.checked) drawCheck(out, sets.checked);
-  return [intro, row(go, ...morning), out, versionCard(), backupsCard()];
+  return [intro, row(go, ...morning.slice(0, 1), at, ...morning.slice(1)), out,
+          versionCard(), backupsCard()];
 }
 
 // ---- Version: `sarathi version`, which commit of each project runs -----------------
@@ -924,7 +929,8 @@ function versionCard() {
     h("p.meta", {}, "A version is the day of a project's last commit and that day's " +
       "count: 2026.10.25.3 is the third commit of 25 October. On containers, what the " +
       "image was built from, against each checkout now: newer commits are in the next " +
-      "rebuild. On plain programs, each checkout as it is. The same as ",
+      "rebuild. On plain programs, each running program on the commit it started " +
+      "with, against its checkout now: a restart takes in the newer ones. The same as ",
       h("code", {}, "sarathi version"), " in a terminal."),
     body);
 }
@@ -955,7 +961,11 @@ async function showVersion(body) {
       extra.push(podmanRoad && !p.here ? `${run.left_out} uncommitted change(s) left out`
                             : `+${run.left_out} uncommitted change(s)`);
     }
-    if (p.newer) extra.push(`${p.newer} newer in the checkout`);
+    if (p.newer && p.started) {
+      extra.push(`running since ${new Date(p.started).toLocaleString([], {
+        weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+      })}, ${p.newer} newer in the checkout`);
+    } else if (p.newer) extra.push(`${p.newer} newer in the checkout`);
     if (p.here) extra.push("this page, run from its checkout");
     return h("div.version-row", {}, h("strong", {}, p.name),
       h("code.version-number", {}, run.version || "?"), h("code.meta", {}, run.commit),
@@ -987,28 +997,38 @@ async function showVersion(body) {
 
 // ---- A run of the house's own that Samay keeps (the morning check, the night's
 // backup): the button says when it's on already, and its answer is said beside
-// it -- the Settings line at the foot of the page is off screen from here.
+// it -- the Settings line at the foot of the page is off screen from here. With
+// a time box (the morning check), the time is sent, and pressing again with
+// another time moves it.
 
-function houseRun(runner, label, onWords, path) {
+function houseRun(runner, label, onWords, path, at = null) {
   const b = button(label, async () => {
     b.disabled = true;
-    try { note.textContent = (await api(path, {})).said; note.classList.remove("warn"); }
-    catch (err) { note.textContent = err.message; note.classList.add("warn"); }
+    try {
+      note.textContent = (await api(path, at ? { at: at.value } : {})).said;
+      note.classList.remove("warn");
+    } catch (err) { note.textContent = err.message; note.classList.add("warn"); }
     b.disabled = false;
-    showHouseRun(runner, b, onWords);
+    showHouseRun(runner, b, onWords, at);
   }, "quiet");
   const note = h("span.meta", { role: "status" });
-  showHouseRun(runner, b, onWords);
+  showHouseRun(runner, b, onWords, at);
   return [b, note];
 }
 
-async function showHouseRun(runner, b, onWords) {
+async function showHouseRun(runner, b, onWords, at = null) {
   let got;
   try { got = await api("/api/schedules/house"); } catch { return; }
   const run = got[runner];
   if (run && run.state === "active") {
-    b.textContent = `✓ ${onWords}, ${run.when}`;
-    b.title = `Samay's schedule ${run.id}: stop or change it on Samay's page`;
+    if (at && run.at) {
+      at.value = run.at;
+      b.textContent = `✓ ${onWords}, every day at`;
+      b.title = `Samay's schedule ${run.id}: change the time and press to move it`;
+    } else {
+      b.textContent = `✓ ${onWords}, ${run.when}`;
+      b.title = `Samay's schedule ${run.id}: stop or change it on Samay's page`;
+    }
   }
 }
 

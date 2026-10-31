@@ -181,6 +181,32 @@ def test_on_plain_programs_the_checkouts_say_uncommitted_and_all(checkouts):
     assert "+1 uncommitted change(s)" in version.text(got)
 
 
+def test_on_plain_programs_a_running_program_is_on_the_commit_it_started_with(
+        checkouts):
+    samay = checkouts / "samay"
+    first = git(samay, "rev-parse", "--short", "HEAD")
+    started = "2098-01-01T00:00:00+00:00"           # after the first commit
+    (samay / "kept.txt").write_text("a fix\n")
+    git(samay, "add", ".")
+    # the fix is committed after the program started
+    subprocess.run(["git", "-C", str(samay), "-c", "user.name=t", "-c", "user.email=t@t",
+                    "commit", "-qm", "samay: a fix after it started"], check=True,
+                   capture_output=True,
+                   env={**os.environ, "GIT_COMMITTER_DATE": "2099-01-01T00:00:00+00:00"})
+    later = git(samay, "rev-parse", "--short", "HEAD")
+    got = version.report(Config("ollama", pages=Pages(on=False)),
+                         started={"samay": started})
+    row = next(p for p in got["projects"] if p["name"] == "samay")
+    assert row["running"]["commit"] == first and row["newer"] == 1
+    assert row["now"]["commit"] != first and later
+    said = version.text(got)
+    assert "running since" in said and "1 newer in the checkout" in said
+    assert "`sarathi down && sarathi up` starts them on the newer commits" in said
+    # not running: the checkout as it is
+    setu = next(p for p in got["projects"] if p["name"] == "setu")
+    assert setu["running"] == setu["now"] and "started" not in setu
+
+
 def test_the_home_page_says_it_to_the_owner_alone(keys):  # noqa: F811
     from sarathi.home import Home, HomeServer
 

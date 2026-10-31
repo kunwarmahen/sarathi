@@ -65,6 +65,12 @@ the current image: both voices in `/usr/share/piper/voices`, a Hindi
 sentence read by `hi_IN-pratham-medium` and made into an `OggS` voice
 note by the image's ffmpeg.
 
+Spanish on this house: `sarathi dvara --voices
+en_US-lessac-medium,es_MX-claude-high`. The first Spanish voice tried,
+`es_MX-ald-medium`, is in Piper's catalogue with a card Piper itself
+refuses (`"phoneme_type": "PhonemeType.ESPEAK"`); Dvara now leaves such
+a voice out rather than fail at every answer (its notes/65).
+
 ## What the tests hold
 
 `tests/test_door.py`: voices read back as written, English when unset,

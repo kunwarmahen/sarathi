@@ -84,6 +84,7 @@ and writes its own file; a person signed in gets 403:
                                            such ask (Samay's doctor road, by the
                                            doctor key, which opens this and nothing else)
     POST /api/doctor/morning               Samay asked once to run the doctor each morning
+                                           ({"at": "06:45"}: then, or moved there)
     GET  /api/backup                       the backups: the folder, the newest, the key
     POST /api/backup                       `sarathi backup`, now (and Samay's backup road,
                                            by the backup key, which opens this alone)
@@ -345,6 +346,8 @@ NIGHTLY = {"prompt": "the night's kept tests", "when": "at 03:00",
            "runner": "tests", "time_limit": 3600, "notify": "when_new"}
 MORNING = {"prompt": "the house, checked by Sarathi's doctor", "when": "at 07:30",
            "runner": "doctor", "time_limit": 300, "notify": "when_new"}
+#: A time the morning check may be moved to, as the page's time box sends it.
+_CLOCK = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 #: Before the kept tests, so a night's backup never waits behind them.
 BACKUP_NIGHTLY = {"prompt": "the house, backed up", "when": "at 02:30",
                   "runner": "backup", "time_limit": 3600, "notify": "when_new"}
@@ -505,10 +508,37 @@ class Home:
             answer = doctor.news(answer, state_dir() / DOCTOR_TOLD)
         return 200, answer
 
-    def morning(self) -> tuple[int, str]:
-        """(status, words): Samay asked once to run the doctor each morning."""
-        return self._ask_once(MORNING, "doctor", "Samay already checks the house "
-                              "each morning", "Every morning at 07:30 Samay asks the "
+    def morning(self, at: str | None = None) -> tuple[int, str]:
+        """(status, words): Samay asked once to run the doctor each morning,
+        at 07:30 or ``at`` ("06:45"). With one there at another time it is
+        moved: Samay has no edit for a time, so the old one is removed and
+        a new one made."""
+        if at is not None and not _CLOCK.match(at):
+            return 400, f"\"{at}\" isn't a time like 06:45"
+        if at is None or at == MORNING["when"].split()[-1]:
+            schedule = MORNING
+        else:
+            schedule = {**MORNING, "when": f"at {at}"}
+        at = schedule["when"].split()[-1]
+        if self.config.clock_on:
+            try:
+                listed = (self._ask_samay or _samay)(self.config, "GET", "schedules")
+            except (OSError, ValueError, urllib.error.URLError) as exc:
+                return 502, f"Samay didn't answer: {exc}"
+            rows = listed.get("schedules", listed) if isinstance(listed, dict) else listed
+            had = next((r for r in rows or [] if r.get("runner") == "doctor"), None)
+            if had is not None and (had.get("when") or {}).get("at") not in (None, at):
+                try:
+                    (self._ask_samay or _samay)(self.config, "DELETE",
+                                                f"schedules/{had.get('id')}")
+                except (OSError, ValueError, urllib.error.URLError) as exc:
+                    return 502, f"Samay didn't move it: {exc}"
+                code, said = self._ask_once(schedule, "doctor", "", "")
+                return code, (f"Moved: every morning at {at} Samay asks the doctor. "
+                              "You hear only when something new is wrong."
+                              if code == 200 else said)
+        return self._ask_once(schedule, "doctor", "Samay already checks the house "
+                              "each morning", f"Every morning at {at} Samay asks the "
                               "doctor. You hear only when something new is wrong.")
 
     def backup_now(self) -> tuple[int, dict[str, Any]]:
@@ -597,6 +627,7 @@ class Home:
             if row is not None:
                 # Samay's own words for it: "every day at 07:30"
                 out[runner] = {"id": row.get("id"), "state": row.get("state", "active"),
+                               "at": (row.get("when") or {}).get("at"),
                                "when": row.get("sentence") or "every day " + {
                                    "doctor": MORNING, "backup": BACKUP_NIGHTLY,
                                    "tests": NIGHTLY}[runner]["when"]}
@@ -1417,7 +1448,11 @@ def _handler(server: HomeServer):
             if parts == ["api", "doctor", "morning"]:
                 if self._owner() is None:
                     return None
-                code, words = server.home.morning()
+                body = self._body(4096)
+                if body is None:
+                    return None
+                at = body.get("at")
+                code, words = server.home.morning(at if isinstance(at, str) and at else None)
                 return self._json(code, {"detail" if code >= 400 else "said": words})
             if parts == ["api", "backup"]:
                 offered = self.headers.get("Authorization", "")

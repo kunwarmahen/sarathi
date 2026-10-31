@@ -843,7 +843,8 @@ What goes into the containers:
   Xvfb for a site that wants a real window; bubblewrap, so Setu's
   connectors are walled off here as on your desktop; ffmpeg, so a
   voice note can be heard; and Piper with the voices `[dvara] voices`
-  names (English unless you list more, `hi_IN-pratham-medium` say), so an
+  names (English unless you list more, `hi_IN-pratham-medium` or
+  `es_MX-claude-high` say), so an
   answer can be read aloud, in a voice for its language
   ([notes/30](notes/30-answers-read-aloud.md), [notes/31](notes/31-a-voice-for-each-language.md)). Chrome refuses a
   profile a newer Chrome wrote, so `up` says when your computer's Chrome
@@ -980,8 +981,10 @@ On that tab a line gets a button when the page can already do its fix:
 N and restart** (the model's window), **Bring it back** (a Wi-Fi phone,
 plugged in first), **Open Setu's page** (a sign-in to renew). Firewall,
 disk and the iPhone's signature need root or a Mac, so they stay lines
-to type. **Check every morning** asks Samay, once, for a 07:30 schedule
-on its doctor road: it asks the doctor with a key that opens that one
+to type. **Check every morning at** asks Samay, once, for a schedule on
+its doctor road at the time in the box beside it (07:30 unless changed;
+another time later moves it, the old schedule removed and a new one
+made, since Samay has no edit for a time): it asks the doctor with a key that opens that one
 answer and nothing else, and tells you only what's newly wrong (Samay's
 notes/09). Both it and **Back up every night** ask `GET
 /api/schedules/house` when the tab opens and say so on the button once
@@ -1019,8 +1022,10 @@ built from as a label on the image (`sarathi.build`), read back with no
 container started, and each checkout is shown against it ("1 newer in
 the checkout"). The image has no git, so the build also puts a `VERSION`
 file at the top of each project in it, which each program reads there.
-On plain programs, each checkout as it is (`+dirty` with uncommitted
-changes). `--json` prints `sarathi.version.v1`. The home page shows the
+On plain programs, each running program on the commit its checkout was
+on when `up` started it, against the checkout now (*running since Fri
+30 Oct 09:12, 2 newer in the checkout*; a restart takes them in), and
+one not running as its checkout is (`+dirty` with uncommitted changes). `--json` prints `sarathi.version.v1`. The home page shows the
 first line in its footer and a **Version** card in Settings → Check,
 with **Rebuild and restart** when the checkouts have moved on
 ([notes/32](notes/32-the-version-is-a-commit.md)).
@@ -1041,7 +1046,10 @@ One locked file of everything that is yours here: Setu's accounts, keys
 and browser profiles, each person's conversations and own Setu folder in
 Dvara's, Samay's schedules and logbook, Prahari's watches, Sparsh's
 rules and adb's key, Yantra's History and learned skills, Smritikosh's
-memories (`pg_dump`), and every settings file. **Each program says what
+memories (`pg_dump`) and, with `[smritikosh] full`, its graph and audit
+log (Neo4j's and MongoDB's folders, each stopped for the seconds they
+take and started again; Redis left out, it's a job queue), and every
+settings file. **Each program says what
 it keeps** (`<program> keeps --json`, `<name>.keeps.v1`), and Sarathi
 packs what it says. A program that can't say is named in the answer, and
 the command exits 1. Browser caches are left out. SQLite files are
@@ -1354,7 +1362,8 @@ src/sarathi/
                 home page's Settings → Check asks the same  (notes/28)
   backup.py     sarathi backup / restore: each program asked what it keeps,
                 one file sealed to a key only your passphrase opens, SQLite
-                copied whole, Smritikosh's pg_dump; restore under this
+                copied whole, Smritikosh's pg_dump and its Neo4j and
+                MongoDB folders (stopped, copied, started); restore under this
                 home, what was there moved aside; the Backups card and
                 Samay's backup road  (notes/29)
   version.py    sarathi version: each project's version (the day of its

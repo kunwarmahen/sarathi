@@ -650,7 +650,10 @@ sarathi image && sarathi down && sarathi up     # containers; plain programs: ju
 (or **Settings → Sarathi → Dvara → Voices for answers read aloud**, then
 the same `sarathi image` line). Now an answer written in Hindi is read by the Hindi voice
 and an English one by the English voice, whoever asked. Hindi typed in
-English letters (*"kal kya hai"*) is read by the Hindi voice too. Other voices are
+English letters (*"kal kya hai"*) is read by the Hindi voice too, its
+numbers as Hindi says them (*9 baje* is *नौ बजे*). For Spanish, add
+`es_MX-claude-high` the same way (not `es_MX-ald-medium`: Piper can't
+read that one's card, so Dvara leaves it out). Other voices are
 listed at huggingface.co/rhasspy/piper-voices (`hi_IN-priyamvada-medium`
 is a second Hindi one). Someone who wants every answer in one voice of
 their own sends `/voice use 2`, or you pick it for them under **Their
@@ -1578,7 +1581,10 @@ You asked: "keep an eye on the nonstop to Phoenix and tell me if it gets cheaper
 ```
 
 So you always know what a watch is for, even weeks later. `/watches` in
-the chat shows the same words under each watch's name. Asking twice for
+the chat shows the same words under each watch's name, numbered:
+`/watches every 2 6h` makes the second one look every 6 hours,
+`/watches pause 2` stops it looking (it is kept), and `/watches resume 2`
+starts it again. Asking twice for
 the same thing doesn't make a second watch: the helper offers to change
 the one you have.
 
@@ -1771,7 +1777,10 @@ samay      state          ~/.samay
 written: ~/sarathi-backups/sarathi-beast-20261024-023000.sarathi-backup (512.3 MB, 41s), locked with your backup passphrase
 ```
 
-Browser caches are left out, which is most of the size. A line starting
+Browser caches are left out, which is most of the size. With
+Smritikosh's graph on (`full`), its Neo4j and MongoDB are stopped for a
+few seconds while their folders are copied, and started again; you see
+*"smritikosh neo4j … (stopped for it, started again)"*. A line starting
 `NOT IN IT:` means something was left out, and it says why. *"setu
 doesn't say what it keeps (an older setu: update it)"* means update that
 program and run it again.
@@ -1885,6 +1894,12 @@ house. The program that does it is **Vaani**; it answers through Dvara
    ring spins while your helper works, then the puck says the answer.
    * **It asks you something back?** Just reply: the puck listens again
      by itself, no wake word.
+   * **The next question, no wake word:** tick **Follow-up questions** on
+     the puck in **Settings → Vaani**, Save. After every answer its ring
+     stays on for a few seconds: ask *"and the day after?"* straight
+     away. Say nothing, or *"thanks, that's all"*, and it stops, with
+     nothing said back. Off unless you tick it: while it listens, a radio
+     nearby can be heard as a question.
    * **A fresh start:** *"Okay Nabu… new conversation"*. It also starts
      over by itself after 30 quiet minutes (change that in Settings →
      Vaani).
@@ -1970,10 +1985,12 @@ newer in the checkout" means you changed things since: **Rebuild and
 restart** takes them in. Each program also answers `--version`, for
 example `dvara --version`.
 
-**Check every morning** (next to it) has Samay ask the doctor at 07:30
-each day, and you get a message only when something is newly wrong.
-Once it's on, the button says **✓ Checked by Samay, every day at
-07:30**; to stop it, pause or delete that schedule on Samay's page.
+**Check every morning at** (next to it, with a time box that says 07:30)
+has Samay ask the doctor at that time each day, and you get a message
+only when something is newly wrong. Once it's on, the button says
+**✓ Checked by Samay, every day at** with its time in the box; to move
+it, change the time and press the button again (*"Moved: every morning
+at 06:45 …"*). To stop it, pause or delete that schedule on Samay's page.
 Your morning might say *"gmail:personal: Google ends this sign-in Sun
 25 Oct"* with what to do, while a phone you left unplugged all week
 is mentioned only once.
@@ -1992,7 +2009,7 @@ Your check: 1 amber
 A schedule of theirs that failed this morning, a watch that paused, a
 phone of theirs not connected all show there. Nobody sees anyone
 else's. `/doctor every morning` checks it for them at 07:30 on their own
-clock and tells them only what's newly wrong, as your morning check
+clock (`/doctor every morning 6:45` for another time) and tells them only what's newly wrong, as your morning check
 does for the house.
 
 **Restarting in the middle of a job is safe.** Every step of a job is

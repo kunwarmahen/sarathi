@@ -392,6 +392,136 @@ class TestTheMemories:
             backup.restore_memory(config, tmp_path / "m.dump")
 
 
+# ---- Smritikosh's graph and audit log --------------------------------------------------
+
+
+class FakePodman:
+    """Podman as far as the stores go: containers with mounts, a running
+    flag, stop/start recorded; ``podman unshare CMD`` runs CMD here (the
+    test's folders are this user's own)."""
+
+    def __init__(self, tmp_path, running=("sarathi-smritikosh-neo4j",)):
+        self.neo4j = tmp_path / "neo4j"
+        for sub in ("data/databases", "logs", "conf"):
+            (self.neo4j / sub).mkdir(parents=True)
+        (self.neo4j / "data" / "databases" / "store").write_text("the facts")
+        (self.neo4j / "logs" / "debug.log").write_text("noise")
+        self.volume = tmp_path / "volumes" / "mongodb"
+        self.volume.mkdir(parents=True)
+        (self.volume / "collection.wt").write_text("the audit log")
+        self.running = set(running)
+        self.asked: list[list[str]] = []
+        self.containers = {
+            "sarathi-smritikosh-neo4j": [
+                {"Type": "bind", "Source": str(self.neo4j / "data"), "Destination": "/data"},
+                {"Type": "bind", "Source": str(self.neo4j / "logs"), "Destination": "/logs"}],
+            "sarathi-smritikosh-mongodb": [
+                {"Type": "volume", "Name": "mongodb", "Source": str(self.volume),
+                 "Destination": "/data/db"},
+                {"Type": "volume", "Name": "84923bb3" * 8, "Source": "/elsewhere",
+                 "Destination": "/data/configdb"}]}
+
+    def __call__(self, argv, **kw):
+        self.asked.append(argv)
+        ok = lambda out="": subprocess.CompletedProcess(argv, 0, out, "")  # noqa: E731
+        if argv[:2] == ["podman", "unshare"]:
+            done = subprocess.run(argv[2:], capture_output=True, text=True)
+            return subprocess.CompletedProcess(argv, done.returncode, done.stdout, done.stderr)
+        if argv[:3] == ["podman", "container", "inspect"]:
+            name = argv[-1]
+            if name not in self.containers:
+                return subprocess.CompletedProcess(argv, 125, "", "no such container")
+            if "--format" in argv:
+                return ok("true\n" if name in self.running else "false\n")
+            return ok(json.dumps([{"Mounts": self.containers[name]}]))
+        if argv[:3] == ["podman", "volume", "inspect"]:
+            return ok(str(self.volume) + "\n") if self.volume.is_dir() else \
+                subprocess.CompletedProcess(argv, 125, "", "no such volume")
+        if argv[:3] == ["podman", "volume", "create"]:
+            self.volume.mkdir(parents=True)
+            return ok()
+        if argv[0] == "systemctl":
+            unit = argv[-1].removesuffix(".service")
+            (self.running.discard if argv[2] == "stop" else self.running.add)(unit)
+            return ok()
+        raise AssertionError(f"unexpected: {argv}")
+
+
+class TestTheStores:
+    CONFIG = ('[model]\nprovider = "ollama"\n[run]\nroad = "podman"\n'
+              '[smritikosh]\ncheckout = "{checkout}"\nfull = true\n')
+
+    def _config(self, tmp_path):
+        checkout = tmp_path / "smritikosh"
+        checkout.mkdir()
+        (checkout / ".env").write_text("POSTGRES_URL=postgresql://u:p@h:5432/d\n")
+        return parse(self.CONFIG.format(checkout=checkout))
+
+    def test_a_running_store_is_stopped_for_its_data_and_started_again(self, tmp_path):
+        podman = FakePodman(tmp_path)
+        taken, problems = backup.take_stores(self._config(tmp_path), tmp_path, run=podman)
+        assert problems == []
+        assert [(t["store"], t["at"]) for t in taken] == [("neo4j", "/data"),
+                                                         ("mongodb", "/data/db")]
+        units = [a for a in podman.asked if a[0] == "systemctl"]
+        # neo4j was running: stopped, then started; mongodb wasn't: left alone
+        assert [a[2] for a in units] == ["stop", "start"]
+        assert "sarathi-smritikosh-neo4j" in podman.running
+        assert not any("logs" in " ".join(a) for a in podman.asked if "tar" in a)
+
+    def test_a_store_that_cant_be_read_is_said_and_still_started_again(self, tmp_path):
+        podman = FakePodman(tmp_path)
+        podman.containers["sarathi-smritikosh-neo4j"][0]["Source"] = str(tmp_path / "gone")
+        del podman.containers["sarathi-smritikosh-mongodb"]
+        taken, problems = backup.take_stores(self._config(tmp_path), tmp_path, run=podman)
+        assert taken == []
+        assert "Smritikosh's neo4j (/data) couldn't be read" in problems[0]
+        assert problems[1] == ("Smritikosh's mongodb: there is no container "
+                               "sarathi-smritikosh-mongodb, so it isn't in this backup")
+        assert "sarathi-smritikosh-neo4j" in podman.running
+
+    def test_without_full_there_is_nothing_to_take(self, tmp_path):
+        config = parse('[model]\nprovider = "ollama"\n')
+        assert backup.take_stores(config, tmp_path, run=None) == ([], [])
+
+    def test_they_go_in_the_file_and_come_back_with_what_was_there_kept(self, tmp_path,
+                                                                         key):
+        config = self._config(tmp_path)
+        podman = FakePodman(tmp_path)
+        out = backup.make([], key, tmp_path / "b", config=config,
+                          dump=lambda c, into: None,
+                          stores=lambda c, scratch: backup.take_stores(c, scratch, run=podman))
+        assert out.stores == ["mongodb", "neo4j"] and out.problems == []
+        assert "  smritikosh neo4j         its facts (the graph)" in backup.made_lines(out)
+        # the house changes after the backup; then it is restored, down
+        (podman.neo4j / "data" / "databases" / "store").write_text("a wrong fact")
+        podman.running.clear()
+        restored = backup.unpack(out.file, WORDS, home=tmp_path)
+        lines, aside, failed = backup.restore_stores(
+            restored.staging, restored.manifest["stores"], "T", str(tmp_path), tmp_path,
+            run=podman)
+        backup.finish(restored)
+        assert failed == [] and len(lines) == 2
+        assert (podman.neo4j / "data" / "databases" / "store").read_text() == "the facts"
+        assert (podman.volume / "collection.wt").read_text() == "the audit log"
+        assert sorted(Path(a).name for a in aside) == ["data.before-restore-T",
+                                                       "mongodb.before-restore-T"]
+        assert (Path(aside[0]) / "databases" / "store").read_text() == "a wrong fact"
+
+    def test_a_store_still_running_by_itself_is_left_alone_and_said(self, tmp_path, key):
+        config = self._config(tmp_path)
+        podman = FakePodman(tmp_path, running=())
+        out = backup.make([], key, tmp_path / "b", config=config, dump=lambda c, into: None,
+                          stores=lambda c, scratch: backup.take_stores(c, scratch, run=podman))
+        podman.running.add("sarathi-smritikosh-mongodb")
+        restored = backup.unpack(out.file, WORDS, home=tmp_path)
+        lines, aside, failed = backup.restore_stores(
+            restored.staging, restored.manifest["stores"], "T", str(tmp_path), tmp_path,
+            run=podman)
+        backup.finish(restored)
+        assert len(lines) == 1 and "sarathi-smritikosh-mongodb is running" in failed[0]
+
+
 # ---- the command --------------------------------------------------------------------
 
 

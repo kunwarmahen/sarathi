@@ -253,7 +253,7 @@ def vaani_view(config: Config) -> dict:
 
 def vaani_do(config: Config, body: dict) -> str:
     """{"do": "puck", "puck", "person"?, "agent"?, "people"?, "fresh_after"?,
-    "wake_word"?, "agents"?}: done by Vaani. ``agents`` is {person: agent},
+    "wake_word"?, "follow_up"?, "agents"?}: done by Vaani. ``agents`` is {person: agent},
     "" for the puck's own again, each sent as ``--agent-for``."""
     if not config.voice_on:
         raise EditError(409, "Vaani is off: turn it on under Settings → Sarathi first")
@@ -274,6 +274,10 @@ def vaani_do(config: Config, body: dict) -> str:
             if not re.fullmatch(r"[A-Za-z0-9 _-]{1,40}", word):
                 raise EditError(400, "a wake word the puck offers, like Hey Jarvis")
             argv += ["--wake-word", word]
+        if body.get("follow_up") is not None:
+            if not isinstance(body["follow_up"], bool):
+                raise EditError(400, "follow_up is true or false")
+            argv += ["--follow-up", "on" if body["follow_up"] else "off"]
         if body.get("fresh_after") is not None:
             quiet = body["fresh_after"]
             if isinstance(quiet, str) and quiet.strip().isdigit():

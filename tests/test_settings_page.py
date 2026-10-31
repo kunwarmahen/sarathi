@@ -345,6 +345,10 @@ def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
                                            "wake_word": "Hey Jarvis"})[0] == 200
     assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
                                            "wake_word": "x; rm -rf"})[0] == 400
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                           "follow_up": True})[0] == 200
+    assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                           "follow_up": "yes"})[0] == 400
     for wrong in (-1, "soon", 99999, True):
         assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
                                                "fresh_after": wrong})[0] == 400
@@ -354,6 +358,7 @@ def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
     assert ["puck", "kitchen", "--person", "house", "--people", "owner,asha"] in asked
     assert ["puck", "kitchen", "--fresh-after", "45"] in asked
     assert ["puck", "kitchen", "--wake-word", "Hey Jarvis"] in asked
+    assert ["puck", "kitchen", "--follow-up", "on"] in asked
     assert not any("--x" in ",".join(a) or "../k" in a for a in asked)
 
 

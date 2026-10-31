@@ -29,6 +29,17 @@ written into the pack, so a file that grows while it is read cannot
 break the pack. Smritikosh's database is ``pg_dump``'s, from the
 container running it.
 
+SMRITIKOSH'S GRAPH AND AUDIT LOG ARE THEIR OWN FOLDERS, COPIED STOPPED.
+With ``[smritikosh] full``, Neo4j holds the facts and MongoDB the audit
+log the facts were once rebuilt from. Neo4j Community has no copy taken
+while it runs, and a folder copied under a running server is a torn
+copy; so each is stopped for the seconds its folder takes to read and
+started again, whatever happened (a night's backup at 02:30 is the
+quiet time for it). Their folders belong to the container's own user,
+so they are read and written through ``podman unshare``. Redis is left
+out: it holds Smritikosh's job queue and rate-limit counts, nothing a
+restored house wants back.
+
 LOCKED LIKE SETU'S FOLDER, SO A NIGHT NEEDS NO PASSPHRASE. The first
 backup asks for a passphrase twice and makes a key pair: the public half
 in the clear, the private half sealed with a key from the passphrase
@@ -47,7 +58,8 @@ its nonce the prefix and a counter, the header's hash, the counter and
 the flag its associated data -- so a chunk can't be moved, dropped or
 swapped, and a file cut short says so instead of restoring half a house.
 Inside is a tar: ``keeps/<owner>/<id>/...``, ``memory/smritikosh.dump``,
-and ``manifest.json`` last.
+``memory/<store>/<n>.tar`` for the graph and the audit log, and
+``manifest.json`` last.
 
 RESTORE PUTS THINGS WHERE THEY WERE, AND MOVES NOTHING AWAY UNSAID. Each
 place goes back to its path, with this computer's home in place of the
@@ -66,6 +78,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import secrets
 import shutil
 import socket
@@ -111,6 +124,13 @@ IN_MEMORY = 64 << 20
 OWN_LEAVE_OUT = {"config": ["units", "*.bak*"],
                  "state": ["logs", "run", "*.lock", "*.sock"]}
 DUMP = "memory/smritikosh.dump"
+#: Smritikosh's stores kept as their folders (Redis left out: see above).
+STORES = ("neo4j", "mongodb")
+#: A data folder of theirs, by where the container mounts it.
+DATA_AT = "/data"
+#: A volume podman named itself, for an image's VOLUME nobody mounted
+#: (MongoDB's /data/configdb): left out, as nothing would find it again.
+ANONYMOUS = re.compile(r"[0-9a-f]{64}")
 #: How long one sibling may take to say what it keeps.
 KEEPS_TIMEOUT = 20.0
 
@@ -574,6 +594,147 @@ def dump_memory(config: Config, into: Path,
             "backup (`sarathi up` starts it)")
 
 
+def _store_name(config: Config, store: str) -> str:
+    from sarathi import podman
+
+    return podman.UNITS[f"smritikosh-{store}"] if config.road == "podman" \
+        else config.smritikosh.extras()[store]
+
+
+def _folders(name: str, run: Callable[..., subprocess.CompletedProcess]
+             ) -> list[dict[str, str]] | str:
+    """The data folders container ``name`` mounts, as {at, kind, source,
+    folder}; or why they can't be told."""
+    seen = run(["podman", "container", "inspect", name], capture_output=True, text=True,
+               check=False)
+    if seen.returncode != 0:
+        return f"there is no container {name}"
+    try:
+        mounts = json.loads(seen.stdout)[0].get("Mounts") or []
+    except (ValueError, IndexError, AttributeError):
+        return f"podman didn't describe {name}"
+    out = []
+    for m in mounts:
+        at = m.get("Destination") or ""
+        if at != DATA_AT and not at.startswith(DATA_AT + "/"):
+            continue
+        kind = m.get("Type") or ""
+        source = m.get("Name") if kind == "volume" else m.get("Source")
+        if kind == "volume" and ANONYMOUS.fullmatch(source or ""):
+            continue                     # an image's own spare; no new container finds it
+        folder = m.get("Source") or ""
+        if kind == "volume":
+            looked = run(["podman", "volume", "inspect", "--format", "{{.Mountpoint}}",
+                          source], capture_output=True, text=True, check=False)
+            folder = looked.stdout.strip() if looked.returncode == 0 else ""
+        if folder and source:
+            out.append({"at": at, "kind": kind, "source": source, "folder": folder})
+    return out
+
+
+def _stop_start(config: Config, name: str, store: str, stop: bool,
+                run: Callable[..., subprocess.CompletedProcess]) -> None:
+    if config.road == "podman":
+        run(["systemctl", "--user", "stop" if stop else "start",
+             f"sarathi-smritikosh-{store}.service"], capture_output=True, check=False)
+    else:
+        run(["podman", "stop" if stop else "start", name], capture_output=True,
+            check=False)
+
+
+def take_stores(config: Config, scratch: Path,
+                run: Callable[..., subprocess.CompletedProcess] = subprocess.run
+                ) -> tuple[list[dict[str, Any]], list[str]]:
+    """Neo4j's and MongoDB's data folders, each a tar in ``scratch``: the
+    container stopped while it is read and started again, always. Returns
+    (what was taken, with ``file``; what kept one out, in words)."""
+    if not config.smritikosh.full:
+        return [], []
+    taken, problems = [], []
+    for store in STORES:
+        name = _store_name(config, store)
+        folders = _folders(name, run)
+        if isinstance(folders, str):
+            problems.append(f"Smritikosh's {store}: {folders}, so it isn't in this backup")
+            continue
+        state = run(["podman", "container", "inspect", "--format", "{{.State.Running}}",
+                     name], capture_output=True, text=True, check=False)
+        was_running = state.returncode == 0 and state.stdout.strip() == "true"
+        if was_running:
+            _stop_start(config, name, store, True, run)
+        try:
+            for n, f in enumerate(folders):
+                out = scratch / f"{store}-{n}.tar"
+                done = run(["podman", "unshare", "tar", "-C", f["folder"], "-cf", str(out),
+                            "."], capture_output=True, text=True, check=False)
+                if done.returncode != 0 or not out.exists():
+                    problems.append(f"Smritikosh's {store} ({f['at']}) couldn't be read: "
+                                    f"{(done.stderr or '').strip()[-200:]}")
+                    continue
+                taken.append({"store": store, "container": name, "n": n, **f,
+                              "member": f"memory/{store}/{n}.tar", "file": str(out)})
+        finally:
+            if was_running:
+                _stop_start(config, name, store, False, run)
+    return taken, problems
+
+
+def restore_stores(staging: Path, rows: list[dict[str, Any]], stamp: str,
+                   old_home: str = "", home: Path | None = None,
+                   run: Callable[..., subprocess.CompletedProcess] = subprocess.run
+                   ) -> tuple[list[str], list[str], list[str]]:
+    """Each store's folders back: a bind folder at its path on this home,
+    a volume made when there is none and filled. What was there moves
+    aside (``.before-restore-<stamp>``), never deleted. Returns (lines,
+    moved aside, what couldn't be put back). The house is down here
+    (``restore`` refuses otherwise); a store's container still running
+    by itself is said, and that store left alone."""
+    lines, aside, failed = [], [], []
+    home = home or Path.home()
+    for row in rows:
+        member = staging / row["member"]
+        if not member.is_file():
+            continue
+        name = row.get("container") or ""
+        state = run(["podman", "container", "inspect", "--format", "{{.State.Running}}",
+                     name], capture_output=True, text=True, check=False)
+        if state.returncode == 0 and state.stdout.strip() == "true":
+            failed.append(f"Smritikosh's {row['store']}: {name} is running; stop it "
+                          "(`podman stop " + name + "`) and restore again")
+            continue
+        if row.get("kind") == "volume":
+            looked = run(["podman", "volume", "inspect", "--format", "{{.Mountpoint}}",
+                          row["source"]], capture_output=True, text=True, check=False)
+            if looked.returncode != 0:
+                run(["podman", "volume", "create", row["source"]], capture_output=True,
+                    check=False)
+                looked = run(["podman", "volume", "inspect", "--format", "{{.Mountpoint}}",
+                              row["source"]], capture_output=True, text=True, check=False)
+            folder = looked.stdout.strip()
+            where = f"volume {row['source']}"
+        else:
+            folder = str(rebase(row["source"], old_home, home))
+            where = tilde(folder)
+        if not folder:
+            failed.append(f"Smritikosh's {row['store']}: no folder for {where}")
+            continue
+        listed = run(["podman", "unshare", "ls", "-A", folder], capture_output=True,
+                     text=True, check=False)
+        if listed.returncode == 0 and listed.stdout.strip():
+            moved = f"{folder}.before-restore-{stamp}"
+            run(["podman", "unshare", "mv", folder, moved], capture_output=True, check=False)
+            aside.append(moved)
+        run(["podman", "unshare", "mkdir", "-p", folder], capture_output=True, check=False)
+        done = run(["podman", "unshare", "tar", "-C", folder, "-xpf", str(member)],
+                   capture_output=True, text=True, check=False)
+        if done.returncode != 0:
+            failed.append(f"Smritikosh's {row['store']} into {where}: "
+                          f"{(done.stderr or '').strip()[-200:]}")
+            continue
+        lines.append(f"  {'smritikosh ' + row['store']:<24} {where}")
+    return lines, aside, failed
+
+
 # ---- the backup -------------------------------------------------------------------
 
 
@@ -583,6 +744,7 @@ class Made:
     taken: list[Taken]
     problems: list[str]
     memory: bool = False
+    stores: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
     seconds: float = 0.0
 
@@ -593,7 +755,8 @@ class Made:
     def as_json(self) -> dict[str, Any]:
         return {"format": "sarathi.backup.made.v1", "ok": not self.problems,
                 "file": str(self.file) if self.file else None, "bytes": self.bytes,
-                "memory": self.memory, "places": [t.as_json() for t in self.taken],
+                "memory": self.memory, "stores": self.stores,
+                "places": [t.as_json() for t in self.taken],
                 "problems": self.problems, "removed": self.removed,
                 "seconds": round(self.seconds, 1)}
 
@@ -612,6 +775,8 @@ def file_name(when: float | None = None) -> str:
 def make(places: list[Place], key: dict[str, Any], folder: Path, *,
          config: Config | None = None, problems: list[str] | None = None,
          dump: Callable[[Config, Path], str | None] = dump_memory,
+         stores: Callable[[Config, Path], tuple[list[dict[str, Any]], list[str]]]
+         = take_stores,
          say: Callable[[str], None] = lambda _line: None,
          home: Path | None = None) -> Made:
     """Every place, sealed, into a new file in ``folder``. ``home``: this
@@ -626,6 +791,7 @@ def make(places: list[Place], key: dict[str, Any], folder: Path, *,
     partial = target.with_name(target.name + ".part")
     taken: list[Taken] = []
     memory = False
+    store_rows: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="sarathi-backup-", dir=folder) as scratch_dir:
         scratch = Path(scratch_dir)
         fd = os.open(partial, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -650,11 +816,23 @@ def make(places: list[Place], key: dict[str, Any], folder: Path, *,
                             memory = True
                         elif said:
                             problems.append(said)
+                        kept, why = stores(config, scratch)
+                        problems += why
+                        for row in kept:
+                            say(f"{'smritikosh':<10} {row['store']:<14} {row['at']} "
+                                "(stopped for it, started again)")
+                            got = Path(row.pop("file"))
+                            with got.open("rb") as f:
+                                tar.addfile(_info(row["member"], got.stat(),
+                                                  got.stat().st_size), f)
+                            got.unlink()
+                            store_rows.append(row)
                     manifest = json.dumps({
                         "format": FORMAT, "made": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                         "host": socket.gethostname(), "home": str(home or Path.home()),
                         "places": [t.as_json() for t in taken], "memory": memory,
                         "memory_db": _db_name(config) if memory else None,
+                        "stores": store_rows,
                         "problems": problems}, indent=1).encode("utf-8")
                     info = tarfile.TarInfo("manifest.json")
                     info.size, info.mtime, info.mode = len(manifest), int(time.time()), 0o600
@@ -666,7 +844,9 @@ def make(places: list[Place], key: dict[str, Any], folder: Path, *,
         except BaseException:
             partial.unlink(missing_ok=True)
             raise
-    return Made(target, taken, problems, memory=memory, seconds=time.monotonic() - start)
+    return Made(target, taken, problems, memory=memory,
+                stores=sorted({r["store"] for r in store_rows}),
+                seconds=time.monotonic() - start)
 
 
 def _db_name(config: Config | None) -> dict[str, str] | None:
@@ -759,6 +939,10 @@ def made_lines(made: Made) -> list[str]:
         out.append(f"  {t.place.owner + ' ' + t.place.id:<24} {where}")
     if made.memory:
         out.append(f"  {'smritikosh database':<24} its memories (pg_dump)")
+    for store in made.stores:
+        out.append(f"  {'smritikosh ' + store:<24} "
+                   + {"neo4j": "its facts (the graph)",
+                      "mongodb": "its audit log"}.get(store, store))
     out.append("")
     out.append(f"written: {tilde(made.file)} ({size(made.bytes)}, {made.seconds:.0f}s), "
                "locked with your backup passphrase")
@@ -824,7 +1008,8 @@ def unpack(file: Path, passphrase: str, *, only: set[str] | None = None,
             owner = member.name.split("/")[1] if member.name.startswith("keeps/") else None
             if only is not None and owner is not None and owner not in only:
                 continue
-            if member.name == DUMP and only is not None and "smritikosh" not in only:
+            if member.name.startswith("memory/") and only is not None \
+                    and "smritikosh" not in only:
                 continue
             try:
                 # "data": nothing lands outside the staging folder, no link

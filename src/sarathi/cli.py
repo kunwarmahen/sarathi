@@ -670,6 +670,8 @@ def _restore(args) -> int:
                 print(f"  {row['owner'] + ' ' + row['id']:<24} {said:<22} {where}")
             if manifest.get("memory"):
                 print(f"  {'smritikosh database':<24} its memories")
+            for row in manifest.get("stores") or []:
+                print(f"  {'smritikosh ' + row['store']:<24} {row['at']} of {row['container']}")
             for p in manifest.get("problems") or []:
                 print(f"  not in it: {p}")
             return 0
@@ -690,6 +692,16 @@ def _restore(args) -> int:
         except (backup.BackupError, ConfigError) as exc:
             lines.append(f"NOT PUT BACK: {exc}")
             code = 1
+    stores = restored.manifest.get("stores") or []
+    if stores and (only is None or "smritikosh" in only):
+        put, aside, failed = backup.restore_stores(
+            restored.staging, stores,
+            restored.staging.name.removeprefix(".sarathi-restoring-"),
+            restored.manifest.get("home", ""))
+        lines += put
+        restored.moved_aside += aside
+        lines += [f"NOT PUT BACK: {f}" for f in failed]
+        code = 1 if failed else code
     backup.finish(restored)
     for refused in restored.refused:
         lines.append(f"left out (it would have pointed outside its folder): {refused}")

@@ -396,11 +396,35 @@ class TestTheMorningRoad:
 
         def samay(cfg, method, path, body=None):
             asked.append((method, body))
-            return {"schedules": [{"runner": "doctor"}] if len(asked) > 2 else []}
+            return {"schedules": [{"runner": "doctor"}]
+                    if ("POST", doctor_home_morning()) in asked else []}
         home = Home(config(tmp_path), lambda: {}, ask_samay=samay)
         assert home.morning()[0] == 200
-        assert asked[1] == ("POST", doctor_home_morning())
+        assert [a for a in asked if a[0] == "POST"] == [("POST", doctor_home_morning())]
         assert "already" in home.morning()[1]
+
+    def test_a_time_of_your_own_and_another_time_moves_it(self, tmp_path):
+        from test_home import config
+        asked, rows = [], []
+
+        def samay(cfg, method, path, body=None):
+            asked.append((method, path, body))
+            if method == "POST":
+                rows[:] = [{"id": "m2", "runner": "doctor", "when": {"at": body["when"][3:]}}]
+            if method == "DELETE":
+                rows.clear()
+            return {"schedules": list(rows)}
+        home = Home(config(tmp_path), lambda: {}, ask_samay=samay)
+        code, said = home.morning("06:45")
+        assert code == 200 and said.startswith("Every morning at 06:45")
+        assert asked[-1] == ("POST", "schedules", {**doctor_home_morning(), "when": "at 06:45"})
+        assert "already" in home.morning("06:45")[1]
+        asked.clear()
+        code, said = home.morning("08:15")
+        assert code == 200 and said.startswith("Moved: every morning at 08:15")
+        assert [a[0] for a in asked] == ["GET", "DELETE", "GET", "POST"]
+        assert asked[1][1] == "schedules/m2"
+        assert home.morning("8 o'clock") == (400, "\"8 o'clock\" isn't a time like 06:45")
 
     def test_the_page_can_see_the_morning_check_is_already_on(self, tmp_path):
         from test_home import config
@@ -410,6 +434,7 @@ class TestTheMorningRoad:
                                    "sentence": "every day at 07:30"}]}
         got = Home(config(tmp_path), lambda: {}, ask_samay=samay).house_schedules()
         assert got["samay"] and got["doctor"] == {"id": "bfaea182", "state": "active",
+                                                  "at": None,
                                                   "when": "every day at 07:30"}
         assert got["backup"] is None and got["tests"] is None
 

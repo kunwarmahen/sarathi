@@ -32,6 +32,7 @@ function puckForm(p, voiced) {
   const unsure = pick(people.map((x) => [x, x]), p.person);
   const agent = pick([["", "Vaani's default"], ...agents], p.agent || "");
   const quiet = text(p.fresh_after ?? 30, { inputmode: "numeric", size: "5" });
+  const followUp = check(!!p.follow_up);
   // the puck's own wake words, as it told Vaani; none known while it's away
   const offers = p.wake_words?.offers || [];
   const on = (p.wake_words?.on || [])[0] || "";
@@ -56,7 +57,7 @@ function puckForm(p, voiced) {
     const heard = new Set([...ticked, unsure.value]);
     return vaaniSave({
       do: "puck", puck: p.name, person: unsure.value, agent: agent.value,
-      fresh_after: quiet.value.trim(),
+      fresh_after: quiet.value.trim(), follow_up: followUp.checked,
       ...(wake ? { wake_word: wake.value } : {}),
       people: ticked,
       agents: Object.fromEntries(people.map((x) => [x, heard.has(x) ? own[x].value : ""])),
@@ -78,6 +79,12 @@ function puckForm(p, voiced) {
                  "A change reaches the puck within a minute.")
          : h("p.meta", {}, "Wake word: the puck hasn't told Vaani its wake words yet " +
                            "(is it listening? See Vaani's page)."),
+    field("Follow-up questions", h("label.inline", {}, followUp,
+                                    " Listen again after every answer, no wake word"),
+          "After it answers, the ring stays on for a few seconds: just ask the next " +
+          "thing. Silence, or “thanks, that's all”, ends it with nothing said. Off: it " +
+          "listens again only when the answer asked you something. A television nearby " +
+          "may be heard as a question while it listens."),
     field("Start a new conversation after this many minutes quiet", quiet,
           "Until then, everything someone asks at this puck is one conversation, so " +
           "“and the one before?” works. After it, the next question starts afresh (the " +

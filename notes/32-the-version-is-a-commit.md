@@ -81,14 +81,26 @@ container still on an older image than the newest built is named too:
 `sarathi up` restarts it on the new one (the doctor's same check, note
 28).
 
-## On plain programs, the checkout says
+## On plain programs, each running program says when it started
 
-Without containers each program runs from its checkout, so what's
-checked out is what runs, uncommitted changes and all ("+3 uncommitted
-change(s)"). The one gap: a program started before your last commit
-still runs the code it started with, until `sarathi down && sarathi up`.
-Sarathi doesn't track when each process read its code; the line is
-honest about the checkout, not the memory of a running process.
+Without containers each program runs from its checkout, uncommitted
+changes and all ("+3 uncommitted change(s)"). But **A PROGRAM KEEPS THE
+CODE IT STARTED WITH**: one started before your last commit runs the
+older code until `sarathi down && sarathi up`. `up` writes down when it
+started each program (its record in Sarathi's state), so a running one
+is shown on the commit its checkout was on at that moment (the newest
+on HEAD made before it, `git rev-list -1 --before=…`), and the commits
+since are counted against it, as an image's are:
+
+```
+  samay      2026.10.30.7  4b30fb6  feat(page): …  -- running since Fri 30 Oct 09:12, 2 newer in the checkout
+`sarathi down && sarathi up` starts them on the newer commits
+```
+
+A program not running (or one Sarathi didn't start) is its checkout as
+it is. The tradeoff: a commit made with a date older than when it was
+committed, or code changed and run without a commit, isn't seen; the
+line counts commits, as everywhere here.
 
 Sarathi itself runs from its own checkout on both roads: the home page
 is a user service, not a container. Its line is that checkout.
@@ -140,8 +152,10 @@ opened Settings → Check.
 
 ## What is not here
 
-* **No version per process on plain programs.** See above: the
-  checkout, not what a long-running process loaded.
+* ~~**No version per process on plain programs.**~~ Each running
+  program is on the commit it started with (above). Not run on this
+  house, which is on containers: the tests drive a real git checkout
+  with a program "started" between two commits.
 * **No changelog.** "2 newer" says how many; `git log` in the checkout
   says which. The page doesn't list them.
 * **No release numbers.** A day and a count say when, not how big a

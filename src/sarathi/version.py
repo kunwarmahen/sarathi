@@ -22,10 +22,14 @@ so the build also writes a ``VERSION`` file at the top of each project
 in it (``YEAR.MONTH.DAY.N COMMIT``), which each program's own
 ``--version`` reads there.
 
-ON THE PLAIN-PROGRAMS ROAD, THE CHECKOUTS SAY. Each program runs from its
-checkout, so what runs is what is checked out, uncommitted changes and
-all. A program started before your last commit still runs the code it
-started with until ``sarathi down && sarathi up``.
+ON THE PLAIN-PROGRAMS ROAD, EACH RUNNING PROGRAM SAYS WHEN IT STARTED.
+Each program runs from its checkout, but a program keeps the code it
+started with: one started before your last commit runs the older code
+until ``sarathi down && sarathi up``. So a program `up` started (its
+record in Sarathi's state, with when) is shown on the commit its
+checkout was on at that moment, and the commits made since are counted
+against it, as an image's are. One not running is the checkout as it
+is, uncommitted changes and all.
 
 SARATHI ITSELF runs from its own checkout on both roads (the home page
 is a user service, not a container), so its line is that checkout.
@@ -80,16 +84,37 @@ def dated(repo: Path, rev: str = "HEAD") -> str | None:
     return f"{days[0]}.{count}"
 
 
-def commit(repo: Path) -> dict[str, Any] | None:
-    """A checkout's last commit, its version, and its uncommitted
-    changes, or None when it isn't a git checkout."""
-    said = _git(["git", "-C", str(repo), "log", "-1", "--format=%h%x00%ct%x00%s"])
+def commit(repo: Path, rev: str = "HEAD") -> dict[str, Any] | None:
+    """A checkout's last commit (or ``rev``), its version, and (for HEAD)
+    its uncommitted changes, or None when it isn't a git checkout."""
+    said = _git(["git", "-C", str(repo), "log", "-1", "--format=%h%x00%ct%x00%s", rev])
     parts = said.stdout.strip().split("\0")
     if said.returncode != 0 or len(parts) != 3 or not parts[1].isdigit():
         return None
-    dirty = _git(["git", "-C", str(repo), "status", "--porcelain"]).stdout
-    return {"commit": parts[0], "version": dated(repo) or "", "date": int(parts[1]),
+    dirty = _git(["git", "-C", str(repo), "status", "--porcelain"]).stdout \
+        if rev == "HEAD" else ""
+    return {"commit": parts[0], "version": dated(repo, rev) or "", "date": int(parts[1]),
             "subject": parts[2], "left_out": len(dirty.splitlines())}
+
+
+def at_start(repo: Path, started: str) -> str | None:
+    """The commit ``repo`` was on when a program started at ``started``
+    (ISO): the newest on HEAD made before it."""
+    said = _git(["git", "-C", str(repo), "rev-list", "-1", f"--before={started}", "HEAD"])
+    out = said.stdout.strip()
+    return out or None if said.returncode == 0 else None
+
+
+def started_programs() -> dict[str, str]:
+    """Project -> when its running program started, for what `up` started
+    on the plain-programs road and is still alive."""
+    from sarathi import services
+
+    out = {}
+    for row in services.running():
+        if row.get("alive") and row.get("sibling") and row.get("started"):
+            out.setdefault(row["sibling"], row["started"])
+    return out
 
 
 def newer(repo: Path, since: str) -> int | None:
@@ -192,10 +217,13 @@ def behind() -> list[str]:
     return out
 
 
-def report(config: Any) -> dict[str, Any]:
+def report(config: Any, started: dict[str, str] | None = None) -> dict[str, Any]:
     """sarathi.version.v1: the road, the image (podman road), and each
-    project's running commit against its checkout's now."""
+    project's running commit against its checkout's now. ``started``:
+    project -> when its program started (plain programs; asked when None)."""
     road = getattr(config, "road", "process")
+    if road != "podman" and started is None:
+        started = started_programs()
     repos = checkouts(config)
     image = None
     built: dict[str, Any] = {}
@@ -220,8 +248,14 @@ def report(config: Any) -> dict[str, Any]:
             count = newer(repo, running["commit"]) \
                 if running and repo is not None and now else None
         else:
-            running, count = now, 0
-        projects.append({"name": name, "running": running, "now": now, "newer": count})
+            since = (started or {}).get(name)
+            rev = at_start(repo, since) if since and repo is not None and now else None
+            running = commit(repo, rev) if rev else now
+            count = newer(repo, rev) if rev else 0
+        row = {"name": name, "running": running, "now": now, "newer": count}
+        if road != "podman" and (started or {}).get(name):
+            row["started"] = started[name]
+        projects.append(row)
     mine = own_checkout()
     projects.append({"name": "sarathi", "running": commit(mine) if mine else None,
                      "now": None, "newer": None, "here": True})
@@ -231,6 +265,14 @@ def report(config: Any) -> dict[str, Any]:
 
 def _day(unix: int) -> str:
     return time.strftime("%a %d %b %H:%M", time.localtime(unix))
+
+
+def _since(iso: str) -> str:
+    from datetime import datetime
+    try:
+        return _day(int(datetime.fromisoformat(iso).timestamp()))
+    except ValueError:
+        return iso
 
 
 def headline(got: dict[str, Any]) -> str:
@@ -271,11 +313,16 @@ def text(got: dict[str, Any]) -> str:
             line += (f"  ({run['left_out']} uncommitted change(s) left out)"
                      if got["road"] == "podman" and not p.get("here") else
                      f"  (+{run['left_out']} uncommitted change(s))")
-        if p.get("newer"):
+        if p.get("newer") and p.get("started"):
+            line += (f"  -- running since {_since(p['started'])}, {p['newer']} newer "
+                     "in the checkout")
+        elif p.get("newer"):
             line += f"  -- {p['newer']} newer in the checkout"
         elif got["road"] == "podman" and p["now"] and p["newer"] is None and not p.get("here"):
             line += f"  -- the checkout is on {p['now']['commit']}, not after it"
         lines.append(line)
     if any(p.get("newer") for p in got["projects"]):
-        lines.append("the next `sarathi image && sarathi up` takes in the newer commits")
+        lines.append("the next `sarathi image && sarathi up` takes in the newer commits"
+                     if got["road"] == "podman" else
+                     "`sarathi down && sarathi up` starts them on the newer commits")
     return "\n".join(lines)
