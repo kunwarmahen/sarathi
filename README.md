@@ -432,6 +432,10 @@ never a key:
 | `dvara-<id>`, each person behind Dvara | `~/.local/share/sarathi/smritikosh-accounts.json` |
 | `sarathi`, the admin Sarathi made (only if it had to) | `SMRITIKOSH_ADMIN_PASSWORD` in `~/.config/sarathi/secrets.env` |
 
+To change one, sign in as that account and open **Settings → Password**;
+it asks for the current password first. A password Sarathi wrote down is
+not updated when you change it there, so the file then holds the old one.
+
 **Where the keys are.** You put none anywhere: `sarathi smritikosh` does.
 
 | Whose | Where | Used by |
