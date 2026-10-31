@@ -1145,6 +1145,23 @@ def build_dashboard(kosh: Smritikosh, checkout: Path, say: Callable[[str], None]
     say(f"dashboard  built; `sarathi up` starts it on 127.0.0.1:{kosh.dashboard_port}")
 
 
+def refresh_dashboard(config: Config, say: Callable[[str], None]) -> None:
+    """`sarathi image`'s last step: the dashboard built again when ui/ has a
+    commit newer than its build. The image carries no Node, so a rebuild
+    that pulled a new ui/ would otherwise leave `up` skipping the dashboard
+    until someone ran `sarathi smritikosh`. A failed build is said, never
+    raised: the image is made, and the rest of the house starts."""
+    kosh, checkout = config.smritikosh, config.smritikosh.path()
+    if not kosh.dashboard or checkout is None or not (ui_dir(checkout) / "package.json").is_file():
+        return
+    if built(checkout):
+        return
+    try:
+        build_dashboard(kosh, checkout, say)
+    except SetupError as exc:
+        say(f"dashboard  not rebuilt: {exc}")
+
+
 def dashboard_argv(kosh: Smritikosh, house: bool = False) -> list[str] | None:
     """How `up` starts it, or None when it won't (off, or not built).
     ``house``: on every address, so the house's other devices reach it too

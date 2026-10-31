@@ -642,6 +642,32 @@ def test_a_build_older_than_the_ui_s_last_commit_is_built_again(world, tmp_path,
     assert smritikosh.built(tmp_path) is True
 
 
+def test_the_image_step_builds_a_stale_dashboard_and_leaves_a_fresh_one(world, tmp_path,
+                                                                     monkeypatch):
+    calls = []
+    monkeypatch.setattr(smritikosh, "build_dashboard",
+                        lambda kosh, checkout, say: calls.append(checkout))
+    a_ui(tmp_path, built=False)
+    config = replace(ON, smritikosh=replace(SET_UP, checkout=str(tmp_path)))
+    smritikosh.refresh_dashboard(config, print)
+    assert calls == [tmp_path]
+    monkeypatch.setattr(smritikosh, "built", lambda checkout: True)
+    smritikosh.refresh_dashboard(config, print)
+    assert calls == [tmp_path]                           # fresh: not built again
+
+
+def test_a_dashboard_that_fails_to_build_in_the_image_step_is_said_not_raised(
+        world, tmp_path, monkeypatch):
+    def broken(kosh, checkout, say):
+        raise smritikosh.SetupError("building the dashboard failed")
+    monkeypatch.setattr(smritikosh, "build_dashboard", broken)
+    a_ui(tmp_path, built=False)
+    said = []
+    smritikosh.refresh_dashboard(
+        replace(ON, smritikosh=replace(SET_UP, checkout=str(tmp_path))), said.append)
+    assert said == ["dashboard  not rebuilt: building the dashboard failed"]
+
+
 def test_a_dashboard_not_started_says_whether_it_was_never_built_or_is_stale(
         world, tmp_path, monkeypatch):
     import shutil as sh

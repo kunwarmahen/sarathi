@@ -813,7 +813,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "road":
             return switch_road(args.road)
         if args.command == "image":
-            return podman.build(config=_settings_or_none())
+            config = _settings_or_none()
+            made = podman.build(config=config)
+            if made == 0 and config is not None:
+                from sarathi import smritikosh
+
+                smritikosh.refresh_dashboard(config, lambda line: print(line, flush=True))
+            return made
         if args.command == "version":
             got = version.report(_settings_or_none())
             print(json.dumps(got) if args.json_out else version.text(got))
