@@ -439,6 +439,13 @@ To change one, sign in as that account and open **Settings → Password**;
 it asks for the current password first. A password Sarathi wrote down is
 not updated when you change it there, so the file then holds the old one.
 
+**What your agents are told about you.** Signed in as an admin, **Admin →
+Users** has **In the agent's prompt** for everyone, and each user's page
+(each `dvara-<id>` too) has it for that person. It holds Facts, Beliefs
+and Memories, each On, Off or Default, and *What keeps a memory*: Used
+(the default) or Shown. Yantra and every Dvara agent read it at the start
+of each conversation.
+
 **Where the keys are.** You put none anywhere: `sarathi smritikosh` does.
 
 | Whose | Where | Used by |
