@@ -103,6 +103,14 @@ def test_each_link_opens_its_page_signed_in(served):
     assert by["yantra"]["open"] == "http://127.0.0.1:8321/" and by["yantra"]["keyed"]
 
 
+def test_each_card_shows_its_programs_icon(served):
+    by = {p["name"]: p for p in get(served, "/api/pieces").json()["pieces"]}
+    for name in ("yantra", "samay", "setu", "dvara"):
+        assert by[name]["icon"] == f"/icons/{name}.svg"
+        reply = get(served, by[name]["icon"], token=None)
+        assert reply.status_code == 200 and reply.text.lstrip().startswith("<svg")
+
+
 def test_yantras_link_carries_the_token_sarathi_made_for_its_page(keys):
     from sarathi.config import YANTRA_TOKEN, save_secret
 

@@ -65,7 +65,9 @@ function h(spec, attrs, ...kids) {
 
 function card(p) {
   return h("article.card", {},
-    h("div.card-head", {}, h("h3", {}, p.title),
+    h("div.card-head", {},
+      h("h3", {}, p.icon ? h("img.logo", { src: p.icon, alt: "", width: 20, height: 20 }) : null,
+        p.title),
       h("span.badge." + (p.up ? "up" : "down"), {}, p.up ? "running" : "not running")),
     h("div.who", {}, p.purpose),
     p.said ? h("div.said", {}, p.said) : null,

@@ -1119,6 +1119,8 @@ no chat, and the page opens on Your pages.
 **Your pages** links to each program's own page: Yantra's, Samay's,
 Prahari's (when it's here), Setu's (`setu serve`) and, with Dvara on,
 Dvara's (`dvara page`).
+Each card carries that program's own icon, the same one its browser tab
+shows (Sarathi keeps a copy of each under `static/icons/`).
 With Sparsh found (on the Podman road, once `[phone] address` or `wda` is set), a **Your phone** card
 opens Yantra's page, where the phone panel shows the phone and what the
 agent did on it; Sparsh has no page of its own. Each

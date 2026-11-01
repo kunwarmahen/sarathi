@@ -94,6 +94,7 @@ a { color: var(--accent); }
 .card.is-locked { border-style: dashed; }
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .card-head h3 { font-size: 15px; overflow-wrap: anywhere; }
+.card-head h3 .logo { width: 20px; height: 20px; border-radius: 5px; vertical-align: -4px; margin-right: 8px; }
 .ref { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
 .who { color: var(--ink-2); overflow-wrap: anywhere; }
 .chip {

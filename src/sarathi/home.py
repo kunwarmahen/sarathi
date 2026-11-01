@@ -197,6 +197,10 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/md.js": ("md.js", "text/javascript; charset=utf-8"),
           "/page.css": ("page.css", "text/css; charset=utf-8"),
           "/favicon.svg": ("favicon.svg", "image/svg+xml")}
+#: Each program's own icon (a copy of its favicon.svg), shown on its card.
+#: Sparsh has none: its card opens Yantra's page.
+ICONS = ("yantra", "samay", "prahari", "vaani", "setu", "dvara")
+STATIC.update({f"/icons/{n}.svg": (f"icons/{n}.svg", "image/svg+xml") for n in ICONS})
 
 POLICY = ("default-src 'none'; script-src 'self'; style-src 'self'; "
           "connect-src 'self'; img-src 'self' data: blob:; media-src blob:; "
@@ -713,7 +717,8 @@ class Home:
                         "open": f"{url.rstrip('/')}{page.token_in}{token}" if token
                         else url,
                         "keyed": token is not None or page.token_file is None,
-                        "said": lines.get(page.name, ""), "start": page.start})
+                        "said": lines.get(page.name, ""), "start": page.start,
+                        "icon": f"/icons/{page.name}.svg" if page.name in ICONS else None})
         return out
 
 
