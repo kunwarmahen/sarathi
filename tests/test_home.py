@@ -109,6 +109,9 @@ def test_each_card_shows_its_programs_icon(served):
         assert by[name]["icon"] == f"/icons/{name}.svg"
         reply = get(served, by[name]["icon"], token=None)
         assert reply.status_code == 200 and reply.text.lstrip().startswith("<svg")
+    # the Memory card's, while memories are kept in Smritikosh
+    reply = get(served, "/icons/smritikosh.svg", token=None)
+    assert reply.status_code == 200 and reply.text.lstrip().startswith("<svg")
 
 
 def test_yantras_link_carries_the_token_sarathi_made_for_its_page(keys):

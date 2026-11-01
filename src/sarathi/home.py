@@ -198,9 +198,11 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/page.css": ("page.css", "text/css; charset=utf-8"),
           "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 #: Each program's own icon (a copy of its favicon.svg), shown on its card.
-#: Sparsh has none: its card opens Yantra's page.
+#: Sparsh has none: its card opens Yantra's page. Smritikosh's (its
+#: dashboard's icon) is on the Memory card while memories are kept there.
 ICONS = ("yantra", "samay", "prahari", "vaani", "setu", "dvara")
-STATIC.update({f"/icons/{n}.svg": (f"icons/{n}.svg", "image/svg+xml") for n in ICONS})
+STATIC.update({f"/icons/{n}.svg": (f"icons/{n}.svg", "image/svg+xml")
+               for n in (*ICONS, "smritikosh")})
 
 POLICY = ("default-src 'none'; script-src 'self'; style-src 'self'; "
           "connect-src 'self'; img-src 'self' data: blob:; media-src blob:; "

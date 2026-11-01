@@ -106,7 +106,9 @@ function memoryCard(m) {
        h("div.meta", {}, "Sign in with your Smritikosh username and password.")]
     : h("div.meta", {}, `Smritikosh's dashboard isn't running: ${dash.start.replace(/`/g, "")}.`);
   return h("article.card", {},
-    h("div.card-head", {}, h("h3", {}, "Memory"),
+    h("div.card-head", {},
+      h("h3", {}, kosh ? h("img.logo", { src: "/icons/smritikosh.svg", alt: "", width: 20,
+                                         height: 20 }) : null, "Memory"),
       h("span.badge." + badge[0], {}, badge[1])),
     h("div.who", {}, "What your agents remember about you, and where it is kept."),
     m.said ? h("div.said", {}, m.said) : null,
