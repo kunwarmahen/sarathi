@@ -883,8 +883,10 @@ amazon:read                    open, follow, scroll, search, a picture -- never 
 
 *A picture* is the site's screenshot: ask *"send me a screenshot of my
 Amazon orders page"* and minder takes one, saved in your folder with it,
-and sends it with `send_file`, which asks you first (give minder
-`send_file` under *Tools it may use* if it doesn't have it).
+and the picture comes with its answer: in the chat here, drawn under the
+words; on Telegram, as a photo. minder needs `send_file` under *Tools it
+may use* for that (it has every tool unless you narrowed the list); a
+picture from earlier it sends with `send_file`, which asks you first.
 
 The need brings Amazon's tools with it; `[tools] allow` doesn't have to
 name them. Your home works the same way: `needs = ["amazon:read",
