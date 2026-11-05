@@ -1196,15 +1196,14 @@ async function send(text) {
   const button = document.querySelector("#say .send");
   button.disabled = true;
   try {
-    // writing under one from the list carries it on: it's opened here
-    // first (it stays open where else it was), then the words go to it
+    // writing under one from the list carries it on: the words go with
+    // its id, and Dvara moves this chat into it and answers them there, in
+    // one go -- waiting, not refusing, while the one before still answers
+    // (it stays open where else it was)
     const row = chat.reading;
-    if (row && !row.here) {
-      // its answer brings a short transcript: the reading below is the whole
-      chat.carried = true;
-      try { await api("/api/chat", { agent: row.agent, text: `/chats open ${row.id}` }); }
-      catch (err) { chat.carried = false; throw err; }
-    }
+    const into = row && !row.here ? { conversation: row.id } : {};
+    // the reading below is the window now: no look may empty it
+    if (into.conversation) chat.carried = true;
     const to = row ? row.agent : agent;
     if (row) {
       // the window goes on from the reading as it was drawn: its name,
@@ -1219,7 +1218,8 @@ async function send(text) {
     stopReading();
     const files = await Promise.all(chosen.map(async (f) => ({ name: f.name,
                                                                data: await asBase64(f) })));
-    await api("/api/chat", files.length ? { agent: to, text, files } : { agent: to, text });
+    await api("/api/chat", files.length ? { agent: to, text, files, ...into }
+                                         : { agent: to, text, ...into });
     chosen.length = 0;
     drawChosen();
     problem("");
@@ -1232,6 +1232,7 @@ async function send(text) {
     chat.sending = false;
     button.disabled = false;
     await look();
+    chat.carried = false;
     lookAgain();
   }
 }

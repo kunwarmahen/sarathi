@@ -471,7 +471,13 @@ the left. Type a word you remember, like *boiler*, into the search box
 at the top of the list, and it shrinks to the conversations that say it,
 with the word marked. Tap one and it opens in the middle to read. To
 carry it on, just write below it: it stays as you were reading it, with
-its tools folded and its answers' lists and tables kept. If it began on
+its tools folded and its answers' lists and tables kept. This works even
+while another conversation is still being answered. Your words wait
+until that answer is done, then go into the one you wrote under, never
+into the other. On Telegram, do the same by replying (swipe, or
+long-press and *Reply*) to any answer from the conversation you want.
+The answer starts *"Back in: …"*, and `/chats` there has a button for
+each conversation. If it began on
 Telegram, it stays open there too: what you say in either place carries
 on the same conversation. You don't need to reload the page: a
 conversation on Telegram or at the puck shows in the list within about

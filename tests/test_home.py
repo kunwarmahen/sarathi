@@ -423,6 +423,18 @@ def test_files_go_to_dvara_with_the_message_and_dvara_checks_them(chatting, door
                                  "actor": "mahen"}
 
 
+def test_words_under_an_old_conversation_go_to_dvara_with_its_id(chatting, door):
+    """One request, so Dvara carries that one on and never answers the
+    words in the conversation the chat was in before."""
+    status, _ = send(chatting, "/api/chat", {"agent": "greeter", "text": "and then?",
+                                             "conversation": "b4779213f56a"})
+    assert status == 200
+    assert door.heard[-1][2] == {"agent": "greeter", "text": "and then?",
+                                 "conversation": "b4779213f56a", "actor": "mahen"}
+    send(chatting, "/api/chat", {"agent": "greeter", "text": "x", "conversation": 7})
+    assert "conversation" not in door.heard[-1][2]      # only an id is passed on
+
+
 def test_the_chat_reads_the_owners_lines_with_the_doors_token(chatting, door):
     seen = ask(chatting, "/api/chat?after=0").json()
     assert seen["lines"][0]["text"] == "2 new mails"

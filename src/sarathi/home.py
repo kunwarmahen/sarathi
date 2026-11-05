@@ -43,7 +43,8 @@ in both (Dvara's notes/71). Dvara's token stays in this process and never
 reaches the browser, the way Dvara's own page keeps it:
 
     GET  /api/chat?after=N        your lines since N, agents, questions
-    POST /api/chat                {"agent", "text", "files"?: [{"name", "data"}]}
+    POST /api/chat                {"agent", "text", "files"?: [{"name", "data"}],
+                                   "conversation"?: an old one's id, carried on}
     POST /api/chat/asks/ID        {"approve": true|false, "for_turn"?: true}
     POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}}
     GET  /api/chat/file?line=&n=  a file an answer carried
@@ -1556,6 +1557,9 @@ def _handler(server: HomeServer):
                 said = {"agent": body.get("agent"), "text": body.get("text")}
                 if body.get("files"):
                     said["files"] = body.get("files")    # Dvara checks them
+                if isinstance(body.get("conversation"), str):
+                    # an old one it was written under: carried on in this turn
+                    said["conversation"] = body["conversation"]
                 return self._chat(who, "POST", "/web/message", said)
             if parts[2] == "asks":
                 return self._chat(who, "POST",

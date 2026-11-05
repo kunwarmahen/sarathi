@@ -22,17 +22,19 @@ full-text index), with the words marked under each match.
 
 **PICKED, ONE IS READ IN THE CHAT'S PLACE.** Its words fill the chat,
 tools folded under the answers that used them, with *Write below to
-carry this conversation on here*. Writing does: the page sends
-`/chats open ID` first, then your words. One begun on Telegram stays
+carry this conversation on here*. Writing does: the page sends your
+words with that conversation's id, in one request, and Dvara moves the
+chat into it and answers them there. A chat still answering in another
+conversation is waited out, never refused, so the words cannot land in
+the wrong one (Dvara's [notes/78](https://github.com/kunwarmahen/dvara/blob/main/notes/78-carried-on-where-it-was-written.md)). One begun on Telegram stays
 open there too, and both carry it on (Dvara's
 [notes/71](https://github.com/kunwarmahen/dvara/blob/main/notes/71-one-conversation-two-chats.md)).
 
 **CARRIED ON, IT STAYS AS YOU READ IT.** The window goes on from the
 reading as it was drawn: its name and where it went on at the top, each
-tool folded where it ran, every answer with its own lists and bold. The
-answer to `/chats open` brings Dvara's short transcript; the page has
-the whole already, so it draws nothing from it, and `/chats open ID`
-itself never shows as something you said. A voice note's line reads as
+tool folded where it ran, every answer with its own lists and bold. No
+look at the chat empties it while the words are on their way. A
+`/chats open ID` line from before never shows as something you said. A voice note's line reads as
 you said it, *🎤 "…"*, in the reading and in the list's names, never
 Dvara's *(a voice note, heard as: "…")*.
 
@@ -113,7 +115,8 @@ holds that line, the page only draws it.
 
 ## Passing it through
 
-Three routes, each to Dvara as the person signed in, deciding nothing:
+Three routes, each to Dvara as the person signed in, deciding nothing
+(and `POST /api/chat` passes a `conversation` id on, when there is one):
 
 ```
 POST /api/chat/chats/ID/rename  {title}    -> Dvara's /web/chats/ID/rename
@@ -193,6 +196,13 @@ in; and every view hides every other view's sections, with the
 list, New chat and the bell in the page and the History dialog gone.
 
 ## What is not here yet
+
+* ~~**Words under an old conversation answered in the newer one.**~~
+  Asked while the newer one was still answering, `/chats open` was
+  refused and the words went on anyway. They now go with the
+  conversation's id in one request (Dvara's [notes/78](https://github.com/kunwarmahen/dvara/blob/main/notes/78-carried-on-where-it-was-written.md)).
+* **Two conversations answering at once.** Words under one wait while
+  another answers; each conversation as its own chat would let both run.
 
 * **Suggestions from your own skills.** The greeting's four are
   questions every agent answers. Dvara's look doesn't list a person's
