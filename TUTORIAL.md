@@ -627,7 +627,9 @@ every answer on the home page is a small
 **Steps**. Open it to see each tool the agent used for that answer,
 when, how long it waited for your yes and how long it ran, a line
 of what came back, and any picture a tool returned (a screenshot of a
-page, the phone's screen; tap it to see it whole):
+page, the phone's screen; tap it to see it whole). Its first line says
+how long the answer took and how much of that was the model thinking
+(*3 steps · 19s, 18.6s of it the model thinking*):
 
 ```
 1 step · 19s · end_turn

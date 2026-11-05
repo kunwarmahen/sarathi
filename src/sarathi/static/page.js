@@ -816,7 +816,9 @@ function stepsView(ln) {
     try {
       const d = await api(`/api/chat/steps?line=${ln.id}`);
       const head = `${d.steps.length} step${d.steps.length === 1 ? "" : "s"}`
-        + (d.seconds != null ? ` · ${d.seconds}s` : "") + (d.outcome ? ` · ${d.outcome}` : "");
+        + (d.seconds != null ? ` · ${d.seconds}s` : "")
+        + (d.model_calls && d.thinking != null ? `, ${d.thinking}s of it the model thinking` : "")
+        + (d.outcome ? ` · ${d.outcome}` : "");
       const rows = d.steps.map((st, i) => h("div.step", {},
         h("div.step-head", {}, d.said[i] || st.tool),
         st.short ? h("div.step-said", {}, `→ ${st.short}`) : null,
