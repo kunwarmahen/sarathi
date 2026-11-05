@@ -696,6 +696,7 @@ function drawSarathiTab() {
     vaaniPage: text(s.vaani ? s.vaani.page_port : 8797),
     home: text(s.pages.sarathi_port),
     setu: text(s.pages.setu_port), dvaraPage: text(s.pages.dvara_port),
+    sparsh: text(s.pages.sparsh_port || 8794),
     dvara: text(dv.port || 8770), ntfy: text(dv.ntfy_port || 8793),
   };
   const go = button("Save", () => save("/api/settings/sarathi", {
@@ -709,7 +710,7 @@ function drawSarathiTab() {
     vaani: { on: vaaniOn.checked, port: ports.vaani.value, page_port: ports.vaaniPage.value },
     run: { road: road.value },
     pages: { on: pagesOn.checked, sarathi_port: ports.home.value, setu_port: ports.setu.value,
-             dvara_port: ports.dvaraPage.value },
+             dvara_port: ports.dvaraPage.value, sparsh_port: ports.sparsh.value },
     dvara: dvaraOn.checked ? { on: true, telegram: bot.value, owner: owner.value,
                                window_host: house.value.trim(), ntfy: ntfy.checked,
                                voices: voices.value, whisper: whisper.value.trim(),
@@ -772,7 +773,8 @@ function drawSarathiTab() {
       field("Prahari (its page and its inlet)", ports.prahari),
       field("Prahari's inlet alone (the public road)", ports.prahariInlet),
       field("This home page", ports.home), field("Setu's page", ports.setu),
-      field("Dvara's page", ports.dvaraPage), field("Dvara", ports.dvara),
+      field("Dvara's page", ports.dvaraPage), field("Sparsh's page", ports.sparsh),
+      field("Dvara", ports.dvara),
       field("ntfy", ports.ntfy),
       field("Vaani (where a puck fetches the answer; open it to your network)", ports.vaani),
       field("Vaani's page", ports.vaaniPage)),

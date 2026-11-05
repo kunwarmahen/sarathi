@@ -801,7 +801,7 @@ would otherwise start again at your next login. It starts nothing new;
 | Setu's page's streamed window | on `window_host`, any free port | published from Setu's container on the next port (8791) |
 | Yantra's page's streamed window | with `[house]`, on the house address, any free port | published from Yantra's container on the port after that (8792): on the house address with `[house]`, else on `127.0.0.1` for you (in its container even your own browser is "another device") |
 | Setu's page for people's phones | `setu serve --also-host <window_host>` | published on `window_host` too; only the people's folders mounted |
-| the pages | plain programs | Setu's and Dvara's as containers; the home page, and Smritikosh's dashboard when it's on, as user services (`~/.config/systemd/user/sarathi-home.service`, `sarathi-smritikosh-ui.service`) |
+| the pages | plain programs | Setu's, Dvara's and (with `[phone] on`) Sparsh's as containers, Sparsh's with the phones' adb and `~/.sparsh` as Yantra's has them; the home page, and Smritikosh's dashboard when it's on, as user services (`~/.config/systemd/user/sarathi-home.service`, `sarathi-smritikosh-ui.service`) |
 | a cloud key | from `secrets.env`, or your shell | from `secrets.env` only |
 | Ollama | as it is | must listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0`) |
 | Yantra's own `.env` | read, as in a terminal | not in the image: model settings come from `[model]` in sarathi.toml only |
@@ -1117,14 +1117,20 @@ at the foot of the list opens the rest: **Your pages**, **Settings**,
 no chat, and the page opens on Your pages.
 
 **Your pages** links to each program's own page: Yantra's, Samay's,
-Prahari's (when it's here), Setu's (`setu serve`) and, with Dvara on,
-Dvara's (`dvara page`).
+Prahari's (when it's here), Setu's (`setu serve`), with Dvara on,
+Dvara's (`dvara page`), and with `[phone] on`, Sparsh's (`sparsh serve`).
 Each card carries that program's own icon, the same one its browser tab
 shows (Sarathi keeps a copy of each under `static/icons/`); the Memory card
 carries Smritikosh's while your memories are kept there.
 With Sparsh found (on the Podman road, once `[phone] address` or `wda` is set), a **Your phone** card
-opens Yantra's page, where the phone panel shows the phone and what the
-agent did on it; Sparsh has no page of its own. Each
+(**Your phones** when they have names) opens Sparsh's own page: each
+phone, whether it answers and why not, its screen when you press
+**Look**, and every step done on it, whoever asked for it. That covers
+Yantra's chat, a schedule, a watch on a spare phone and someone on
+Dvara's door. The page only watches; it never taps
+([Sparsh's notes/20](https://github.com/kunwarmahen/sparsh/blob/main/notes/20-a-page-for-the-phones.md)).
+With `[pages] on = false` nothing starts that page, so the card opens
+the phone panel on Yantra's page instead. Each
 card says whether that page is running, shows the program's own status
 line (the one `sarathi status` prints), and has an **Open** link that
 opens the page already signed in. A page that isn't running shows the
@@ -1145,8 +1151,11 @@ changes them. The tests run on the model `[model]` names,
 because Samay's Yantra is given it like every other. You hear about a
 night only when something broke ([notes/27](notes/27-kept-tests-every-night.md)).
 
-`sarathi up` starts it, with Setu's page and (with Dvara on) Dvara's,
-unless `[pages] on = false` in sarathi.toml. With Dvara on, Setu's page
+`sarathi up` starts it, with Setu's page, (with Dvara on) Dvara's and
+(with `[phone] on`) Sparsh's, unless `[pages] on = false` in sarathi.toml.
+Sparsh's page is given the phones as Yantra's page is (`SPARSH_PHONES`,
+`SPARSH_SPARE`, and on the Podman road the borrowed adb and
+`~/.sparsh`), so it shows the same phones and reads the same step logs. With Dvara on, Setu's page
 also knows where each person's own folder is (`--people`), for the
 one-time link `/accounts page` sends them, and Dvara's page reads each
 person's schedules from the Samay Sarathi found. A person's link opens
@@ -1154,7 +1163,7 @@ only on an address their phone can reach: with `[dvara] window_host` set
 to one address, Setu's page listens there too and the links use it
 (above); without it, they work only here. `sarathi home` runs it by
 hand. `[pages]` also holds their ports (`sarathi_port`, `setu_port`,
-`dvara_port`), and `[dvara] owner` names your id in the actors file, which
+`dvara_port`, `sparsh_port`: 8760, 8775, 8785, 8794), and `[dvara] owner` names your id in the actors file, which
 Dvara's page shows and answers for. Dvara's page gets Dvara's token and
 address from `up`, so your answers on it reach Dvara. No other page
 gets that token.

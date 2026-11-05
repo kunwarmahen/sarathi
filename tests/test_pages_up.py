@@ -20,11 +20,13 @@ from sarathi import services
 
 
 def pages_on(stage, extra: str = "") -> dict:
-    ports = {"setu": free_port(), "door": free_port(), "home": free_port()}
+    ports = {"setu": free_port(), "door": free_port(), "home": free_port(),
+             "sparsh": free_port()}
     fake(stage["world"] / "bin", "setu", {"format": "setu.status.v1", "connections": []})
     settings(stage["world"], stage["ports"],
              extra + f'\n[pages]\non = true\nsetu_port = {ports["setu"]}\n'
-                     f'dvara_port = {ports["door"]}\nsarathi_port = {ports["home"]}\n')
+                     f'dvara_port = {ports["door"]}\nsarathi_port = {ports["home"]}\n'
+                     f'sparsh_port = {ports["sparsh"]}\n')
     return ports
 
 
@@ -36,6 +38,42 @@ def test_setus_page_and_the_home_page_start_with_their_keys_shown(stage, capsys)
     assert f"sarathi    up at http://127.0.0.1:{ports['home']}/#token=" in out
     assert seen(stage, "setu")["argv"] == ["serve", "--port", str(ports["setu"])]
     assert "dvara-page" not in services.records()          # no door, no owner page
+    assert "sparsh" not in services.records()              # no phone, no phones' page
+
+
+# two Androids: an iPhone would have `up` start `sparsh iphone` too
+PHONES = ('[phone]\non = true\n\n[phone.nexus]\naddress = "192.168.1.160:5555"\n'
+          'spare = true\n\n[phone.pixel]\naddress = "192.168.1.161:5555"\n')
+
+
+def test_sparshs_page_starts_with_the_phone_on_and_sees_the_same_phones(stage, capsys):
+    fake(stage["world"] / "bin", "sparsh", {"format": "sparsh.status.v1", "phones": []})
+    ports = pages_on(stage, PHONES)
+    code, out = run(capsys, "up")
+    assert code == 0, out
+    assert f"sparsh     up at http://127.0.0.1:{ports['sparsh']}/#token=k-sparsh" in out
+    page = seen(stage, "sparsh")
+    assert page["argv"] == ["serve", "--port", str(ports["sparsh"])]
+    # the phones by the names Yantra's page is given, and which is spare
+    assert page["env"]["SPARSH_PHONES"] == seen(stage, "yantra")["env"]["SPARSH_PHONES"] \
+        == "nexus=192.168.1.160:5555,pixel=192.168.1.161:5555"
+    assert page["env"]["SPARSH_SPARE"] == "nexus"
+
+
+def test_the_phone_card_opens_sparshs_page_signed_in(stage, monkeypatch):
+    from sarathi.config import load
+    from sarathi.home import pages
+
+    fake(stage["world"] / "bin", "sparsh", {"format": "sparsh.status.v1", "phones": []})
+    ports = pages_on(stage, PHONES)
+    kept = stage["world"] / "sparsh-state"
+    kept.mkdir()
+    (kept / "page.token").write_text("k-sparsh-kept-0123456789\n")
+    monkeypatch.setenv("SPARSH_STATE", str(kept))
+    card = next(p for p in pages(load()) if p.name == "sparsh")
+    assert card.title == "Your phones" and card.port == ports["sparsh"]
+    assert card.token() == "k-sparsh-kept-0123456789"
+    assert "every step done on each, whoever asked" in card.purpose
 
 
 def test_the_owner_page_gets_the_doors_token_and_address_and_asks_as_the_owner(

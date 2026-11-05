@@ -46,7 +46,8 @@ Eight small programs, each with one job. You'll use three of them today:
 Telegram, is Step 6, when you want it. Sparsh, which lets the helper
 work an Android phone plugged into this computer, is optional: install
 it (its SETUP.md) and Sarathi finds it, and Yantra's page gets a phone
-panel. `sarathi phone` turns it on for Dvara too, and on the
+panel. `sarathi phone` turns it on for Dvara too, and gives your phones
+a page of their own (Sparsh's, on the home page's **Your phones** card), and on the
 containers' road it reaches the phone over Wi-Fi. Smritikosh, a memory
 that finds things by meaning, is optional too: Step 7, when the helper
 starts forgetting things you told it. And Prahari, which tells you when
@@ -1240,6 +1241,17 @@ a USB cable, so they reach the phone over your Wi-Fi.
    Press refuse. Nothing is dialled. For a tap only a picture can show,
    like a pin on a map, see Dvara's tutorial §18.
 
+   Now see what happened on the phone. On the home page, **Your pages →
+   Your phone → Open** opens Sparsh's page. Each phone has a card that
+   says whether it answers (and if not, what to do). Under it is every
+   step done on it, newest first: the Settings look from the computer,
+   the Call held for your yes from Telegram, *held* in amber. Press
+   **Look** to see the screen as it is now, with a picture and the
+   battery. The page only watches. It never taps, types or wakes the
+   phone, and a look doesn't get in the way of a helper that's halfway
+   through a job. Steps taken by a schedule at 3 in the morning, or by
+   a watch on a spare phone, show up here too.
+
 4. A schedule on your phone: ask your bot *"every morning at 8, tell me
    my phone's battery"* and accept the card. If the phone is locked with
    a PIN at 8, the bot asks you to unlock it and waits; with only a swipe
@@ -1313,8 +1325,9 @@ with nothing to change.
    service, `sarathi-iphone` (`systemctl --user status sarathi-iphone`).
    `sarathi down` leaves it running. To stop it: `sparsh iphone --stop`.
 
-3. Try it the same way as step 3 above: the **Your phone** card's
-   phone panel shows the iPhone's screen, and
+3. Try it the same way as step 3 above: on the **Your phones** card's
+   page, **Look** under the iPhone shows its screen (a card that says
+   *not answering* means WebDriverAgent isn't running: step 2), and
    `podman exec sarathi-yantra yantra --prompt "On my iPhone, open
    Settings and tell me what the Battery row says."` asks the helper.
 
@@ -2113,6 +2126,7 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
 | Your schedules and their history | Samay's folder, `~/.samay/` |
 | What you're watching for, and what each watch saw | Prahari's folder, `~/.prahari/` (its inlet's key: `inlet.token` there, only you) |
+| What was done on each phone, your phone rules, and Sparsh's page key | Sparsh's folder, `~/.sparsh/` (each phone's steps in `phones/<phone>/actions.jsonl`; `rules.toml`; `page.token`, only you) |
 | What the helper remembers about you | `~/.local/state/yantra/`, or with Smritikosh on, its database (the `smritikosh-pgdata` volume) |
 | Your conversations on Yantra's page, for its **history** button | `~/.local/state/yantra/conversations.sqlite` |
 | Conversations kept as tests, and each night's result | `~/.local/state/yantra/tests/` (yours by agent; each person's under `people/`; last night in `last.json`) |

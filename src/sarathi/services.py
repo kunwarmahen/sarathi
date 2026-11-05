@@ -40,6 +40,10 @@ files:
                   --as <dvara.owner> --port <pages.dvara_port>, with
                   DVARA_TOKEN and DVARA_URL: the door's own token and
                   address, so your answers reach it; Samay, for schedules
+    sparsh  sparsh serve --port <pages.sparsh_port>, with [phone] on: your
+                  phones and every step done on each, whoever asked (with
+                  the phone's SPARSH_* settings, as Yantra's; on 0.0.0.0
+                  with [house])
     home    sarathi home --port <pages.home_port> [--also-host <dvara.window_host>,
                   when that is one address: people sign in from their phones]
     smritikosh  uvicorn smritikosh.api.main:app --port <smritikosh.port>, in its
@@ -387,7 +391,8 @@ OLD_NAMES = {"clock": "samay", "door": "dvara", "page": "yantra", "owner": "dvar
 PORT_SETTINGS = {"yantra": "yantra.port", "samay": "samay.port",
                  "prahari": "prahari.port", "dvara": "dvara.port",
                  "setu": "pages.setu_port", "dvara-page": "pages.dvara_port",
-                 "sarathi": "pages.sarathi_port", "smritikosh": "smritikosh.port",
+                 "sarathi": "pages.sarathi_port", "sparsh": "pages.sparsh_port",
+                 "smritikosh": "smritikosh.port",
                  "smritikosh-db": "smritikosh.db_port",
                  "smritikosh-ui": "smritikosh.dashboard_port", "ntfy": "dvara.ntfy_port"}
 
@@ -400,8 +405,9 @@ def sarathi_program() -> str:
 
 def page_services(config: Config, found: dict[str, Found], door_on: bool,
                   notes: list[str]) -> list[Service]:
-    """Setu's page, Dvara's owner page and the home page. Each prints its
-    address with its token on the line after the first, two spaces in."""
+    """Setu's page, Dvara's owner page, Sparsh's page (with [phone] on) and
+    the home page. Each prints its address with its token on the line
+    after the first, two spaces in."""
     pages, out = config.pages, []
     setu = found["setu"].program
     door = config.door
@@ -433,6 +439,16 @@ def page_services(config: Config, found: dict[str, Found], door_on: bool,
             # the door's token stays server-side in the page, never in a browser
             {DOOR_TOKEN: token, "DVARA_URL": f"http://{HOST}:{door.port}"},
             says_address="  "))
+    sparsh = found.get("sparsh")
+    if config.phone is not None and sparsh is not None and sparsh.program is not None:
+        # the phones' own page: it reads every phone the agents work, so it
+        # is told them as they are (SPARSH_PHONES, SPARSH_SPARE ...)
+        out.append(Service(
+            "sparsh", "sparsh",
+            [str(sparsh.program), "serve",
+             *(["--host", EVERYWHERE] if config.house is not None else []),
+             "--port", str(pages.sparsh_port)],
+            pages.sparsh_port, phone_env(config), says_address="  "))
     home = [sarathi_program(), "home", "--port", str(pages.home_port)]
     if (door_on or config.house is not None) and config.people_host():
         # the people in the house sign in from their phones (people.py)

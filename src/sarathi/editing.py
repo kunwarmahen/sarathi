@@ -336,7 +336,8 @@ def sarathi_view(config: Config) -> dict:
                     "people": list(config.watch_people)},
         "run": {"road": config.road},
         "pages": {"on": config.pages.on, "sarathi_port": config.pages.home_port,
-                  "setu_port": config.pages.setu_port, "dvara_port": config.pages.door_port},
+                  "setu_port": config.pages.setu_port, "dvara_port": config.pages.door_port,
+                  "sparsh_port": config.pages.sparsh_port},
         "dvara": None if door is None else {
             "port": door.port, "telegram": door.telegram, "owner": door.owner,
             "window_host": door.window_host, "window_port": door.window_port,
@@ -446,7 +447,9 @@ def sarathi_apply(changes: dict) -> Config:
             pages, on=bool(p.get("on", pages.on)),
             home_port=_num(p.get("sarathi_port"), "the home page's port") or pages.home_port,
             setu_port=_num(p.get("setu_port"), "Setu's page's port") or pages.setu_port,
-            door_port=_num(p.get("dvara_port"), "Dvara's page's port") or pages.door_port))
+            door_port=_num(p.get("dvara_port"), "Dvara's page's port") or pages.door_port,
+            sparsh_port=_num(p.get("sparsh_port"), "Sparsh's page's port")
+            or pages.sparsh_port))
     if "dvara" in changes:
         d = changes["dvara"]
         if d is None or d.get("on") is False:

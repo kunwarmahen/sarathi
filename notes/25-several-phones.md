@@ -153,5 +153,7 @@ nexus`, then `sarathi phone add nexus 192.168.1.160:5555`.
   (above). A task on each from Dvara hasn't run yet.
 * ~~One card per phone on the home page itself.~~ The card is *Your
   phones* and names each (*"nexus (Android), iphone (iPhone), and what
-  the agent did on each"*). It opens Yantra's phone panel, where each
-  phone has its own row, and where one can be picked by name.
+  the agent did on each"*). It opens Sparsh's own page, where each phone
+  has its own card with every step done on it, whoever asked, and a
+  **Look** at its screen ([Sparsh's notes/20](https://github.com/kunwarmahen/sparsh/blob/main/notes/20-a-page-for-the-phones.md)).
+  With `[pages] off` it still opens Yantra's phone panel.

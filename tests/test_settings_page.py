@@ -161,6 +161,16 @@ def test_the_house_is_set_and_cleared_from_the_page(owner_page):
     assert settings_mod.load().house is None
 
 
+def test_sparshs_page_port_is_set_from_the_page_and_written_down(owner_page):
+    view = json.loads(ask(owner_page, "/api/settings").text)["sarathi"]["pages"]
+    assert view["sparsh_port"] == 8794
+    status, _ = send(owner_page, "/api/settings/sarathi",
+                     {"pages": {"on": True, "sparsh_port": "8894"}})
+    assert status == 200
+    assert settings_mod.load().pages.sparsh_port == 8894
+    assert "sparsh_port = 8894" in settings_mod.settings_path().read_text()
+
+
 def test_a_key_goes_in_and_never_comes_back_out(owner_page):
     status, _ = send(owner_page, "/api/settings/key/TELEGRAM_TOKEN", {"value": "123:secret"})
     assert status == 200

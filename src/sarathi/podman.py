@@ -108,9 +108,13 @@ its actors file marks ``phone = true``.
 THE PAGES PEOPLE LOOK AT, with ``[pages] on`` (the default). Setu's page
 (``sarathi-setu``) and, with the door on, Dvara's owner page
 (``sarathi-dvara-page``) are two more containers from the same image, each
-published on 127.0.0.1 only. The owner page reaches the door by name on
-the network and holds the door's token from its own env file, so your
-answers from the browser get to the door; no other page holds it. The
+published on 127.0.0.1 only. With ``[phone] on``, Sparsh's page
+(``sarathi-sparsh``) is a third: it gets the phone's environment and
+folders as Yantra's page does (the adb socket, ``~/.android``,
+``~/.sparsh``), so it sees the same phones and reads the same step
+logs. The owner page reaches the door by name on the network and holds
+the door's token from its own env file, so your answers from the
+browser get to the door; no other page holds it. The
 HOME PAGE IS NOT A CONTAINER: Sarathi is not in the image, and from a
 container 127.0.0.1 is that container, so it could not see the other
 pages' ports. It is an ordinary user service (``sarathi-home.service``
@@ -215,6 +219,8 @@ WATCH_PORT = 8782
 #: Prahari's inlet alone, inside its container (the public road's).
 WATCH_INLET_PORT = 8783
 SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
+#: Sparsh's page, inside its container.
+SPARSH_PAGE_PORT = 8794
 SMRITIKOSH_PORT = 8080
 #: ntfy's own image (not Sarathi's: nothing of ours runs in it), pinned,
 #: and its port inside.
@@ -228,6 +234,7 @@ UNITS = {"samay": "sarathi-samay", "prahari": "sarathi-prahari", "dvara": "sarat
          "vaani": "sarathi-vaani",
          "yantra": "sarathi-yantra",
          "setu": "sarathi-setu", "dvara-page": "sarathi-dvara-page",
+         "sparsh": "sarathi-sparsh",
          "sarathi": "sarathi-home", "smritikosh-db": "sarathi-smritikosh-db",
          "smritikosh": "sarathi-smritikosh", "smritikosh-neo4j": "sarathi-smritikosh-neo4j",
          "smritikosh-mongodb": "sarathi-smritikosh-mongodb",
@@ -770,6 +777,7 @@ def lan_ports(config: Config) -> list[int]:
     if pages.on:
         ports += [pages.setu_port, pages.home_port]
         ports += [pages.door_port] if door is not None else []
+        ports += [pages.sparsh_port] if config.phone is not None else []
         shown = setu_window(config)
         ports += [int(shown[1])] if shown else []
     if config.remembers_in_smritikosh and kosh.dashboard:
@@ -984,6 +992,15 @@ def units(config: Config) -> dict[str, str]:
             extra_container=(f"PublishPort={phones}:{pages.setu_port}:{SETU_PAGE_PORT}\n"
                              if phones else "") + setu_window_lines(config),
             more_volumes=[folders] if folders else None)
+        if config.phone is not None:
+            # the phones' own page: the same phones and logs as Yantra's page
+            out[f"{UNITS['sparsh']}.container"] = _unit(
+                "Sarathi: Sparsh's page", UNITS["sparsh"],
+                f"{IN_IMAGE}/sparsh serve --host 0.0.0.0 --port {SPARSH_PAGE_PORT}",
+                f"127.0.0.1:{pages.sparsh_port}:{SPARSH_PAGE_PORT}", config,
+                extra_container=lan(config, pages.sparsh_port, SPARSH_PAGE_PORT)
+                + phone_env(config),
+                more_volumes=phone_dirs(config))
         if config.door is not None:
             door = config.door
             out[f"{UNITS['dvara-page']}.container"] = _unit(
@@ -1265,7 +1282,7 @@ def keyed_address(config: Config, name: str, url: str) -> str:
         except OSError:
             token = None
     else:
-        wanted = {"setu": "setu", "dvara-page": "dvara"}.get(name)
+        wanted = {"setu": "setu", "dvara-page": "dvara", "sparsh": "sparsh"}.get(name)
         page = next((p for p in pages(config) if p.name == wanted), None)
         token = page.token() if page else None
     return f"{url}#token={token}" if token else url
@@ -1481,6 +1498,8 @@ def up(config: Config) -> tuple[list[str], bool]:
         wanted.append(("setu", config.pages.setu_port))
         if config.door is not None:
             wanted.append(("dvara-page", config.pages.door_port))
+        if config.phone is not None:
+            wanted.append(("sparsh", config.pages.sparsh_port))
         wanted.append(("sarathi", config.pages.home_port))
     if dashboard_unit(config) is not None:
         wanted.append(("smritikosh-ui", config.smritikosh.dashboard_port))
@@ -1611,7 +1630,7 @@ def _address(config: Config, name: str, url: str) -> str:
         return clock_address(config) or url
     if name == "prahari":
         return watch_address(config) or url
-    if name in ("setu", "dvara-page", "sarathi"):
+    if name in ("setu", "dvara-page", "sparsh", "sarathi"):
         return keyed_address(config, name, url)
     return url
 
@@ -1620,7 +1639,7 @@ def down(remove: bool = False) -> list[str]:
     """Stop the units. They stay installed -- and so start again at the
     next login, which is what they are for -- unless ``remove``."""
     lines = retire_old()
-    for name in ("smritikosh-ui", "sarathi", "dvara-page", "setu", "yantra", "vaani",
+    for name in ("smritikosh-ui", "sarathi", "dvara-page", "sparsh", "setu", "yantra", "vaani",
                  "dvara", "ntfy", "prahari", "samay",
                  "smritikosh", "smritikosh-db", "smritikosh-neo4j", "smritikosh-mongodb",
                  "smritikosh-redis"):
@@ -1666,7 +1685,8 @@ def running(config: Config) -> list[dict]:
                        ("ntfy", config.door.ntfy_port if config.door else None),
                        ("dvara", door_port),
                        ("yantra", config.web_port), ("setu", pages.setu_port),
-                       ("dvara-page", pages.door_port), ("sarathi", pages.home_port),
+                       ("dvara-page", pages.door_port), ("sparsh", pages.sparsh_port),
+                       ("sarathi", pages.home_port),
                        ("smritikosh-ui", config.smritikosh.dashboard_port)):
         unit = UNITS[name]
         if port is None or not unit_file(name).exists():

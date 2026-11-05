@@ -800,3 +800,31 @@ def test_vaani_is_a_container_beside_dvara_its_answers_open_to_the_house(
     assert 8797 not in podman.lan_ports(voiced)
     off = podman.units(replace(voiced, voice_on=True, door=None))
     assert "sarathi-vaani.container" not in off          # it answers through Dvara
+
+
+# ---- Sparsh's page: the phones, on the podman road ------------------------------------
+
+def test_sparshs_page_is_a_container_that_sees_the_phones_yantras_page_sees(host, world):
+    from dataclasses import replace
+
+    from sarathi.config import NamedPhone, Phone
+
+    phones = Phone(named=(NamedPhone(name="nexus", address="192.168.1.160:5555", spare=True),
+                          NamedPhone(name="iphone", wda="http://127.0.0.1:8100")))
+    units = podman.units(replace(PAGES, phone=phones, pages=replace(PAGES.pages,
+                                                                    sparsh_port=8894)))
+    page = units["sarathi-sparsh.container"]
+    assert "sparsh serve --host 0.0.0.0 --port 8794" in page
+    assert "PublishPort=127.0.0.1:8894:8794" in page
+    yantra = units["sarathi-yantra.container"]
+    # the same phones, the same adb, the same folders (its logs, your rules)
+    for line in page.splitlines():
+        if line.startswith(("Environment=SPARSH_", "Environment=ADB_SERVER_SOCKET",
+                            "Volume=" + str(world / "home" / ".sparsh"))):
+            assert line in yantra.splitlines()
+    assert "Environment=SPARSH_SPARE=nexus" in page
+    assert f"Volume={world / 'home' / '.sparsh'}" in page
+
+
+def test_no_phone_no_sparsh_page(host, world):
+    assert "sarathi-sparsh.container" not in podman.units(PAGES)

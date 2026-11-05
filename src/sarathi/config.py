@@ -81,6 +81,9 @@ DEFAULT_VOICES = ("en_US-lessac-medium",)
 VOICE_NAME = re.compile(r"^[a-z]{2,3}_[A-Z]{2}-[A-Za-z0-9_]+-(x_low|low|medium|high)$")
 #: Each program's own page, and the home page linking them (`[pages]`).
 DEFAULT_HOME_PORT, DEFAULT_SETU_PAGE_PORT, DEFAULT_DOOR_PAGE_PORT = 8760, 8775, 8785
+#: Sparsh's page (with [phone] on): after Dvara's and Setu's windows
+#: (8790, 8791), Yantra's (8792) and ntfy (8793).
+DEFAULT_SPARSH_PAGE_PORT = 8794
 #: Window addresses that are not one address a phone can be sent to.
 NOT_ONE_ADDRESS = ("0.0.0.0", "::", "127.0.0.1", "localhost", "::1")
 #: Dvara's own defaults, used when [dvara] names no folder.
@@ -99,7 +102,7 @@ KNOWN: dict[str, set[str]] = {
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
              "window_port", "window_url", "owner", "ntfy", "ntfy_port", "voices",
               "whisper", "yolo"},
-    "pages": {"on", "sarathi_port", "setu_port", "dvara_port"},
+    "pages": {"on", "sarathi_port", "setu_port", "dvara_port", "sparsh_port"},
     "phone": {"on", "address", "wda", "awake"},
     "memory": {"via"},
     "house": {"name", "address"},
@@ -140,12 +143,14 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class Pages:
     """The pages `up` starts besides Yantra's and Samay's: Setu's, Dvara's
-    owner page (with the door on), and the home page linking them all."""
+    owner page (with the door on), Sparsh's (with [phone] on), and the
+    home page linking them all."""
 
     on: bool = True
     home_port: int = DEFAULT_HOME_PORT
     setu_port: int = DEFAULT_SETU_PAGE_PORT
     door_port: int = DEFAULT_DOOR_PAGE_PORT
+    sparsh_port: int = DEFAULT_SPARSH_PAGE_PORT
 
 
 @dataclass(frozen=True)
@@ -568,7 +573,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     pages = Pages(on=pages_table.get("on", True),
                   home_port=_port(pages_table, "sarathi_port", DEFAULT_HOME_PORT, "pages"),
                   setu_port=_port(pages_table, "setu_port", DEFAULT_SETU_PAGE_PORT, "pages"),
-                  door_port=_port(pages_table, "dvara_port", DEFAULT_DOOR_PAGE_PORT, "pages"))
+                  door_port=_port(pages_table, "dvara_port", DEFAULT_DOOR_PAGE_PORT, "pages"),
+                  sparsh_port=_port(pages_table, "sparsh_port", DEFAULT_SPARSH_PAGE_PORT,
+                                    "pages"))
     phone_table = data.get("phone", {})
     if not isinstance(phone_table.get("on", False), bool):
         raise ConfigError(f"{where}: phone.on must be true or false")
@@ -744,13 +751,15 @@ page_port = {config.voice_page_port}
 road = "{config.road}"
 
 # Each program's own page, started by `sarathi up`: Setu's (your accounts),
-# Dvara's (when Dvara is on), and Sarathi's own, which links them all
-# with Yantra's, Samay's and Prahari's -- bookmark that one.
+# Dvara's (when Dvara is on), Sparsh's (your phones, when the phone is
+# on below), and Sarathi's own, which links them all with Yantra's,
+# Samay's and Prahari's -- bookmark that one.
 [pages]
 on = {"true" if config.pages.on else "false"}
 sarathi_port = {config.pages.home_port}
 setu_port = {config.pages.setu_port}
 dvara_port = {config.pages.door_port}
+sparsh_port = {config.pages.sparsh_port}
 
 {_render_house(config.house)}
 {_render_backup(config.backup)}

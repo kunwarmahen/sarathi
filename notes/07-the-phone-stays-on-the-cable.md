@@ -47,10 +47,14 @@ starts.
 
 ## A card on the home page, pointing elsewhere
 
-Sparsh has no page. The phone is watched from the **phone panel** on
-Yantra's page: the phones, a picture of the screen beside the lines the
-agent reads, and every step the agent took. So the home page's **Your
-phone** card opens Yantra's page. It's only there when Sparsh was found.
+Sparsh had no page then. The phone was watched from the **phone panel**
+on Yantra's page: the phones, a picture of the screen beside the lines
+the agent reads, and every step the agent took. So the home page's
+**Your phone** card opened Yantra's page. It's only there when Sparsh
+was found. Sparsh has its own page now (`sparsh serve`, which `up`
+starts with `[phone] on`), and the card opens that one instead. It shows
+every step on each phone, whoever asked, and not just Yantra's chat's
+([Sparsh's notes/20](https://github.com/kunwarmahen/sparsh/blob/main/notes/20-a-page-for-the-phones.md)).
 
 ## Not in the containers
 

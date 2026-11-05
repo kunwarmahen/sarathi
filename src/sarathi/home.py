@@ -198,9 +198,9 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/page.css": ("page.css", "text/css; charset=utf-8"),
           "/favicon.svg": ("favicon.svg", "image/svg+xml")}
 #: Each program's own icon (a copy of its favicon.svg), shown on its card.
-#: Sparsh has none: its card opens Yantra's page. Smritikosh's (its
-#: dashboard's icon) is on the Memory card while memories are kept there.
-ICONS = ("yantra", "samay", "prahari", "vaani", "setu", "dvara")
+#: Smritikosh's (its dashboard's icon) is on the Memory card while
+#: memories are kept there.
+ICONS = ("yantra", "samay", "prahari", "vaani", "setu", "dvara", "sparsh")
 STATIC.update({f"/icons/{n}.svg": (f"icons/{n}.svg", "image/svg+xml")
                for n in (*ICONS, "smritikosh")})
 
@@ -284,22 +284,27 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
     over_wifi = config.road == "podman" and config.phone is not None \
         and bool(config.phone.addresses or config.phone.wdas or config.phone.named)
     if on_cable or over_wifi:
-        # Sparsh has no page of its own: the phone is watched from the
-        # panel on Yantra's page, so the card opens that page. On the
-        # podman road only with a Wi-Fi address or an iPhone's
+        # Sparsh's own page (`sparsh serve`, which `up` starts with [phone]
+        # on): each phone, and every step done on it, whoever asked. On
+        # the podman road only with a Wi-Fi address or an iPhone's
         # WebDriverAgent: a container can't reach a phone on a USB cable.
+        # With [pages] off nothing starts it, so the card opens the phone
+        # panel on Yantra's page, as it did before Sparsh had a page.
         named = config.phone.named if config.phone is not None else ()
-        if named:
-            # several, each by a name: the card says which (Yantra's panel
-            # shows each one's screen and steps)
-            which = ", ".join(f"{p.name} ({p.kind})" for p in named)
+        title = "Your phones" if named else "Your phone"
+        which = (", ".join(f"{p.name} ({p.kind})" for p in named) + ", and"
+                 if named else "Your phone and")
+        if config.pages.on and config.phone is not None:
+            sparsh_state = Path(env.get("SPARSH_STATE", "").strip()
+                                or home / ".sparsh").expanduser()
             found.append(Page(
-                "sparsh", "Your phones", f"{which}, and what the agent did on each: the "
-                "phone panel on Yantra's page.", config.web_port, **yantra))
+                "sparsh", title, f"{which} every step done on {'each' if named else 'it'}, "
+                "whoever asked: Sparsh's page.", config.pages.sparsh_port,
+                "SPARSH_PAGE_TOKEN", sparsh_state / "page.token"))
         else:
             found.append(Page(
-                "sparsh", "Your phone", "Your phone and what the agent did on it: the phone "
-                "panel on Yantra's page.", config.web_port, **yantra))
+                "sparsh", title, f"{which} what the agent did on {'each' if named else 'it'}: "
+                "the phone panel on Yantra's page.", config.web_port, **yantra))
     if door is not None:
         found.append(Page(
             "dvara", "Dvara", "Your door: the people on it, what they've spent, what "

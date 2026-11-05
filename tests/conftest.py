@@ -61,7 +61,8 @@ if args[-2:] == ["status", "--json"]:
 seen = os.environ["FAKE_SEEN"]
 keep = {{k: v for k, v in os.environ.items()
         if k.startswith(("YANTRA_", "SAMAY_", "OLLAMA_", "ANTHROPIC_", "OPENAI_",
-                          "DVARA_", "TELEGRAM_", "SETU_WINDOW_", "SETU_PAGE_"))}}
+                          "DVARA_", "TELEGRAM_", "SETU_WINDOW_", "SETU_PAGE_",
+                          "SPARSH_"))}}
 tag = name + ("-page" if "page" in args else "")
 with open(os.path.join(seen, tag + ".json"), "w") as out:
     json.dump({{"argv": args, "env": keep, "cwd": os.getcwd(), "at": time.monotonic()}}, out)
@@ -71,7 +72,7 @@ if os.environ.get("FAKE_CRASH") == name:
 port = int(args[args.index("--port") + 1])
 if name == "samay":
     print(f"page: http://127.0.0.1:{{port}}/#token=t0k3n", flush=True)
-if tag in ("setu", "dvara-page"):          # as `setu serve` and `dvara page` print it
+if tag in ("setu", "dvara-page", "sparsh"):  # as `setu serve`, `dvara page`, `sparsh serve`
     print(f"{{tag}}'s page:\\n  http://127.0.0.1:{{port}}/#token=k-{{tag}}", flush=True)
 http.server.HTTPServer(("127.0.0.1", port), http.server.SimpleHTTPRequestHandler).serve_forever()
 """
