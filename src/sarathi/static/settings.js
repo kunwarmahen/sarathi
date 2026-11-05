@@ -188,6 +188,7 @@ function drawPeopleTab() {
     const accounts = p.setu === "none" ? "no accounts" : p.setu === "own" ? "their own accounts"
       : `accounts in ${p.setu}${p.setu_manage ? " (may change them)" : ""}`;
     const bits = [agents, accounts,
+                  p.connectors ? `only ${p.connectors.join(", ")}` : null,
                   p.max_usd_per_day != null ? `$${p.max_usd_per_day} a day` : "no daily limit",
                   p.hours ? `answers ${p.hours}` : null,
                   p.zone ? `on ${p.zone} time` : null,
@@ -231,6 +232,11 @@ function personForm(p, isNew) {
                      [shared, "This computer's accounts (yours)"]],
                     p.setu && !["own", "none"].includes(p.setu) ? shared : (p.setu || "none"));
   const manage = check(p.setu_manage);
+  // Dvara's connectors =: which of those sign-ins their agents may use,
+  // and which /connect signs in to (a child: their school site, not the
+  // shops). Setu's names for them; blank is every one an agent asks for.
+  const sites = text((p.connectors || []).join(", "), { autocapitalize: "none",
+                                                         placeholder: "every one their agents ask for" });
   const rung = pick(Object.entries(RUNGS), p.permissions || "");
   const day = text(p.max_usd_per_day ?? "", { inputmode: "decimal", placeholder: "no limit" });
   const turn = text(p.max_usd_per_turn ?? "", { inputmode: "decimal", placeholder: "the agent's own" });
@@ -284,7 +290,9 @@ function personForm(p, isNew) {
           .map((c) => c.dataset.agent);
     save(`/api/settings/person/${encodeURIComponent(who)}`, {
       agents, setu: setu.value, setu_manage: setu.value !== "own" && setu.value !== "none"
-        && manage.checked, permissions: rung.value || null, max_usd_per_day: numOr(day),
+        && manage.checked,
+      connectors: setu.value === "none" || !listOf(sites).length ? null : listOf(sites),
+      permissions: rung.value || null, max_usd_per_day: numOr(day),
       max_usd_per_turn: numOr(turn), receipt: receipt.value || null,
       hours: hours.value.trim() || null, zone: zone.value.trim() || null,
       max_turns_per_day: numOr(turns),
@@ -302,6 +310,10 @@ function personForm(p, isNew) {
       h("label.inline", {}, allAgents, " Every agent"), h("div.checks", {}, ...agentBoxes)),
     field("Accounts their agents use", setu),
     h("label.inline", {}, manage, " They may connect and disconnect those from the chat"),
+    field("Sites and accounts they may use", sites, "Comma-separated, by Setu's names: " +
+          "gmail, google, amazon, or a server of their own by its name. Their agents use " +
+          "only these, and /connect signs them in to only these. Blank: every one their " +
+          "agents ask for."),
     field("Asking before changes", rung),
     field("Daily allowance (US dollars)", day),
     field("Most per message (US dollars)", turn),

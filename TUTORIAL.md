@@ -997,7 +997,11 @@ three boxes besides the allowance:
   buttons. They can't answer it, and if you don't, it's refused.
 
 *Agents they may use* and *Accounts their agents use* are the other two
-limits; give a child an agent made for them.
+limits; give a child an agent made for them. **Sites and accounts they
+may use** narrows those accounts to a few sites, by Setu's names
+(`google, khanacademy`): their agents use only those, even of their own
+sign-ins, and `/connect amazon` from them is refused. Blank is every one
+their agents ask for.
 
 **Answers read aloud**, on the same form, is for anyone: *When they sent
 a voice note* (the usual), *Every answer* (someone who'd rather listen
