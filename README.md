@@ -1020,7 +1020,8 @@ Every program says its own the same way, in `--version` and as
 road the versions are the image's own: `sarathi image` writes what it
 built from as a label on the image (`sarathi.build`), read back with no
 container started, and each checkout is shown against it ("1 newer in
-the checkout"). The image has no git, so the build also puts a `VERSION`
+the checkout"), with those commits listed under it by their first
+lines, newest first. The image has no git, so the build also puts a `VERSION`
 file at the top of each project in it, which each program reads there.
 On plain programs, each running program on the commit its checkout was
 on when `up` started it, against the checkout now (*running since Fri
@@ -1384,7 +1385,8 @@ src/sarathi/
                 Samay's backup road  (notes/29)
   version.py    sarathi version: each project's version (the day of its
                 last commit and that day's count) and commit running, the
-                image's label against each checkout now; `sarathi
+                image's label against each checkout now, the newer
+                commits by name; `sarathi
                 --version`; the footer's line and the Version card in
                 Settings → Check  (notes/32)
   door.py       sarathi dvara: dvara turned on, its tokens, starter files,

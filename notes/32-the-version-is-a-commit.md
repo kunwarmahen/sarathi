@@ -105,6 +105,28 @@ line counts commits, as everywhere here.
 Sarathi itself runs from its own checkout on both roads: the home page
 is a user service, not a container. Its line is that checkout.
 
+## The newer commits, by name
+
+"2 newer" says how many, and the question was never how many: it was
+*is my fix one of them?* So a row with newer commits lists them under
+it, newest first: short id, day, first line (`git log since..HEAD`).
+The newest 20 at most, and a count of the rest, because a checkout two
+weeks ahead of its image is a reason to rebuild, not to read a page of
+subjects:
+
+```
+  yantra     2026.11.04.2  6e9a9c2  feat(skills): an empty answer is kept only with p…  -- running since Wed 04 Nov 22:41, 2 newer in the checkout
+             + c34dbb3  Thu 05 Nov 11:04  feat(sparsh): the phone's log is told who asked for each step
+             + 2c14c50  Thu 05 Nov 10:15  docs(phone): the phone panel beside the chat, the phones on Sparsh's page
+```
+
+**THE COMMITS ARE THE CHANGELOG.** Every first line here is written for
+a reader already: what changed, as a sentence. A changelog kept by hand
+beside them would say the same thing later and less exactly, and be
+wrong the first time somebody forgot it. The Version card folds the
+list under *What's in the 2 newer*, so a long one doesn't push
+**Rebuild and restart** off a phone's screen.
+
 ## Shape
 
 `sarathi version --json` prints `sarathi.version.v1`:
@@ -116,7 +138,9 @@ is a user service, not a container. Its line is that checkout.
                "running": {"commit": "a65654e", "version": "2026.10.25.1",
                            "date": 1761390000,
                            "subject": "feat(remembering): ...", "left_out": 0},
-               "now": {"commit": "9c1e0aa", ...}, "newer": 2}, ...]}
+               "now": {"commit": "9c1e0aa", ...}, "newer": 2,
+               "changes": [{"commit": "9c1e0aa", "date": 1761400000,
+                            "subject": "fix(telegram): ..."}, ...]}, ...]}
 ```
 
 `GET /api/version` on the home page answers the same with a `said`
@@ -156,8 +180,9 @@ opened Settings → Check.
   program is on the commit it started with (above). Not run on this
   house, which is on containers: the tests drive a real git checkout
   with a program "started" between two commits.
-* **No changelog.** "2 newer" says how many; `git log` in the checkout
-  says which. The page doesn't list them.
+* ~~**No changelog.**~~ The newer commits are listed by name (above).
+  Not a changelog of what is already running: that is `git log` in the
+  checkout, and nothing on the page needs it.
 * **No release numbers.** A day and a count say when, not how big a
   change was: nothing here says "this one breaks things". Everything
   ships together in one image, so nobody installs one project against

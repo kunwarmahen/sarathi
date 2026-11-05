@@ -937,6 +937,19 @@ function versionCard() {
     body);
 }
 
+// What the newer commits are, by name: what the next rebuild or restart
+// takes in. Folded, so a long list doesn't push the buttons off the screen.
+function newerList(p) {
+  const day = (unix) => new Date(unix * 1000).toLocaleString([], {
+    weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const more = p.newer - p.changes.length;
+  return h("details.version-changes", {},
+    h("summary", {}, `What's in the ${p.newer} newer`),
+    h("ul", {}, ...p.changes.map((c) => h("li", {}, h("code.meta", {}, c.commit), " ",
+      h("span.meta", {}, day(c.date)), " ", c.subject)),
+      more > 0 ? h("li.meta", {}, `and ${more} older: git log in the checkout`) : null));
+}
+
 async function showVersion(body) {
   let got;
   try { got = await api("/api/version"); }
@@ -972,7 +985,8 @@ async function showVersion(body) {
     return h("div.version-row", {}, h("strong", {}, p.name),
       h("code.version-number", {}, run.version || "?"), h("code.meta", {}, run.commit),
       h("span.version-subject", {}, run.subject),
-      extra.length ? h("span.version-note", {}, extra.join(" · ")) : null);
+      extra.length ? h("span.version-note", {}, extra.join(" · ")) : null,
+      p.changes && p.changes.length ? newerList(p) : null);
   });
   const acts = [];
   if (podmanRoad && (got.projects.some((p) => p.newer) || (got.image && !got.image.exists)

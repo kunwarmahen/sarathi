@@ -1998,8 +1998,9 @@ the home page, which opens **Settings → Check → Version**) shows which
 version of each project is running. A version is the day of the last
 commit and that day's count: `2026.10.25.3` is the third change made on
 25 October. On containers it's what the image was built from, and "2
-newer in the checkout" means you changed things since: **Rebuild and
-restart** takes them in. Each program also answers `--version`, for
+newer in the checkout" means you changed things since. Under it,
+**What's in the 2 newer** lists those changes by name, so you can see
+whether your fix is one of them. **Rebuild and restart** takes them in. Each program also answers `--version`, for
 example `dvara --version`.
 
 **Check every morning at** (next to it, with a time box that says 07:30)

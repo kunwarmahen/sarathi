@@ -31,6 +31,13 @@ checkout was on at that moment, and the commits made since are counted
 against it, as an image's are. One not running is the checkout as it
 is, uncommitted changes and all.
 
+THE NEWER COMMITS BY NAME. "3 newer" says how many, not whether the fix
+you are waiting for is one of them; so each row with newer commits lists
+them too (``changes``): short id, day and first line, newest first, the
+newest 20 at most and a count of the rest. The first line is what the
+commit says it did, written for a reader -- a changelog nobody keeps by
+hand, because the commits already are one.
+
 SARATHI ITSELF runs from its own checkout on both roads (the home page
 is a user service, not a container), so its line is that checkout.
 
@@ -123,6 +130,26 @@ def newer(repo: Path, since: str) -> int | None:
     said = _git(["git", "-C", str(repo), "rev-list", "--count", f"{since}..HEAD"])
     out = said.stdout.strip()
     return int(out) if said.returncode == 0 and out.isdigit() else None
+
+
+#: The newer commits a row lists by name; a count says the rest.
+CHANGES_AT_MOST = 20
+
+
+def changes(repo: Path, since: str) -> list[dict[str, Any]]:
+    """The commits in the checkout after ``since``, newest first: each
+    one's short id, day and first line -- what a rebuild or restart takes
+    in, by name. Empty when there are none or git can't say."""
+    said = _git(["git", "-C", str(repo), "log", f"-{CHANGES_AT_MOST}",
+                 "--format=%h%x00%ct%x00%s", f"{since}..HEAD"])
+    if said.returncode != 0:
+        return []
+    out = []
+    for line in said.stdout.splitlines():
+        parts = line.split("\0")
+        if len(parts) == 3 and parts[1].isdigit():
+            out.append({"commit": parts[0], "date": int(parts[1]), "subject": parts[2]})
+    return out
 
 
 def build_label(found: dict[str, Path]) -> dict[str, Any]:
@@ -253,6 +280,8 @@ def report(config: Any, started: dict[str, str] | None = None) -> dict[str, Any]
             running = commit(repo, rev) if rev else now
             count = newer(repo, rev) if rev else 0
         row = {"name": name, "running": running, "now": now, "newer": count}
+        if count and repo is not None and running:
+            row["changes"] = changes(repo, running["commit"])
         if road != "podman" and (started or {}).get(name):
             row["started"] = started[name]
         projects.append(row)
@@ -321,6 +350,12 @@ def text(got: dict[str, Any]) -> str:
         elif got["road"] == "podman" and p["now"] and p["newer"] is None and not p.get("here"):
             line += f"  -- the checkout is on {p['now']['commit']}, not after it"
         lines.append(line)
+        for change in p.get("changes") or []:
+            lines.append(f"  {'':<11}+ {change['commit']:<9}{_day(change['date'])}  "
+                         f"{change['subject']}")
+        if p.get("newer") and p["newer"] > len(p.get("changes") or []):
+            lines.append(f"  {'':<11}+ {p['newer'] - len(p['changes'])} older "
+                         "(git log in the checkout)")
     if any(p.get("newer") for p in got["projects"]):
         lines.append("the next `sarathi image && sarathi up` takes in the newer commits"
                      if got["road"] == "podman" else

@@ -388,10 +388,13 @@ button.danger:hover { color: var(--clay); border-color: var(--clay); }
 .version-row code { font: 12.5px var(--mono); }
 .version-subject { min-width: 0; overflow-wrap: anywhere; }
 .version-note { grid-column: 2 / -1; color: var(--accent); font-size: 12.5px; }
+.version-changes { grid-column: 2 / -1; font-size: 12.5px; }
+.version-changes ul { margin: 4px 0 0; padding-left: 1.2em; }
+.version-changes li { margin: 2px 0; overflow-wrap: anywhere; }
 @media (max-width: 520px) {
   .doctor-line { grid-template-columns: 1fr; gap: 4px; }
   .version-row { grid-template-columns: 7.5em 1fr; }
-  .version-subject, .version-note { grid-column: 1 / -1; }
+  .version-subject, .version-note, .version-changes { grid-column: 1 / -1; }
 }
 
 /* -- the page: a list of conversations beside the chat, as a chat app is ---- */

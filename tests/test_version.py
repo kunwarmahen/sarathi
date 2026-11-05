@@ -153,6 +153,27 @@ def test_on_containers_the_image_says_and_newer_commits_are_counted(checkouts, t
     assert "2 newer in the checkout" in said and "sarathi image && sarathi up" in said
 
 
+def test_the_newer_commits_are_named_not_only_counted(checkouts, tmp_path, monkeypatch):
+    into = tmp_path / "context"
+    podman.stage(into)
+    stamp = label_of(into)
+    fix = commit(checkouts / "samay", "samay: the fix you waited for")
+    newest = commit(checkouts / "samay", "samay: and a doc after it")
+    answer_podman(monkeypatch, {version.LABEL: json.dumps(stamp)})
+    monkeypatch.setattr(version, "CHANGES_AT_MOST", 1)
+    got = version.report(Config("ollama", road="podman", pages=Pages(on=False)))
+    samay = next(p for p in got["projects"] if p["name"] == "samay")
+    # newest first, only as many as asked, and the rest still counted
+    assert [c["commit"] for c in samay["changes"]] == [newest]
+    assert samay["changes"][0]["subject"] == "samay: and a doc after it"
+    assert samay["newer"] == 2 and fix
+    said = version.text(got)
+    assert f"+ {newest}" in said and "samay: and a doc after it" in said
+    assert "+ 1 older (git log in the checkout)" in said
+    # a project with nothing newer lists nothing
+    assert "changes" not in next(p for p in got["projects"] if p["name"] == "setu")
+
+
 def test_an_image_from_before_the_label_is_said_to_be_one(checkouts, monkeypatch):
     answer_podman(monkeypatch, None)
     got = version.report(Config("ollama", road="podman", pages=Pages(on=False)))
