@@ -290,21 +290,22 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
         # WebDriverAgent: a container can't reach a phone on a USB cable.
         # With [pages] off nothing starts it, so the card opens the phone
         # panel on Yantra's page, as it did before Sparsh had a page.
+        # Called Sparsh, like every other card by its program's name; the
+        # line under it says whose phones they are.
         named = config.phone.named if config.phone is not None else ()
-        title = "Your phones" if named else "Your phone"
-        which = (", ".join(f"{p.name} ({p.kind})" for p in named) + ", and"
+        which = ("Your phones, " + ", ".join(f"{p.name} ({p.kind})" for p in named) + ", and"
                  if named else "Your phone and")
+        each = "each" if named else "it"
         if config.pages.on and config.phone is not None:
             sparsh_state = Path(env.get("SPARSH_STATE", "").strip()
                                 or home / ".sparsh").expanduser()
             found.append(Page(
-                "sparsh", title, f"{which} every step done on {'each' if named else 'it'}, "
-                "whoever asked: Sparsh's page.", config.pages.sparsh_port,
-                "SPARSH_PAGE_TOKEN", sparsh_state / "page.token"))
+                "sparsh", "Sparsh", f"{which} every step done on {each}, with who asked.",
+                config.pages.sparsh_port, "SPARSH_PAGE_TOKEN", sparsh_state / "page.token"))
         else:
             found.append(Page(
-                "sparsh", title, f"{which} what the agent did on {'each' if named else 'it'}: "
-                "the phone panel on Yantra's page.", config.web_port, **yantra))
+                "sparsh", "Sparsh", f"{which} what the agent did on {each}: the phone "
+                "panel on Yantra's page.", config.web_port, **yantra))
     if door is not None:
         found.append(Page(
             "dvara", "Dvara", "Your door: the people on it, what they've spent, what "

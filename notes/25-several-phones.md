@@ -143,7 +143,7 @@ iphone: iPhone at http://127.0.0.1:8100 -- answers
 nexus: Android at 84B7N16128001616 -- not answering
 ```
 
-The home page's *Your phones* card shows that same line under it, asked
+The home page's *Sparsh* card shows that same line under it, asked
 again every 30 seconds. The fix for this Nexus is `sarathi phone remove
 nexus`, then `sarathi phone add nexus 192.168.1.160:5555`.
 
@@ -151,9 +151,9 @@ nexus`, then `sarathi phone add nexus 192.168.1.160:5555`.
 
 * ~~A real iPhone named beside a real Android.~~ Both named and checked
   (above). A task on each from Dvara hasn't run yet.
-* ~~One card per phone on the home page itself.~~ The card is *Your
-  phones* and names each (*"nexus (Android), iphone (iPhone), and what
-  the agent did on each"*). It opens Sparsh's own page, where each phone
-  has its own card with every step done on it, whoever asked, and a
+* ~~One card per phone on the home page itself.~~ The card is *Sparsh*
+  and names each (*"Your phones, nexus (Android), iphone (iPhone), and
+  every step done on each, with who asked"*). It opens Sparsh's own page, where each phone
+  has its own card with every step done on it and who asked for it, and a
   **Look** at its screen ([Sparsh's notes/20](https://github.com/kunwarmahen/sparsh/blob/main/notes/20-a-page-for-the-phones.md)).
   With `[pages] off` it still opens Yantra's phone panel.

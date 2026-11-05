@@ -185,8 +185,8 @@ def test_the_home_card_names_each_phone(world, monkeypatch):
     program(world / "bin", "sparsh")
     card = next(p for p in pages(Config("ollama", road="podman", pages=Pages(on=False),
                                         phone=TWO)) if p.name == "sparsh")
-    assert card.title == "Your phones"
-    assert card.purpose.startswith("nexus (Android), iphone (iPhone), and what")
+    assert card.title == "Sparsh"
+    assert card.purpose.startswith("Your phones, nexus (Android), iphone (iPhone), and what")
 
 
 # -- a spare phone: a watch may read a page on it unasked ------------------------------

@@ -582,7 +582,7 @@ The image has `adb` and Sparsh; the page and Dvara mount `~/.android`
 (so the key this computer paired with is theirs, and nothing is paired
 twice) and `~/.sparsh` (so your rules hold inside), and Sparsh
 reconnects to `[phone] address` whenever it looks for phones. The home
-page's **Your phone** card appears there once an address is set.
+page's **Sparsh** card appears there once an address is set.
 Rebuild the image (`sarathi image`) to get adb and Sparsh into it
 ([notes/08](notes/08-the-phone-over-wifi.md)).
 
@@ -1122,12 +1122,16 @@ Dvara's (`dvara page`), and with `[phone] on`, Sparsh's (`sparsh serve`).
 Each card carries that program's own icon, the same one its browser tab
 shows (Sarathi keeps a copy of each under `static/icons/`); the Memory card
 carries Smritikosh's while your memories are kept there.
-With Sparsh found (on the Podman road, once `[phone] address` or `wda` is set), a **Your phone** card
-(**Your phones** when they have names) opens Sparsh's own page: each
-phone, whether it answers and why not, its screen when you press
-**Look**, and every step done on it, whoever asked for it. That covers
-Yantra's chat, a schedule, a watch on a spare phone and someone on
-Dvara's door. The page only watches; it never taps
+With Sparsh found (on the Podman road, once `[phone] address` or `wda` is set), a **Sparsh** card
+(the line under it names your phones) opens Sparsh's own page. It shows
+each phone, whether it answers and why not, its screen when you press
+**Look**, and every step done on it **with who asked for it**: *Yantra's
+page*, *Samay: Tell me my battery (bfaea182)*, *Prahari: Mayfield ice
+cream*, *Telegram · asha*, *Vaani: kitchen puck · asha*. Samay and
+Prahari say which schedule or watch; Dvara adds the person, and the
+way the turn came in. A step done after a yes says where the yes came
+from. The page can show one program's steps only. It only watches; it
+never taps
 ([Sparsh's notes/20](https://github.com/kunwarmahen/sparsh/blob/main/notes/20-a-page-for-the-phones.md)).
 With `[pages] on = false` nothing starts that page, so the card opens
 the phone panel on Yantra's page instead. Each

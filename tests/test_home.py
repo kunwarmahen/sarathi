@@ -284,7 +284,7 @@ def test_a_phone_card_opens_yantras_page_when_sparsh_is_here(world, keys):
     assert "sparsh" not in names(config(keys))
     program(world / "bin", "sparsh")
     card = next(p for p in pages(config(keys)) if p.name == "sparsh")
-    assert card.title == "Your phone" and card.port == 8321 and card.token() is None
+    assert card.title == "Sparsh" and card.port == 8321 and card.token() is None
     assert "phone panel on Yantra's page" in card.purpose
 
 

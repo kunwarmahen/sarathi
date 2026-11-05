@@ -71,9 +71,10 @@ def test_the_phone_card_opens_sparshs_page_signed_in(stage, monkeypatch):
     (kept / "page.token").write_text("k-sparsh-kept-0123456789\n")
     monkeypatch.setenv("SPARSH_STATE", str(kept))
     card = next(p for p in pages(load()) if p.name == "sparsh")
-    assert card.title == "Your phones" and card.port == ports["sparsh"]
+    assert card.title == "Sparsh" and card.port == ports["sparsh"]
     assert card.token() == "k-sparsh-kept-0123456789"
-    assert "every step done on each, whoever asked" in card.purpose
+    assert card.purpose.startswith("Your phones, nexus (Android), pixel (Android), and every "
+                                    "step done on each, with who asked")
 
 
 def test_the_owner_page_gets_the_doors_token_and_address_and_asks_as_the_owner(

@@ -47,7 +47,7 @@ Telegram, is Step 6, when you want it. Sparsh, which lets the helper
 work an Android phone plugged into this computer, is optional: install
 it (its SETUP.md) and Sarathi finds it, and Yantra's page gets a phone
 panel. `sarathi phone` turns it on for Dvara too, and gives your phones
-a page of their own (Sparsh's, on the home page's **Your phones** card), and on the
+a page of their own (Sparsh's, on the home page's **Sparsh** card), and on the
 containers' road it reaches the phone over Wi-Fi. Smritikosh, a memory
 that finds things by meaning, is optional too: Step 7, when the helper
 starts forgetting things you told it. And Prahari, which tells you when
@@ -1242,10 +1242,12 @@ a USB cable, so they reach the phone over your Wi-Fi.
    like a pin on a map, see Dvara's tutorial §18.
 
    Now see what happened on the phone. On the home page, **Your pages →
-   Your phone → Open** opens Sparsh's page. Each phone has a card that
+   Sparsh → Open** opens Sparsh's page. Each phone has a card that
    says whether it answers (and if not, what to do). Under it is every
-   step done on it, newest first: the Settings look from the computer,
-   the Call held for your yes from Telegram, *held* in amber. Press
+   step done on it, newest first, with who asked: the Settings look
+   from the computer says *Yantra*, the Call held for your yes says
+   *Telegram · you* (your name in Dvara), *held* in amber. **Show steps
+   asked for by** keeps one program's steps only. Press
    **Look** to see the screen as it is now, with a picture and the
    battery. The page only watches. It never taps, types or wakes the
    phone, and a look doesn't get in the way of a helper that's halfway
@@ -1325,7 +1327,7 @@ with nothing to change.
    service, `sarathi-iphone` (`systemctl --user status sarathi-iphone`).
    `sarathi down` leaves it running. To stop it: `sparsh iphone --stop`.
 
-3. Try it the same way as step 3 above: on the **Your phones** card's
+3. Try it the same way as step 3 above: on the **Sparsh** card's
    page, **Look** under the iPhone shows its screen (a card that says
    *not answering* means WebDriverAgent isn't running: step 2), and
    `podman exec sarathi-yantra yantra --prompt "On my iPhone, open
