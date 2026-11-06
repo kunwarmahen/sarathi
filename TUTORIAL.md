@@ -1173,7 +1173,7 @@ every sign-in, and if Google stopped one, the person whose account it is
 gets a message saying so, with what to send to fix it. And when a
 conversation goes quiet for half an hour, an agent that remembers sends
 what it noticed about you (*"Lives in Raleigh"*), and keeps it only if
-you answer `/remember 1`.
+you press **Keep** under it (or answer `/remember 1`).
 
 **Kept without asking, and told.** If your permissions are *Never
 asked* (`yolo`), the agent can keep something you said without asking
@@ -1188,8 +1188,14 @@ already kept, rather than saying nothing.
 under the 🔔 as a numbered list. On the home page you don't need to
 type `/remember 1`: each fact has **Keep** and **No** beside it, and
 **Keep all** / **None of these** when there are several. The agent's
-answer (*Kept: …*) appears under the notice. On Telegram, type
-`/remember 1` (it's in the `/` menu), or `/remember not 1`.
+answer (*Kept: …*) appears under the notice. On Telegram the notice
+has the same buttons (**Keep 1**, **No 1**, … and **Keep all** /
+**None of these**), and the answer comes into the chat. On your phone's
+ntfy notification there's room for three buttons, so one fact gets
+**Keep** and **No**, and several get **Keep all** and **None of these**;
+to keep only some of several, use the page or type `/remember 1`. A
+button pressed late never keeps the wrong fact: if that one was already
+answered, it says so.
 
 **Said no by mistake?** `/remember not 2` means "never offer that
 again", and the numbers move as you keep things, so it's easy to turn
