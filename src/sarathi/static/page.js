@@ -603,12 +603,44 @@ async function drawPeople() {
 // draws nothing: the greeting shows instead), and a conversation opened
 // again starts it over with that conversation's own words. What was sent
 // to you unasked goes to the bell (Notices), not between your words.
+// EACH CONVERSATION IS ITS OWN CHAT. Dvara runs each in a chat of its own,
+// so one can answer while you ask in another: every line says its
+// conversation, and the window draws only its own (chat.conv); the others
+// are marked working in the list. A new chat's first words go as new and
+// Dvara hands its id back on the line.
 
 const CHAT_EVERY = 3000;
 const CHAT_BUSY_EVERY = 700;
 const chat = { on: false, last: 0, timer: null, agents: [], sending: false, busy: false,
                lessons: [], voice: false, reading: null, title: "", waiting: 0,
-               carried: false };
+               carried: false,
+               // the conversation the window shows (null: a new chat), whether
+               // its first words are on their way, whether the window shows
+               // lines from before lines said their conversation, and which
+               // conversations are answering now
+               conv: null, starting: false, legacy: false, working: new Set() };
+
+// Is this line the window's? Lines of another conversation are not drawn
+// here; a new chat (or one from before) takes the first one that is its.
+function forWindow(ln) {
+  if (!ln.conversation) return !chat.conv;
+  if (chat.conv) return ln.conversation === chat.conv;
+  if (chat.starting || (chat.legacy && ln.who === "agent")) {
+    chat.conv = ln.conversation; chat.starting = false; chat.legacy = false;
+    return true;
+  }
+  return false;
+}
+
+// Opened afresh: the window is the conversation of the newest line (none
+// after a /new), and only its lines are drawn.
+function pickWindow(lines) {
+  const said = lines.filter((ln) => ln.who !== "notice");
+  const last = said[said.length - 1];
+  if (!last || last.fresh) return;
+  if (last.conversation) chat.conv = last.conversation;
+  else chat.legacy = true;
+}
 
 function api(path, body) {
   const init = { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" };
@@ -1013,18 +1045,25 @@ function draw(data) {
   const live = document.getElementById("live") || h("div", { id: "live" });
   const running = data.live || [];
   let changed = false;
-  if (!chat.last && !chat.carried) { box.replaceChildren(live); chat.title = ""; }
+  if (!chat.last && !chat.carried) {
+    box.replaceChildren(live); chat.title = "";
+    if (!chat.conv) pickWindow(data.lines);
+  }
   if (data.lines.length) {
     const fresh = Boolean(chat.last);   // lines that came while the page was open
     for (const ln of data.lines) {
       if (ln.who === "notice") { lookNotices(); continue; }   // the bell's
       changed = true;
+      if (!forWindow(ln)) continue;     // another conversation's: the list's
       // /new's answer: the window starts over, and says nothing itself
       if (ln.fresh) {
         queued.length = 0; stopVoice(); box.replaceChildren(live); chat.title = "";
+        chat.conv = null;
         continue;
       }
       if (ln.transcript) {
+        // /chats N typed here: this window is that conversation now
+        if (ln.moved_to) chat.conv = ln.moved_to;
         // carried on from the list: the reading is already the window
         if (chat.carried) { chat.carried = false; continue; }
         // back in an old one: its words are the window now
@@ -1048,8 +1087,22 @@ function draw(data) {
     chat.last = data.lines[data.lines.length - 1].id;
   }
   if (!live.isConnected) box.append(live);
-  live.replaceChildren(...running.map(liveView));
-  for (const lv of running) if (lv.heard) heardOnYours(lv.heard);
+  const mine = (lv) => (lv.conversation ? lv.conversation === chat.conv : !chat.conv);
+  live.replaceChildren(...running.filter(mine).map(liveView));
+  for (const lv of running.filter(mine)) if (lv.heard) heardOnYours(lv.heard);
+  // one read from the list that is answering here too: its working shows under it
+  const reading = chat.reading && running.filter((lv) => lv.conversation === chat.reading.id);
+  const under = document.getElementById("past-live");
+  if (reading && reading.length) {
+    const el = under || h("div", { id: "past-live" });
+    if (!el.isConnected) document.getElementById("past").append(el);
+    el.replaceChildren(...reading.map(liveView));
+  } else if (under) under.remove();
+  const working = new Set(data.working || []);
+  const moved = [...working].some((c) => !chat.working.has(c))
+    || [...chat.working].some((c) => !working.has(c));
+  chat.working = working;
+  if (moved) { drawConvsMark(); lookConvs(); }
   if (atEnd || data.lines.some((l) => l.who === "you")) box.scrollTop = box.scrollHeight;
   document.getElementById("waiting").replaceChildren(
     ...data.asks.map(askView), ...data.holds.map(holdView));
@@ -1057,8 +1110,9 @@ function draw(data) {
   drawBell();
   chat.lessons = data.lessons || [];
   drawLesson();
+  const here = running.filter(mine).map((lv) => lv.agent);
   document.getElementById("chat-state").textContent =
-    data.busy.length ? `${data.busy.join(", ")} is working…` : "";
+    here.length ? `${here.join(", ")} is working…` : "";
   const wasBusy = chat.busy;
   chat.busy = data.busy.length > 0;
   drawHello();
@@ -1072,7 +1126,7 @@ function draw(data) {
 function chatTitle() {
   if (chat.reading) return chat.reading.title;
   // Dvara's own title when it has one (a name you gave it, too)
-  const here = chat.title ? openHere() : null;
+  const here = chat.conv ? past.rows.find((r) => r.id === chat.conv) : null;
   return (here && here.title) || chat.title || "New chat";
 }
 
@@ -1201,15 +1255,21 @@ async function send(text) {
     // one go -- waiting, not refusing, while the one before still answers
     // (it stays open where else it was)
     const row = chat.reading;
-    const into = row && !row.here ? { conversation: row.id } : {};
+    const conv = row ? row.id : chat.conv;
+    // a window from before lines said their conversation goes on as it was;
+    // an empty one starts a new conversation in a chat of its own
+    const into = conv ? { conversation: conv } : chat.legacy ? {} : { new: true };
     // the reading below is the window now: no look may empty it
-    if (into.conversation) chat.carried = true;
+    if (row && row.id !== chat.conv) chat.carried = true;
+    if (into.new) chat.starting = true;
     const to = row ? row.agent : agent;
     if (row) {
       // the window goes on from the reading as it was drawn: its name,
       // its tools, its answers as written
       const box = document.getElementById("lines");
-      if (!row.here) box.replaceChildren();
+      if (row.id !== chat.conv) box.replaceChildren();
+      chat.conv = row.id; chat.legacy = false;
+      document.getElementById("past-live")?.remove();
       const live = document.getElementById("live") || h("div", { id: "live" });
       if (!live.isConnected) box.append(live);
       for (const el of [...document.getElementById("past").children]) box.insertBefore(el, live);
@@ -1218,14 +1278,19 @@ async function send(text) {
     stopReading();
     const files = await Promise.all(chosen.map(async (f) => ({ name: f.name,
                                                                data: await asBase64(f) })));
-    await api("/api/chat", files.length ? { agent: to, text, files, ...into }
-                                         : { agent: to, text, ...into });
+    const said = await api("/api/chat", files.length ? { agent: to, text, files, ...into }
+                                                       : { agent: to, text, ...into });
+    // a new chat's id, from Dvara: its lines are this window's
+    if (into.new && said.line && said.line.conversation) {
+      chat.conv = said.line.conversation; chat.starting = false;
+    }
     chosen.length = 0;
     drawChosen();
     problem("");
     chat.busy = true;
     return true;
   } catch (err) {
+    chat.starting = false;
     problem(err.message);
     return false;
   } finally {
@@ -1545,7 +1610,7 @@ async function lookConvs() {
       // aged out, or it was opened elsewhere): shown, so nothing written
       // lands in a conversation the page called new
       const here = openHere();
-      if (here && !past.q && !chat.reading && !chat.sending
+      if (here && !chat.legacy && !past.q && !chat.reading && !chat.sending
           && !document.querySelector("#lines > .line") && !document.querySelector("#live > *")) {
         openPast(here);
       }
@@ -1582,8 +1647,10 @@ function drawConvsMark() {
   for (const el of document.querySelectorAll(".conv")) {
     const r = past.rows.find((x) => x.id === el.dataset.id);
     const current = onChat && r && (chat.reading ? chat.reading.id === r.id
-      : r.here && r.agent === agent && Boolean(chat.title));
+      : r.id === chat.conv && r.agent === agent);
     el.setAttribute("aria-current", String(Boolean(current)));
+    // answering now, in its own chat, while you're in another
+    el.classList.toggle("working", chat.working.has(el.dataset.id));
   }
 }
 
@@ -1638,17 +1705,28 @@ function rowMenu(r, row) {
     }));
   }
   items.push(h("hr"));
-  const del = menuItem("Delete", r.open ? "It's open in a chat now: start a new chat there first" : null,
+  // open on Telegram or a puck: its next turn there would write it again;
+  // still answering here: once it has answered
+  const busy = r.open ? "It's open in a chat now: start a new chat there first"
+    : chat.working.has(r.id) ? "It's answering now: delete it once it has answered" : null;
+  const del = menuItem("Delete", busy,
     async () => {
       if (!confirm(`Delete “${r.title}” for good? It can't be brought back.`)) return;
       try {
         await api(`/api/chat/chats/${encodeURIComponent(r.id)}/delete`, {});
         if (chat.reading && chat.reading.id === r.id) stopReading();
+        // the window's own: it starts over (nothing to tell Dvara: it's gone)
+        if (chat.conv === r.id) {
+          chat.conv = null; chat.title = "";
+          const live = document.getElementById("live") || h("div", { id: "live" });
+          document.getElementById("lines").replaceChildren(live);
+          drawHello();
+        }
         problem("");
       } catch (err) { problem(err.message); }
       lookConvs();
     }, "danger");
-  del.disabled = r.open;
+  del.disabled = Boolean(busy);
   items.push(del);
   return items;
 }
@@ -1687,7 +1765,7 @@ async function openPast(r) {
   sideDone();
   if (location.hash.slice(1) !== "chat" && wantedView() !== "chat") location.hash = "chat";
   const agent = document.getElementById("agent").value;
-  if (r.here && r.agent === agent && document.querySelector("#lines > .line")) {
+  if (r.id === chat.conv && r.agent === agent && document.querySelector("#lines > .line")) {
     stopReading();
     return;
   }
@@ -1695,11 +1773,12 @@ async function openPast(r) {
   try { d = await pastRead(r.id); } catch (err) { problem(err.message); return; }
   chat.reading = { ...r, title: d.title || r.title };
   drawReading(d, r);
-  const back = r.here ? null : h("button.quiet", { type: "button" }, "Back to the chat you're in");
+  const isHere = r.id === chat.conv;
+  const back = isHere ? null : h("button.quiet", { type: "button" }, "Back to the chat you're in");
   if (back) back.addEventListener("click", stopReading);
   const elsewhere = (r.roads || [r.road]).filter((x) => x !== "the page").map(roadName);
   document.getElementById("carry").replaceChildren(
-    h("span", {}, r.here ? "You're in this conversation. Write below to carry it on."
+    h("span", {}, isHere ? "You're in this conversation. Write below to carry it on."
       : "Write below to carry this conversation on here" +
         (elsewhere.length && r.open ? ` (it stays open on ${elsewhere.join(" and ")} too).` : ".")),
     ...(back ? [back] : []));
@@ -1768,22 +1847,36 @@ function stopReading() {
 
 // The conversation Dvara has open on this page with the agent picked.
 function openHere() {
-  const agent = document.getElementById("agent").value;
-  return past.rows.find((r) => r.here && r.agent === agent) || null;
+  return chat.conv ? past.rows.find((r) => r.id === chat.conv) || null : null;
 }
 
-// New chat: the window empties (Dvara keeps the one before, in the list).
+// New chat: the window empties at once (Dvara keeps the one before, in the
+// list), even while that one is still answering: it goes on in its own chat.
+// One that is quiet is told /new behind it, for the look back over it.
 async function newChat() {
   sideDone();
   if (wantedView() !== "chat") location.hash = "chat";
-  const wasHere = openHere();
   stopReading();
+  const agent = document.getElementById("agent").value;
+  const was = chat.conv;
+  const ended = was ? (chat.working.has(was) ? null : { conversation: was })
+    : chat.legacy ? {} : null;
+  chat.conv = null; chat.legacy = false; chat.starting = false; chat.title = "";
+  queued.length = 0; stopVoice();
+  const box = document.getElementById("lines");
+  const live = document.getElementById("live") || h("div", { id: "live" });
+  box.replaceChildren(live);
+  live.replaceChildren();
+  document.getElementById("chat-state").textContent = "";
+  drawHello();
+  document.getElementById("bar-title").textContent = chatTitle();
+  drawConvsMark();
   const text = document.getElementById("text");
-  if (document.querySelector("#lines > .line") || wasHere) {
-    await send("/new");
+  text.focus();
+  if (ended && agent) {
+    try { await api("/api/chat", { agent, text: "/new", ...ended }); } catch (_) { /* kept anyway */ }
     await lookConvs();
   }
-  text.focus();
 }
 
 /* Sharing one. A PDF is the browser's own "Save as PDF" over a print layout

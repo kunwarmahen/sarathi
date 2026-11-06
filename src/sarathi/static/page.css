@@ -453,6 +453,8 @@ body.side-closed .side { display: none; }
 }
 .conv:hover, .conv:focus-within { background: var(--sunk); }
 .conv[aria-current="true"] { background: var(--accent-soft); }
+/* answering now in its own chat, while you're in another */
+.conv.working .conv-meta::before { content: "working… · "; color: var(--accent); }
 .conv-open {
   font: inherit; font-size: 14px; color: var(--ink); background: none; border: 0;
   text-align: left; padding: 7px 4px 7px 9px; cursor: pointer; min-width: 0;

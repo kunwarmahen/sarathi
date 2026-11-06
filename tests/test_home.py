@@ -435,6 +435,19 @@ def test_words_under_an_old_conversation_go_to_dvara_with_its_id(chatting, door)
     assert "conversation" not in door.heard[-1][2]      # only an id is passed on
 
 
+def test_a_new_chats_first_words_go_to_dvara_as_new(chatting, door):
+    """A conversation of its own, in a chat of its own: one can answer
+    while you ask in another."""
+    send(chatting, "/api/chat", {"agent": "greeter", "text": "hi", "new": True})
+    assert door.heard[-1][2] == {"agent": "greeter", "text": "hi", "new": True,
+                                 "actor": "mahen"}
+    send(chatting, "/api/chat", {"agent": "greeter", "text": "hi", "new": "yes"})
+    assert "new" not in door.heard[-1][2]               # only true is passed on
+    send(chatting, "/api/chat", {"agent": "greeter", "text": "hi", "new": True,
+                                 "conversation": "abc"})
+    assert door.heard[-1][2]["conversation"] == "abc" and "new" not in door.heard[-1][2]
+
+
 def test_the_chat_reads_the_owners_lines_with_the_doors_token(chatting, door):
     seen = ask(chatting, "/api/chat?after=0").json()
     assert seen["lines"][0]["text"] == "2 new mails"

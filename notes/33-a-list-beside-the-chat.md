@@ -24,9 +24,11 @@ full-text index), with the words marked under each match.
 tools folded under the answers that used them, with *Write below to
 carry this conversation on here*. Writing does: the page sends your
 words with that conversation's id, in one request, and Dvara moves the
-chat into it and answers them there. A chat still answering in another
-conversation is waited out, never refused, so the words cannot land in
-the wrong one (Dvara's [notes/78](https://github.com/kunwarmahen/dvara/blob/main/notes/78-carried-on-where-it-was-written.md)). One begun on Telegram stays
+chat into it and answers them there. Each conversation is its own chat
+in Dvara, so one still answering doesn't hold up the others; the window
+draws only its own conversation's lines and the list marks the others
+*working…* (Dvara's [notes/79](https://github.com/kunwarmahen/dvara/blob/main/notes/79-each-conversation-its-own-chat.md)).
+The words cannot land in the wrong one (Dvara's [notes/78](https://github.com/kunwarmahen/dvara/blob/main/notes/78-carried-on-where-it-was-written.md)). One begun on Telegram stays
 open there too, and both carry it on (Dvara's
 [notes/71](https://github.com/kunwarmahen/dvara/blob/main/notes/71-one-conversation-two-chats.md)).
 
@@ -69,10 +71,13 @@ or the name you gave it.
 **AN EMPTY WINDOW ISN'T ALWAYS A NEW CONVERSATION.** Dvara can be in a
 conversation the window no longer shows: its lines aged out, or it was
 opened from somewhere else. Then the page shows that conversation, and
-writing carries it on with its words still there. **New chat** sends
-`/new` whenever the list says one is open here, not only when the
-window has lines. The first run found this the hard way: a question
-written under the greeting went into an old conversation.
+writing carries it on with its words still there. **New chat** empties
+the window at once and the next words go as a new conversation of their
+own, so a question written under the greeting can't go into an old one
+(the first run found that the hard way, when the page's single chat kept
+whichever conversation it was last in). It sends `/new` to the
+conversation it leaves only when that one is quiet, for the look back
+over it.
 
 **THE TEN BUTTONS ARE BEHIND +.** **Skills**, **Learn this**,
 **Teach…**, **Tools**, **Schedules**, **Memory**, **Turned down…**,
@@ -201,8 +206,10 @@ list, New chat and the bell in the page and the History dialog gone.
   Asked while the newer one was still answering, `/chats open` was
   refused and the words went on anyway. They now go with the
   conversation's id in one request (Dvara's [notes/78](https://github.com/kunwarmahen/dvara/blob/main/notes/78-carried-on-where-it-was-written.md)).
-* **Two conversations answering at once.** Words under one wait while
-  another answers; each conversation as its own chat would let both run.
+* ~~**Two conversations answering at once.**~~ Each conversation is its
+  own chat in Dvara: a new chat's first words go as `new` and its id
+  comes back on the line, and **New chat** clears the window at once,
+  telling `/new` only to a conversation that is quiet (Dvara's [notes/79](https://github.com/kunwarmahen/dvara/blob/main/notes/79-each-conversation-its-own-chat.md)).
 
 * **Suggestions from your own skills.** The greeting's four are
   questions every agent answers. Dvara's look doesn't list a person's

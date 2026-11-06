@@ -1205,8 +1205,9 @@ Pinned / Today / Yesterday / Previous 7 days / Older and searched by what
 was said, and it keeps up by itself (every 20 seconds while in sight),
 so a conversation on Telegram or at the puck shows without a reload.
 Pick one to read it in the chat's place; write under it to carry it on
-here, even while another one is still answering (your words wait their
-turn and go into this one; Dvara's notes/78), and the window goes on as you read it: its name, its tools, its
+here, even while another one is still answering: each conversation is
+its own chat in Dvara, so both answer and the list marks the one still
+*working…* (Dvara's notes/79), and the window goes on as you read it: its name, its tools, its
 answers as written, a voice note as 🎤 "…". One begun on Telegram stays
 open there too, and both carry it on; one you're reading grows as it
 goes on there. Each row's ⋯ renames it, pins it, saves it as a PDF,

@@ -394,7 +394,8 @@ the chat apps you know:
 - **In the middle, the one you're in.** Your words on the right, the
   agent's answers on the left, the box to write in at the bottom.
 - **New chat** at the top of the list starts a fresh conversation. The
-  old one stays in the list.
+  old one stays in the list, and if it was still answering, it goes on
+  answering there (*working…*).
 - **The bell 🔔** at the top right holds what was sent to you without
   your asking: a schedule's answer (including schedules you make on
   Yantra's page), a watch going off, a sign-in that stopped working. Its
@@ -471,10 +472,15 @@ the left. Type a word you remember, like *boiler*, into the search box
 at the top of the list, and it shrinks to the conversations that say it,
 with the word marked. Tap one and it opens in the middle to read. To
 carry it on, just write below it: it stays as you were reading it, with
-its tools folded and its answers' lists and tables kept. This works even
-while another conversation is still being answered. Your words wait
-until that answer is done, then go into the one you wrote under, never
-into the other. On Telegram, do the same by replying (swipe, or
+its tools folded and its answers' lists and tables kept. Each
+conversation is a chat of its own, like in ChatGPT. Ask something long,
+press **New chat** and ask something else while the first is still
+being answered: both get answered. The one still going says *working…*
+in the list, and its answer is there when you open it. Your words only
+ever go into the conversation you wrote them in. (With a model on this
+computer, two answers come at the same time only when it has room for
+two; otherwise the second waits for the model, not for the other
+conversation.) On Telegram, do the same by replying (swipe, or
 long-press and *Reply*) to any answer from the conversation you want.
 The answer starts *"Back in: …"*, and `/chats` there has a button for
 each conversation. If it began on

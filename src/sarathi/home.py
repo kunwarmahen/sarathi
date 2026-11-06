@@ -44,7 +44,8 @@ reaches the browser, the way Dvara's own page keeps it:
 
     GET  /api/chat?after=N        your lines since N, agents, questions
     POST /api/chat                {"agent", "text", "files"?: [{"name", "data"}],
-                                   "conversation"?: an old one's id, carried on}
+                                   "conversation"?: the one it carries on,
+                                   "new"?: true for a new chat's first words}
     POST /api/chat/asks/ID        {"approve": true|false, "for_turn"?: true}
     POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}}
     GET  /api/chat/file?line=&n=  a file an answer carried
@@ -1558,8 +1559,11 @@ def _handler(server: HomeServer):
                 if body.get("files"):
                     said["files"] = body.get("files")    # Dvara checks them
                 if isinstance(body.get("conversation"), str):
-                    # an old one it was written under: carried on in this turn
+                    # the one it was written under: carried on in its own chat
                     said["conversation"] = body["conversation"]
+                elif body.get("new") is True:
+                    # a new chat: a conversation of its own, its id on the line
+                    said["new"] = True
                 return self._chat(who, "POST", "/web/message", said)
             if parts[2] == "asks":
                 return self._chat(who, "POST",
