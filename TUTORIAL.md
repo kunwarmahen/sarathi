@@ -1190,12 +1190,12 @@ type `/remember 1`: each fact has **Keep** and **No** beside it, and
 **Keep all** / **None of these** when there are several. The agent's
 answer (*Kept: …*) appears under the notice. On Telegram the notice
 has the same buttons (**Keep 1**, **No 1**, … and **Keep all** /
-**None of these**), and the answer comes into the chat. On your phone's
-ntfy notification there's room for three buttons, so one fact gets
-**Keep** and **No**, and several get **Keep all** and **None of these**;
-to keep only some of several, use the page or type `/remember 1`. A
-button pressed late never keeps the wrong fact: if that one was already
-answered, it says so.
+**None of these**), and the answer comes into the chat. On your phone,
+each fact comes as its own ntfy notification with **Keep**, **No** and
+**Keep all** (an ntfy notification has room for three buttons). Only
+the first one makes a sound, so three facts are one buzz, and you can
+keep just the ones you want. A button pressed late never keeps the
+wrong fact: if that one was already answered, it says so.
 
 **Said no by mistake?** `/remember not 2` means "never offer that
 again", and the numbers move as you keep things, so it's easy to turn
