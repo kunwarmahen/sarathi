@@ -621,6 +621,19 @@ def test_the_undo_beside_what_was_kept_forgets_only_your_own(chatting, door):
     assert send(chatting, "/api/chat/forget", {"id": "x"}, token="wrong")[0] == 401
 
 
+def test_a_notices_keep_and_no_answer_only_your_own(chatting, door):
+    status, _ = send(chatting, "/api/chat/remember",
+                     {"agent": "minder", "keep": ["Lives in Pune"], "actor": "guest"})
+    assert status == 200
+    method, path, body = door.heard[-1]
+    # whose facts they are, set here, never by the browser
+    assert (method, path.split("?")[0]) == ("POST", "/web/remember")
+    assert body == {"agent": "minder", "keep": ["Lives in Pune"], "actor": "mahen"}
+    send(chatting, "/api/chat/remember", {"agent": "minder", "decline": ["Has a cat"]})
+    assert door.heard[-1][2] == {"agent": "minder", "decline": ["Has a cat"], "actor": "mahen"}
+    assert send(chatting, "/api/chat/remember", {"keep": ["x"]}, token="wrong")[0] == 401
+
+
 def test_dvara_down_is_said_not_hung(keys):
     home = Home(config(keys), lambda: {})
     server = HomeServer(home, GOOD, port=0, chat=Chat("http://127.0.0.1:9", DOOR_KEY, "mahen"))

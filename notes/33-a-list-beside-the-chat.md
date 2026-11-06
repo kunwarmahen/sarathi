@@ -79,13 +79,23 @@ whichever conversation it was last in). It sends `/new` to the
 conversation it leaves only when that one is quiet, for the look back
 over it.
 
-**THE TEN BUTTONS ARE BEHIND +.** **Skills**, **Learn this**,
-**Teach…**, **Tools**, **Schedules**, **Memory**, **Turned down…**,
-**Phone screen**, **Check what's mine** (`/doctor`) and
-**Conversations** (`/chats`), each with a line saying what it's for.
-Typing `/` at the start of a message lists the same words, narrowing as
-you type. Arrows move, Enter or Tab picks, and a word it doesn't list is
-still sent as written. The writing box grows with what you write.
+**THE AGENT'S WORDS ARE BEHIND +, THE SAME ONES TELEGRAM'S `/` MENU
+HAS.** Dvara hands the page each agent's list on its first look, built
+by the code that sets the Telegram bot's menu (Dvara's `menu.py`), so
+an agent that remembers people shows **Memory** and **Remember**, one
+with accounts shows **Accounts**, **Connect…** and **Lock accounts**,
+and every agent shows **Carry on**, **Steps**, **Tests**, **Household**
+and **Voice**. The page names the ones it knows in its own words and
+adds two of its own beside them: **Teach…** after **Learn this** and
+**Turned down…** after **Remember**. **New chat** is the page's own new
+chat, with its look back. A word that needs a name (**Get a file…**,
+**Connect…**, **Disconnect…**) goes in the box for you to finish. The
+page once kept a short list of its own, and every word Dvara learned
+after it reached Telegram and never the page; it still stands in when
+Dvara sends no list. Typing `/` at the start of a message lists the
+same words, narrowing as you type. Arrows move, Enter or Tab picks, and
+a word it doesn't list is still sent as written. The writing box grows
+with what you write.
 
 ## The bell
 
@@ -94,7 +104,18 @@ a watch, a sign-in that stopped working: these go under the 🔔 at the top
 right, not between your words. The count is what you haven't read plus
 the questions waiting for your yes, which stay in the chat that asked.
 **Notices** lists them newest first, unread ones marked, with **Go to the
-chat** when a question is waiting. **Notices on this phone** (the ntfy
+chat** when a question is waiting.
+
+**WHAT A LOOK BACK NOTICED IS ANSWERED ON ITS NOTICE.** When the chat
+went quiet, or you started over, the agent may have noticed something
+about you: *Akshi has math at Mathnasium, Mondays 7–8 pm*. Its notice
+has **Keep** and **No** beside each fact still waiting, and **Keep all**
+and **None of these** when there are several. They send the fact's
+words, not its number (Dvara's `POST /web/remember`): keeping one moves
+the rest up, and a newer look back replaces the list, so a number read
+from an old notice could keep the wrong one. A fact no longer waiting
+gets no buttons, and pressing one on a page drawn before says so.
+Dvara's answer, *Kept: …*, stays under the notice. **Notices on this phone** (the ntfy
 steps) moved there too. Dvara keeps the notices whatever **New chat**
 cleared (`GET /web/notices`), and how far you've read them: opened on
 the phone, on this computer, or by another address for the same page

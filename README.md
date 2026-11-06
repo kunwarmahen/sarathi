@@ -1228,14 +1228,18 @@ It shows the work as it happens, as Yantra's page does: each step as a
 line under the agent's name, then the answer as it is written, drawn as
 formatted text. After a job of several steps it may offer to keep how
 it was done, with **Keep** and **Not now**, saved for you alone. The +
-beside the box sends **Skills**, **Learn this**, **Tools**, **Schedules**,
-**Memory**, **Phone screen** (its screen and last steps, for the phone's
-person), **Check what's mine** and **Conversations** to Dvara as the
-words they are, and opens **Teach…** and **Turned down…** (what the
+beside the box holds the agent's words, the same list its Telegram `/`
+menu has (Dvara hands it over: **Memory**, **Remember**, **Household**,
+**Voice**, **Accounts**, **Skills**, **Tools**, **Schedules**, **Phone
+screen**, **Check what's mine**, **Conversations** and the rest, as the
+agent answers them), sent to Dvara as the words they are, and opens
+**Teach…** and **Turned down…** (what the
 person said no to with `/remember not`, each with an **Undo** that puts
 it back on their list, not kept; Dvara's
 [notes/68](https://github.com/kunwarmahen/dvara/blob/main/notes/68-what-you-turned-down.md)).
-Typing `/` lists the same words as you type. On a phone the chat takes the whole screen too. A job can also be taught one step at a time:
+Typing `/` lists the same words as you type. What a look back noticed
+about you comes as a notice with **Keep** and **No** beside each fact
+([notes/33](notes/33-a-list-beside-the-chat.md)). On a phone the chat takes the whole screen too. A job can also be taught one step at a time:
 **Teach…** behind the +, or `/learn start <what it's for>` and each step (the agent does only what
 you say), or `/learn watch` and do each step on your phone yourself,
 saying `next`; while it's open a bar shows how far it got, with

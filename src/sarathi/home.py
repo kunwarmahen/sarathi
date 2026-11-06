@@ -57,6 +57,8 @@ reaches the browser, the way Dvara's own page keeps it:
     GET  /api/chat/push           your ntfy server and topic, for notices on a phone
     GET  /api/chat/notices        what was sent to you unasked, and how far you've read
     POST /api/chat/notices/read   {"upto": N}: read up to there, on every page you open
+    POST /api/chat/remember       {"agent", "keep"|"decline": [fact, …]}: a look back's
+                                  notice answered from its Keep and No (Dvara's /web/remember)
     POST /api/push/answer         Keep / Not now pressed on a phone's ntfy notice:
                                   no sign-in, Dvara takes it only with its own mark
 
@@ -1502,6 +1504,16 @@ def _handler(server: HomeServer):
                 if body is None:
                     return None
                 return self._chat(who, "POST", "/web/declined", {"undo": body.get("undo")})
+            if parts == ["api", "chat", "remember"]:
+                # Keep or No on a look back's notice, by the facts' words; only their own
+                who = self._who()
+                if who is None:
+                    return None
+                body = self._body(MAX_BODY)
+                if body is None:
+                    return None
+                return self._chat(who, "POST", "/web/remember", {
+                    k: body[k] for k in ("agent", "keep", "decline") if k in body})
             if parts == ["api", "chat", "forget"]:
                 # the Undo beside what a turn kept on its own; only their own
                 who = self._who()

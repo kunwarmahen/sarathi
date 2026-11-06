@@ -266,6 +266,11 @@ h3.sub { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
 }
 .offer .what { font-size: 13px; }
 .offer .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+/* a look back's facts, each with its Keep and No (noticeRemember) */
+.offer.remember .fact { display: grid; gap: 4px; }
+.offer.remember .fact + .fact { border-top: 1px solid var(--line); padding-top: 6px; }
+.offer.remember .said { font-size: 13px; color: var(--ink-2); white-space: pre-wrap; }
+.offer.remember .said.quiet { color: var(--ink-3); }
 .buttons.taps { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .words { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px 0; }
 .words button, button.quiet {

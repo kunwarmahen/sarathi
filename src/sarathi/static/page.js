@@ -1040,6 +1040,7 @@ function draw(data) {
     picker.hidden = data.agents.length < 2;
   }
   chat.voice = Boolean(data.voice);
+  if (data.words) chat.words = data.words;    // on the first look (menu.py)
   const box = document.getElementById("lines");
   const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   const live = document.getElementById("live") || h("div", { id: "live" });
@@ -1362,36 +1363,77 @@ function fitText() {
 }
 
 /* -- the words your agent answers: behind + and typed after / -----------------
-   Each sends what a person would type on Telegram. Teach and Turned down
-   open their own boxes. The / list narrows as you type and goes away when
-   nothing matches, so a word it doesn't know is still sent as written. */
+   Dvara hands the page each agent's words on its first look, the same list
+   Telegram's / menu is (Dvara's menu.py), so a word added there is here
+   too. The page names the ones it knows in its own way and adds two of
+   its own: Teach and Turned down open boxes here. Before Dvara sends any
+   (an older Dvara), the short list below stands in. Each sends what a
+   person would type on Telegram; one that needs a name goes in the box
+   to finish. The / list narrows as you type and goes away when nothing
+   matches, so a word it doesn't know is still sent as written. */
 
 const WORDS = [
   ["/skills", "Skills", "What it has learned, and what's on offer"],
   ["/learn", "Learn this", "Keep what it just did as a skill"],
-  ["teach", "Teach…", "A job one step at a time, by telling or showing"],
   ["/tools", "Tools", "What it can use"],
   ["/schedules", "Schedules", "What it does by itself, and when"],
   ["/watches", "Watches", "What it keeps an eye on; /watches every 1 6h"],
   ["/memory", "Memory", "What it remembers about you"],
-  ["declined", "Turned down…", "What you said no to remembering"],
   ["/phone", "Phone screen", "Your phone's screen now"],
   ["/doctor", "Check what's mine", "Accounts, schedules, watches, phones, limits"],
   ["/chats", "Conversations", "Every one, as a list in the chat"],
 ];
 
+// the page's own names for Dvara's words; one not here shows Dvara's words
+const NAMES = {
+  "/new": "New chat", "/carry": "Carry on", "/steps": "Steps", "/chats": "Conversations",
+  "/tests": "Tests", "/doctor": "Check what's mine", "/files": "Files", "/file": "Get a file…",
+  "/memory": "Memory", "/remember": "Remember", "/accounts": "Accounts",
+  "/connect": "Connect…", "/disconnect": "Disconnect…", "/lock": "Lock accounts",
+  "/unlock": "Unlock accounts", "/skills": "Skills", "/learn": "Learn this",
+  "/household": "Household", "/tools": "Tools", "/voice": "Voice", "/phone": "Phone screen",
+  "/schedules": "Schedules", "/watches": "Watches",
+};
+// finished in the box: alone, they only ask which
+const NEEDS_NAME = new Set(["/file", "/connect", "/disconnect"]);
+// the page's own, each after the first of the words it belongs beside
+const EXTRAS = [
+  [["/learn"], ["teach", "Teach…", "A job one step at a time, by telling or showing"]],
+  [["/remember", "/memory"], ["declined", "Turned down…", "What you said no to remembering"]],
+];
+
+function wordsHere() {
+  const theirs = (chat.words || {})[document.getElementById("agent").value];
+  const words = theirs
+    ? theirs.map(([word, said]) => [word, NAMES[word] || said, said])
+    : WORDS.slice();
+  for (const [after, extra] of EXTRAS) {
+    const anchor = after.find((a) => words.some(([word]) => word === a));
+    if (anchor) words.splice(words.findIndex(([word]) => word === anchor) + 1, 0, extra);
+  }
+  return words;
+}
+
 function useWord(word) {
   closeMenus();
   if (word === "teach") return openTeach();
   if (word === "declined") return openDeclined();
+  if (word === "/new") return newChat();       // the page's own, with its look back
   const text = document.getElementById("text");
+  if (NEEDS_NAME.has(word)) {
+    text.value = `${word} `;
+    fitText();
+    text.focus();
+    document.getElementById("slash").hidden = true;
+    return;
+  }
   text.value = "";
   fitText();
   send(word);
 }
 
 function drawPlus() {
-  document.getElementById("plus-menu").replaceChildren(...WORDS.map(([word, label, hint]) =>
+  document.getElementById("plus-menu").replaceChildren(...wordsHere().map(([word, label, hint]) =>
     menuItem(label, hint, () => useWord(word))));
 }
 
@@ -1402,7 +1444,7 @@ function drawSlash() {
   const menu = document.getElementById("slash");
   const typed = text.value;
   if (!/^\/\S*$/.test(typed)) { menu.hidden = true; return; }
-  slash.shown = WORDS.filter(([word]) => word.startsWith("/") && word.startsWith(typed.toLowerCase()));
+  slash.shown = wordsHere().filter(([word]) => word.startsWith("/") && word.startsWith(typed.toLowerCase()));
   if (!slash.shown.length) { menu.hidden = true; return; }
   slash.at = Math.min(slash.at, slash.shown.length - 1);
   menu.replaceChildren(...slash.shown.map(([word, label, hint], i) => {
@@ -1489,6 +1531,7 @@ function drawNotices(opening) {
     h("div.meta", {}, `${when(n.at)}${n.agent ? ` · ${n.agent}` : ""}`),
     (() => { const b = bubble(n.text, "notice"); b.classList.add("notice-text"); return b; })(),
     n.offer ? noticeOffer(n) : null,
+    n.remember ? noticeRemember(n) : null,
     (n.files || []).map((name, i) => {
       const b = h("button.file.quiet", { type: "button" }, `⤓ ${name}`);
       b.addEventListener("click", () => download(n.id, i, name));
@@ -1531,6 +1574,35 @@ function noticeOffer(n) {
     h("div.what", {}, `${n.offer.name} — test: ${n.offer.test}`),
     buttons(answer("keep", `Keep ${n.offer.name}: sent.`),
             answer("drop", "Not now: sent."), "Keep", "Not now"));
+}
+
+// What a look back noticed about you, as a notice: Keep and No beside each
+// fact still waiting, and both for all of them. Sent by the fact's words
+// (Dvara's /web/remember), never its number: keeping one moves the rest
+// up, and a newer look back replaces the list. What Dvara said back stays
+// under it while the page is open; a fact already answered gets no buttons.
+const answered = new Map();
+
+function noticeRemember(n) {
+  const { agent, waiting = [] } = n.remember;
+  const said = answered.get(n.id);
+  const answer = (facts, keep) => async () => {
+    const got = await api("/api/chat/remember",
+      { agent, ...(keep ? { keep: facts } : { decline: facts }) });
+    answered.set(n.id, got.said);
+    await lookNotices();
+    drawNotices(false);
+  };
+  const rows = waiting.map((fact) => h("div.fact", {}, h("div.what", {}, fact),
+    buttons(answer([fact], true), answer([fact], false), "Keep", "No")));
+  const all = waiting.length > 1
+    ? h("div.fact.all", {}, buttons(answer(waiting, true), answer(waiting, false),
+        "Keep all", "None of these"))
+    : null;
+  const note = said ? h("div.said", {}, said)
+    : !waiting.length ? h("div.said.quiet", {}, "Answered: nothing here waits any more.")
+    : null;
+  return h("div.offer.remember", {}, ...rows, all, note);
 }
 
 /* -- the list: every conversation, kept by Dvara as it goes (past.py) -------
@@ -2021,6 +2093,7 @@ function startChat() {
   const plus = document.getElementById("plus");
   plus.addEventListener("click", (e) => {
     e.stopPropagation();
+    drawPlus();          // the agent picked now, and the words Dvara sent for it
     toggleMenu(plus, document.getElementById("plus-menu"));
   });
   if (phone.matches) text.placeholder = "Message your agent";

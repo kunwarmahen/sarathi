@@ -1183,6 +1183,14 @@ forgets it (on Telegram it's a line, with the `/memory forget 1` that
 does the same). When the chat goes quiet, the look back lists what it
 already kept, rather than saying nothing.
 
+**Keep it from the notice.** When the agent noticed something about you
+(a look back after the chat went quiet, or after New chat), it comes
+under the 🔔 as a numbered list. On the home page you don't need to
+type `/remember 1`: each fact has **Keep** and **No** beside it, and
+**Keep all** / **None of these** when there are several. The agent's
+answer (*Kept: …*) appears under the notice. On Telegram, type
+`/remember 1` (it's in the `/` menu), or `/remember not 1`.
+
 **Said no by mistake?** `/remember not 2` means "never offer that
 again", and the numbers move as you keep things, so it's easy to turn
 down the wrong one. Press **Turned down** under the chat: everything
