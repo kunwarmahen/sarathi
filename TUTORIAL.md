@@ -1953,9 +1953,13 @@ house. The program that does it is **Vaani**; it answers through Dvara
      *Okay Nabu*, *Hey Jarvis* or *Hey Mycroft*. (Hey Jarvis switched on
      but never woke our puck; if one doesn't work, go back.)
    * **The language it hears** is per puck in **Settings → Vaani**
-     too: Vaani's own (English) unless you pick Hindi, Telugu and so
-     on. If Vaani's page shows your English written down in another
-     script, that puck was left to *Let Whisper guess*; set it back.
+     too: *Vaani's own (English)* unless you pick Hindi, Telugu and so
+     on, or **Let Whisper guess**, which has Whisper work out the
+     language of each question itself. Guessing suits a puck where
+     people ask in more than one language, but on a voice across the
+     room it guesses wrong often: English heard as Urdu or Telugu, and
+     the answer comes back in that language. If Vaani's page shows that,
+     pick the language you speak instead.
 7. **Watch it work: the Vaani card.** Under **Your pages** there's a
    Vaani card. Its line says how things stand, e.g. *kitchen listening ·
    last question 2 min ago, played*. Open it for Vaani's own page. It
