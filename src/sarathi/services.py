@@ -59,7 +59,8 @@ files:
     ntfy    ntfy serve --listen-http <dvara.window_host, else 127.0.0.1>:<dvara.ntfy_port>,
                   with [dvara] ntfy = true: a push server for notices on phones;
                   then Dvara gets --ntfy <its address> and DVARA_NTFY_CLICK, the
-                  home page (dvara's push.py)
+                  home page (dvara's push.py); with dvara.ntfy_upstream also
+                  --base-url <ntfy_url> --upstream-base-url <it>, so iPhones wake
 
 THE DOOR AND THE CLOCK ARE TOLD ABOUT EACH OTHER. A schedule made in a
 chat runs through the door as its person, and Samay checks every such
@@ -601,8 +602,20 @@ def ntfy_service(config: Config, notes: list[str]) -> Service | None:
     return Service("ntfy", "ntfy",
                    [program, "serve", "--listen-http",
                     f"{config.ntfy_host()}:{door.ntfy_port}",
-                    "--cache-file", str(cache / "cache.db"), "--cache-duration", "24h"],
+                    "--cache-file", str(cache / "cache.db"), "--cache-duration", "24h",
+                    *ntfy_upstream(config)],
                    door.ntfy_port, host=config.ntfy_host())
+
+
+def ntfy_upstream(config: Config) -> list[str]:
+    """For iPhones, with ``[dvara] ntfy_upstream``: ntfy asks that server
+    (ntfy.sh) to wake a phone through Apple's push -- a message's id and a
+    hash of its topic, never the words. The hash is of the address the
+    phone subscribed with, so ntfy is told that address as its base-url."""
+    door = config.door
+    if door is None or not door.ntfy_upstream:
+        return []
+    return ["--base-url", config.ntfy_url() or "", "--upstream-base-url", door.ntfy_upstream]
 
 
 def ntfy_click(config: Config) -> dict[str, str]:

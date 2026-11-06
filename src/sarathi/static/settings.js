@@ -689,6 +689,8 @@ function drawSarathiTab() {
                      dv.owner || "owner");
   const house = text(dv.window_host || "", { placeholder: "192.168.1.44" });
   const ntfy = check(dv.ntfy);
+  const ntfyAt = text(dv.ntfy_url || "", { placeholder: "http://192.168.1.44:8793" });
+  const iphones = check(!!dv.ntfy_upstream);
   const yolo = check(dv.yolo);
   const whisper = text(dv.whisper || "", { placeholder: "http://127.0.0.1:11435" });
   const voices = text((dv.voices || ["en_US-lessac-medium"]).join(", "),
@@ -725,6 +727,9 @@ function drawSarathiTab() {
              dvara_port: ports.dvaraPage.value, sparsh_port: ports.sparsh.value },
     dvara: dvaraOn.checked ? { on: true, telegram: bot.value, owner: owner.value,
                                window_host: house.value.trim(), ntfy: ntfy.checked,
+                               ntfy_url: ntfyAt.value.trim(),
+                               ntfy_upstream: iphones.checked
+                                 ? (dv.ntfy_upstream || "https://ntfy.sh") : "",
                                voices: voices.value, whisper: whisper.value.trim(),
                                yolo: yolo.checked,
                                port: ports.dvara.value, ntfy_port: ports.ntfy.value }
@@ -747,6 +752,13 @@ function drawSarathiTab() {
       field("This computer's address at home", house, "Phones at home reach the home page, " +
             "Setu's page and ntfy here. Your home network's address, or Tailscale's."),
       h("label.inline", {}, ntfy, " Notices on phones, through ntfy in the house"),
+      field("The address your phones subscribe with", ntfyAt, "As typed in the ntfy app. " +
+            "Empty: this computer's name at home, with ntfy's port."),
+      h("label.inline", {}, iphones, " Wake iPhones through ntfy.sh"),
+      h("p.meta", {}, "An iPhone shows nothing from ntfy here until the app is opened: iOS " +
+        "wakes an app only through Apple, which only ntfy.sh can ask. On, ntfy.sh is told " +
+        "a notice came (its number and a scrambled topic, never the words), and the " +
+        "iPhone fetches the words from this house. Needs Apply."),
       h("label.inline", {}, yolo, " Let \"Never asked\" work"),
       h("p.meta", {}, "Off, Dvara asks you before every change, whatever a person's " +
         "\"Asking before changes\" or an agent says. On, someone set to Never asked " +

@@ -198,8 +198,8 @@ from sarathi.config import (
     write_private,
     yantra_token,
 )
-from sarathi.services import (OLD_NAMES, WIDTH, alive, answers, door_problems, place,
-                              records, sarathi_program, work_dir)
+from sarathi.services import (OLD_NAMES, WIDTH, alive, answers, door_problems,
+                              ntfy_upstream, place, records, sarathi_program, work_dir)
 from sarathi.siblings import beside_dir
 
 IMAGE = "localhost/sarathi:latest"
@@ -1023,6 +1023,8 @@ def ntfy_unit(config: Config) -> str:
     assert config.door is not None and config.door.ntfy_port
     port, phones = config.door.ntfy_port, config.people_host()
     house = f"PublishPort={phones}:{port}:{NTFY_PORT}\n" if phones else ""
+    # for iPhones (services.ntfy_upstream): woken through ntfy.sh, never the words
+    upstream = "".join(f" {word}" for word in ntfy_upstream(config))
     return f"""{HEADER}
 [Unit]
 Description=Sarathi: ntfy, for notices on phones
@@ -1031,7 +1033,7 @@ Description=Sarathi: ntfy, for notices on phones
 Image={NTFY_IMAGE}
 ContainerName={UNITS['ntfy']}
 Network={NETWORK}.network
-Exec=serve --cache-file /var/cache/ntfy/cache.db --cache-duration 24h
+Exec=serve --cache-file /var/cache/ntfy/cache.db --cache-duration 24h{upstream}
 Volume=sarathi-ntfy-cache:/var/cache/ntfy
 PublishPort=127.0.0.1:{port}:{NTFY_PORT}
 {house}

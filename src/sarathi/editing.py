@@ -352,6 +352,7 @@ def sarathi_view(config: Config) -> dict:
             "window_host": door.window_host, "window_port": door.window_port,
             "window_url": door.window_url, "ntfy": door.ntfy_port is not None,
             "ntfy_port": door.ntfy_port or DEFAULT_NTFY_PORT,
+            "ntfy_url": door.ntfy_url or "", "ntfy_upstream": door.ntfy_upstream or "",
             "voices": list(door.voices), "whisper": door.whisper or "",
             "yolo": door.yolo},
         "phone": None if phone is None else {
@@ -475,6 +476,9 @@ def sarathi_apply(changes: dict) -> Config:
                 window_url=d.get("window_url", door.window_url) or None,
                 ntfy_port=(_num(d.get("ntfy_port"), "ntfy's port") or door.ntfy_port
                            or DEFAULT_NTFY_PORT) if ntfy else None,
+                ntfy_url=_address(d.get("ntfy_url", door.ntfy_url), "ntfy's address"),
+                ntfy_upstream=_address(d.get("ntfy_upstream", door.ntfy_upstream),
+                                       "the server that wakes iPhones"),
                 voices=_voices(d.get("voices"), door.voices),
                 whisper=_address(d.get("whisper", door.whisper), "Whisper's address"),
                 yolo=d.get("yolo", door.yolo) is True))

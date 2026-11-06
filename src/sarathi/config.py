@@ -100,7 +100,8 @@ KNOWN: dict[str, set[str]] = {
     "vaani": {"on", "port", "page_port"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
-             "window_port", "window_url", "owner", "ntfy", "ntfy_port", "voices",
+             "window_port", "window_url", "owner", "ntfy", "ntfy_port", "ntfy_url",
+              "ntfy_upstream", "voices",
               "whisper", "yolo"},
     "pages": {"on", "sarathi_port", "setu_port", "dvara_port", "sparsh_port"},
     "phone": {"on", "address", "wda", "awake"},
@@ -384,7 +385,7 @@ class Config:
         """ntfy as a phone subscribes to it, or None with no ntfy."""
         if self.door is None or self.door.ntfy_port is None:
             return None
-        return self.link(self.door.ntfy_port, "")
+        return self.door.ntfy_url or self.link(self.door.ntfy_port, "")
 
     def people_env(self) -> dict[str, str]:
         """The door's word for that page (``setu page-link`` reads it)."""
@@ -414,6 +415,16 @@ class Door:
     #: ntfy's port, when the house runs one for notices on phones (dvara's
     #: push.py); None: no ntfy, notices wait on the page and go to Telegram.
     ntfy_port: int | None = None
+    #: The address phones subscribe with in the ntfy app, when it is not the
+    #: house's name (a phone that only knows 192.168.1.44): ntfy is told it
+    #: as its base-url, and the home page shows it. None: ``link`` of the port.
+    ntfy_url: str | None = None
+    #: An iPhone hears nothing from a server of its own: iOS lets an app
+    #: wake only through Apple's push, which only ntfy.sh can ask for. With
+    #: this (``https://ntfy.sh``) ntfy tells that server a message came --
+    #: its id and a hash of the topic, never the words -- and the iPhone,
+    #: woken, fetches the words from this house. None: nothing leaves.
+    ntfy_upstream: str | None = None
     #: Piper's voices for answers read aloud: in the image, and fetched to
     #: this computer by `sarathi dvara --voices` (Dvara's spoken.py).
     voices: tuple[str, ...] = DEFAULT_VOICES
@@ -539,13 +550,18 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     if not isinstance(door_table.get("on", False), bool):
         raise ConfigError(f"{where}: dvara.on must be true or false")
     for key in ("telegram", "root", "actors", "state", "window_host", "window_url", "owner",
-                "whisper"):
+                "whisper", "ntfy_url", "ntfy_upstream"):
         if not isinstance(door_table.get(key, ""), str):
             raise ConfigError(f"{where}: dvara.{key} must be text")
     if not isinstance(door_table.get("ntfy", False), bool):
         raise ConfigError(f"{where}: dvara.ntfy must be true or false")
     if not isinstance(door_table.get("yolo", False), bool):
         raise ConfigError(f"{where}: dvara.yolo must be true or false")
+    for key in ("ntfy_url", "ntfy_upstream"):
+        value = door_table.get(key, "").strip()
+        if value and not re.match(r"https?://[^/\s]+/?$", value):
+            raise ConfigError(f"{where}: dvara.{key} must be an address like "
+                              f"http://192.168.1.44:8793 or https://ntfy.sh, not {value!r}")
     voices = door_table.get("voices", list(DEFAULT_VOICES))
     if not isinstance(voices, list) or not all(isinstance(v, str) and VOICE_NAME.match(v)
                                                for v in voices):
@@ -563,6 +579,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                 owner=door_table.get("owner") or "owner",
                 ntfy_port=_port(door_table, "ntfy_port", DEFAULT_NTFY_PORT, "dvara")
                 if door_table.get("ntfy", False) else None,
+                ntfy_url=door_table.get("ntfy_url", "").strip().rstrip("/") or None,
+                ntfy_upstream=door_table.get("ntfy_upstream", "").strip().rstrip("/") or None,
                 voices=tuple(dict.fromkeys(voices)),
                 whisper=str(door_table.get("whisper") or "").strip().rstrip("/") or None,
                 yolo=door_table.get("yolo", False)) \
@@ -955,6 +973,10 @@ on = false
                            ("window_url", door.window_url)))
     ntfy = (f"ntfy = true\nntfy_port = {door.ntfy_port}\n" if door.ntfy_port
             else "ntfy = false\n")
+    ntfy += (f'ntfy_url = "{door.ntfy_url}"\n' if door.ntfy_url
+             else '# ntfy_url = "http://192.168.1.44:8793"\n')
+    ntfy += (f'ntfy_upstream = "{door.ntfy_upstream}"\n' if door.ntfy_upstream
+             else '# ntfy_upstream = "https://ntfy.sh"\n')
     return f"""# dvara: your agents for other people, and for you on your phone.
 # Its tokens are in secrets.env; who it serves is in the actors file.
 [dvara]
@@ -970,7 +992,10 @@ port = {door.port}
 {window}
 # ntfy: a push server here, so a schedule's answer (or a sign-in that ran
 # out) shows on a phone with the ntfy app, while it can reach this house.
-# `sarathi dvara --ntfy` turns it on.
+# `sarathi dvara --ntfy` turns it on. ntfy_url: the address your phones
+# subscribe with, when it is not this house's name. ntfy_upstream: for an
+# iPhone, which hears a server of its own only through ntfy.sh -- told a
+# message's id and a hash of its topic, never the words.
 {ntfy}
 # Voices for answers read aloud, from https://huggingface.co/rhasspy/piper-voices:
 # the image has these; `sarathi dvara --voices a,b` fetches them here too.

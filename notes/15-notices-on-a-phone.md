@@ -40,6 +40,23 @@ The pieces:
   Dvara reaches it as `http://sarathi-ntfy:80`. Since it isn't
   Sarathi's image, `sarathi image` never restarts it. Its port joins the
   firewall line `up` prints.
+* **AN IPHONE, WOKEN THROUGH NTFY.SH, NEVER WITH THE WORDS.** iOS lets an
+  app wake only through Apple's push, and only ntfy.sh can ask Apple for
+  it. A server in the house can be posted to all day, but an iPhone shows
+  nothing until someone opens the app. So `[dvara] ntfy_upstream =
+  "https://ntfy.sh"` starts ntfy with `--upstream-base-url` set to it.
+  For each message, ntfy tells ntfy.sh only that one came: its id and a
+  hash of the topic. ntfy.sh wakes the iPhone, and the iPhone fetches the
+  words from the house. The price is that ntfy.sh learns *when* a
+  notice came, never *what* it said. That is why this is off unless it
+  is set (and a checkbox on the settings page).
+* **THE ADDRESS THE PHONE TYPED.** The hash is of the server address
+  together with the topic, so ntfy is told, as its `--base-url`, the
+  exact address the phone subscribed with. That is the house's name by
+  default. `[dvara] ntfy_url` overrides it for a phone that was set up
+  with `http://192.168.1.44:8793`, and the home page's **Notices on this
+  phone** then shows that address too. If the two addresses differ,
+  ntfy.sh wakes nothing, without any error.
 
 ## On the page, for each person
 
@@ -72,6 +89,16 @@ back from the server (Dvara's note 40). The Sarathi pieces (the plan,
 the units, the page's two routes) are covered by tests. They have not
 been run on either road, and no real phone has received a notice yet.
 
+An iPhone, on the Podman road. The owner's topic had 5 notices posted
+to it over a night (a look back, a skill offered, the morning brief),
+and ntfy's stats said `subscribers=0`. The app showed the notices only
+when opened, and the phone never buzzed. With `ntfy_url =
+"http://192.168.1.44:8793"` and `ntfy_upstream = "https://ntfy.sh"`, the
+unit's line became `Exec=serve ... --cache-duration 24h --base-url
+http://192.168.1.44:8793 --upstream-base-url https://ntfy.sh`, and from
+inside the container `https://ntfy.sh/v1/health` answered
+`{"healthy":true}`.
+
 ## What the tests hold
 
 `tests/test_ntfy.py`: the setting reads, writes and refuses a word;
@@ -79,15 +106,17 @@ ntfy listens on the house address or this computer alone; Dvara is
 pointed at it before `serve` and told where a tap opens; with no ntfy
 installed, `up` says so and Dvara gets no `--ntfy`; the Podman road
 brings ntfy's image, published on 127.0.0.1 and the house address, with
-Dvara after it. `tests/test_people.py`: **My accounts** asks Dvara for
+Dvara after it; an iPhone is woken through ntfy.sh only when
+`ntfy_upstream` is set, with the address the phone typed as the
+base-url, on both roads; `ntfy_url` wins over the house name, and both
+settings read, write, and refuse an address with no `http`. `tests/test_people.py`: **My accounts** asks Dvara for
 the signed-in person's own link and nobody else's; **Notices on this
 phone** names their own topic on the house's server, and is off without
 ntfy.
 
 ## What is not here yet
 
-* **A real phone.** The steps are written for the ntfy app on Android.
-  On an iPhone, a server in the house can't wake the app through Apple
-  without forwarding through ntfy.sh, which was turned down.
+* ~~**A real phone.** On an iPhone, a server in the house can't wake the
+  app.~~ It can, through ntfy.sh, with the words kept home (above).
 * **Away from home.** A phone hears notices while it can reach the
   house. Tailscale would carry them further, and is not set up here.

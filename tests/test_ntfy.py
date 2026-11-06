@@ -7,7 +7,9 @@ every address. Dvara must be pointed at it (its flag before `serve`,
 where Dvara reads it), and a person's page must name their own topic and
 nobody else's. The other bias is a setting that silently does nothing:
 `ntfy = true` with no ntfy installed says so, and the podman road brings
-its own.
+its own. And A WAKE-UP THAT LEAKS OR NEVER COMES: an iPhone is woken
+through ntfy.sh only when that is asked for, and then with the address
+the phone typed, or ntfy.sh's hash matches nothing.
 """
 
 from __future__ import annotations
@@ -95,3 +97,57 @@ def test_the_podman_road_brings_its_own_on_the_house_address(world, monkeypatch)
     assert "Environment=DVARA_NTFY_CLICK=http://192.168.1.44:8760/" in door
     assert 8793 in podman.house_ports(config)[1]
     assert "sarathi-ntfy.container" not in podman.units(replace(config, door=Door()))
+
+
+def test_an_iphone_is_woken_through_ntfy_sh_only_when_asked_and_never_with_the_words(
+        world, monkeypatch):
+    """iOS wakes an app only through Apple's push, which only ntfy.sh can ask
+    for: with `ntfy_upstream` ntfy is told that server, and the address the
+    phone subscribed with as its base-url (the hash ntfy.sh is sent is of
+    that address). Without it nothing leaves the house."""
+    monkeypatch.setenv("SARATHI_NTFY", str(program(world / "bin", "ntfy")))
+    planned, _ = plan(world, Config("ollama", door=HOUSE))
+    serve = next(s for s in planned if s.name == "ntfy").argv
+    assert "--upstream-base-url" not in serve and "--base-url" not in serve
+
+    iphone = replace(HOUSE, ntfy_upstream="https://ntfy.sh")
+    planned, _ = plan(world, Config("ollama", door=iphone))
+    serve = next(s for s in planned if s.name == "ntfy").argv
+    assert serve[serve.index("--upstream-base-url") + 1] == "https://ntfy.sh"
+    assert serve[serve.index("--base-url") + 1] == "http://192.168.1.44:8793"
+
+    monkeypatch.setenv("HOME", str(world / "home"))
+    by_address = replace(iphone, ntfy_url="http://192.168.1.44:8793")
+    config = Config("ollama", road="podman", door=by_address, pages=Pages(on=True),
+                    house=settings_mod.House(name="beast.singhs", address="192.168.1.44"))
+    push = podman.units(config)["sarathi-ntfy.container"]
+    assert ("Exec=serve --cache-file /var/cache/ntfy/cache.db --cache-duration 24h "
+            "--base-url http://192.168.1.44:8793 --upstream-base-url https://ntfy.sh") in push
+    off = podman.units(replace(config, door=HOUSE))["sarathi-ntfy.container"]
+    assert "upstream" not in off
+
+
+def test_the_address_phones_subscribe_with_wins_over_the_house_name():
+    house = settings_mod.House(name="beast.singhs", address="192.168.1.44")
+    assert Config("ollama", door=HOUSE, house=house).ntfy_url() == "http://beast.singhs:8793"
+    typed = replace(HOUSE, ntfy_url="http://192.168.1.44:8793")
+    assert Config("ollama", door=typed, house=house).ntfy_url() == "http://192.168.1.44:8793"
+
+
+def test_both_settings_are_read_written_and_a_wrong_one_is_refused():
+    text = ('[model]\nprovider = "ollama"\n[dvara]\non = true\nntfy = true\n'
+            'ntfy_url = "http://192.168.1.44:8793/"\nntfy_upstream = "https://ntfy.sh"\n')
+    door = parse(text).door
+    assert (door.ntfy_url, door.ntfy_upstream) == ("http://192.168.1.44:8793",
+                                                    "https://ntfy.sh")
+    assert parse(render(parse(text))).door == door
+    plain = parse('[model]\nprovider = "ollama"\n[dvara]\non = true\nntfy = true\n').door
+    assert plain.ntfy_upstream is None and plain.ntfy_url is None
+    assert '# ntfy_upstream = "https://ntfy.sh"' in render(parse(
+        '[model]\nprovider = "ollama"\n[dvara]\non = true\nntfy = true\n'))
+    try:
+        parse('[model]\nprovider = "ollama"\n[dvara]\non = true\nntfy_upstream = "ntfy.sh"\n')
+    except ConfigError as exc:
+        assert "dvara.ntfy_upstream must be an address" in str(exc)
+    else:
+        raise AssertionError("an address with no http was taken")

@@ -1165,6 +1165,21 @@ the containers bring their own. Then, on each phone:
    is in the chat on the home page.
 
 They hear notices while the phone can reach your house (home Wi-Fi).
+
+**On an iPhone,** the app shows notices only when you open it, because
+iOS lets an app wake only through Apple, and only the public ntfy.sh
+server can ask Apple for that. On Sarathi's home page, under Settings,
+tick **Wake iPhones through ntfy.sh**. In **The address your phones
+subscribe with**, type exactly what you typed in the app (for example
+`http://192.168.1.44:8793`). Then press Apply. ntfy.sh learns only that
+a notice came, never what it says; the iPhone then fetches the words
+from your house. In the settings file the two lines are:
+
+```toml
+[dvara]
+ntfy_url = "http://192.168.1.44:8793"
+ntfy_upstream = "https://ntfy.sh"
+```
 Keep the topic private: whoever has it can read their notices. If
 `sarathi up` prints a firewall line, it now includes ntfy's port, 8793.
 
