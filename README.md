@@ -283,8 +283,9 @@ Settings → Sarathi has it under *The rest* (on/off) and *Ports*
   status: *kitchen listening · last question 2 min ago, played*.
 * **Settings → Vaani** sets who each puck answers, which people it
   tells apart, the agent each of them asks there (*asha asks helper*),
-  its wake word (from the ones the puck itself offers), and
-  after how many quiet minutes its conversations start over, through
+  its wake word (from the ones the puck itself offers), the language
+  it hears (English unless set; *Let Whisper guess* for a puck where
+  people mix languages), and after how many quiet minutes its conversations start over, through
   `vaani puck`, which writes vaani.toml itself.
 
 At the puck, your agent's questions are asked out loud: a yes counts in

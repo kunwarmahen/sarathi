@@ -247,14 +247,17 @@ def vaani_view(config: Config) -> dict:
     wakes = {p.get("name"): p.get("wake_words") or {}
              for p in _vaani_json(["status"]).get("pucks", [])}
     return {"on": True, "voices": got.get("voices", []),
+            "language": got.get("language", "en"), "languages": got.get("languages", {}),
             "pucks": [{**p, "wake_words": wakes.get(p.get("name"), {})}
                       for p in got.get("pucks", [])]}
 
 
 def vaani_do(config: Config, body: dict) -> str:
     """{"do": "puck", "puck", "person"?, "agent"?, "people"?, "fresh_after"?,
-    "wake_word"?, "follow_up"?, "agents"?}: done by Vaani. ``agents`` is {person: agent},
-    "" for the puck's own again, each sent as ``--agent-for``."""
+    "wake_word"?, "follow_up"?, "agents"?, "language"?}: done by Vaani.
+    ``agents`` is {person: agent}, "" for the puck's own again, each sent as
+    ``--agent-for``. ``language`` is a Whisper code, "auto", or "" for Vaani's
+    own [hear] one."""
     if not config.voice_on:
         raise EditError(409, "Vaani is off: turn it on under Settings → Sarathi first")
     do = body.get("do")
@@ -278,6 +281,12 @@ def vaani_do(config: Config, body: dict) -> str:
             if not isinstance(body["follow_up"], bool):
                 raise EditError(400, "follow_up is true or false")
             argv += ["--follow-up", "on" if body["follow_up"] else "off"]
+        if body.get("language") is not None:
+            language = str(body["language"]).strip()
+            if not re.fullmatch(r"[a-z]{2,3}|auto|", language):
+                raise EditError(400, "a language code like en or hi, auto (Whisper "
+                                "guesses), or empty for Vaani's own")
+            argv += ["--language", language]
         if body.get("fresh_after") is not None:
             quiet = body["fresh_after"]
             if isinstance(quiet, str) and quiet.strip().isdigit():

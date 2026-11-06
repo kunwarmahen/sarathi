@@ -1952,6 +1952,10 @@ house. The program that does it is **Vaani**; it answers through Dvara
    * **The wake word** is chosen per puck in **Settings → Vaani**:
      *Okay Nabu*, *Hey Jarvis* or *Hey Mycroft*. (Hey Jarvis switched on
      but never woke our puck; if one doesn't work, go back.)
+   * **The language it hears** is per puck in **Settings → Vaani**
+     too: Vaani's own (English) unless you pick Hindi, Telugu and so
+     on. If Vaani's page shows your English written down in another
+     script, that puck was left to *Let Whisper guess*; set it back.
 7. **Watch it work: the Vaani card.** Under **Your pages** there's a
    Vaani card. Its line says how things stand, e.g. *kitchen listening ·
    last question 2 min ago, played*. Open it for Vaani's own page. It

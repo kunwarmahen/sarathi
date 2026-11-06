@@ -23,16 +23,23 @@ async function fillVaani(out) {
     return;
   }
   const voiced = new Set((got.voices || []).map((v) => v.person));
-  out.replaceChildren(...(got.pucks || []).map((p) => puckForm(p, voiced)));
+  out.replaceChildren(...(got.pucks || []).map((p) => puckForm(p, voiced, got)));
 }
 
-function puckForm(p, voiced) {
+function puckForm(p, voiced, got = {}) {
   const people = (sets.data.dvara?.people || []).map((x) => x.id);
   const agents = (sets.data.dvara?.agents || []).map((a) => [a.name, a.name]);
   const unsure = pick(people.map((x) => [x, x]), p.person);
   const agent = pick([["", "Vaani's default"], ...agents], p.agent || "");
   const quiet = text(p.fresh_after ?? 30, { inputmode: "numeric", size: "5" });
   const followUp = check(!!p.follow_up);
+  // what Whisper is told the questions are in; "" is Vaani's [hear] one
+  const names = got.languages || {};
+  const house = got.language || "en";
+  const tongues = Object.entries(names).filter(([code]) => code !== "auto");
+  if (p.language && !(p.language in names)) tongues.push([p.language, p.language]);
+  const language = pick([["", `Vaani's own (${names[house] || house})`], ...tongues,
+                         ["auto", names.auto || "Let Whisper guess"]], p.language || "");
   // the puck's own wake words, as it told Vaani; none known while it's away
   const offers = p.wake_words?.offers || [];
   const on = (p.wake_words?.on || [])[0] || "";
@@ -57,7 +64,7 @@ function puckForm(p, voiced) {
     const heard = new Set([...ticked, unsure.value]);
     return vaaniSave({
       do: "puck", puck: p.name, person: unsure.value, agent: agent.value,
-      fresh_after: quiet.value.trim(), follow_up: followUp.checked,
+      fresh_after: quiet.value.trim(), follow_up: followUp.checked, language: language.value,
       ...(wake ? { wake_word: wake.value } : {}),
       people: ticked,
       agents: Object.fromEntries(people.map((x) => [x, heard.has(x) ? own[x].value : ""])),
@@ -79,6 +86,10 @@ function puckForm(p, voiced) {
                  "A change reaches the puck within a minute.")
          : h("p.meta", {}, "Wake word: the puck hasn't told Vaani its wake words yet " +
                            "(is it listening? See Vaani's page)."),
+    field("Language it hears", language,
+          "What Whisper is told the questions are in. Set it: left to guess, Whisper " +
+          "hears a voice across the room as Urdu or Telugu. “Let Whisper guess” is for " +
+          "a puck where people ask in more than one language."),
     field("Follow-up questions", h("label.inline", {}, followUp,
                                     " Listen again after every answer, no wake word"),
           "After it answers, the ring stays on for a few seconds: just ask the next " +

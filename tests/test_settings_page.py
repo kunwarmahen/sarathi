@@ -372,6 +372,19 @@ def test_a_puck_is_changed_by_vaani_and_its_refusal_is_the_answer(with_vaani):
     assert not any("--x" in ",".join(a) or "../k" in a for a in asked)
 
 
+
+def test_the_language_a_puck_hears_goes_to_vaani_and_only_as_a_code(with_vaani):
+    for good in ("hi", "auto", ""):
+        assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                               "language": good})[0] == 200
+    for wrong in ("Hindi", "hi; rm", "--x", "en-US"):
+        assert send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
+                                               "language": wrong})[0] == 400
+    asked = [json.loads(line) for line in with_vaani.vaani_log.read_text().splitlines()]
+    assert ["puck", "kitchen", "--language", "hi"] in asked
+    assert ["puck", "kitchen", "--language", ""] in asked
+    assert not any("Hindi" in a or "--x" in a for a in asked)
+
 def test_each_persons_own_agent_goes_to_vaani_as_agent_for(with_vaani):
     code, _ = send(with_vaani, "/api/vaani", {"do": "puck", "puck": "kitchen",
                                               "people": ["owner", "asha"],
