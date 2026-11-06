@@ -752,8 +752,8 @@ function drawSarathiTab() {
       field("This computer's address at home", house, "Phones at home reach the home page, " +
             "Setu's page and ntfy here. Your home network's address, or Tailscale's."),
       h("label.inline", {}, ntfy, " Notices on phones, through ntfy in the house"),
-      field("The address your phones subscribe with", ntfyAt, "As typed in the ntfy app. " +
-            "Empty: this computer's name at home, with ntfy's port."),
+      field("The address your phones subscribe with", ntfyAt, "As in the ntfy app (an " +
+            "iPhone's Default Server). Empty: this computer's name at home, with ntfy's port."),
       h("label.inline", {}, iphones, " Wake iPhones through ntfy.sh"),
       h("p.meta", {}, "An iPhone shows nothing from ntfy here until the app is opened: iOS " +
         "wakes an app only through Apple, which only ntfy.sh can ask. On, ntfy.sh is told " +

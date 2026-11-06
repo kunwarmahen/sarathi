@@ -1169,22 +1169,26 @@ They hear notices while the phone can reach your house (home Wi-Fi).
 **On an iPhone,** the app shows notices only when you open it, because
 iOS lets an app wake only through Apple, and only the public ntfy.sh
 server can ask Apple for that. On Sarathi's home page, under Settings,
-tick **Wake iPhones through ntfy.sh**. In **The address your phones
-subscribe with**, type exactly what you typed in the app (for example
-`http://192.168.1.44:8793`). Then press Apply. ntfy.sh learns only that
+tick **Wake iPhones through ntfy.sh** and press Apply. The iPhone's
+address for your house must be the one ntfy is told: by default this
+computer's name at home with port 8793 (as **Notices on this phone**
+shows it, like `http://linux-al-ml-beast.singhs:8793`). If a phone was
+set up with the number instead (`http://192.168.1.44:8793`), type that
+in **The address your phones subscribe with**. ntfy.sh learns only that
 a notice came, never what it says; the iPhone then fetches the words
 from your house. In the ntfy app, set **Settings → Default Server** to
 that same address *before* you add your topic, and add the topic without
 *Use another server*. If notices still come only when you refresh, delete
 the app, reinstall it, set the Default Server first, then add the topic
 again. Re-adding the topic alone may not be enough. In the settings file
-the two lines are:
+it is one line, plus `ntfy_url` only for a phone that uses the number:
 
 ```toml
 [dvara]
-ntfy_url = "http://192.168.1.44:8793"
 ntfy_upstream = "https://ntfy.sh"
+# ntfy_url = "http://192.168.1.44:8793"
 ```
+
 Keep the topic private: whoever has it can read their notices. If
 `sarathi up` prints a firewall line, it now includes ntfy's port, 8793.
 

@@ -753,7 +753,7 @@ your house: home Wi-Fi, or Tailscale. An iPhone needs `[dvara]
 ntfy_upstream = "https://ntfy.sh"`. iOS wakes an app only through Apple,
 so ntfy.sh is told that a message came (its id and a hash of the topic,
 never the words), and the iPhone fetches the words from the house. Set
-`ntfy_url` to the server address the phone typed, when that isn't the
+`ntfy_url` to the iPhone app's Default Server, when that isn't the
 house's name. On plain programs, install ntfy
 first (<https://docs.ntfy.sh/install/>, or set `SARATHI_NTFY`); on the
 Podman road it is its own container, `sarathi-ntfy`, from ntfy's own

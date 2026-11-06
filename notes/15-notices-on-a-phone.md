@@ -118,8 +118,7 @@ pointed at it before `serve` and told where a tap opens; with no ntfy
 installed, `up` says so and Dvara gets no `--ntfy`; the Podman road
 brings ntfy's image, published on 127.0.0.1 and the house address, with
 Dvara after it; an iPhone is woken through ntfy.sh only when
-`ntfy_upstream` is set, with the address the phone typed as the
-base-url, on both roads; `ntfy_url` wins over the house name, and both
+`ntfy_upstream` is set, with the phone's address as the base-url, on both roads; `ntfy_url` wins over the house name, and both
 settings read, write, and refuse an address with no `http`. `tests/test_people.py`: **My accounts** asks Dvara for
 the signed-in person's own link and nobody else's; **Notices on this
 phone** names their own topic on the house's server, and is off without
