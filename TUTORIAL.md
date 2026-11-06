@@ -1173,7 +1173,12 @@ tick **Wake iPhones through ntfy.sh**. In **The address your phones
 subscribe with**, type exactly what you typed in the app (for example
 `http://192.168.1.44:8793`). Then press Apply. ntfy.sh learns only that
 a notice came, never what it says; the iPhone then fetches the words
-from your house. In the settings file the two lines are:
+from your house. In the ntfy app, set **Settings → Default Server** to
+that same address *before* you add your topic, and add the topic without
+*Use another server*. If notices still come only when you refresh, delete
+the app, reinstall it, set the Default Server first, then add the topic
+again. Re-adding the topic alone may not be enough. In the settings file
+the two lines are:
 
 ```toml
 [dvara]

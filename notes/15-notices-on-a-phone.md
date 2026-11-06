@@ -99,6 +99,17 @@ http://192.168.1.44:8793 --upstream-base-url https://ntfy.sh`, and from
 inside the container `https://ntfy.sh/v1/health` answered
 `{"healthy":true}`.
 
+The house side was then proved on its own terms. A listener on
+`https://ntfy.sh/<sha256 of base-url/topic>/json` saw a `poll_request`
+about three seconds after each local post. Even so, the iPhone stayed
+silent through three tests, after it re-subscribed by the house's name
+and after its Default Server was set to that name. Each time the message
+was there on refresh. What fixed it was deleting and reinstalling the
+app, setting the Default Server before adding the topic. The next test
+reached the locked phone. So `base-url` must equal the app's *Default
+Server*, not only the server typed for one subscription, and an app that
+subscribed before upstream was on may need a fresh install.
+
 ## What the tests hold
 
 `tests/test_ntfy.py`: the setting reads, writes and refuses a word;
