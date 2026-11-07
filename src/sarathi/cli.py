@@ -134,6 +134,13 @@ def build_parser() -> argparse.ArgumentParser:
                                "ntfy app (--no-ntfy: stop starting it)")
     door_cmd.add_argument("--ntfy-port", dest="ntfy_port", type=int, metavar="PORT",
                           help="ntfy's port (default 8793)")
+    door_cmd.add_argument("--ntfy-url", dest="ntfy_url", metavar="URL",
+                          help="the address phones subscribe with, when it is not this "
+                               "house's name, e.g. http://192.168.1.44:8793 (\"\" for "
+                               "the house's own)")
+    door_cmd.add_argument("--ntfy-upstream", dest="ntfy_upstream", metavar="URL",
+                          help="for iPhones: a public ntfy that only wakes them, e.g. "
+                               "https://ntfy.sh; the words stay in the house (\"\" for none)")
     door_cmd.add_argument("--voices", metavar="NAME,NAME",
                           help="Piper voices to read answers aloud in, e.g. "
                                "en_US-lessac-medium,hi_IN-pratham-medium (fetched here "

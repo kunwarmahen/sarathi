@@ -205,6 +205,21 @@ def run(args, found: Found, *, ask: Callable[[str], str] = input,
             print(f"error: {exc}", file=sys.stderr)
             return 2
         said.append(f"voice notes heard by: {door.whisper or 'a local Ollama model that hears'}")
+    for key, what, said_as in (("ntfy_url", "--ntfy-url", "phones subscribe at"),
+                               ("ntfy_upstream", "--ntfy-upstream", "iPhones woken through")):
+        value = getattr(args, key, None)
+        if value is None:
+            continue
+        from sarathi.editing import EditError, _address
+        try:
+            door = replace(door, **{key: _address(value, what)})
+        except EditError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        shown = getattr(door, key)
+        said.append(f"{said_as}: {shown}" if shown else
+                    ("phones subscribe at the house's own address" if key == "ntfy_url"
+                     else "iPhones woken through: nothing (Android needs none)"))
     ntfy = getattr(args, "ntfy", None)
     if ntfy is not None or getattr(args, "ntfy_port", None):
         door = replace(door, ntfy_port=None if ntfy is False else

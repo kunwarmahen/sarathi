@@ -1189,6 +1189,15 @@ ntfy_upstream = "https://ntfy.sh"
 # ntfy_url = "http://192.168.1.44:8793"
 ```
 
+Or from the terminal, which writes the same lines and refuses a typo:
+
+```
+sarathi dvara --ntfy-upstream https://ntfy.sh
+sarathi dvara --ntfy-url http://192.168.1.44:8793   # only for a phone set up with the number
+```
+
+`--ntfy-upstream ""` takes it off again.
+
 Keep the topic private: whoever has it can read their notices. If
 `sarathi up` prints a firewall line, it now includes ntfy's port, 8793.
 

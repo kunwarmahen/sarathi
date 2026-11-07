@@ -292,6 +292,29 @@ def test_whisper_is_written_read_back_and_reaches_dvara_on_both_roads(
     assert "# whisper = " in config.render(load())
 
 
+def test_the_ntfy_addresses_are_set_from_the_command_and_cleared_with_blank(
+        world, home, dvara_checkout, capsys):
+    settings(world, {"web": 8321, "clock": 8780})
+    assert door.run(door_args(telegram="", ntfy=True,
+                              ntfy_url="http://192.168.1.44:8793/",
+                              ntfy_upstream="https://ntfy.sh"),
+                    dvara_checkout, interactive=False) == 0
+    out = capsys.readouterr().out
+    assert "phones subscribe at: http://192.168.1.44:8793" in out
+    assert "iPhones woken through: https://ntfy.sh" in out
+    got = config.parse(config.render(load())).door
+    assert (got.ntfy_url, got.ntfy_upstream) == ("http://192.168.1.44:8793", "https://ntfy.sh")
+    assert door.run(door_args(telegram="", ntfy_upstream="ntfy.sh"), dvara_checkout,
+                    interactive=False) == 2
+    assert "--ntfy-upstream is an address like" in capsys.readouterr().err
+    assert load().door.ntfy_upstream == "https://ntfy.sh"
+    assert door.run(door_args(telegram="", ntfy_upstream=""), dvara_checkout,
+                    interactive=False) == 0
+    assert load().door.ntfy_upstream is None
+    assert load().door.ntfy_url == "http://192.168.1.44:8793"
+    assert "# ntfy_upstream = " in config.render(load())
+
+
 def test_dvara_is_started_with_its_whisper(world, monkeypatch):
     from dataclasses import replace
 

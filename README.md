@@ -621,6 +621,7 @@ everything as containers instead, after `sarathi road podman` (below).
 sarathi dvara                  # which agent a Telegram bot answers as; the bot's token
 sarathi dvara --telegram greeter --telegram-id 8675309
 sarathi dvara --ntfy           # notices on phones, through ntfy in the house (--no-ntfy)
+sarathi dvara --ntfy-upstream https://ntfy.sh   # iPhones woken through ntfy.sh, words kept home
 sarathi dvara --off
 ```
 
@@ -771,7 +772,9 @@ ntfy_upstream = "https://ntfy.sh"`. iOS wakes an app only through Apple,
 so ntfy.sh is told that a message came (its id and a hash of the topic,
 never the words), and the iPhone fetches the words from the house. Set
 `ntfy_url` to the iPhone app's Default Server, when that isn't the
-house's name. On plain programs, install ntfy
+house's name. Both are also set with `sarathi dvara --ntfy-upstream
+https://ntfy.sh --ntfy-url http://192.168.1.44:8793` (`""` takes one
+off), checked as addresses the same way Settings checks them. On plain programs, install ntfy
 first (<https://docs.ntfy.sh/install/>, or set `SARATHI_NTFY`); on the
 Podman road it is its own container, `sarathi-ntfy`, from ntfy's own
 image (`docker.io/binwiederhier/ntfy:v2.11.0`), with its port added to
