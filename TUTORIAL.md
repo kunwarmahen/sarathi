@@ -486,7 +486,11 @@ two; otherwise the second waits for the model, not for the other
 conversation.) On Telegram, do the same by replying (swipe, or
 long-press and *Reply*) to any answer from the conversation you want.
 The answer starts *"Back in: …"*, and `/chats` there has a button for
-each conversation. If it began on
+each conversation. Or give Telegram a sidebar like the page's: in
+@BotFather, open your bot's settings and turn on its topics mode, then
+start a topic in the bot's chat for each thing you're working on. Each
+topic is its own conversation, answered inside it, and two can answer at
+once. If it began on
 Telegram, it stays open there too: what you say in either place carries
 on the same conversation. You don't need to reload the page: a
 conversation on Telegram or at the puck shows in the list within about
@@ -2021,7 +2025,10 @@ house. The program that does it is **Vaani**; it answers through Dvara
      stays on for a few seconds: ask *"and the day after?"* straight
      away. Say nothing, or *"thanks, that's all"*, and it stops, with
      nothing said back. Off unless you tick it: while it listens, a radio
-     nearby can be heard as a question.
+     nearby can be heard as a question. On a shared puck with voice
+     prints, someone else asking in that moment is answered as
+     themselves when their voice is clear; otherwise it's taken as the
+     person just answered.
    * **A fresh start:** *"Okay Nabu… new conversation"*. It also starts
      over by itself after 30 quiet minutes (change that in Settings →
      Vaani).
