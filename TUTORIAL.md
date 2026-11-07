@@ -413,7 +413,10 @@ away once you pick something. When an agent wants a yes, a card with
 because the agent read something you didn't write (a page, an email),
 there's a third button, **Yes to all for this task**: the rest of that
 job's questions like it are then not asked, unless the agent reads
-something new. A purchase is still asked every time.
+something new. A purchase is still asked every time. The same button
+is on a card for a job that stopped and waited for you (*stopped and is
+waiting for your yes*), when everything it waits on was asked for that
+reason.
 
 **Asked too often?** Three places to look
 ([notes/34](notes/34-never-asked-means-it.md)). Open **Settings** from

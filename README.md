@@ -1219,7 +1219,8 @@ and the answer comes back a few seconds later. A question an agent asks
 shows as a card with **Yes** and **No** above the box (and goes to
 Telegram as well; the first answer counts). One asked only because the
 agent read something you didn't write has **Yes to all for this task**
-too (Dvara's notes/72). The chat holds no logic:
+too (Dvara's notes/72), and so does a held job's card when everything it
+waits on was asked for that reason. The chat holds no logic:
 every word goes to Dvara's web channel and back, as you, the `[dvara]
 owner`, with the same rules and allowance as on Telegram. Dvara's token
 stays in the home page's process, never in the browser.

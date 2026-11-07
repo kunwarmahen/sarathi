@@ -1012,11 +1012,15 @@ function askView(a) {
 
 function holdView(hd) {
   const all = (v) => Object.fromEntries(hd.calls.map((c) => [c.id, v]));
-  const post = (v) => api(`/api/chat/holds/${encodeURIComponent(hd.id)}`, { answers: all(v) });
+  const post = (v, forTurn = false) => api(`/api/chat/holds/${encodeURIComponent(hd.id)}`,
+    { answers: all(v), ...(forTurn ? { for_turn: true } : {}) });
   return h("div.ask", {},
     h("div.q", {}, `${hd.agent} stopped and is waiting for your yes:`),
     hd.calls.map((c) => h("div.what", {}, `${c.tool}: ${c.summary}`)),
-    buttons(() => post(true), () => post(false), "Yes, carry on", "No"));
+    // hd.for_task: every call waiting was asked only because of what the
+    // turn read; one yes covers the rest of this task (Dvara's Hold.for_task)
+    buttons(() => post(true), () => post(false), "Yes, carry on", "No",
+            hd.for_task ? () => post(true, true) : null));
 }
 
 function liveView(lv) {

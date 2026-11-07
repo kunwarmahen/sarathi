@@ -47,7 +47,7 @@ reaches the browser, the way Dvara's own page keeps it:
                                    "conversation"?: the one it carries on,
                                    "new"?: true for a new chat's first words}
     POST /api/chat/asks/ID        {"approve": true|false, "for_turn"?: true}
-    POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}}
+    POST /api/chat/holds/ID       {"answers": {call id: true|false|reason}, "for_turn"?: true}
     GET  /api/chat/file?line=&n=  a file an answer carried
     GET  /api/chat/spoken?line=   an answer read aloud (WAV)
     GET  /api/chat/steps?line=    what an answer's turn did, step by step
@@ -1584,6 +1584,8 @@ def _handler(server: HomeServer):
                                    **({"for_turn": True}
                                       if body.get("for_turn") is True else {})})
             return self._chat(who, "POST", f"/web/holds/{urllib.parse.quote(parts[3])}",
-                              {"answers": body.get("answers")})
+                              {"answers": body.get("answers"),
+                               **({"for_turn": True}
+                                  if body.get("for_turn") is True else {})})
 
     return Handler
