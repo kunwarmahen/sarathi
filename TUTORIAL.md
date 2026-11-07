@@ -1661,6 +1661,43 @@ starts it again. Asking twice for
 the same thing doesn't make a second watch: the helper offers to change
 the one you have.
 
+**Both sides of a number is two watches.** *"Heat the guestroom when
+it goes below 60 outside, and cool it above 70"* makes two watches on
+the same temperature, one for each line. Each tells the helper once,
+when its line is crossed, and no model is asked in between: a night
+below 60 is one *heat* turn, not one an hour. A second line on the same
+side (*below 60* and *below 50*) is still one watch, mended.
+
+**Every look says why.** On Prahari's page, click any look under
+**Looks** (or a watch's **last:** line) and it opens: why it was quiet,
+told you or failed, what went wrong, what it picked out, what the helper
+did and said, and what the site or tool answered. *"Why didn't my
+guestroom watch fire?"* in the chat gets the same answer. At the
+computer, `prahari looks ID --full` prints it:
+
+```
+Fri 6 Nov 21:19  fired      56  then: ok  sent
+    why: The outside temperature is 56, so it is below 60, and it did not last time
+    came by: clock   Dvara run: 827f74dc3015
+    the agent said:
+      It's 56°F outside in Cary now, so I set the guestroom thermostat to heat
+      (keeping the existing setpoint). It'll warm up through the night.
+```
+
+A question the model never answered shows as **failed**, not quiet, and
+three in a row pause the watch and tell you.
+
+**Typing a watch at the computer** instead of asking for one works too.
+Prahari's README has full `prahari add` commands for the guestroom pair
+(*Both sides of a number*). A watch whose turn goes through Dvara needs
+Dvara's address and token for that one command (on containers):
+
+```bash
+PRAHARI_DVARA_URL=http://127.0.0.1:8770 \
+PRAHARI_DVARA_TOKEN=$(podman exec sarathi-prahari printenv PRAHARI_DVARA_TOKEN) \
+~/agent/prahari/.venv/bin/prahari add "…" --runner dvara --agent minder --as owner …
+```
+
 **A watch can have its days.** Say them, and the helper sets them:
 
 * *"Keep an eye on the fare for Saturday's flight"* stops after Saturday.

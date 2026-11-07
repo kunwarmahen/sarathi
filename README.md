@@ -205,6 +205,23 @@ words, and it picks; the tutorial's Step 8 has a table.
 work-mail --account mail:work`. The password stays in Setu; Prahari keeps
 the folder open and asks Setu for the login each time it connects.
 
+**A watch typed at your own terminal**, rather than asked for in a chat:
+Prahari's watches are in `~/.prahari` on your machine, the same file
+the container reads, so `prahari add` from Prahari's checkout is seen by
+the container at once. A watch whose turn goes through Dvara (`--runner
+dvara --as owner`) asks Dvara for its agents when it is made, so give it
+Dvara's address and token for that command:
+
+```bash
+PRAHARI_DVARA_URL=http://127.0.0.1:8770 \
+PRAHARI_DVARA_TOKEN=$(podman exec sarathi-prahari printenv PRAHARI_DVARA_TOKEN) \
+~/agent/prahari/.venv/bin/prahari add "…" --runner dvara --agent minder --as owner …
+```
+
+`podman exec sarathi-prahari prahari add …` works too, with the image's
+copy of Prahari, which is as new as your last `sarathi image`. Prahari's
+README has a full example (*Both sides of a number*).
+
 What `up` wires for you:
 
 * **Yantra's page** gets `--prahari`, so the agent there can offer
