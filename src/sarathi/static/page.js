@@ -1062,6 +1062,16 @@ function draw(data) {
         chat.conv = null;
         continue;
       }
+      // written under a conversation that is gone: its old words go from
+      // the window, your words and why nothing was answered stay, and the
+      // window is the chat's own conversation again (none: a new chat)
+      if (ln.gone) {
+        const yours = [...box.querySelectorAll(":scope > .line.you")].pop();
+        box.replaceChildren(...(yours ? [yours] : []), live);
+        chat.conv = ln.moved_to || null; chat.title = "";
+        box.insertBefore(lineView(ln), live);
+        continue;
+      }
       if (ln.transcript) {
         // /chats N typed here: this window is that conversation now
         if (ln.moved_to) chat.conv = ln.moved_to;
