@@ -1684,6 +1684,34 @@ when its line is crossed, and no model is asked in between: a night
 below 60 is one *heat* turn, not one an hour. A second line on the same
 side (*below 60* and *below 50*) is still one watch, mended.
 
+**One reading for many watches.** Those two watches each check the
+weather on their own. An **indriya** (Sanskrit for *a sense*, said
+*in-dree-yuh*) is one reading Prahari keeps up to date, such as *the
+outside temperature, every 15 minutes*. Any number of watches can use it
+instead of each checking for themselves, and the helper can answer
+*"how cold is it outside?"* from it without looking anything up. Ask
+for one in plain words (*"keep the outside temperature up to date, and
+use it for both guestroom watches"*). The helper shows you what it reads
+before saving it. Or type it at the computer:
+
+```bash
+prahari indriya add outside-temp --check web_fetch \
+  --args '{"url": "https://api.open-meteo.com/v1/forecast?latitude=35.79&longitude=-78.78&current=temperature_2m&temperature_unit=fahrenheit"}' \
+  --pick json:current.temperature_2m --thing "the outside temperature" --every 15m
+prahari add "Heat the guestroom" --sense outside-temp --when 'below 60' --then "…"
+prahari indriya list
+#   98a752ef  active  outside-temp: 56.9 (just now)
+#             sensed by: 29fa64b3 (Heat the guestroom)
+```
+
+Prahari's page lists each indriya under **Indriyas**: its value, how
+long ago it was read, and which watches use it. If the reading stops
+working, every watch that uses it says why on its looks, and after three
+failures in a row you're told once, by name, which watches went quiet.
+An indriya is yours unless you share it with the house
+(`--share house`). Sharing lets the others' watches read the number, but
+never use your accounts.
+
 **Every look says why.** On Prahari's page, click any look under
 **Looks** (or a watch's **last:** line) and it opens: why it was quiet,
 told you or failed, what went wrong, what it picked out, what the helper

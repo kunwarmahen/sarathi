@@ -200,6 +200,12 @@ when it is here.
 price drops", "as soon as the bank writes"). Ask your agent in plain
 words, and it picks; the tutorial's Step 8 has a table.
 
+**One reading for many watches**: an *indriya* is a number Prahari keeps
+up to date (the outside temperature every 15 minutes, a price), which
+any number of watches use and your agent answers from, instead of each
+looking it up. Prahari's page lists them under **Indriyas**; the
+tutorial's Step 8 shows one for the guestroom.
+
 **Mail the moment it lands**: add the mail account on Setu's page (its
 **Mail (IMAP)** card, with an app password), then `prahari mailbox add
 work-mail --account mail:work`. The password stays in Setu; Prahari keeps
