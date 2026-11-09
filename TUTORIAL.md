@@ -1762,11 +1762,28 @@ for each; nothing changes until you say so. A moved watch remembers
 what it already told you, so it won't tell you *46 °F* twice. From then
 on, a new watch on that same call uses the reading by itself, and says
 so. Ask your agent instead, and it shows a card before anything moves.
+Changed your mind? `prahari edit aa5afa6c --look-itself` gives a watch
+its own call back, still remembering what it told you.
+
+**How often it reads.** A watch that asks for more (every 5 minutes)
+speeds the reading up; when that watch is removed or ends, the reading
+goes back to the pace you gave it, and says so. `prahari indriya edit
+outside-temp --every 30m` is always the last word. If a site asks for
+fewer calls (a free weather service, a shop that turns bots away), tell
+Prahari once, for the whole house:
+
+```bash
+podman exec sarathi-prahari prahari floor set open-meteo.com 15m --why "their free tier"
+#   open-meteo.com is called no more than once every 15 minutes (their free tier)
+```
+
+Anything already calling it faster is slowed (and listed), and a new
+watch asking for more is turned down with the reason.
 
 **When the number has to be current.** Ask *"is it below 50 right now?
 I'm about to go out"* and the agent asks for a fresh reading, not the
 one from up to 15 minutes ago. Prahari never reads again within 5
-minutes, however often it's asked. A reading nothing has used for 30
+minutes (or the site's floor), however often it's asked. A reading nothing has used for 30
 days pauses itself and tells you.
 
 **A number Home Assistant already knows.** The guestroom's own

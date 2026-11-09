@@ -240,11 +240,17 @@ any chat, and the home page's Prahari card counts them. Ask *"how cold
 is it outside?"* and the agent reads the indriya instead of looking the
 weather up again. A new watch on the same thing uses the indriya by
 itself; watches you made before move onto it when you say so
-(`prahari indriya add NAME --from-watch ID --move`). A number Home Assistant
+(`prahari indriya add NAME --from-watch ID --move`), and back to their own
+call with `prahari edit ID --look-itself`. A reading sped up for a watch
+slows back down when that watch goes, and a site that wants fewer calls
+gets a floor once for the house (`prahari floor set open-meteo.com 15m`).
+A number Home Assistant
 already knows (a room's own thermometer) can be *sent in* instead:
 `prahari indriya add guestroom-temp --pushed`, and a `rest_command` in
 Home Assistant. The tutorial's Step 8 walks through it, `secrets.yaml`
-to automation, with what to do when it doesn't arrive. The tutorial's Step 8 shows one for the guestroom.
+to automation, with what to do when it doesn't arrive; a value may carry
+the time it was measured, and one older than the kept value fires
+nothing.
 
 **Mail the moment it lands**: add the mail account on Setu's page (its
 **Mail (IMAP)** card, with an app password), then `prahari mailbox add
