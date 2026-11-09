@@ -99,7 +99,7 @@ KNOWN: dict[str, set[str]] = {
     "yantra": {"port"},
     "samay": {"on", "port"},
     "prahari": {"on", "port", "inlet_port", "public_url", "people"},
-    "vidhi": {"on", "port"},
+    "vidhi": {"on", "port", "market_port", "market_url"},
     "vaani": {"on", "port", "page_port"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
@@ -337,6 +337,12 @@ class Config:
     #: Vidhi, routines: on unless sarathi.toml says ``[vidhi] on = false``.
     routine_on: bool = True
     routine_port: int = DEFAULT_ROUTINE_PORT
+    #: Vidhi's marketplace ALONE (only /market/) on its own port, kept in
+    #: ~/.vidhi-market, for Tailscale Funnel to reach; 0 for none.
+    routine_market_port: int = 0
+    #: The marketplace this house fetches routines from (VIDHI_MARKET): its
+    #: public address. Empty with a market_port: this house's own.
+    routine_market_url: str = ""
     backup: Backup = Backup()
 
     @property
@@ -544,6 +550,14 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
         raise ConfigError(f"{where}: prahari.public_url is the inlet's public address, "
                           f"like https://<computer>.<tailnet>.ts.net:8443 -- not "
                           f"{watch_public!r}")
+    market_port = routine.get("market_port", 0)
+    if market_port != 0:
+        market_port = _port(routine, "market_port", 0, "vidhi")
+    market_url = routine.get("market_url", "")
+    if not isinstance(market_url, str) or (
+            market_url and not market_url.startswith(("https://", "http://"))):
+        raise ConfigError(f"{where}: vidhi.market_url is a marketplace's address, like "
+                          f"https://<computer>.<tailnet>.ts.net:10000 -- not {market_url!r}")
     if watch_public and not watch_inlet:
         raise ConfigError(f"{where}: prahari.public_url needs prahari.inlet_port: the "
                           "public road reaches the inlet alone, on a port of its own")
@@ -695,10 +709,27 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   watch_people=tuple(n.strip() for n in watch_people),
                   routine_on=routine.get("on", True),
                   routine_port=_port(routine, "port", DEFAULT_ROUTINE_PORT, "vidhi"),
+                  routine_market_port=market_port,
+                  routine_market_url=market_url.rstrip("/"),
                   voice_on=voice.get("on", False),
                   voice_port=_port(voice, "port", DEFAULT_VOICE_PORT, "vaani"),
                   voice_page_port=_port(voice, "page_port", DEFAULT_VOICE_PAGE_PORT,
                                         "vaani"))
+
+
+def _render_market(config: Config) -> str:
+    lines = []
+    if config.routine_market_port:
+        lines.append(f"market_port = {config.routine_market_port}")
+    if config.routine_market_url:
+        lines.append(f'market_url = "{config.routine_market_url}"')
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+def market_dir() -> Path:
+    """Where the house's own marketplace keeps what it lists."""
+    raw = os.environ.get("VIDHI_MARKET_DIR", "").strip()
+    return Path(raw).expanduser() if raw else Path.home() / ".vidhi-market"
 
 
 def _render_watch_extra(config: Config) -> str:
@@ -767,10 +798,14 @@ port = {config.watch_port}
 # Vidhi: routines you draw once on its page (a morning brief, a price
 # check that asks you before it plans), started by a schedule, a watch,
 # a button or a chat. Each person's run as them, through Dvara.
+# market_port runs a marketplace ALONE (only /market/, kept in
+# ~/.vidhi-market) on 127.0.0.1 for Tailscale Funnel (Vidhi's
+# deploy/public-market-tailscale.sh); market_url is the marketplace
+# this house fetches from (its public address).
 [vidhi]
 on = {"true" if config.routine_on else "false"}
 port = {config.routine_port}
-
+{_render_market(config)}
 # Vaani: a Home Assistant Voice puck that talks to your agents, through
 # Dvara. Its pucks, their keys and who each answers as are in
 # ~/.config/vaani/vaani.toml (`vaani init`, `vaani key`). port: where a

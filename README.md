@@ -132,6 +132,8 @@ port = 8782
 [vidhi]
 on = true              # started when Vidhi is on this computer; optional
 port = 8786
+# market_port = 8787   # run a marketplace ALONE here, for Tailscale Funnel
+# market_url = "https://<computer>.<tailnet>.ts.net:10000"   # where to fetch from
 
 [memory]
 via = "local"          # or "smritikosh", once `sarathi smritikosh` set it up
@@ -217,6 +219,12 @@ container, since starting a run is adding it there; its page is
 published on the house address with `[house]` (port 8786, in the
 firewall line), and `sarathi backup` takes its folder. `[vidhi] on =
 false` turns it off ([notes/35](notes/35-routines-in-the-house.md)).
+`market_url` is the marketplace your Vidhi fetches routines (and Prahari
+readings) from; `market_port = 8787` runs one of your own, alone (only
+`/market/`) in `sarathi-vidhi-market`, on 127.0.0.1 where Vidhi's
+`deploy/public-market-tailscale.sh` puts it on the internet. It keeps
+`~/.vidhi-market`, and with no `market_url` the house fetches from it.
+Both are under Settings.
 
 **Samay or Prahari?** Samay does things *at a time* ("every morning at
 8", "on Friday"); Prahari waits for something *to happen* ("when the

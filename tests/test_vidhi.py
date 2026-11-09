@@ -89,3 +89,54 @@ def test_the_process_road_starts_it_and_tells_the_door(world, monkeypatch):
     vidhi = next(s for s in planned if s.name == "vidhi")
     assert vidhi.argv[1:] == ["serve", "--host", "127.0.0.1", "--port", "8786"]
     assert vidhi.env["VIDHI_YANTRA"] == "/bin/yantra"
+
+
+# The marketplace, alone. The bias: A MARKETPLACE ON THE INTERNET MUST BE
+# THE MARKETPLACE ONLY -- never Vidhi's page with its routines and runs --
+# on 127.0.0.1 where Tailscale Funnel reaches it, and the house's own Vidhi
+# must be told where to fetch from.
+
+
+def test_the_marketplace_settings_are_read_back_as_written():
+    text = ('[model]\nprovider = "ollama"\n[vidhi]\nmarket_port = 8787\n'
+            'market_url = "https://beast.tail.ts.net:10000/"\n')
+    config = parse(text)
+    assert config.routine_market_port == 8787
+    assert config.routine_market_url == "https://beast.tail.ts.net:10000"
+    assert parse(render(config)) == config
+    import pytest
+
+    from sarathi.config import ConfigError
+    with pytest.raises(ConfigError, match="a marketplace's address"):
+        parse('[model]\nprovider = "ollama"\n[vidhi]\nmarket_url = "beast:10000"\n')
+
+
+def test_the_podman_road_runs_the_marketplace_alone_on_this_computer(
+        host, world, tmp_path, monkeypatch):  # noqa: F811
+    installed(world)
+    monkeypatch.setenv("VIDHI_MARKET_DIR", str(tmp_path / "shop"))
+    config = Config("ollama", road="podman", house=House("beast.local", "192.168.1.44"),
+                    pages=Pages(on=False), routine_market_port=8787,
+                    routine_market_url="https://beast.tail.ts.net:10000")
+    made = podman.units(config)
+    shop = made["sarathi-vidhi-market.container"]
+    assert (f"Exec=/usr/local/bin/vidhi market serve --dir {tmp_path / 'shop'} "
+            "--host 0.0.0.0 --port 8787") in shop
+    assert "PublishPort=127.0.0.1:8787:8787" in shop and "192.168.1.44:8787" not in shop
+    assert "VIDHI_MARKET_PUBLIC_URL=https://beast.tail.ts.net:10000" in shop
+    assert f"Volume={tmp_path / 'shop'}:" in shop
+    assert ("Environment=VIDHI_MARKET=https://beast.tail.ts.net:10000"
+            in made["sarathi-vidhi.container"])
+
+
+def test_a_house_running_its_own_market_fetches_from_it_by_default(world, monkeypatch):
+    installed(world)
+    monkeypatch.setattr(services, "model_env", lambda c: {})
+    planned, _ = services.plan(Config("ollama", pages=Pages(on=False),
+                                      routine_market_port=8787),
+                               found("yantra", "setu", "samay", "vidhi"))
+    shop = next(s for s in planned if s.name == "vidhi-market")
+    assert shop.argv[1:4] == ["market", "serve", "--dir"]
+    assert shop.argv[-4:] == ["--host", "127.0.0.1", "--port", "8787"]
+    vidhi = next(s for s in planned if s.name == "vidhi")
+    assert vidhi.env["VIDHI_MARKET"] == "http://127.0.0.1:8787"

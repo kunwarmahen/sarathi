@@ -1706,6 +1706,23 @@ prahari indriya list
 #             sensed by: 29fa64b3 (Heat the guestroom)
 ```
 
+**Or from a template.** The outside temperature, the air quality, a
+coin's price and a Home Assistant sensor come ready, with blanks: ask
+your helper (*"keep the outside temperature for Cary"*), press **From a
+template** under **Indriyas** on Prahari's page, or type:
+
+```bash
+podman exec sarathi-prahari prahari indriya templates
+podman exec sarathi-prahari prahari indriya install outside-temp \
+    --input latitude=35.79 --input longitude=-78.78
+#   added indriya outside-temp from outside-temp: reads the outside temperature
+#   every 15 minutes: looks at api.open-meteo.com/v1/forecast (with web_fetch)
+```
+
+A marketplace lists more, each read and signed by a reviewer: `--market`
+shows them, and `install NAME --from-market` installs one only if it's
+signed by a reviewer you trust (Step 13, *Sharing one*).
+
 Prahari's page lists each indriya under **Indriyas**: its value, how
 long ago it was read, and which watches use it. If the reading stops
 working, every watch that uses it says why on its looks, and after three
@@ -2325,13 +2342,24 @@ keeps them.
    after your yes. Or: *"When the porch goes below 60, start my coat
    check"* makes a Prahari watch that does.
 5. **When a routine asks you.** A step can be **Ask me**: the run stops
-   and your chat gets the question with **Yes** and **No**. Press one,
-   now or hours later. No answer in time counts as no.
+   and your chat gets the question with **Yes** and **No**, or with two
+   or three choices of its own (*Heat*, *Cool*, *Leave it*), or asking
+   for a few words you type (`/routines say CODE ...`). Press one, now or
+   hours later; the buttons are on a phone's ntfy notification too. No
+   answer in time counts as no.
 6. **Draw your own.** **New routine**: add steps with the buttons along
-   the top (*call*, *ask*, *read*, *check*, *ask me*, *wait*, *tell me*),
-   click one to fill it in, and drag from its right dot onto the step
-   that should wait for it. The bar at the bottom says what's wrong, or
-   the order it will run in and what it touches. **Save**.
+   the top (*call*, *ask*, *read*, *check*, *ask me*, *wait*, *tell me*,
+   *repeat*), click one to fill it in, and drag from its right dot onto
+   the step that should wait for it. The bar at the bottom says what's
+   wrong, or the order it will run in and what it touches. **Save**.
+   A **repeat** does some steps again, every so often, until a check
+   says yes, a number of times at most (*look at the temperature every
+   15 minutes until it's above 68, four times at most*). **Runs after any
+   one of** joins two branches again.
+7. **One routine, two places.** A schedule or a watch can fill a
+   routine's blanks its own way: *"start my morning brief for Durham at
+   7, and for Cary at 7:05"* is one routine and two schedules
+   (`samay add morning-brief --runner vidhi --input city=Durham ...`).
 
 In any chat, `/routines` lists them and any question waiting, `/routines
 run 1` starts one, and `/routines 1` says how it went.
@@ -2342,7 +2370,13 @@ the morning brief asks once. `qwen3.8` wrote it in about half a minute.
 **Sharing one.** A routine can be published to a marketplace, where a
 reviewer reads it and signs it before anyone can install it, and you
 install only what's signed by reviewers you trust. That's Vidhi's own
-README (*Sharing: the marketplace*).
+README (*Sharing: the marketplace*). Put a marketplace's address in
+Settings → *Vidhi's marketplace*, and Vidhi's page lists what it has,
+with **Get it**. To run one for others: Settings → Ports → *Vidhi's
+marketplace alone* (8787), `sarathi up`, then Vidhi's
+`deploy/public-market-tailscale.sh` puts it on the internet and prints
+its address; its page at that address shows what's listed and the
+reviewers' keys.
 
 ## When something goes wrong
 

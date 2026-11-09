@@ -343,7 +343,9 @@ def sarathi_view(config: Config) -> dict:
                     "inlet_port": config.watch_inlet_port,
                     "public_url": config.watch_public,
                     "people": list(config.watch_people)},
-        "vidhi": {"on": config.routine_on, "port": config.routine_port},
+        "vidhi": {"on": config.routine_on, "port": config.routine_port,
+                  "market_port": config.routine_market_port,
+                  "market_url": config.routine_market_url},
         "run": {"road": config.road},
         "pages": {"on": config.pages.on, "sarathi_port": config.pages.home_port,
                   "setu_port": config.pages.setu_port, "dvara_port": config.pages.door_port,
@@ -449,6 +451,12 @@ def sarathi_apply(changes: dict) -> Config:
         config = replace(config, routine_on=bool(r.get("on", config.routine_on)),
                          routine_port=_num(r.get("port"), "Vidhi's port")
                          or config.routine_port)
+        if "market_port" in r:
+            config = replace(config, routine_market_port=_num(
+                r.get("market_port"), "Vidhi's marketplace port", low=0) or 0)
+        if "market_url" in r:
+            config = replace(config, routine_market_url=str(r.get("market_url") or "")
+                             .strip().rstrip("/"))
     if "vaani" in changes:
         v = changes["vaani"]
         config = replace(config, voice_on=bool(v.get("on", config.voice_on)),

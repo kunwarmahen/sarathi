@@ -42,6 +42,21 @@ nothing about it is started, published, passed or carded.
 A notice's buttons on the home page (a routine's Yes and No) go to the
 agent chosen in the chat, since a notice comes from no agent.
 
+## A marketplace of the house's own
+
+`[vidhi] market_port = 8787` runs Vidhi's marketplace ALONE: `vidhi
+market serve` in its own container, `sarathi-vidhi-market`, published on
+127.0.0.1 only, keeping `~/.vidhi-market` (mounted, and named by `vidhi
+keeps` so a backup takes it). Only `/market/` is served there, never
+Vidhi's page, so Vidhi's `deploy/public-market-tailscale.sh` can put that
+port on the internet through Tailscale Funnel (10000), the way Prahari's
+inlet goes out on 8443. `market_url` is the marketplace the house's Vidhi
+fetches from (`VIDHI_MARKET`): its public address, and the address the
+marketplace's own page tells people (`VIDHI_MARKET_PUBLIC_URL`). With a
+`market_port` and no `market_url`, the house fetches from its own,
+inside the container network. Both are on Settings; the plain-programs
+road runs the same marketplace as a process.
+
 ## Not here
 
 * **A run seen from the home page.** Its card opens Vidhi's own page,

@@ -676,6 +676,8 @@ function drawSarathiTab() {
   const samayOn = check(s.samay.on);
   const prahariOn = check(s.prahari ? s.prahari.on : true);
   const vidhiOn = check(s.vidhi ? s.vidhi.on : true);
+  const vidhiMarketUrl = text(s.vidhi?.market_url || "",
+                              { placeholder: "https://computer.tailnet.ts.net:10000" });
   const vaaniOn = check(s.vaani ? s.vaani.on : false);
   const prahariPublic = text(s.prahari?.public_url || "",
                              { placeholder: "https://beast.tail1234.ts.net:8443" });
@@ -708,6 +710,7 @@ function drawSarathiTab() {
     prahari: text(s.prahari ? s.prahari.port : 8782),
     prahariInlet: text(s.prahari?.inlet_port || "", { placeholder: "none" }),
     vidhi: text(s.vidhi ? s.vidhi.port : 8786),
+    vidhiMarket: text(s.vidhi?.market_port || "", { placeholder: "none" }),
     vaani: text(s.vaani ? s.vaani.port : 8799),
     vaaniPage: text(s.vaani ? s.vaani.page_port : 8797),
     home: text(s.pages.sarathi_port),
@@ -723,7 +726,9 @@ function drawSarathiTab() {
     prahari: { on: prahariOn.checked, port: ports.prahari.value,
                inlet_port: ports.prahariInlet.value.trim() || 0,
                public_url: prahariPublic.value.trim(), people: prahariPeople.value },
-    vidhi: { on: vidhiOn.checked, port: ports.vidhi.value },
+    vidhi: { on: vidhiOn.checked, port: ports.vidhi.value,
+             market_port: ports.vidhiMarket.value.trim() || 0,
+             market_url: vidhiMarketUrl.value.trim() },
     vaani: { on: vaaniOn.checked, port: ports.vaani.value, page_port: ports.vaaniPage.value },
     run: { road: road.value },
     pages: { on: pagesOn.checked, sarathi_port: ports.home.value, setu_port: ports.setu.value,
@@ -792,6 +797,9 @@ function drawSarathiTab() {
             "Gmail's push. Needs the inlet's own port, under Ports."),
       h("label.inline", {}, vidhiOn, " Vidhi: routines you draw once (a morning brief), " +
         "started by a schedule, a watch, a button or a chat"),
+      field("Vidhi's marketplace", vidhiMarketUrl, "Where routines and readings are " +
+            "fetched from (its address). Running your own: its port under Ports, then " +
+            "Vidhi's deploy/public-market-tailscale.sh prints the address to put here."),
       h("label.inline", {}, vaaniOn, " Vaani: a voice puck you talk to (its pucks: " +
         "`vaani init`; it answers through Dvara)"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
@@ -802,6 +810,7 @@ function drawSarathiTab() {
       field("Prahari (its page and its inlet)", ports.prahari),
       field("Prahari's inlet alone (the public road)", ports.prahariInlet),
       field("Vidhi's page", ports.vidhi),
+      field("Vidhi's marketplace alone (the public road)", ports.vidhiMarket),
       field("This home page", ports.home), field("Setu's page", ports.setu),
       field("Dvara's page", ports.dvaraPage), field("Sparsh's page", ports.sparsh),
       field("Dvara", ports.dvara),

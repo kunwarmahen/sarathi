@@ -131,6 +131,7 @@ from sarathi.config import (
     YANTRA_TOKEN,
     Config,
     ConfigError,
+    market_dir,
     read_secrets,
     state_dir,
     yantra_token,
@@ -306,8 +307,20 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
              "VIDHI_YANTRA_HOME": str(work_dir()),
              **({"VIDHI_PUBLIC_URL": config.link(config.routine_port)} if config.house
                 else {}),
+             **market_env(config, f"http://127.0.0.1:{config.routine_market_port}"),
              **routine_door_env(meet), **memory_env},
             says_address="page: "))
+        if config.routine_market_port:
+            # the marketplace ALONE, on 127.0.0.1 only, where Tailscale
+            # Funnel reaches it: no routines of yours, no runs, no API
+            services.append(Service(
+                "vidhi-market", "vidhi",
+                [vidhi.program, "market", "serve", "--dir", str(market_dir()),
+                 "--host", "127.0.0.1", "--port", str(config.routine_market_port)],
+                config.routine_market_port,
+                {**env, **({"VIDHI_MARKET_PUBLIC_URL": config.routine_market_url}
+                           if config.routine_market_url else {})},
+                says_address="vidhi market on "))
     if door is not None:
         services.append(door)
     voice = voice_service(config, found, door is not None, notes)
@@ -576,6 +589,17 @@ def routining(config: Config, env: dict[str, str] | None = None) -> bool:
     if not config.routine_on:
         return False
     return locate(next(s for s in SIBLINGS if s.name == "vidhi"), env) is not None
+
+
+def market_env(config: Config, own: str) -> dict[str, str]:
+    """Which marketplace Vidhi fetches from: ``[vidhi] market_url``, or
+    this house's own (``own``, its address from where Vidhi runs) when it
+    runs one and names no other; none otherwise."""
+    if config.routine_market_url:
+        return {"VIDHI_MARKET": config.routine_market_url}
+    if config.routine_market_port:
+        return {"VIDHI_MARKET": own}
+    return {}
 
 
 def routine_door_env(meet: dict[str, str]) -> dict[str, str]:

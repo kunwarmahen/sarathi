@@ -192,6 +192,7 @@ from sarathi.config import (
     Config,
     ConfigError,
     config_dir,
+    market_dir,
     read_secrets,
     secrets_path,
     state_dir,
@@ -221,6 +222,8 @@ WATCH_PORT = 8782
 WATCH_INLET_PORT = 8783
 #: Vidhi's page and its API, inside its container.
 ROUTINE_PORT = 8786
+#: Vidhi's marketplace, alone, inside its container.
+MARKET_PORT = 8787
 SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
 #: Sparsh's page, inside its container.
 SPARSH_PAGE_PORT = 8794
@@ -234,7 +237,7 @@ WINDOW_PORT = 8790
 #: The browser in the image, and the one a desktop's Setu records.
 BROWSER = "/usr/bin/google-chrome"
 UNITS = {"samay": "sarathi-samay", "prahari": "sarathi-prahari", "dvara": "sarathi-dvara",
-         "vidhi": "sarathi-vidhi",
+         "vidhi": "sarathi-vidhi", "vidhi-market": "sarathi-vidhi-market",
          "vaani": "sarathi-vaani",
          "yantra": "sarathi-yantra",
          "setu": "sarathi-setu", "dvara-page": "sarathi-dvara-page",
@@ -935,12 +938,28 @@ def units(config: Config) -> dict[str, str]:
             # its page on the house address too: a question is answered there
             extra_container=lan(config, config.routine_port, ROUTINE_PORT)
                             + f"Environment=VIDHI_PUBLIC_URL={config.link(config.routine_port)}\n"
+                            + "".join(f"Environment={k}={v}\n" for k, v in services.market_env(
+                                config, f"http://{UNITS['vidhi-market']}:{MARKET_PORT}").items())
                             + (f"Environment=VIDHI_DVARA_URL=http://{UNITS['dvara']}:"
                                f"{DOOR_PORT}\n"
                                f"Environment=VIDHI_DVARA_ACTOR={config.door.owner}\n"
                                if config.door else "") + memory_env,
             more_volumes=memory_dirs or None)
         page_exec += f" --vidhi {IN_IMAGE}/vidhi"
+        if config.routine_market_port:
+            # the marketplace ALONE (only /market/), on 127.0.0.1, where
+            # Tailscale Funnel reaches it; what it lists in ~/.vidhi-market
+            shop = market_dir()
+            shop.mkdir(parents=True, exist_ok=True)
+            out[f"{UNITS['vidhi-market']}.container"] = _unit(
+                "Sarathi: Vidhi's marketplace", UNITS["vidhi-market"],
+                f"{IN_IMAGE}/vidhi market serve --dir {shop} --host 0.0.0.0 "
+                f"--port {MARKET_PORT}",
+                f"127.0.0.1:{config.routine_market_port}:{MARKET_PORT}", config,
+                extra_container=(f"Environment=VIDHI_MARKET_PUBLIC_URL="
+                                 f"{config.routine_market_url}\n"
+                                 if config.routine_market_url else ""),
+                more_volumes=[shop])
     elif not config.routine_on:
         page_exec += " --no-vidhi"
     if config.door is not None:
