@@ -1830,6 +1830,11 @@ rest_command:
     payload: '{"value": "{{ states(''sensor.guestroom_temperature'') }}"}'
 ```
 
+(If you like, the payload can also say when the sensor measured it:
+`"at": "{{ states.sensor.guestroom_temperature.last_updated.isoformat() }}"` beside `"value"`. Then a value sent late, say after the
+Wi-Fi came back, counts its age from that time, and an older one never
+sets off a watch. It works without it.)
+
 Then **Developer tools → YAML → Check configuration**, and restart Home
 Assistant (a new `rest_command` needs a restart).
 
