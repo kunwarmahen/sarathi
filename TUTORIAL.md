@@ -1730,6 +1730,26 @@ one, it shows you a card first: exactly which call it will make and how
 often, and, in capitals, if everyone in the house will be able to read
 the number.
 
+**Watches you made before.** If two of your watches already check the
+same thing (the guestroom's heat and cool watches both fetch the
+weather), make one reading from either and move them onto it:
+
+```bash
+prahari indriya add outside-temp --from-watch aa5afa6c --move
+```
+
+Without `--move` it lists the watches that could move and the command
+for each; nothing changes until you say so. A moved watch remembers
+what it already told you, so it won't tell you *46 °F* twice. From then
+on, a new watch on that same call uses the reading by itself, and says
+so. Ask your agent instead, and it shows a card before anything moves.
+
+**When the number has to be current.** Ask *"is it below 50 right now?
+I'm about to go out"* and the agent asks for a fresh reading, not the
+one from up to 15 minutes ago. Prahari never reads again within 5
+minutes, however often it's asked. A reading nothing has used for 30
+days pauses itself and tells you.
+
 **Every look says why.** On Prahari's page, click any look under
 **Looks** (or a watch's **last:** line) and it opens: why it was quiet,
 told you or failed, what went wrong, what it picked out, what the helper
