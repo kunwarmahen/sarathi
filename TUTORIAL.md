@@ -2532,6 +2532,7 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Your schedules and their history | Samay's folder, `~/.samay/` |
 | What you're watching for, and what each watch saw | Prahari's folder, `~/.prahari/` (its inlet's key: `inlet.token` there, only you) |
 | Your routines, every run and what each step gave, and their questions | Vidhi's folder, `~/.vidhi/` (`serve.token` there is its page's key, only you; `reviewers` the marketplace reviewers you trust) |
+| A marketplace you run for others (only with `market_port`) | `~/.vidhi-market/`: its reviewers, what waits for review, and what it lists, signed; the backup takes it |
 | What was done on each phone, your phone rules, and Sparsh's page key | Sparsh's folder, `~/.sparsh/` (each phone's steps in `phones/<phone>/actions.jsonl`; `rules.toml`; `page.token`, only you) |
 | What the helper remembers about you | `~/.local/state/yantra/`, or with Smritikosh on, its database (the `smritikosh-pgdata` volume) |
 | Your conversations on Yantra's page, for its **history** button | `~/.local/state/yantra/conversations.sqlite` |
