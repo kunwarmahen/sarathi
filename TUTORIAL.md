@@ -1751,22 +1751,128 @@ minutes, however often it's asked. A reading nothing has used for 30
 days pauses itself and tells you.
 
 **A number Home Assistant already knows.** The guestroom's own
-thermometer is better than any website. Make a reading that Home
-Assistant *sends* instead of one Prahari fetches:
+thermometer is better than any website. Instead of Prahari fetching a
+number, Home Assistant can *send* it, the moment it changes. Here is the
+whole setup, start to finish, for a sensor called
+`sensor.guestroom_temperature`.
+
+*1. Make the reading, and a watch on it.* At the computer that runs
+Sarathi:
 
 ```bash
-prahari indriya add guestroom-temp --pushed --thing "the guestroom temperature in °F" --every 30m
-prahari indriya push guestroom-temp 61.5     # try it before Home Assistant is set up
+podman exec sarathi-prahari prahari indriya add guestroom-temp --pushed \
+  --thing "the guestroom temperature in °F" --every 30m
+podman exec sarathi-prahari prahari add "Guestroom too cold" \
+  --sense guestroom-temp --when 'below 62'
 ```
 
-It prints the address to send to; `prahari inlet` gives your key. In
-Home Assistant, a `rest_command` posts `{"value": "{{ states('sensor.guestroom_temperature') }}"}`
-there, from an automation that runs when the sensor changes *and* every
-20 minutes. Prahari's notes/08 has the exact lines. If Home Assistant
-stops sending, or sends `unavailable`, your watches say so instead of
-going quietly silent, and after three misses you're told. Or ask your
-agent: *"Home Assistant can send me the guestroom temperature"*, and it
-sets the reading up and gives you the address.
+`--every 30m` means *"expect a value at least every 30 minutes"*. If
+none comes, your watch says so (step 6 makes sure one always does).
+
+*2. Get the address and your key.*
+
+```bash
+podman exec sarathi-prahari prahari inlet
+#   send to:   POST http://linux-al-ml-beast.singhs:8782/inlet/WORD
+#   with:      Authorization: Bearer AbCdEf…
+```
+
+Your reading's address is that one with `WORD` replaced by
+`indriya/guestroom-temp`, and the key added on the end:
+
+```
+http://linux-al-ml-beast.singhs:8782/inlet/indriya/guestroom-temp?key=AbCdEf…
+```
+
+The key can only *send* things to Prahari. It can't read or change
+anything, but keep it out of shared files anyway.
+
+*3. Find your sensor's name in Home Assistant.* **Settings → Devices &
+services → Entities**, search *guestroom*, and copy the entity ID, for
+example `sensor.guestroom_temperature`.
+
+*4. Tell Home Assistant how to send it.* Home Assistant keeps passwords
+in `secrets.yaml`, beside `configuration.yaml`. Add a line with the
+address from step 2:
+
+```yaml
+# secrets.yaml
+prahari_guestroom_url: "http://linux-al-ml-beast.singhs:8782/inlet/indriya/guestroom-temp?key=AbCdEf…"
+```
+
+and to `configuration.yaml`:
+
+```yaml
+rest_command:
+  prahari_guestroom:
+    url: !secret prahari_guestroom_url
+    method: POST
+    content_type: "application/json"
+    payload: '{"value": "{{ states(''sensor.guestroom_temperature'') }}"}'
+```
+
+Then **Developer tools → YAML → Check configuration**, and restart Home
+Assistant (a new `rest_command` needs a restart).
+
+*5. Try it once by hand.* **Developer tools → Actions**, choose
+`RESTful Command: prahari_guestroom`, and press **Perform action**. Then,
+at the computer:
+
+```bash
+podman exec sarathi-prahari prahari indriya readings guestroom-temp
+#   Mon 9 Nov 10:12  read       66.4        ← it arrived
+```
+
+If nothing shows, see *When it doesn't arrive* below.
+
+*6. Send it by itself.* **Settings → Automations & scenes → Create
+automation → ⋮ → Edit in YAML**, paste, and save:
+
+```yaml
+alias: Guestroom temperature to Prahari
+triggers:
+  - trigger: state
+    entity_id: sensor.guestroom_temperature
+  - trigger: time_pattern
+    minutes: "/20"
+actions:
+  - action: rest_command.prahari_guestroom
+mode: queued
+```
+
+It sends when the temperature changes *and* every 20 minutes. The second
+trigger matters. A room holding steady at 66 °F changes nothing for
+hours, and with nothing sent, Prahari would think Home Assistant had
+stopped. Keep the 20 shorter than step 1's `--every`.
+
+*That's it.* The reading shows on Prahari's page under **Indriyas** (*"read
+2 min ago · expected by 10:42"*), on Yantra's Watches panel (*"sent in,
+not read"*), and as `/indriyas` in any chat. When the guestroom drops
+below 62, the watch tells you, exactly as one that fetched the number
+would.
+
+**When it doesn't arrive.** `prahari indriya readings guestroom-temp`
+says what came in, and Home Assistant's log (**Settings → System →
+Logs**, search *rest_command*) says what it got back:
+
+| Home Assistant's log says | What it means |
+|---|---|
+| `401` | the key in `secrets.yaml` is wrong: copy it again from `prahari inlet` |
+| `404 … no indriya guestroom-temp to push to` | the name in the address doesn't match step 1, or it's someone else's key |
+| `409 … paused` | you paused the reading; `prahari indriya resume guestroom-temp` |
+| can't connect | Home Assistant can't reach this computer: try the address with its number (`192.168.1.44:8782`) instead of its name |
+
+If the sensor drops off, Home Assistant sends `unavailable`. Prahari
+doesn't take that as the temperature: the watch shows *"got no value
+from its sender"*, and after three misses in a row (or 30 minutes of
+nothing, three times) the reading pauses and you're told. It starts
+again by itself as soon as a real value comes in.
+
+You don't have to type step 1 yourself, either. Tell your agent
+*"Home Assistant can send me the guestroom temperature"*. It shows a
+card first, makes the reading, and gives you the address from step 2.
+Before Home Assistant is set up, `prahari indriya push guestroom-temp
+61.5` sends a value by hand, as Home Assistant would.
 
 **Every look says why.** On Prahari's page, click any look under
 **Looks** (or a watch's **last:** line) and it opens: why it was quiet,
