@@ -1,10 +1,10 @@
-# Sarathi -- Yantra, Setu, Samay and Prahari (and Dvara, Sparsh, Vaani, Smritikosh) in one image.
+# Sarathi -- Yantra, Setu, Samay and Prahari (and Vidhi, Dvara, Sparsh, Vaani, Smritikosh) in one image.
 #
 # Not built by hand: `sarathi image` puts a clean copy of each project's
 # committed code beside this file and builds from there. The context is
 #
-#   yantra/  setu/  samay/  dvara/  sparsh/  prahari/  vaani/  smritikosh/ (the
-#   last five maybe empty)  Containerfile
+#   yantra/  setu/  samay/  dvara/  sparsh/  prahari/  vidhi/  vaani/  smritikosh/
+#   (the last six maybe empty)  Containerfile
 #
 # ONE IMAGE, SEVERAL CONTAINERS. The projects call each other as programs
 # -- the page runs `setu run gmail:mine` and `samay mcp`, the clock runs
@@ -34,6 +34,9 @@ FROM python:3.12-slim
 #   xvfb        a screen nobody looks at, for a site whose rules say a
 #               real window (X): headless is what those sites detect.
 #   fonts       so a page has its letters, and a screenshot is readable.
+#   ssh-keygen  (openssh-client) checks the reviewer's signature on a routine
+#               fetched from a marketplace (Vidhi's market.py); nothing here
+#               connects anywhere over SSH.
 #   ffmpeg      a voice note from Telegram or the page, made the WAV a
 #               local model that hears takes (Dvara's heard.py); and an
 #               answer read aloud, made the OGG Telegram plays as a voice
@@ -47,6 +50,7 @@ RUN echo "this machine's browser: ${HOST_BROWSER:-none}" \
  && apt-get update \
  && apt-get install -y --no-install-recommends bubblewrap xvfb xauth \
       ca-certificates curl gnupg fonts-liberation fonts-noto-color-emoji ffmpeg \
+      openssh-client \
  && if [ "$(dpkg --print-architecture)" = amd64 ]; then \
       curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
         | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg && \
@@ -129,6 +133,16 @@ COPY prahari/ /opt/prahari/
 RUN if [ -f /opt/prahari/pyproject.toml ]; then \
       cd /opt/prahari && uv sync --frozen --no-dev && \
       ln -s /opt/prahari/.venv/bin/prahari /usr/local/bin/; \
+    fi
+
+# Vidhi, routines, when its checkout was there to copy. No dependencies of
+# its own: each step is a program above (`yantra --call`, `yantra
+# --prompt`, `prahari indriya get`), and Samay's, Prahari's and Dvara's
+# containers start a run with `vidhi start`, so it is in all of them.
+COPY vidhi/ /opt/vidhi/
+RUN if [ -f /opt/vidhi/pyproject.toml ]; then \
+      cd /opt/vidhi && uv sync --frozen --no-dev && \
+      ln -s /opt/vidhi/.venv/bin/vidhi /usr/local/bin/; \
     fi
 
 # Vaani, a voice puck's listener, when its checkout was there to copy.

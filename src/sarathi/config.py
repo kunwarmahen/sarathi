@@ -69,6 +69,8 @@ DEFAULT_WEB_PORT = 8321
 DEFAULT_CLOCK_PORT = 8780
 #: Prahari: its page, its API and its inlet (what a phone app knocks on).
 DEFAULT_WATCH_PORT = 8782
+#: Vidhi's page: routines drawn once, and their runs.
+DEFAULT_ROUTINE_PORT = 8786
 #: Where a voice puck fetches Vaani's spoken answers.
 DEFAULT_VOICE_PORT = 8799
 DEFAULT_VOICE_PAGE_PORT = 8797
@@ -97,6 +99,7 @@ KNOWN: dict[str, set[str]] = {
     "yantra": {"port"},
     "samay": {"on", "port"},
     "prahari": {"on", "port", "inlet_port", "public_url", "people"},
+    "vidhi": {"on", "port"},
     "vaani": {"on", "port", "page_port"},
     "run": {"road"},
     "dvara": {"on", "port", "telegram", "root", "actors", "state", "window_host",
@@ -331,6 +334,9 @@ class Config:
     voice_page_port: int = DEFAULT_VOICE_PAGE_PORT
     #: Only these people get watches through Dvara; () for everyone.
     watch_people: tuple[str, ...] = ()
+    #: Vidhi, routines: on unless sarathi.toml says ``[vidhi] on = false``.
+    routine_on: bool = True
+    routine_port: int = DEFAULT_ROUTINE_PORT
     backup: Backup = Backup()
 
     @property
@@ -526,6 +532,9 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     watch = data.get("prahari", {})
     if not isinstance(watch.get("on", True), bool):
         raise ConfigError(f"{where}: prahari.on must be true or false")
+    routine = data.get("vidhi", {})
+    if not isinstance(routine.get("on", True), bool):
+        raise ConfigError(f"{where}: vidhi.on must be true or false")
     watch_inlet = watch.get("inlet_port", 0)
     if watch_inlet != 0:
         watch_inlet = _port(watch, "inlet_port", 0, "prahari")
@@ -684,6 +693,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   watch_port=_port(watch, "port", DEFAULT_WATCH_PORT, "prahari"),
                   watch_inlet_port=watch_inlet, watch_public=watch_public.rstrip("/"),
                   watch_people=tuple(n.strip() for n in watch_people),
+                  routine_on=routine.get("on", True),
+                  routine_port=_port(routine, "port", DEFAULT_ROUTINE_PORT, "vidhi"),
                   voice_on=voice.get("on", False),
                   voice_port=_port(voice, "port", DEFAULT_VOICE_PORT, "vaani"),
                   voice_page_port=_port(voice, "page_port", DEFAULT_VOICE_PAGE_PORT,
@@ -753,6 +764,13 @@ port = {config.clock_port}
 on = {"true" if config.watch_on else "false"}
 port = {config.watch_port}
 {_render_watch_extra(config)}
+# Vidhi: routines you draw once on its page (a morning brief, a price
+# check that asks you before it plans), started by a schedule, a watch,
+# a button or a chat. Each person's run as them, through Dvara.
+[vidhi]
+on = {"true" if config.routine_on else "false"}
+port = {config.routine_port}
+
 # Vaani: a Home Assistant Voice puck that talks to your agents, through
 # Dvara. Its pucks, their keys and who each answers as are in
 # ~/.config/vaani/vaani.toml (`vaani init`, `vaani key`). port: where a

@@ -675,6 +675,7 @@ function drawSarathiTab() {
   const ctx = text(s.model.context_window || "", { inputmode: "numeric", placeholder: "8192" });
   const samayOn = check(s.samay.on);
   const prahariOn = check(s.prahari ? s.prahari.on : true);
+  const vidhiOn = check(s.vidhi ? s.vidhi.on : true);
   const vaaniOn = check(s.vaani ? s.vaani.on : false);
   const prahariPublic = text(s.prahari?.public_url || "",
                              { placeholder: "https://beast.tail1234.ts.net:8443" });
@@ -706,6 +707,7 @@ function drawSarathiTab() {
     yantra: text(s.yantra.port), samay: text(s.samay.port),
     prahari: text(s.prahari ? s.prahari.port : 8782),
     prahariInlet: text(s.prahari?.inlet_port || "", { placeholder: "none" }),
+    vidhi: text(s.vidhi ? s.vidhi.port : 8786),
     vaani: text(s.vaani ? s.vaani.port : 8799),
     vaaniPage: text(s.vaani ? s.vaani.page_port : 8797),
     home: text(s.pages.sarathi_port),
@@ -721,6 +723,7 @@ function drawSarathiTab() {
     prahari: { on: prahariOn.checked, port: ports.prahari.value,
                inlet_port: ports.prahariInlet.value.trim() || 0,
                public_url: prahariPublic.value.trim(), people: prahariPeople.value },
+    vidhi: { on: vidhiOn.checked, port: ports.vidhi.value },
     vaani: { on: vaaniOn.checked, port: ports.vaani.value, page_port: ports.vaaniPage.value },
     run: { road: road.value },
     pages: { on: pagesOn.checked, sarathi_port: ports.home.value, setu_port: ports.setu.value,
@@ -787,6 +790,8 @@ function drawSarathiTab() {
       field("Prahari's inlet from outside", prahariPublic, "Its Tailscale Funnel address " +
             "(Prahari's deploy/public-inlet-tailscale.sh prints it), for a webhook or " +
             "Gmail's push. Needs the inlet's own port, under Ports."),
+      h("label.inline", {}, vidhiOn, " Vidhi: routines you draw once (a morning brief), " +
+        "started by a schedule, a watch, a button or a chat"),
       h("label.inline", {}, vaaniOn, " Vaani: a voice puck you talk to (its pucks: " +
         "`vaani init`; it answers through Dvara)"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
@@ -796,6 +801,7 @@ function drawSarathiTab() {
       field("Yantra", ports.yantra), field("Samay", ports.samay),
       field("Prahari (its page and its inlet)", ports.prahari),
       field("Prahari's inlet alone (the public road)", ports.prahariInlet),
+      field("Vidhi's page", ports.vidhi),
       field("This home page", ports.home), field("Setu's page", ports.setu),
       field("Dvara's page", ports.dvaraPage), field("Sparsh's page", ports.sparsh),
       field("Dvara", ports.dvara),

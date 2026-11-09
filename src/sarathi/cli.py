@@ -363,7 +363,7 @@ def _yantra_env(config) -> dict[str, str]:
     except ConfigError:
         env = {}
     for name, var in (("setu", "YANTRA_SETU"), ("samay", "YANTRA_SAMAY"),
-                      ("prahari", "YANTRA_PRAHARI")):
+                      ("prahari", "YANTRA_PRAHARI"), ("vidhi", "YANTRA_VIDHI")):
         hit = locate(next(s for s in SIBLINGS if s.name == name))
         if hit is not None:
             env[var] = hit[0]
@@ -371,6 +371,8 @@ def _yantra_env(config) -> dict[str, str]:
         env["YANTRA_SAMAY"] = "off"
     if not config.watch_on:
         env["YANTRA_PRAHARI"] = "off"
+    if not config.routine_on:
+        env["YANTRA_VIDHI"] = "off"
     hit = locate(next(s for s in SIBLINGS if s.name == "sparsh"))
     if hit is not None:
         env["YANTRA_SPARSH"] = f"auto:{hit[0]}"

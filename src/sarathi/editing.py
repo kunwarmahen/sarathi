@@ -343,6 +343,7 @@ def sarathi_view(config: Config) -> dict:
                     "inlet_port": config.watch_inlet_port,
                     "public_url": config.watch_public,
                     "people": list(config.watch_people)},
+        "vidhi": {"on": config.routine_on, "port": config.routine_port},
         "run": {"road": config.road},
         "pages": {"on": config.pages.on, "sarathi_port": config.pages.home_port,
                   "setu_port": config.pages.setu_port, "dvara_port": config.pages.door_port,
@@ -443,6 +444,11 @@ def sarathi_apply(changes: dict) -> Config:
                 people = [n for n in people.replace(",", " ").split()]
             config = replace(config, watch_people=tuple(str(n).strip() for n in people
                                                         if str(n).strip()))
+    if "vidhi" in changes:
+        r = changes["vidhi"]
+        config = replace(config, routine_on=bool(r.get("on", config.routine_on)),
+                         routine_port=_num(r.get("port"), "Vidhi's port")
+                         or config.routine_port)
     if "vaani" in changes:
         v = changes["vaani"]
         config = replace(config, voice_on=bool(v.get("on", config.voice_on)),

@@ -311,6 +311,19 @@ def _prahari(data: dict, config: Any) -> list[Line]:
     return [Line("green", "prahari", "Prahari is watching")]
 
 
+def _vidhi(data: dict, config: Any) -> list[Line]:
+    if config is not None and not getattr(config, "routine_on", True):
+        return []
+    if not data.get("serving"):
+        return [Line("red", "vidhi", "Vidhi isn't running: no routine starts, and a "
+                     "run waiting on your answer stays waiting", "sarathi up", act=UP)]
+    waiting = (data.get("runs") or {}).get("waiting") or 0
+    if waiting:
+        return [Line("amber", "vidhi", f"{waiting} routine run{'s' * (waiting != 1)} "
+                     "waiting for your answer", "/routines")]
+    return [Line("green", "vidhi", "Vidhi is running routines")]
+
+
 def _vaani(data: dict, config: Any) -> list[Line]:
     if config is not None and not getattr(config, "voice_on", False):
         return []
@@ -405,7 +418,7 @@ def _sparsh(data: dict, config: Any) -> list[Line]:
 
 READERS: dict[str, Callable[[dict, Any], list[Line]]] = {
     "yantra": _yantra, "setu": _setu, "samay": _samay, "prahari": _prahari,
-    "dvara": _dvara, "sparsh": _sparsh, "vaani": _vaani}
+    "vidhi": _vidhi, "dvara": _dvara, "sparsh": _sparsh, "vaani": _vaani}
 
 
 def _epoch(at: Any) -> float | None:

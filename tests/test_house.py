@@ -108,7 +108,7 @@ def test_the_firewall_line_names_every_house_port(host, world, monkeypatch):  # 
         [], 0, "2: eno1    inet 192.168.1.44/24 brd 192.168.1.255 scope global eno1\n", "")
     note = podman.firewall_note(housed())
     assert note[1] == ("  sudo ufw allow from 192.168.1.0/24 to any port "
-                       "8321,8760,8775,8780,8782,8785,8790,8791,8792,8793 proto tcp")
+                       "8321,8760,8775,8780,8782,8785,8786,8790,8791,8792,8793 proto tcp")
 
 
 def test_on_the_plain_programs_road_the_pieces_listen_everywhere_and_say_the_name(

@@ -229,6 +229,10 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
                      "(see `sarathi status`; it's optional)")
     elif not config.watch_on:
         notes.append(f"{'prahari':<{WIDTH}} off in sarathi.toml")
+    vidhi = found.get("vidhi")
+    routine_on = routining(config) and vidhi is not None and vidhi.program is not None
+    if not config.routine_on:
+        notes.append(f"{'vidhi':<{WIDTH}} off in sarathi.toml")
 
     # The clock starts first: the page asks Samay whether its clock runs
     # once, at start-up, and tells the model what it heard for the whole
@@ -289,6 +293,20 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
              **({"PRAHARI_INLET_PUBLIC_URL": config.watch_public}
                 if config.watch_public else {}),
              "PRAHARI_YANTRA_HOME": str(work_dir()), **watch_door_env(meet), **memory_env},
+            says_address="page: "))
+    if routine_on:
+        # each step is a program it already is: `yantra --call`, `yantra
+        # --prompt`, `prahari indriya get`; what a routine says reaches you
+        # through the door, with Yes and No when it asks
+        services.append(Service(
+            "vidhi", "vidhi", [vidhi.program, "serve", "--host", listen,
+                               "--port", str(config.routine_port)],
+            config.routine_port,
+            {**env, "VIDHI_YANTRA": shlex.join(run_yantra),
+             "VIDHI_YANTRA_HOME": str(work_dir()),
+             **({"VIDHI_PUBLIC_URL": config.link(config.routine_port)} if config.house
+                else {}),
+             **routine_door_env(meet), **memory_env},
             says_address="page: "))
     if door is not None:
         services.append(door)
@@ -390,7 +408,7 @@ OLD_NAMES = {"clock": "samay", "door": "dvara", "page": "yantra", "owner": "dvar
 
 #: The sarathi.toml key that moves each piece's port, for "change it" lines.
 PORT_SETTINGS = {"yantra": "yantra.port", "samay": "samay.port",
-                 "prahari": "prahari.port", "dvara": "dvara.port",
+                 "prahari": "prahari.port", "vidhi": "vidhi.port", "dvara": "dvara.port",
                  "setu": "pages.setu_port", "dvara-page": "pages.dvara_port",
                  "sarathi": "pages.sarathi_port", "sparsh": "pages.sparsh_port",
                  "smritikosh": "smritikosh.port",
@@ -549,6 +567,22 @@ def voice_service(config: Config, found: dict[str, Found], door_on: bool,
                        else {})})
 
 
+def routining(config: Config, env: dict[str, str] | None = None) -> bool:
+    """Vidhi is on in sarathi.toml AND on this machine. Optional, like
+    Prahari: with no checkout and nothing on PATH, nothing about it is
+    started, published or passed."""
+    from sarathi.siblings import SIBLINGS, locate
+
+    if not config.routine_on:
+        return False
+    return locate(next(s for s in SIBLINGS if s.name == "vidhi"), env) is not None
+
+
+def routine_door_env(meet: dict[str, str]) -> dict[str, str]:
+    """The door's address, token and owner, in Vidhi's own names."""
+    return {key.replace("SAMAY_", "VIDHI_", 1): value for key, value in meet.items()}
+
+
 def watch_door_env(meet: dict[str, str]) -> dict[str, str]:
     """The door's address, token and owner, in Prahari's own names: the
     same three the clock gets (``door_env``), so a watch's news reaches
@@ -656,6 +690,10 @@ def door_service(config: Config, found: dict[str, Found], env: dict[str, str],
         argv += ["--prahari", prahari]
         argv += ["--prahari-for", ",".join(config.watch_people)] if config.watch_people \
             else []
+    vidhi = found["vidhi"].program if "vidhi" in found else None
+    # each person's routines, run as them; /routines and a run's Yes and No
+    if vidhi and routining(config):
+        argv += ["--vidhi", vidhi]
     if config.remembers_in_smritikosh and config.smritikosh.path() is not None:
         # each person's turns, with each person's own key (memory.json)
         argv += ["--memory", str(memory_files(config)[1])]

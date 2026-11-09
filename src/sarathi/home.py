@@ -204,7 +204,7 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
 #: Each program's own icon (a copy of its favicon.svg), shown on its card.
 #: Smritikosh's (its dashboard's icon) is on the Memory card while
 #: memories are kept there.
-ICONS = ("yantra", "samay", "prahari", "vaani", "setu", "dvara", "sparsh")
+ICONS = ("yantra", "samay", "prahari", "vidhi", "vaani", "setu", "dvara", "sparsh")
 STATIC.update({f"/icons/{n}.svg": (f"icons/{n}.svg", "image/svg+xml")
                for n in (*ICONS, "smritikosh")})
 
@@ -268,6 +268,14 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
                           "watch saw, the readings they share, and the inlet a phone "
                           "app knocks on.",
                           config.watch_port, "PRAHARI_TOKEN", prahari_state / "serve.token"))
+    from sarathi.services import routining
+
+    if routining(config, dict(env)):
+        vidhi_state = Path(env.get("VIDHI_STATE", "").strip()
+                           or home / ".vidhi").expanduser()
+        found.append(Page("vidhi", "Vidhi", "Your routines: draw one, run it, see each "
+                          "run step by step, and answer what a run is asking you.",
+                          config.routine_port, "VIDHI_TOKEN", vidhi_state / "serve.token"))
     if services_voicing(config, env):
         vaani_state = Path(env.get("VAANI_STATE", "").strip()
                            or home / ".local" / "state" / "vaani").expanduser()

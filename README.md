@@ -127,6 +127,10 @@ port = 8780
 on = true              # started when Prahari is on this computer; optional
 port = 8782
 
+[vidhi]
+on = true              # started when Vidhi is on this computer; optional
+port = 8786
+
 [memory]
 via = "local"          # or "smritikosh", once `sarathi smritikosh` set it up
 ```
@@ -194,6 +198,22 @@ with no model, one tool call every so often, and the news comes to your
 chat through Dvara like a schedule's answer. It's optional: without it,
 nothing about it is started, and `[prahari] on = false` turns it off
 when it is here.
+
+### Routines: Vidhi
+
+With [Vidhi](https://github.com/kunwarmahen/vidhi) beside the other
+checkouts, `up` starts it too (its own container on the podman road),
+Dvara gets `--vidhi`, and Vidhi's card is on the home page. A routine is
+a few steps you draw once on Vidhi's page (a morning brief that fetches
+the weather, your mail and the headlines side by side and writes them
+into one message), started by **Run now**, `/routines run 1` in a chat,
+your agent, a Samay schedule (`--runner vidhi`) or a Prahari watch
+(`--routine`). A run that asks you a yes/no puts it in your chat with
+Yes and No buttons. Vidhi's folder (`~/.vidhi`) is mounted in every
+container, since starting a run is adding it there; its page is
+published on the house address with `[house]` (port 8786, in the
+firewall line), and `sarathi backup` takes its folder. `[vidhi] on =
+false` turns it off.
 
 **Samay or Prahari?** Samay does things *at a time* ("every morning at
 8", "on Friday"); Prahari waits for something *to happen* ("when the

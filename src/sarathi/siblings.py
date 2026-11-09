@@ -74,6 +74,8 @@ SIBLINGS: tuple[Sibling, ...] = (
             status_format="samay.status.v1"),
     Sibling("prahari", "prahari", "the watch: tells your agent when something happens",
             status_format="prahari.status.v1", optional=True),
+    Sibling("vidhi", "vidhi", "routines: steps you draw once, started by a schedule, a "
+            "watch, a button or a chat", status_format="vidhi.status.v1", optional=True),
     Sibling("dvara", "dvara", "many people and agents behind one service",
             status_format="dvara.status.v1", optional=True),
     Sibling("sparsh", "sparsh", "the hands: your phone, worked by number, with a yes "
@@ -229,6 +231,18 @@ def _say_prahari(data: dict[str, Any]) -> str:
     return f"not running (start it: prahari serve); watches: {tally}"
 
 
+def _say_vidhi(data: dict[str, Any]) -> str:
+    counts = data.get("routines") or {}
+    runs = data.get("runs") or {}
+    tally = (f"{counts.get('active', 0)} routine(s)"
+             + (f", {counts['paused']} paused" if counts.get("paused") else "")
+             + (f"; {runs.get('waiting', 0)} run(s) waiting for an answer"
+                if runs.get("waiting") else ""))
+    if data.get("serving"):
+        return f"running routines at {data.get('url') or '(no page)'}; {tally}"
+    return f"not running (start it: vidhi serve); {tally}"
+
+
 def _say_dvara(data: dict[str, Any]) -> str:
     running = data.get("running") or {}
     agents = len(data.get("agents") or [])
@@ -308,7 +322,7 @@ def _say_yantra(data: dict[str, Any]) -> str:
 
 
 SAY = {"yantra": _say_yantra, "setu": _say_setu, "samay": _say_samay,
-       "prahari": _say_prahari, "dvara": _say_dvara,
+       "prahari": _say_prahari, "vidhi": _say_vidhi, "dvara": _say_dvara,
        "sparsh": _say_sparsh, "vaani": _say_vaani}
 
 

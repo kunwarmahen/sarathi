@@ -794,14 +794,17 @@ function offerView(offer) {
     buttons(keep("keep"), keep("drop"), "Keep", "Not now"));
 }
 
-// A sign-in word the answer told you to send (Dvara's accounts.taps): the
-// button sends that word as if you'd typed it, to the agent that said it.
+// A sign-in word the answer told you to send (Dvara's accounts.taps), or a
+// routine's Yes and No on a notice (Vidhi): the button sends that word as
+// if you'd typed it, to the agent that said it -- a notice has none, so to
+// the one chosen above.
 function tapsView(ln) {
   return h("div.buttons.taps", {}, ln.taps.map((t) => {
     const b = h("button.yes", { type: "button" }, t.label);
     b.addEventListener("click", async () => {
       b.disabled = true;
-      try { await api("/api/chat", { agent: ln.agent, text: t.word }); problem(""); }
+      const agent = ln.agent || document.getElementById("agent").value;
+      try { await api("/api/chat", { agent, text: t.word }); problem(""); }
       catch (err) { problem(err.message); b.disabled = false; }
       chat.busy = true;
       look();

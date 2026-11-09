@@ -206,8 +206,9 @@ IMAGE = "localhost/sarathi:latest"
 IN_IMAGE = "/usr/local/bin"
 CHECKOUTS = ("yantra", "setu", "samay")
 #: Built into the image when its checkout is there: the door needs dvara,
-#: the phone needs sparsh, watches need prahari, and a voice puck vaani.
-OPTIONAL_CHECKOUTS = ("dvara", "sparsh", "prahari", "vaani")
+#: the phone needs sparsh, watches need prahari, routines vidhi, and a voice
+#: puck vaani.
+OPTIONAL_CHECKOUTS = ("dvara", "sparsh", "prahari", "vidhi", "vaani")
 #: Built in from where sarathi.toml says, when it says (``[smritikosh]``).
 MEMORY_CHECKOUT = "smritikosh"
 #: What a build is from, beside the Containerfile; the image's label (version.py).
@@ -218,6 +219,8 @@ PAGE_PORT, CLOCK_PORT, DOOR_PORT = 8321, 8780, 8765
 WATCH_PORT = 8782
 #: Prahari's inlet alone, inside its container (the public road's).
 WATCH_INLET_PORT = 8783
+#: Vidhi's page and its API, inside its container.
+ROUTINE_PORT = 8786
 SETU_PAGE_PORT, OWNER_PAGE_PORT = 8775, 8785
 #: Sparsh's page, inside its container.
 SPARSH_PAGE_PORT = 8794
@@ -231,6 +234,7 @@ WINDOW_PORT = 8790
 #: The browser in the image, and the one a desktop's Setu records.
 BROWSER = "/usr/bin/google-chrome"
 UNITS = {"samay": "sarathi-samay", "prahari": "sarathi-prahari", "dvara": "sarathi-dvara",
+         "vidhi": "sarathi-vidhi",
          "vaani": "sarathi-vaani",
          "yantra": "sarathi-yantra",
          "setu": "sarathi-setu", "dvara-page": "sarathi-dvara-page",
@@ -387,9 +391,13 @@ def data_dirs() -> list[Path]:
     xdg_state = Path(os.environ.get("XDG_STATE_HOME") or home / ".local" / "state")
     samay = os.environ.get("SAMAY_STATE", "").strip()
     prahari = os.environ.get("PRAHARI_STATE", "").strip()
+    vidhi = os.environ.get("VIDHI_STATE", "").strip()
+    # Vidhi's folder in every container: Samay's, Prahari's and Dvara's
+    # start a run by adding it there, and Vidhi's own runs it
     return [Path(samay).expanduser() if samay else home / ".samay",
             xdg_state / "setu", xdg_state / "yantra", home / ".yantra", work_dir(),
-            Path(prahari).expanduser() if prahari else home / ".prahari"]
+            Path(prahari).expanduser() if prahari else home / ".prahari",
+            Path(vidhi).expanduser() if vidhi else home / ".vidhi"]
 
 
 def setu_files() -> list[Path]:
@@ -450,7 +458,9 @@ def container_env(config: Config) -> dict[str, str]:
     env = {"HOME": str(Path.home()), "YANTRA_PROVIDER": config.provider,
            "SAMAY_YANTRA": run_yantra, "SAMAY_YANTRA_HOME": str(work_dir()),
            # every look is `yantra --call`, with the page's accounts and memory
-           "PRAHARI_YANTRA": run_yantra, "PRAHARI_YANTRA_HOME": str(work_dir())}
+           "PRAHARI_YANTRA": run_yantra, "PRAHARI_YANTRA_HOME": str(work_dir()),
+           # a routine's calls and questions are Yantra's too
+           "VIDHI_YANTRA": run_yantra, "VIDHI_YANTRA_HOME": str(work_dir())}
     zone = host_timezone()
     if zone:
         env["TZ"] = zone          # the browser's clock, the logs', the schedules'
@@ -566,6 +576,10 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
         # a watch's then-turn is a turn: the key; its news goes to the door
         out[UNITS["prahari"]] = {**model, **{k.replace("SAMAY_", "PRAHARI_", 1): v
                                              for k, v in door.items()}}
+    if services.routining(config):
+        # a routine's ask is a model call: the key; what it says goes to the door
+        out[UNITS["vidhi"]] = {**model, **{k.replace("SAMAY_", "VIDHI_", 1): v
+                                           for k, v in door.items()}}
     if config.remembers_in_smritikosh:
         from sarathi import smritikosh
 
@@ -575,6 +589,8 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
             out[UNITS["samay"]][smritikosh.KEY] = held[smritikosh.KEY]
             if UNITS["prahari"] in out:
                 out[UNITS["prahari"]][smritikosh.KEY] = held[smritikosh.KEY]
+            if UNITS["vidhi"] in out:
+                out[UNITS["vidhi"]][smritikosh.KEY] = held[smritikosh.KEY]
         checkout = config.smritikosh.path()
         assert checkout is not None
         out[UNITS["smritikosh"]] = smritikosh.container_dotenv(
@@ -770,6 +786,8 @@ def lan_ports(config: Config) -> list[int]:
     ports += [config.clock_port] if config.clock_on else []
     # Prahari's page, and its inlet: what a phone app knocks on
     ports += [config.watch_port] if services.watching(config) else []
+    # Vidhi's page, where routines are drawn and their questions answered
+    ports += [config.routine_port] if services.routining(config) else []
     if door is not None:
         shown = window(config)
         ports += [int(shown[1])] if shown else []
@@ -908,6 +926,23 @@ def units(config: Config) -> dict[str, str]:
         page_unit += f"Wants={UNITS['prahari']}.service\nAfter={UNITS['prahari']}.service\n"
     elif not config.watch_on:
         page_exec += " --no-prahari"
+    routines_on = services.routining(config)
+    if routines_on:
+        out[f"{UNITS['vidhi']}.container"] = _unit(
+            "Sarathi: Vidhi", UNITS["vidhi"],
+            f"{IN_IMAGE}/vidhi serve --host 0.0.0.0 --port {ROUTINE_PORT}",
+            f"127.0.0.1:{config.routine_port}:{ROUTINE_PORT}", config, memory_after,
+            # its page on the house address too: a question is answered there
+            extra_container=lan(config, config.routine_port, ROUTINE_PORT)
+                            + f"Environment=VIDHI_PUBLIC_URL={config.link(config.routine_port)}\n"
+                            + (f"Environment=VIDHI_DVARA_URL=http://{UNITS['dvara']}:"
+                               f"{DOOR_PORT}\n"
+                               f"Environment=VIDHI_DVARA_ACTOR={config.door.owner}\n"
+                               if config.door else "") + memory_env,
+            more_volumes=memory_dirs or None)
+        page_exec += f" --vidhi {IN_IMAGE}/vidhi"
+    elif not config.routine_on:
+        page_exec += " --no-vidhi"
     if config.door is not None:
         door, after = config.door, ""
         door_exec = (f"{IN_IMAGE}/dvara --root {door.path('root')} --actors "
@@ -922,6 +957,8 @@ def units(config: Config) -> dict[str, str]:
                      + (f"--prahari-for {','.join(config.watch_people)} "
                         if watch and config.watch_people else "")
                      + (f"--sparsh {IN_IMAGE}/sparsh " if config.phone else "")
+                     # each person's routines, run as them (/routines, Yes and No)
+                     + (f"--vidhi {IN_IMAGE}/vidhi " if routines_on else "")
                      + (f"--memory {memory_files(config)[1]} "
                         if config.remembers_in_smritikosh else "")
                      + (f"--ntfy http://{UNITS['ntfy']}:{NTFY_PORT} " if door.ntfy_port else "")
@@ -1366,10 +1403,10 @@ def clock_address(config: Config) -> str | None:
     return None
 
 
-def watch_address(config: Config) -> str | None:
+def watch_address(config: Config, name: str = "prahari") -> str | None:
     """Prahari's own 'page:' line (it says this computer's address itself,
-    told by PRAHARI_PUBLIC_URL)."""
-    logs = run(["podman", "logs", UNITS["prahari"]])
+    told by PRAHARI_PUBLIC_URL); Vidhi's, the same way."""
+    logs = run(["podman", "logs", UNITS[name]])
     for line in reversed((logs.stdout + logs.stderr).splitlines()):
         if line.startswith("page: "):
             return line[len("page: "):].strip()
@@ -1489,6 +1526,7 @@ def up(config: Config) -> tuple[list[str], bool]:
         wanted.append(("smritikosh", config.smritikosh.port))
     wanted += [("samay", config.clock_port)] if config.clock_on else []
     wanted += [("prahari", config.watch_port)] if services.watching(config) else []
+    wanted += [("vidhi", config.routine_port)] if services.routining(config) else []
     if config.door is not None:
         if config.door.ntfy_port:
             wanted.append(("ntfy", config.door.ntfy_port))
@@ -1632,6 +1670,8 @@ def _address(config: Config, name: str, url: str) -> str:
         return clock_address(config) or url
     if name == "prahari":
         return watch_address(config) or url
+    if name == "vidhi":
+        return watch_address(config, "vidhi") or url
     if name in ("setu", "dvara-page", "sparsh", "sarathi"):
         return keyed_address(config, name, url)
     return url
@@ -1642,7 +1682,7 @@ def down(remove: bool = False) -> list[str]:
     next login, which is what they are for -- unless ``remove``."""
     lines = retire_old()
     for name in ("smritikosh-ui", "sarathi", "dvara-page", "sparsh", "setu", "yantra", "vaani",
-                 "dvara", "ntfy", "prahari", "samay",
+                 "dvara", "ntfy", "vidhi", "prahari", "samay",
                  "smritikosh", "smritikosh-db", "smritikosh-neo4j", "smritikosh-mongodb",
                  "smritikosh-redis"):
         unit = UNITS[name]
@@ -1684,6 +1724,7 @@ def running(config: Config) -> list[dict]:
                        ("smritikosh", config.smritikosh.port),
                        ("samay", config.clock_port),
                        ("prahari", config.watch_port),
+                       ("vidhi", config.routine_port),
                        ("ntfy", config.door.ntfy_port if config.door else None),
                        ("dvara", door_port),
                        ("yantra", config.web_port), ("setu", pages.setu_port),

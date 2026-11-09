@@ -55,7 +55,9 @@ something happens — a price drops, a mail comes, Mum messages — is
 Step 8. Step 9 keeps good answers as tests, so a new model can't quietly
 break them. Step 10 sets up a morning brief. Step 11 keeps a copy of
 everything, so a dead disk or a new computer is one command. Step 12
-makes a Home Assistant Voice puck talk to your helper: Vaani.)
+makes a Home Assistant Voice puck talk to your helper: Vaani. Step 13
+is routines you draw once, which a schedule, a watch, a button or a chat
+can start: Vidhi.)
 
 ---
 
@@ -2294,6 +2296,50 @@ house. The program that does it is **Vaani**; it answers through Dvara
 
 ---
 
+## Step 13 (optional) · A routine you draw once
+
+Step 10's brief is your agent deciding each morning how to write it. A
+**routine** is the steps written down once, so they run the same way
+every time: *fetch the weather, my mail and the headlines at the same
+time, have the model write one short brief, send it to me.* Or: *look up
+a price; if it's under my line, ask me before you make a plan.* Vidhi
+keeps them.
+
+1. **Open Vidhi.** On the home page, the **Vidhi** card. (Not there? You
+   need the latest image: `sarathi image`, then `sarathi down && sarathi
+   up`.)
+2. **Install a ready one.** Under **Ready to install**, open **Morning
+   brief**. It lists everything it touches before you install it. Fill
+   its blanks (your latitude and longitude, fahrenheit or celsius, which
+   Gmail account) and press **Install**.
+3. **Run it.** **Run now** on its card. Under **Runs**, open the run:
+   each step, what it gave, and why a step was skipped. The weather, mail
+   and headlines are fetched at the same time; the brief comes to your
+   chat.
+4. **Every morning.** In a chat: *"Start my morning brief every weekday
+   at 7:30."* Your agent makes a Samay schedule that starts the routine,
+   after your yes. Or: *"When the porch goes below 60, start my coat
+   check"* makes a Prahari watch that does.
+5. **When a routine asks you.** A step can be **Ask me**: the run stops
+   and your chat gets the question with **Yes** and **No**. Press one,
+   now or hours later. No answer in time counts as no.
+6. **Draw your own.** **New routine**: add steps with the buttons along
+   the top (*call*, *ask*, *read*, *check*, *ask me*, *wait*, *tell me*),
+   click one to fill it in, and drag from its right dot onto the step
+   that should wait for it. The bar at the bottom says what's wrong, or
+   the order it will run in and what it touches. **Save**.
+
+In any chat, `/routines` lists them and any question waiting, `/routines
+run 1` starts one, and `/routines 1` says how it went.
+
+**Which model.** A routine asks the model only where a step says *ask*;
+the morning brief asks once. `qwen3.8` wrote it in about half a minute.
+
+**Sharing one.** A routine can be published to a marketplace, where a
+reviewer reads it and signs it before anyone can install it, and you
+install only what's signed by reviewers you trust. That's Vidhi's own
+README (*Sharing: the marketplace*).
+
 ## When something goes wrong
 
 Start with the doctor. It asks every program how it's doing and says
@@ -2447,6 +2493,7 @@ the process road; `journalctl --user -u sarathi-yantra` (or `-door`,
 | Your sign-ins | Setu's folder, `~/.local/state/setu/` |
 | Your schedules and their history | Samay's folder, `~/.samay/` |
 | What you're watching for, and what each watch saw | Prahari's folder, `~/.prahari/` (its inlet's key: `inlet.token` there, only you) |
+| Your routines, every run and what each step gave, and their questions | Vidhi's folder, `~/.vidhi/` (`serve.token` there is its page's key, only you; `reviewers` the marketplace reviewers you trust) |
 | What was done on each phone, your phone rules, and Sparsh's page key | Sparsh's folder, `~/.sparsh/` (each phone's steps in `phones/<phone>/actions.jsonl`; `rules.toml`; `page.token`, only you) |
 | What the helper remembers about you | `~/.local/state/yantra/`, or with Smritikosh on, its database (the `smritikosh-pgdata` volume) |
 | Your conversations on Yantra's page, for its **history** button | `~/.local/state/yantra/conversations.sqlite` |
