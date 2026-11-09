@@ -10,14 +10,16 @@ job and stand on their own:
 | **Setu** (सेतु, "bridge") | your accounts — Gmail, Home Assistant, X — signed in once, the key never shown to the model |
 | **Samay** (समय, "time") | work done later, on a schedule, with a record of every run |
 | **Prahari** (प्रहरी, "the sentinel") | tells your agent when something happens — a price, a mail, a phone's notification — looking with no model |
+| **Vidhi** (विधि, "a procedure, step by step") | routines you draw once — a morning brief, a price check that asks you first — started by a schedule, a watch, a button or a chat |
 | **Dvara** (द्वार, "door") | many people and many agents behind one always-on service, e.g. on Telegram |
 | **Sparsh** (स्पर्श, "touch") | your phone, worked by the agent from a numbered list of what's on its screen, with a yes before Send |
 | **Vaani** (वाणी, "speech") | a Home Assistant Voice puck you talk to, answered by your own agents, heard and spoken on this computer |
 | **Smritikosh** (स्मृतिकोश, "store of memories") | a memory store an agent can use instead of Yantra's own |
 
 Each is useful alone. Together they are a helper that knows your
-accounts, remembers you, keeps time, keeps watch, works your phone and
-answers out loud — but only if you know eight names, eight installs, and how they find each
+accounts, remembers you, keeps time, keeps watch, runs your routines,
+works your phone and answers out loud — but only if you know nine names,
+nine installs, and how they find each
 other. **Sarathi is the
 part you install.** It finds the others, asks you once which model
 should answer, and starts them together.
@@ -155,6 +157,7 @@ Yantra shortens a long chat much earlier than it needs to.
 $ sarathi up
 samay      up at http://127.0.0.1:8780/#token=…  (pid 3324159)
 prahari    up at http://127.0.0.1:8782/#token=…  (pid 3324161)
+vidhi      up at http://127.0.0.1:8786/#token=…  (pid 3324162)
 yantra     up at http://127.0.0.1:8321/  (pid 3324163)
 setu       up at http://127.0.0.1:8775/#token=…  (pid 3324170)
 sarathi    up at http://127.0.0.1:8760/#token=…  (pid 3324178)
@@ -166,8 +169,8 @@ address to open, `dvara      up on 8770 (no page here; yours is
 dvara-page, below)`, because Dvara's port answers Samay and its own
 page, not a browser ([notes/09](notes/09-each-by-its-own-name.md)).
 
-That starts **Samay's clock**, **Prahari's watch** (when Prahari is on
-this computer) and **Yantra's page**, in that order, and then the pages
+That starts **Samay's clock**, **Prahari's watch** and **Vidhi** (each
+when it is on this computer) and **Yantra's page**, in that order, and then the pages
 you look at: **Setu's page** (your
 accounts), **Dvara's owner page** when Dvara is on, and **the home
 page** that links them all. Bookmark the `sarathi` address. The page asks once, at start-up, whether Samay runs, so
@@ -213,7 +216,7 @@ Yes and No buttons. Vidhi's folder (`~/.vidhi`) is mounted in every
 container, since starting a run is adding it there; its page is
 published on the house address with `[house]` (port 8786, in the
 firewall line), and `sarathi backup` takes its folder. `[vidhi] on =
-false` turns it off.
+false` turns it off ([notes/35](notes/35-routines-in-the-house.md)).
 
 **Samay or Prahari?** Samay does things *at a time* ("every morning at
 8", "on Friday"); Prahari waits for something *to happen* ("when the
@@ -360,7 +363,8 @@ address = "192.168.1.44"           # optional: what the name finds
 ```
 
 `sarathi up` then publishes every page on that address too: Yantra's,
-Samay's, Prahari's (with its inlet, where a phone app knocks), Dvara's,
+Samay's, Prahari's (with its inlet, where a phone app knocks), Vidhi's
+(where a routine's question can be answered), Dvara's,
 Setu's and its sign-in windows, the home page, and
 Smritikosh's dashboard (and ntfy, as before). What isn't a page stays on
 this computer: Dvara's own port, Smritikosh's server and its databases,
@@ -666,7 +670,7 @@ in that order:
 ```
 dvara  dvara --root ~/dvara/agents --actors ~/dvara/actors.toml --state ~/dvara/state
              --ask [--yolo] --provider <model.provider> --model <model.model> --samay <samay>
-             [--prahari <prahari> [--prahari-for <prahari.people>]]
+             [--prahari <prahari> [--prahari-for <prahari.people>]] [--vidhi <vidhi>]
              serve --port <dvara.port> --web [--telegram <dvara.telegram>]
 ```
 
@@ -893,8 +897,8 @@ takes the units out, so nothing starts at login.
 
 What goes into the containers:
 
-* **One image holding Yantra, Setu and Samay** (and Dvara, Sparsh and
-  Prahari when their checkouts are beside Sarathi's). They call each
+* **One image holding Yantra, Setu and Samay** (and Dvara, Sparsh,
+  Prahari, Vidhi and Vaani when their checkouts are beside Sarathi's). They call each
   other as programs, so each container needs all of them. `sarathi image` builds
   it from the **committed** code of the checkouts beside Sarathi, and
   names any uncommitted changes it left out.
@@ -902,7 +906,9 @@ What goes into the containers:
   `/usr/bin/google-chrome`, where a desktop has it, so the Amazon and X
   profiles Setu already recorded open with the browser that wrote them;
   Xvfb for a site that wants a real window; bubblewrap, so Setu's
-  connectors are walled off here as on your desktop; ffmpeg, so a
+  connectors are walled off here as on your desktop; ssh-keygen, which
+  checks the reviewer's signature on a routine from Vidhi's marketplace;
+  ffmpeg, so a
   voice note can be heard; and Piper with the voices `[dvara] voices`
   names (English unless you list more, `hi_IN-pratham-medium` or
   `es_MX-claude-high` say), so an
@@ -914,7 +920,7 @@ What goes into the containers:
   [notes/05](notes/05-a-browser-in-the-image.md)). Google ships
   Chrome for amd64 only; elsewhere the image gets Debian's Chromium.
 * **Your data, at the same paths.** Samay's schedules, Prahari's
-  watches, Setu's sign-ins and Yantra's memory are mounted from where they are on your machine,
+  watches, Vidhi's routines and runs, Setu's sign-ins and Yantra's memory are mounted from where they are on your machine,
   at the same paths, and the containers run as you. Nothing is copied,
   and the process road and the Podman road see the same things.
 * **Smritikosh, when your memories are kept there.** Its database runs
@@ -1429,7 +1435,8 @@ src/sarathi/
                 which are ours  (notes/02); and the pages  (notes/06);
                 each line by its project's name  (notes/09); ntfy before
                 Dvara, for notices on phones  (notes/15); Prahari beside
-                the clock, wired to the door, the owner's alone  (notes/26)
+                the clock, wired to the door, the owner's alone  (notes/26);
+                Vidhi, its folder in every container  (notes/35)
   podman.py     the same on the podman road: the image, the Quadlet
                 units, systemd  (notes/03); Dvara's unit  (notes/04);
                 its streamed window, and the image's browser  (notes/05);

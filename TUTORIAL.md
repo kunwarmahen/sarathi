@@ -13,7 +13,7 @@ you.
 
 ## What you're setting up
 
-Eight small programs, each with one job. You'll use three of them today:
+Nine small programs, each with one job. You'll use three of them today:
 
 ```
    you, in a browser
@@ -2307,7 +2307,9 @@ keeps them.
 
 1. **Open Vidhi.** On the home page, the **Vidhi** card. (Not there? You
    need the latest image: `sarathi image`, then `sarathi down && sarathi
-   up`.)
+   up`.) With `[house]` (Step 6), `sarathi up` prints a firewall line
+   that now names port 8786; run it once, so Vidhi's page opens from your
+   phone too.
 2. **Install a ready one.** Under **Ready to install**, open **Morning
    brief**. It lists everything it touches; **Look inside** shows every
    step as it was drawn, read only, with anything worth a second look in
@@ -2537,9 +2539,15 @@ need inviting again).
   knock, and each person has their own.
 * **Mailbox** — a mail folder Prahari keeps open, so a new mail is news
   the moment it lands, not at the next look.
+* **Reading (indriya)** — one number Prahari keeps up to date (the
+  outside temperature), read once for every watch that needs it, and
+  answered from when you ask.
+* **Routine** — a few steps you set up once in Vidhi (fetch the weather
+  and your mail, have the model write a brief, send it to you), run the
+  same way every time. A step can stop and ask you yes or no.
 * **Port** — a number that tells your browser which program on your
   computer to talk to (8321 for the page, 8780 for Samay, 8782 for
-  Prahari).
+  Prahari, 8786 for Vidhi).
 * **Container** — a program running in its own sealed box, which your
   computer can restart on its own. Podman is the program that runs them.
 * **Bot** — a Telegram account that a program answers instead of a
