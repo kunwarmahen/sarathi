@@ -1712,6 +1712,24 @@ An indriya is yours unless you share it with the house
 (`--share house`). Sharing lets the others' watches read the number, but
 never use your accounts.
 
+You don't have to remember they're there. Your agent is told which
+indriyas you have, so asking *"how cold is it outside right now?"* gets
+the reading, with how old it is, instead of another trip to the weather
+site:
+
+```
+→ read_indriya   outside-temp
+It's about 49°F outside (49.2°, read just now).
+```
+
+The same list is in three more places: under the watches on Yantra's
+**Watches** panel (with **read now** and **pause** for your own), in any
+chat as `/indriyas`, and as a count on the Prahari card of Sarathi's
+home page (*readings: 1 kept up to date*). If you ask the agent to make
+one, it shows you a card first: exactly which call it will make and how
+often, and, in capitals, if everyone in the house will be able to read
+the number.
+
 **Every look says why.** On Prahari's page, click any look under
 **Looks** (or a watch's **last:** line) and it opens: why it was quiet,
 told you or failed, what went wrong, what it picked out, what the helper

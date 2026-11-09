@@ -203,8 +203,11 @@ words, and it picks; the tutorial's Step 8 has a table.
 **One reading for many watches**: an *indriya* is a number Prahari keeps
 up to date (the outside temperature every 15 minutes, a price), which
 any number of watches use and your agent answers from, instead of each
-looking it up. Prahari's page lists them under **Indriyas**; the
-tutorial's Step 8 shows one for the guestroom.
+looking it up. Prahari's page lists them under **Indriyas**, Yantra's
+Watches panel lists them under the watches, `/indriyas` lists them in
+any chat, and the home page's Prahari card counts them. Ask *"how cold
+is it outside?"* and the agent reads the indriya instead of looking the
+weather up again. The tutorial's Step 8 shows one for the guestroom.
 
 **Mail the moment it lands**: add the mail account on Setu's page (its
 **Mail (IMAP)** card, with an app password), then `prahari mailbox add

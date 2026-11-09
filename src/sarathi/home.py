@@ -265,7 +265,8 @@ def pages(config: Config, env: dict[str, str] | None = None) -> list[Page]:
         prahari_state = Path(env.get("PRAHARI_STATE", "").strip()
                              or home / ".prahari").expanduser()
         found.append(Page("prahari", "Prahari", "What you're waiting for, what each "
-                          "watch saw, and the inlet a phone app knocks on.",
+                          "watch saw, the readings they share, and the inlet a phone "
+                          "app knocks on.",
                           config.watch_port, "PRAHARI_TOKEN", prahari_state / "serve.token"))
     if services_voicing(config, env):
         vaani_state = Path(env.get("VAANI_STATE", "").strip()

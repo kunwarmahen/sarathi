@@ -185,3 +185,18 @@ def test_optional_in_status():
     from sarathi.siblings import SIBLINGS
 
     assert next(s for s in SIBLINGS if s.name == "prahari").optional
+
+
+def test_its_line_counts_the_readings_watches_share():
+    """The card's line is Prahari's own status: the readings (indriyas)
+    are counted beside the watches, and an older Prahari, which has none
+    to say, gets the line it always had."""
+    from sarathi.siblings import _say_prahari
+
+    status = {"serving": True, "url": "http://127.0.0.1:8782",
+              "watches": {"active": 3, "listening": 1, "paused": 0}}
+    assert _say_prahari(status).endswith("watches: 3 active (1 at the inlet), 0 paused")
+    status["indriyas"] = {"active": 1, "paused": 0}
+    assert _say_prahari(status).endswith("0 paused; readings: 1 kept up to date")
+    status["indriyas"] = {"active": 1, "paused": 2}
+    assert _say_prahari(status).endswith("readings: 1 kept up to date, 2 paused")

@@ -219,6 +219,11 @@ def _say_prahari(data: dict[str, Any]) -> str:
     counts = data.get("watches") or {}
     tally = (f"{counts.get('active', 0)} active ({counts.get('listening', 0)} at the "
              f"inlet), {counts.get('paused', 0)} paused")
+    # the readings watches share (indriyas); an older Prahari has none to say
+    kept = data.get("indriyas")
+    if isinstance(kept, dict) and (kept.get("active") or kept.get("paused")):
+        tally += (f"; readings: {kept.get('active', 0)} kept up to date"
+                  + (f", {kept['paused']} paused" if kept.get("paused") else ""))
     if data.get("serving"):
         return f"watching at {data.get('url') or '(no page)'}; watches: {tally}"
     return f"not running (start it: prahari serve); watches: {tally}"
