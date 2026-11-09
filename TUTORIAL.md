@@ -1750,6 +1750,24 @@ one from up to 15 minutes ago. Prahari never reads again within 5
 minutes, however often it's asked. A reading nothing has used for 30
 days pauses itself and tells you.
 
+**A number Home Assistant already knows.** The guestroom's own
+thermometer is better than any website. Make a reading that Home
+Assistant *sends* instead of one Prahari fetches:
+
+```bash
+prahari indriya add guestroom-temp --pushed --thing "the guestroom temperature in °F" --every 30m
+prahari indriya push guestroom-temp 61.5     # try it before Home Assistant is set up
+```
+
+It prints the address to send to; `prahari inlet` gives your key. In
+Home Assistant, a `rest_command` posts `{"value": "{{ states('sensor.guestroom_temperature') }}"}`
+there, from an automation that runs when the sensor changes *and* every
+20 minutes. Prahari's notes/08 has the exact lines. If Home Assistant
+stops sending, or sends `unavailable`, your watches say so instead of
+going quietly silent, and after three misses you're told. Or ask your
+agent: *"Home Assistant can send me the guestroom temperature"*, and it
+sets the reading up and gives you the address.
+
 **Every look says why.** On Prahari's page, click any look under
 **Looks** (or a watch's **last:** line) and it opens: why it was quiet,
 told you or failed, what went wrong, what it picked out, what the helper
