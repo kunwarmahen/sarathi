@@ -2309,7 +2309,9 @@ keeps them.
    need the latest image: `sarathi image`, then `sarathi down && sarathi
    up`.)
 2. **Install a ready one.** Under **Ready to install**, open **Morning
-   brief**. It lists everything it touches before you install it. Fill
+   brief**. It lists everything it touches; **Look inside** shows every
+   step as it was drawn, read only, with anything worth a second look in
+   red (there's nothing in the brief). Fill
    its blanks (your latitude and longitude, fahrenheit or celsius, which
    Gmail account) and press **Install**.
 3. **Run it.** **Run now** on its card. Under **Runs**, open the run:
