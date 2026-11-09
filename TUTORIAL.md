@@ -1874,6 +1874,14 @@ card first, makes the reading, and gives you the address from step 2.
 Before Home Assistant is set up, `prahari indriya push guestroom-temp
 61.5` sends a value by hand, as Home Assistant would.
 
+**What happened to a reading.** Under each indriya on Prahari's page
+(and Yantra's Watches panel), **Readings** lists what it took, newest
+first: how each came (*on its clock*, *sent in*, *nothing came in
+time*) and what every watch on it decided (*Guestroom too cold: fired*).
+Click one to see why. In a chat, `/indriyas 1` says the same for your
+first reading; at the computer, `prahari indriya readings
+guestroom-temp`.
+
 **Every look says why.** On Prahari's page, click any look under
 **Looks** (or a watch's **last:** line) and it opens: why it was quiet,
 told you or failed, what went wrong, what it picked out, what the helper
