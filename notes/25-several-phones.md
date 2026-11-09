@@ -157,3 +157,10 @@ nexus`, then `sarathi phone add nexus 192.168.1.160:5555`.
   has its own card with every step done on it and who asked for it, and a
   **Look** at its screen ([Sparsh's notes/20](https://github.com/kunwarmahen/sparsh/blob/main/notes/20-a-page-for-the-phones.md)).
   With `[pages] off` it still opens Yantra's phone panel.
+* ~~Connected or not on Settings → Your phones.~~ Each row says it now
+  (*connected now (Nexus 6P)*, or *not connected:* and Sparsh's own
+  reason), asked after the card is drawn, since an iPhone's answer can
+  take seconds, and again on **Check again** (`GET
+  /api/settings/phones-now`). Seen on this house: both phones *not
+  connected*, the iPhone's WebDriverAgent not running and the Nexus not
+  listening over Wi-Fi since a restart, each with its fix.

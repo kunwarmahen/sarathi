@@ -108,6 +108,8 @@ and writes its own file; a person signed in gets 403:
     POST /api/settings/tool/AGENT          {"person", "skill", "remove"?}: a learned skill
                                            made a tool, or the tool taken back
                                            (sarathi, actors, policy, agent, prompt, site)
+    GET  /api/settings/phones-now          each phone in Settings, connected or not,
+                                           now (Sparsh asked; owner only)
     POST /api/settings/phone               {"do": "tcpip"|"connect"|"pair"|"iphone"
                                            |"cable"|"remove", "address", "code",
                                            "name"}: the phone, reached from this
@@ -1091,6 +1093,14 @@ def _handler(server: HomeServer):
                 from sarathi import editing
                 try:
                     return self._json(200, editing.vaani_view(server.home.config))
+                except editing.EditError as exc:
+                    return self._json(exc.status, {"detail": str(exc)})
+            if url.path == "/api/settings/phones-now":
+                if self._owner() is None:
+                    return None
+                from sarathi import editing
+                try:
+                    return self._json(200, editing.phones_now(server.home.config))
                 except editing.EditError as exc:
                     return self._json(exc.status, {"detail": str(exc)})
             if url.path == "/api/version":

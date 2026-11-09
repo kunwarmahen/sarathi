@@ -232,3 +232,51 @@ def test_the_settings_page_marks_a_phone_spare_and_back(world, settings, monkeyp
     assert not next(p for p in load().phone.named if p.name == "nexus").spare
     with pytest.raises(editing.EditError, match="no phone called"):
         editing.phone_step(load(), {"do": "spare", "name": "pixel", "on": True})
+
+
+def _status_says(monkeypatch, phones, code=0):
+    """Sparsh's `status --json`, stood in for, and the env it was asked with."""
+    asked = {}
+
+    def fake(found, *argv, env=None):
+        asked.update(argv=argv, env=env)
+        return code, json.dumps({"phones": phones}) if code == 0 else "sparsh: broke"
+    monkeypatch.setattr("sarathi.siblings.find", lambda *a, **k: Found(
+        next(s for s in SIBLINGS if s.name == "sparsh"), program="/bin/true"))
+    monkeypatch.setattr("sarathi.phone._sparsh", fake)
+    return asked
+
+
+def test_settings_says_each_named_phone_connected_or_not_now(monkeypatch):
+    from sarathi import editing
+
+    asked = _status_says(monkeypatch, [
+        {"serial": "84B7N16128001616", "state": "device", "model": "Nexus 6P"}])
+    data = editing.phones_now(Config("ollama", phone=TWO))
+    assert asked["argv"] == ("status", "--json") and "SPARSH_PHONES" in asked["env"]
+    assert data["one"] is None
+    assert data["phones"] == [
+        {"name": "nexus", "connected": True, "model": "Nexus 6P", "why": ""},
+        {"name": "iphone", "connected": False, "model": "",
+         "why": "plug it in, unlock it, and run sparsh iphone"}]
+
+
+def test_settings_says_the_one_unnamed_phone_now(monkeypatch):
+    from sarathi import editing
+
+    _status_says(monkeypatch, [{"serial": "x", "state": "unauthorized"}])
+    data = editing.phones_now(Config("ollama", phone=Phone(address="192.168.1.160:5555")))
+    assert data["phones"] == [] and data["one"] == {
+        "connected": False, "model": "", "why": "attached but not ready: x unauthorized"}
+    _status_says(monkeypatch, [{"serial": "x", "state": "device", "model": "Pixel 8"}])
+    assert editing.phones_now(Config("ollama", phone=Phone(
+        address="192.168.1.160:5555")))["one"]["connected"] is True
+
+
+def test_a_sparsh_that_doesnt_answer_is_said(monkeypatch):
+    from sarathi import editing
+
+    _status_says(monkeypatch, [], code=1)
+    with pytest.raises(editing.EditError, match="sparsh status didn't answer"):
+        editing.phones_now(Config("ollama", phone=TWO))
+    assert editing.phones_now(Config("ollama")) == {"phones": [], "one": None}

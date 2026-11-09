@@ -106,6 +106,9 @@ a { color: var(--accent); }
 .trouble { color: var(--clay); font-size: 13px; }
 .contained { color: var(--ink-3); font-size: 13px; }
 .warn { color: var(--clay); font-size: 13px; }
+.phone-now { color: var(--ink-2, inherit); font-size: 13px; }
+.phone-now.up { color: var(--ok); }
+.phone-now.down { color: var(--clay); }
 
 .levels { margin: 2px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
 .levels li { font-size: 13px; color: var(--ink-2); }

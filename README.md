@@ -614,7 +614,9 @@ Each is a `[phone.NAME]` table with one of `serial`, `address` or
 iPhone at `host.containers.internal` inside the containers. In Dvara's
 actors file `phones = ["nexus"]` gives a person theirs, and their agents
 reach their phones and no others. The same is **Settings → Sarathi →
-Your phones** (each phone, Remove, Add a phone) and a box per phone
+Your phones** (each phone with whether it is connected *now*, and why
+not when it isn't, asked of Sparsh as the card opens and on **Check
+again**; Remove; Add a phone) and a box per phone
 under each person in **Settings → People** (those boxes appear once
 phones have names; before, People has the single *work the phone* box).
 A phone already written down without a name is named first (`sarathi

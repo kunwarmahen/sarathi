@@ -543,6 +543,54 @@ def sarathi_text(text: str) -> Config:
     return config
 
 
+def phones_now(config: Config) -> dict:
+    """Each phone in Settings, connected or not, AS IT IS NOW: Sparsh asked
+    with the names' addresses, as Yantra and Dvara ask it. ``phones``: one
+    row per named phone (connected, its model, and why not); ``one``: the
+    single unnamed phone's. Asked after the card is drawn, never before,
+    because an iPhone's answer can take seconds."""
+    import json as _json
+
+    from sarathi import phone as phone_cmd
+    from sarathi.services import phone_env
+    from sarathi.siblings import SIBLINGS, find
+
+    phone = config.phone
+    if phone is None:
+        return {"phones": [], "one": None}
+    found = find(next(s for s in SIBLINGS if s.name == "sparsh"), ask=False)
+    if found.program is None:
+        raise EditError(409, "sparsh wasn't found on this computer (see `sarathi status`)")
+    code, said = phone_cmd._sparsh(found, "status", "--json", env=phone_env(config))
+    try:
+        data = _json.loads(said) if code == 0 else {}
+    except ValueError:
+        data = {}
+    if code != 0 or not isinstance(data, dict):
+        raise EditError(502, "sparsh status didn't answer: " + " ".join(said.split())[:200])
+    seen = data.get("phones") or []
+    by = {p.get("serial"): p for p in seen}
+    rows = []
+    for each in phone.named:
+        now = by.get(each.where) or {}
+        up = now.get("state") == "device"
+        why = "" if up else (now.get("note") or (
+            "plug it in, unlock it, and run sparsh iphone" if each.kind == "iPhone"
+            else f"nothing answers at {each.where}"))
+        rows.append({"name": each.name, "connected": up,
+                     "model": now.get("model") or "", "why": why})
+    one = None
+    if not phone.named:
+        ready = [p for p in seen if p.get("state") == "device"]
+        one = {"connected": bool(ready),
+               "model": ", ".join(p.get("model") or p.get("serial") or "?" for p in ready),
+               "why": "" if ready else (
+                   "attached but not ready: " + ", ".join(
+                       f"{p.get('serial')} {p.get('state')}" for p in seen)
+                   if seen else "no phone answers")}
+    return {"phones": rows, "one": one}
+
+
 def phone_step(config: Config, body: dict) -> tuple[str, bool]:
     """One of the phone card's buttons: ``tcpip``, ``connect``, ``pair``
     or ``iphone`` (module docstring). (What to say, whether `sarathi up`

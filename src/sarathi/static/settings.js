@@ -829,6 +829,7 @@ function drawSarathiTab() {
 function phoneCard(phoneOn, phoneAt, wdaAt, awake, road, named) {
   const step = (label, body) => button(label, () => save("/api/settings/phone", body()));
   if (named.length) return namedPhonesCard(phoneOn, named, step);
+  const now = h("p.phone-now", { "aria-live": "polite" });
   const fromCable = step("Turn on Wi-Fi from the cable", () => ({ do: "tcpip" }));
   const connect = step("Connect", () => ({ do: "connect", address: phoneAt.value.trim() }));
   const pairAt = text("", { placeholder: "192.168.1.23:37000" });
@@ -845,13 +846,37 @@ function phoneCard(phoneOn, phoneAt, wdaAt, awake, road, named) {
       "Wi-Fi: it finds the phone's address and saves it. Do it again whenever the phone " +
       "restarts: a phone stops listening over Wi-Fi when it's switched off, and its " +
       "address can change. Any Android works this way."),
-    row(fromCable, connect),
+    now, row(fromCable, connect),
     h("details", {}, h("summary", {}, "No cable? Android 11 and newer: pair once"),
       h("p.meta", {}, "On the phone: Developer options → Wireless debugging → Pair device " +
         "with pairing code. Type the address and six digits it shows, then Pair. Then put " +
         "the address on the Wireless debugging page itself above, and Connect."),
       field("Pairing address", pairAt), field("Pairing code", code), row(pair)),
-    iphoneSteps(wdaAt, step), addPhone(step, true));
+    iphoneSteps(wdaAt, step), addPhone(step, true), phonesNow({ one: now }));
+}
+
+// Connected or not, as each phone is NOW: asked of Sparsh after the card is
+// drawn (an iPhone's answer can take seconds), and again on Check again.
+// Returns the button; fills ``where`` (``one``: the single phone's line;
+// ``rows``: name -> its span) when the answer comes.
+function phonesNow(where) {
+  const say = (el, p) => {
+    el.className = "phone-now " + (p.connected ? "up" : "down");
+    el.textContent = p.connected ? `connected now${p.model ? ` (${p.model})` : ""}`
+                                 : `not connected: ${p.why}`;
+  };
+  const ask = () => {
+    const all = [where.one, ...Object.values(where.rows || {})].filter(Boolean);
+    all.forEach((el) => { el.className = "phone-now"; el.textContent = "checking…"; });
+    api("/api/settings/phones-now").then((data) => {
+      if (where.one && data.one) say(where.one, data.one);
+      (data.phones || []).forEach((p) => { const el = (where.rows || {})[p.name];
+                                            if (el) say(el, p); });
+    }).catch((err) => all.forEach((el) => {
+      el.className = "phone-now down"; el.textContent = `couldn't ask: ${err.message}`; }));
+  };
+  ask();
+  return row(button("Check again", ask));
 }
 
 // Several phones, each by a name ([phone.NAME]): the list, each one's Remove,
@@ -860,20 +885,22 @@ function phoneCard(phoneOn, phoneAt, wdaAt, awake, road, named) {
 // Spare: a phone nobody carries, where a watch may read a page unasked when
 // this computer's browser is turned away (Sparsh's open_url). A chat asks.
 function namedPhonesCard(phoneOn, named, step) {
+  const nowOf = {};
   const rows = named.map((n) => {
+    const now = nowOf[n.name] = h("span.phone-now", { "aria-live": "polite" });
     const spare = check(n.spare);
     spare.addEventListener("change", () =>
       save("/api/settings/phone", { do: "spare", name: n.name, on: spare.checked }));
     return h("div.row", { style: "gap: .75rem; align-items: center" },
       h("span", {}, h("b", {}, n.name), ` — ${n.kind} at `, h("code", {}, n.where),
-        n.awake ? ` · awake ${n.awake}` : ""),
+        n.awake ? ` · awake ${n.awake}` : "", " · ", now),
       h("label.inline", { title: "Nobody carries it: a watch may open a page on it " +
         "without asking, when this computer's browser is turned away" }, spare, " Spare"),
       step("Remove", () => ({ do: "remove", name: n.name })));
   });
   return h("div.card.form", {}, h("h3", {}, "Your phones"),
     h("label.inline", {}, phoneOn, " Your phones, through Sparsh"),
-    ...rows,
+    ...rows, phonesNow({ rows: nowOf }),
     h("p.meta", {}, "Spare: a phone nobody carries. When this computer's browser is " +
       "turned away from a page, a watch may read it on a spare phone without asking you; " +
       "in a chat you're always asked first."),
