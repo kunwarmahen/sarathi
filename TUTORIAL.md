@@ -492,7 +492,10 @@ each conversation. Or give Telegram a sidebar like the page's: in
 @BotFather, open your bot's settings and turn on its topics mode, then
 start a topic in the bot's chat for each thing you're working on. Each
 topic is its own conversation, answered inside it, and two can answer at
-once. If it began on
+once. On an iPhone, start each topic with the + button: a thread made by
+typing in the bot's *New Chat* view may be one Telegram won't let the
+bot answer inside (it then says so, and answers in the chat). If that
+happens, turn topics mode off again. If it began on
 Telegram, it stays open there too: what you say in either place carries
 on the same conversation. You don't need to reload the page: a
 conversation on Telegram or at the puck shows in the list within about
@@ -1171,7 +1174,12 @@ the containers bring their own. Then, on each phone:
    tapping it opens the home page.
 4. When the agent offers to keep a job as a skill, the notice has
    **Keep** and **Not now** under it. Press one right there; the answer
-   is in the chat on the home page.
+   is in the chat on the home page. A routine's question comes with its
+   **Yes** and **No**, or its choices, the same way. On an iPhone, the
+   buttons show when you long-press the notification; a notification
+   with buttons doesn't open the home page when tapped, it opens the
+   ntfy app, where the buttons are. A question that wants typed words
+   can't be answered in ntfy: answer it on the home page or Telegram.
 
 They hear notices while the phone can reach your house (home Wi-Fi).
 
@@ -2404,7 +2412,10 @@ keeps them.
    are on a phone's ntfy notification too. For words: on the home page,
    open the bell and type in the box under the question; on Telegram,
    reply to the question's message (it ends *"Or reply to this message
-   with your answer."*). No answer in time counts as no.
+   with your answer."*), or send `/routines CODE your words` with the
+   code the question shows; on Vidhi's own page, type under **Waiting
+   for you** and press Enter. ntfy's buttons can't take words. No answer
+   in time counts as no.
 6. **Draw your own.** **New routine**: add steps with the buttons along
    the top (*call*, *ask*, *read*, *check*, *ask me*, *wait*, *tell me*,
    *repeat*), click one to fill it in, and drag from its right dot onto
