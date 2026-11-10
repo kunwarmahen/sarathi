@@ -110,7 +110,7 @@ KNOWN: dict[str, set[str]] = {
     "phone": {"on", "address", "wda", "awake"},
     "memory": {"via"},
     "house": {"name", "address"},
-    "backup": {"folder", "keep", "also"},
+    "backup": {"folder", "keep", "also", "copy_to"},
     "smritikosh": {"checkout", "port", "database", "volume", "db_port", "full", "neo4j",
                    "mongodb", "redis", "dashboard", "dashboard_port"},
 }
@@ -246,6 +246,12 @@ class House:
         return str(found[0][4][0]) if found else None
 
 
+#: A place a backup is copied to: a folder here (~/..., /...), or
+#: [user@]host:folder for SSH. Nothing that a shell would read as more.
+COPY_TO = re.compile(r"^(?:[~/][^\s'\"`$;&|<>]*|(?:[A-Za-z0-9._-]+@)?[A-Za-z0-9][A-Za-z0-9.-]*"
+                     r":[^\s'\"`$;&|<>]*)$")
+
+
 @dataclass(frozen=True)
 class Backup:
     """``sarathi backup``: where its files go, how many are kept, and any
@@ -256,6 +262,10 @@ class Backup:
     keep: int = 7
     #: Files or folders that are yours, not a program's (a signing key).
     also: tuple[str, ...] = ()
+    #: Where each new backup is copied too, off this computer: another
+    #: computer's folder over SSH (``pi.local:sarathi-backups``,
+    #: ``me@nas:/backups``) or a folder here (a second disk).
+    copy_to: tuple[str, ...] = ()
 
     def path(self) -> Path:
         return Path(self.folder).expanduser()
@@ -690,8 +700,15 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     if not isinstance(also, list) or not all(isinstance(a, str) and a.strip() for a in also):
         raise ConfigError(f"{where}: backup.also must be a list of paths, like "
                           "[\"~/keys\"]")
+    copy_to = kept.get("copy_to", [])
+    if not isinstance(copy_to, list) or not all(
+            isinstance(c, str) and COPY_TO.match(c.strip()) for c in copy_to):
+        raise ConfigError(f"{where}: backup.copy_to must be a list of places, each a "
+                          "folder here or another computer's (\"pi.local:sarathi-backups\", "
+                          "\"me@nas:/backups\")")
     backup = Backup(folder=kept.get("folder") or Backup.folder, keep=keep,
-                    also=tuple(a.strip() for a in also))
+                    also=tuple(a.strip() for a in also),
+                    copy_to=tuple(c.strip() for c in copy_to))
     if via == "smritikosh" and smritikosh.checkout is None:
         raise ConfigError(f"{where}: memory.via = \"smritikosh\" but it isn't set up "
                           "yet: run `sarathi smritikosh`")
@@ -859,13 +876,18 @@ def _render_house(house: House | None) -> str:
 def _render_backup(backup: Backup) -> str:
     also = "also = [" + ", ".join(f'"{a}"' for a in backup.also) + "]" if backup.also \
         else '# also = ["~/keys"]'
+    copy_to = ("copy_to = [" + ", ".join(f'"{c}"' for c in backup.copy_to) + "]"
+               if backup.copy_to else '# copy_to = ["pi.local:sarathi-backups"]')
     return f"""# `sarathi backup`: one locked file of everything here. folder: where it
 # is written (a USB disk's folder, too); keep: the newest this many are
-# kept there, 0 for all; also: places of yours no program keeps.
+# kept there, 0 for all; also: places of yours no program keeps;
+# copy_to: where each new one is copied too, off this computer (another
+# computer's folder over SSH, by its key: no password is asked).
 [backup]
 folder = "{backup.folder}"
 keep = {backup.keep}
 {also}
+{copy_to}
 """
 
 

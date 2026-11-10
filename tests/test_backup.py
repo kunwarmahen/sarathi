@@ -778,3 +778,66 @@ class TestFromTheHomePage:
         assert env["SAMAY_BACKUP_URL"].endswith("/api/backup")
         assert len(env["SAMAY_BACKUP_TOKEN"]) >= 16
         assert env["SAMAY_BACKUP_TOKEN"] != env["SAMAY_DOCTOR_TOKEN"]
+
+
+class TestCopiesOffThisComputer:
+    """The bias: A BACKUP THAT DIES WITH THE DISK IT'S ON. `[backup] copy_to`
+    sends each new file elsewhere; a copy that fails must say so, never hang
+    a night on a password prompt, and never be read as done."""
+
+    def test_copy_to_is_read_written_and_checked(self):
+        from sarathi.config import ConfigError, render
+        conf = parse('[model]\nprovider = "ollama"\n[backup]\n'
+                     'copy_to = ["pi.local:sarathi-backups", "~/second-disk"]\n')
+        assert conf.backup.copy_to == ("pi.local:sarathi-backups", "~/second-disk")
+        assert 'copy_to = ["pi.local:sarathi-backups", "~/second-disk"]' in render(conf)
+        for bad in ('"pi.local:x; rm -rf ~"', '"$(whoami):x"', '"relative/folder"'):
+            with pytest.raises(ConfigError, match="backup.copy_to"):
+                parse(f'[model]\nprovider = "ollama"\n[backup]\ncopy_to = [{bad}]\n')
+
+    def test_a_folder_here_gets_the_file_and_ssh_never_asks_a_password(self, tmp_path):
+        file = tmp_path / "2026-11-10.sarathi-backup"
+        file.write_bytes(b"sealed")
+        ran = []
+
+        def run(argv, **kw):
+            ran.append(argv)
+            return subprocess.CompletedProcess(argv, 0, "", "")
+
+        done = backup.copy_off(file, [str(tmp_path / "second"), "me@pi.local:backups"],
+                               run=run)
+        assert done == [(str(tmp_path / "second"), None), ("me@pi.local:backups", None)]
+        assert (tmp_path / "second" / file.name).read_bytes() == b"sealed"
+        assert all("BatchMode=yes" in argv for argv in ran)
+        assert ran[0][-4:] == ["mkdir", "-p", "--", "backups"]
+        assert ran[1][-2:] == [str(file), "me@pi.local:backups/"]
+
+    def test_a_refused_key_is_said_with_the_fix_and_the_rest_still_copied(self, tmp_path):
+        file = tmp_path / "b.sarathi-backup"
+        file.write_bytes(b"sealed")
+
+        def run(argv, **kw):
+            return subprocess.CompletedProcess(argv, 255, "", "me@pi.local: Permission "
+                                               "denied (publickey).")
+
+        done = backup.copy_off(file, ["me@pi.local:backups", str(tmp_path / "here")],
+                               run=run)
+        assert done[0][1].startswith("me@pi.local turned this computer's key away: "
+                                     "`ssh-copy-id me@pi.local`")
+        assert done[1] == (str(tmp_path / "here"), None)
+        assert backup._ssh_words("Host key verification failed.", "pi.local") == (
+            "this computer hasn't met pi.local yet: `ssh pi.local` once and say yes to "
+            "its key, then it copies by itself")
+        made = backup.Made(file, [], [], copies=done)
+        assert any(ln.startswith("NOT COPIED to me@pi.local:backups") for ln in
+                   backup.made_lines(made))
+        assert made.as_json()["copies"][0]["ok"] is False
+
+    def test_backup_set_adds_and_drops_a_copy_place(self, world, capsys):
+        (world / "config").mkdir()
+        (world / "config/sarathi.toml").write_text('[model]\nprovider = "ollama"\n')
+        assert cli.main(["backup", "set", "--copy-to", "pi.local:sarathi-backups"]) == 0
+        assert "copied: pi.local:sarathi-backups" in capsys.readouterr().out
+        assert cli.main(["backup", "set", "--no-copy-to", "pi.local:sarathi-backups"]) == 0
+        assert "copied: nowhere else" in capsys.readouterr().out
+        assert cli.main(["backup", "set", "--copy-to", "x;y:z"]) == 2

@@ -747,6 +747,8 @@ class Made:
     stores: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
     seconds: float = 0.0
+    #: each place in ``[backup] copy_to``: (place, None when copied, else why not)
+    copies: list[tuple[str, str | None]] = field(default_factory=list)
 
     @property
     def bytes(self) -> int:
@@ -758,6 +760,8 @@ class Made:
                 "memory": self.memory, "stores": self.stores,
                 "places": [t.as_json() for t in self.taken],
                 "problems": self.problems, "removed": self.removed,
+                "copies": [{"to": to, "ok": why is None, "why": why}
+                           for to, why in self.copies],
                 "seconds": round(self.seconds, 1)}
 
 
@@ -948,9 +952,72 @@ def made_lines(made: Made) -> list[str]:
                "locked with your backup passphrase")
     if made.removed:
         out.append(f"older ones removed (keeping the newest): {', '.join(made.removed)}")
+    for to, why in made.copies:
+        out.append(f"copied to {to}" if why is None else f"NOT COPIED to {to}: {why}")
     for p in made.problems:
         out.append(f"NOT IN IT: {p}")
     return out
+
+
+def _remote(place: str) -> tuple[str, str] | None:
+    """``host:folder`` (or ``user@host:folder``) as its two halves; None
+    for a folder here."""
+    if place.startswith(("~", "/")):
+        return None
+    host, _, folder = place.partition(":")
+    return host, folder or "."
+
+
+def copy_off(file: Path, places: tuple[str, ...] | list[str], *,
+             run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+             say: Callable[[str], None] = lambda _line: None) -> list[tuple[str, str | None]]:
+    """``file`` copied to each place: (place, None) when it got there, else
+    (place, why not). Another computer is reached by SSH with its key alone
+    (``BatchMode``: a password prompt would hang a night's run), the folder
+    made there first. The file is sealed, so it is safe anywhere it lands.
+    Nothing is pruned there: that computer's copies are its own to keep."""
+    done = []
+    for place in places:
+        far = _remote(place)
+        try:
+            if far is None:
+                folder = Path(place).expanduser()
+                gone = missing_disk(folder)
+                if gone:
+                    raise BackupError(gone)
+                folder.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(file, folder / file.name)
+            else:
+                host, folder = far
+                ssh = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=15"]
+                made = run(["ssh", *ssh, host, "mkdir", "-p", "--", folder],
+                           capture_output=True, text=True, timeout=60, check=False)
+                if made.returncode != 0:
+                    raise BackupError(_ssh_words(made.stderr, host))
+                sent = run(["scp", "-q", *ssh, str(file), f"{host}:{folder}/"],
+                           capture_output=True, text=True, timeout=3600, check=False)
+                if sent.returncode != 0:
+                    raise BackupError(_ssh_words(sent.stderr, host))
+        except (BackupError, OSError, subprocess.TimeoutExpired) as exc:
+            done.append((place, str(exc) or type(exc).__name__))
+            say(f"not copied to {place}: {exc}")
+            continue
+        done.append((place, None))
+        say(f"copied to {place}")
+    return done
+
+
+def _ssh_words(stderr: str, host: str) -> str:
+    said = (stderr or "").strip().splitlines()[-1:] or ["no answer"]
+    if "Permission denied" in said[0] or "publickey" in said[0]:
+        return (f"{host} turned this computer's key away: `ssh-copy-id {host}` once, "
+                "then it copies with no password")
+    if "Host key verification failed" in said[0]:
+        return (f"this computer hasn't met {host} yet: `ssh {host}` once and say yes "
+                "to its key, then it copies by itself")
+    if "Could not resolve" in said[0] or "timed out" in said[0] or "No route" in said[0]:
+        return f"{host} wasn't reached ({said[0]})"
+    return said[0]
 
 
 # ---- the restore ------------------------------------------------------------------

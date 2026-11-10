@@ -243,6 +243,11 @@ def build_parser() -> argparse.ArgumentParser:
                       help="a file or folder of yours to back up too (again for more)")
     sets.add_argument("--no-also", dest="no_also", action="append", default=[],
                       metavar="PATH", help="stop backing that one up")
+    sets.add_argument("--copy-to", dest="copy_to", action="append", default=[],
+                      metavar="PLACE", help="copy each new backup there too: another "
+                      "computer's folder over SSH (pi.local:sarathi-backups) or a folder")
+    sets.add_argument("--no-copy-to", dest="no_copy_to", action="append", default=[],
+                      metavar="PLACE", help="stop copying there")
     restore = subs.add_parser("restore", help="put a backup back, here or on a new "
                               "computer")
     restore.add_argument("file", help="the .sarathi-backup file")
@@ -674,6 +679,8 @@ def run_backup(*, to: str | None = None, keep: int | None = None,
     folder = Path(to).expanduser() if to else settings.path()
     made = backup.make(places, key, folder, config=config, problems=problems, say=say)
     made.removed = backup.prune(folder, settings.keep if keep is None else keep)
+    if made.file is not None:
+        made.copies = backup.copy_off(made.file, settings.copy_to, say=say)
     return made
 
 
@@ -693,7 +700,8 @@ def _backup(args) -> int:
         print(json.dumps(made.as_json()))
     else:
         print("\n".join([""] + backup.made_lines(made)))
-    return 0 if not made.problems else 1
+    # a copy that didn't get off this computer is said like a part left out
+    return 0 if not made.problems and all(why is None for _, why in made.copies) else 1
 
 
 def _restore(args) -> int:
@@ -786,7 +794,8 @@ def _backup_kept(args) -> int:
     settings = config.backup if config is not None else Backup()
     if args.backup_cmd == "set":
         changes = {"folder": args.folder, "keep": args.keep_n,
-                   "add_also": args.also, "drop_also": args.no_also}
+                   "add_also": args.also, "drop_also": args.no_also,
+                   "add_copy_to": args.copy_to, "drop_copy_to": args.no_copy_to}
         if any(v not in (None, []) for v in changes.values()):
             try:
                 settings = editing.sarathi_apply({"backup": changes}).backup
@@ -796,7 +805,8 @@ def _backup_kept(args) -> int:
             print(f"saved [backup] in {_home(str(settings_path()))}")
         also = ", ".join(settings.also) or "nothing else"
         print(f"folder: {settings.folder}\nkeep:   "
-              f"{settings.keep or 'every one'}\nalso:   {also}")
+              f"{settings.keep or 'every one'}\nalso:   {also}\ncopied: "
+              f"{', '.join(settings.copy_to) or 'nowhere else'}")
         gone = backup.missing_disk(settings.path())
         if gone:
             print(f"note: {gone} The next backup says so too, and makes nothing.")

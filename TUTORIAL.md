@@ -2185,7 +2185,8 @@ keep:   7
 also:   /home/you/keys
 ```
 
-`--keep N` too, and `--no-also PATH` takes one off; `sarathi backup set`
+`--keep N` too, and `--no-also PATH` takes one off (`--copy-to` and
+`--no-copy-to`, below, the same for copies); `sarathi backup set`
 alone shows what you have. With the folder on a USB disk that isn't
 plugged in, it says *"isn't there: is its disk plugged in?"*, and so
 does that night's backup, which then makes nothing rather than filling
@@ -2210,8 +2211,24 @@ By number from the list or by file name, several at once, or
 files in that folder are ever touched (`--from FOLDER` for another).
 
 A backup on the same disk doesn't help when that disk dies. Point
-`folder` at a USB disk, or copy the files somewhere else now and then.
-Each file is safe to put anywhere: without the passphrase it's noise.
+`folder` at a USB disk, or have each new one copied to another computer
+in the house (a Raspberry Pi, a NAS) as soon as it's made:
+
+```
+$ ssh-copy-id pi.local          # once: this computer's key, so no password is asked
+$ ssh pi.local true             # once: say yes to the Pi's own key
+$ sarathi backup set --copy-to pi.local:sarathi-backups
+...
+copied: pi.local:sarathi-backups
+```
+
+From then on each backup ends with *copied to pi.local:sarathi-backups*.
+If the Pi is off or turns the key away, you'll see *NOT COPIED to
+pi.local:sarathi-backups:* and why, with the fix (*"`ssh-copy-id
+pi.local` once"*); the backup itself is still made here. A folder here
+works too (`--copy-to /media/you/second-disk`). Old copies there aren't
+removed: that computer's copies are yours to keep or delete. Each file
+is safe to put anywhere: without the passphrase it's noise.
 
 **Putting it back**, on this computer or a new one (a Raspberry Pi):
 

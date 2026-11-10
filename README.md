@@ -1165,9 +1165,11 @@ and `--new-passphrase` chooses a new passphrase.
 folder = "~/sarathi-backups"   # where it is written; a USB disk's folder too
 keep = 7                       # the newest N kept there; 0 keeps all
 also = ["~/keys"]              # places of yours no program keeps
+copy_to = ["pi.local:sarathi-backups"]  # each new one copied there too (SSH, by key; or a folder)
 ```
 
-`sarathi backup set --folder F --keep N --also PATH --no-also PATH`
+`sarathi backup set --folder F --keep N --also PATH --no-also PATH
+--copy-to PLACE --no-copy-to PLACE`
 writes the same table, through the same check as Settings, and makes no
 backup. A folder under `/media`, `/mnt` or `/run/media` whose disk
 isn't mounted is refused at backup time ("is its disk plugged in?")

@@ -594,9 +594,19 @@ def sarathi_apply(changes: dict) -> Config:
         also = [a for a in also if a not in (b.get("drop_also") or [])]
         if "also" in b:
             also = [str(a).strip() for a in b["also"] or [] if str(a).strip()]
+        copy_to = list(kept.copy_to)
+        for place in b.get("add_copy_to") or []:
+            if place not in copy_to:
+                copy_to.append(place)
+        copy_to = [c for c in copy_to if c not in (b.get("drop_copy_to") or [])]
+        from sarathi.config import COPY_TO
+        for place in copy_to:
+            if not COPY_TO.match(place):
+                raise EditError(400, f"{place!r} isn't a place to copy to: a folder here, "
+                                     "or another computer's (pi.local:sarathi-backups)")
         folder = str(b.get("folder") or kept.folder).strip()
         config = replace(config, backup=replace(
-            kept, folder=folder, also=tuple(also),
+            kept, folder=folder, also=tuple(also), copy_to=tuple(copy_to),
             keep=kept.keep if b.get("keep") in (None, "") else
             _num(b.get("keep"), "how many backups are kept", low=0, high=10_000)))
     if "house" in changes:

@@ -265,9 +265,10 @@ the first night's backup after the rebuild is their first.
 * **A browser profile in use** is copied as it is. A Chrome writing at
   that moment may leave its last cookie out. It signs in again on the
   next use if so.
-* **Off-computer copies.** `[backup] folder` can be a USB disk's
-  folder. Copying to another machine or a cloud is yours to choose:
-  the file is safe to put anywhere, since only the passphrase opens it.
+* ~~**Off-computer copies.**~~ `[backup] copy_to` (*Copied off this
+  computer*, below). A cloud is still yours to choose: the file is safe
+  to put anywhere, since only the passphrase opens it.
+* **Old copies elsewhere** are not pruned: `keep` is for the folder here.
 
 ## A new home, each program's own paths
 
@@ -305,3 +306,32 @@ $ SETU_HOME=…/setu-home setu keeps --rehome /home/oldbox /home/mahen
 
 The owner's comment in the actors file and the vault's sealed secret
 were as they had been.
+
+## Copied off this computer
+
+A backup on the disk it backs up dies with it. `[backup] folder` could be
+a USB disk, but a disk left plugged in beside the computer shares its
+fate, and one left unplugged misses the nights.
+
+**EACH NEW FILE COPIED, AS SOON AS IT'S MADE.** `copy_to` is a list of
+places: another computer's folder over SSH (`pi.local:sarathi-backups`,
+`me@nas:/backups`) or a folder here (a second disk). After the file is
+written and the old ones pruned, it is copied to each. SSH runs with
+`BatchMode=yes`: a password prompt at 02:30 would hang the night's run,
+so a computer that wants a password is refused at once, in words with
+the fix (*"pi.local turned this computer's key away: `ssh-copy-id
+pi.local` once"*, *"this computer hasn't met pi.local yet: `ssh pi.local`
+once and say yes to its key"*). The folder is made there first. A place
+is checked when it's set: a folder or `[user@]host:folder`, nothing a
+shell would read as more.
+
+**A COPY THAT FAILED ISN'T DONE.** Each place gets a line, *copied to …*
+or *NOT COPIED to …: why*, and a failed one makes `sarathi backup` end
+with 1, as a part left out does, so a night's run (Samay) shows it
+failed. The backup here is still made and kept.
+
+Nothing is pruned elsewhere: how many that computer keeps is its own.
+
+Live, here: a folder copy landed; `localhost:` with no key known said
+*"this computer hasn't met localhost yet…"*; `nosuchhost.invalid:` said
+*"nosuchhost.invalid wasn't reached (ssh: Could not resolve hostname…)"*.
