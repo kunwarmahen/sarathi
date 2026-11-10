@@ -18,7 +18,9 @@ conversation you've had with your agents, newest first, under
 ✈ Telegram, 🔊 a puck (*kitchen puck*; one kept before pucks were named
 says only *puck*), several when it went on several.
 The box at the top searches what was said in all of them (Dvara's
-full-text index), with the words marked under each match.
+full-text index), with the words marked under each match; a conversation
+found only in what a tool returned comes after them, its snippet headed
+*in what a tool returned:* (`found_in`, Yantra's notes/130).
 
 **PICKED, ONE IS READ IN THE CHAT'S PLACE.** Its words fill the chat,
 tools folded under the answers that used them, with *Write below to

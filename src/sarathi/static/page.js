@@ -1694,9 +1694,10 @@ function marked(text, q) {
   return span;
 }
 
-function snippetView(snip) {
-  // Dvara marks each match between \u0002 and \u0003
-  const out = h("div.snip");
+function snippetView(snip, inTools) {
+  // Dvara marks each match between \u0002 and \u0003; one found only in
+  // what a tool returned (an order page, a mail) says so
+  const out = h("div.snip", {}, inTools ? h("i", {}, "in what a tool returned: ") : null);
   snip.split(/(\u0002[^\u0003]*\u0003)/).forEach((part) => {
     out.append(part.startsWith("\u0002")
       ? h("mark.hit", {}, part.slice(1, -1)) : document.createTextNode(part));
@@ -1805,7 +1806,7 @@ function convRow(r) {
     toggleMenu(more, menu);
   });
   const row = h("div.conv", { "data-id": r.id }, open, more, menu,
-    r.snippet ? snippetView(r.snippet) : null);
+    r.snippet ? snippetView(r.snippet, r.found_in === "tools") : null);
   return row;
 }
 

@@ -475,7 +475,9 @@ agents is kept by itself as you talk. You don't have to save anything,
 and nobody else in the house can see yours. They're all in the list at
 the left. Type a word you remember, like *boiler*, into the search box
 at the top of the list, and it shrinks to the conversations that say it,
-with the word marked. Tap one and it opens in the middle to read. To
+with the word marked. A number only a tool saw (a tracking number from an
+order page) is found too, under the others, marked *in what a tool
+returned:*. Tap one and it opens in the middle to read. To
 carry it on, just write below it: it stays as you were reading it, with
 its tools folded and its answers' lists and tables kept. Each
 conversation is a chat of its own, like in ChatGPT. Ask something long,
