@@ -2375,9 +2375,11 @@ keeps them.
 5. **When a routine asks you.** A step can be **Ask me**: the run stops
    and your chat gets the question with **Yes** and **No**, or with two
    or three choices of its own (*Heat*, *Cool*, *Leave it*), or asking
-   for a few words you type (`/routines say CODE ...`). Press one, now or
-   hours later; the buttons are on a phone's ntfy notification too. No
-   answer in time counts as no.
+   for a few words you type. Press one, now or hours later; the buttons
+   are on a phone's ntfy notification too. For words: on the home page,
+   open the bell and type in the box under the question; on Telegram,
+   reply to the question's message (it ends *"Or reply to this message
+   with your answer."*). No answer in time counts as no.
 6. **Draw your own.** **New routine**: add steps with the buttons along
    the top (*call*, *ask*, *read*, *check*, *ask me*, *wait*, *tell me*,
    *repeat*), click one to fill it in, and drag from its right dot onto

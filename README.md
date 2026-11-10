@@ -217,7 +217,7 @@ the weather, your mail and the headlines side by side and writes them
 into one message), started by **Run now**, `/routines run 1` in a chat,
 your agent, a Samay schedule (`--runner vidhi`) or a Prahari watch
 (`--routine`). A run that asks you puts the question in your chat with
-buttons (Yes and No, or its choices), on the home page's bell (with a box for one that takes a few words) and on ntfy too. Vidhi's folder (`~/.vidhi`) is mounted in every
+buttons (Yes and No, or its choices), on the home page's bell (with a box for one that takes a few words) and on ntfy too; on Telegram a reply to the question answers it. Vidhi's folder (`~/.vidhi`) is mounted in every
 container, since starting a run is adding it there; its page is
 published on the house address with `[house]` (port 8786, in the
 firewall line), and `sarathi backup` takes its folder. `[vidhi] on =
