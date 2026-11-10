@@ -1549,6 +1549,7 @@ function drawNotices(opening) {
     (() => { const b = bubble(n.text, "notice"); b.classList.add("notice-text"); return b; })(),
     n.offer ? noticeOffer(n) : null,
     n.remember ? noticeRemember(n) : null,
+    noticeRoutine(n),
     (n.files || []).map((name, i) => {
       const b = h("button.file.quiet", { type: "button" }, `⤓ ${name}`);
       b.addEventListener("click", () => download(n.id, i, name));
@@ -1591,6 +1592,53 @@ function noticeOffer(n) {
     h("div.what", {}, `${n.offer.name} — test: ${n.offer.test}`),
     buttons(answer("keep", `Keep ${n.offer.name}: sent.`),
             answer("drop", "Not now: sent."), "Keep", "Not now"));
+}
+
+// A routine's question (Vidhi, through Dvara) as a notice: its Yes and No,
+// or its two or three choices, as buttons; one that takes a few words gets a
+// box. Each sends the /routines words the notice gave, as if typed, to the
+// agent that sent it (a notice from a routine has none: the one chosen
+// above). Vidhi takes it once, from its own person; its answer is in the chat.
+const routined = new Map();
+const ASKS_WORDS = /\/routines say ([A-Za-z0-9]{6})\b/;
+
+function noticeRoutine(n) {
+  const typed = !n.taps && ASKS_WORDS.exec(n.text || "");
+  if (!n.taps && !typed) return null;
+  const said = routined.get(n.id);
+  if (said) {
+    const toChat = h("button.quiet", { type: "button" }, "See its answer in the chat");
+    toChat.addEventListener("click", () => go("chat"));
+    return h("div.offer", {}, h("div.what", {}, said), toChat);
+  }
+  const send = async (word, shown) => {
+    const agent = n.agent || document.getElementById("agent").value;
+    await api("/api/chat", { agent, text: word });
+    routined.set(n.id, `${shown}: sent.`);
+    drawNotices(false);
+  };
+  if (typed) {
+    const box = h("input", { type: "text", maxlength: "200", placeholder: "Your answer",
+                             "aria-label": "Your answer" });
+    const ok = h("button.yes", { type: "button" }, "Send");
+    const go = async () => {
+      const words = box.value.trim();
+      if (!words) return;
+      ok.disabled = true;
+      try { await send(`/routines say ${typed[1]} ${words}`, `"${words}"`); problem(""); }
+      catch (err) { problem(err.message); ok.disabled = false; }
+    };
+    ok.addEventListener("click", go);
+    box.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+    return h("div.offer", {}, h("div.buttons", {}, box, ok));
+  }
+  const all = n.taps.map((t) => h("button.yes", { type: "button" }, t.label));
+  all.forEach((b, i) => b.addEventListener("click", async () => {
+    all.forEach((x) => { x.disabled = true; });
+    try { await send(n.taps[i].word, n.taps[i].label); problem(""); }
+    catch (err) { problem(err.message); all.forEach((x) => { x.disabled = false; }); }
+  }));
+  return h("div.offer", {}, h("div.buttons", {}, ...all));
 }
 
 // What a look back noticed about you, as a notice: Keep and No beside each

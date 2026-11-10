@@ -217,7 +217,7 @@ the weather, your mail and the headlines side by side and writes them
 into one message), started by **Run now**, `/routines run 1` in a chat,
 your agent, a Samay schedule (`--runner vidhi`) or a Prahari watch
 (`--routine`). A run that asks you puts the question in your chat with
-buttons (Yes and No, or its choices), on ntfy too. Vidhi's folder (`~/.vidhi`) is mounted in every
+buttons (Yes and No, or its choices), on the home page's bell (with a box for one that takes a few words) and on ntfy too. Vidhi's folder (`~/.vidhi`) is mounted in every
 container, since starting a run is adding it there; its page is
 published on the house address with `[house]` (port 8786, in the
 firewall line), and `sarathi backup` takes its folder. `[vidhi] on =
@@ -822,7 +822,10 @@ person finds their server and topic under **Notices on this phone** on
 the home page. A skill offered comes with **Keep** and **Not now**,
 pressed on the phone: the ntfy app sends the press to the home page's
 `POST /api/push/answer`, with no sign-in, and Dvara takes it only with
-the mark it made for that one offer. ntfy listens on `window_host` when that is one address,
+the mark it made for that one offer. On an iPhone the buttons show on a
+long-press (or swipe left, **View**); a notification with buttons has no
+link, so a tap opens the ntfy app, where they are drawn, not the home
+page's sign-in. ntfy listens on `window_host` when that is one address,
 so a phone at home reaches it, and otherwise on this computer alone. The
 words never leave the house, so a phone hears them while it can reach
 your house: home Wi-Fi, or Tailscale. An iPhone needs `[dvara]
