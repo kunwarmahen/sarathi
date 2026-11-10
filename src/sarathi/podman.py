@@ -1051,7 +1051,8 @@ def units(config: Config) -> dict[str, str]:
         "Sarathi: Yantra's page", UNITS["yantra"], page_exec,
         f"127.0.0.1:{config.web_port}:{PAGE_PORT}", config, page_unit,
         extra_container=lan(config, config.web_port, PAGE_PORT) + phone_env(config)
-        + memory_env + setu_page_lines(config)[0] + (setu_window_lines(config, yantra_window(config))
+        + memory_env + setu_page_lines(config)[0]
+        + (setu_window_lines(config, yantra_window(config))
                         if yantra_window(config) else ""),
         more_volumes=phone_dirs(config) + memory_dirs)
     if config.pages.on:

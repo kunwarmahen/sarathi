@@ -175,7 +175,10 @@ That starts **Samay's clock**, **Prahari's watch** and **Vidhi** (each
 when it is on this computer) and **Yantra's page**, in that order, and then the pages
 you look at: **Setu's page** (your
 accounts), **Dvara's owner page** when Dvara is on, and **the home
-page** that links them all. Bookmark the `sarathi` address. The page asks once, at start-up, whether Samay runs, so
+page** that links them all. In the containers, Yantra's **connections**
+panel shows Setu's page itself (`YANTRA_SETU_PAGE`, with Yantra's page
+allowed to frame Setu's by `SETU_PAGE_EMBED`), here and under the house's
+name. Bookmark the `sarathi` address. The page asks once, at start-up, whether Samay runs, so
 Samay has to be there first. With `[memory] via = "smritikosh"`,
 Smritikosh's database and server start before all of them
 (`smritikosh  up at http://127.0.0.1:8080/`), since Yantra and Dvara
