@@ -2015,10 +2015,12 @@ sarathi.toml, `people = ["you", "asha"]` (or on **Settings → Sarathi**).
 To hear sooner, let Prahari keep your mail folder open. Two steps, once:
 
 1. **Add the mail account in Setu.** On the home page, open **Setu**
-   under *Your pages*, find the **Mail (IMAP)** card, and fill in the
-   mail server (Gmail: `imap.gmail.com`, iCloud: `imap.mail.me.com`,
-   Outlook: `outlook.office365.com`), your address, and an *app
-   password*. Make the app password in your account's security
+   under *Your pages*, find the **Mail (IMAP)** card, and fill in your
+   address and an *app password* (for a Yahoo, Gmail, iCloud, Outlook,
+   AOL, Fastmail or Zoho address leave the mail server empty: it's found
+   from the address; for any other, type it, like `imap.example.com`).
+   For Yahoo the app password is made at login.yahoo.com/account/security,
+   **Generate app password**. Make the app password in your account's security
    settings, never your real password. Setu checks it with your mail
    server before keeping it, and keeps it with your other sign-ins.
    Call the account `work`.
