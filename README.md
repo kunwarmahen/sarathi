@@ -1152,7 +1152,10 @@ The first backup asks for a passphrase twice and keeps a key pair in
 backup is sealed to the public half, so a night needs no passphrase, and
 each file opens on a new computer with the file and the passphrase
 alone. `restore` refuses while anything runs, puts each place back under
-this computer's home (Sarathi's own `sarathi.toml` follows), moves what
+this computer's home (Sarathi's own `sarathi.toml` follows, and each
+program that can moves the paths in its own files: `dvara keeps
+--rehome`, `setu keeps --rehome`, so each person's accounts and browser
+sign-ins point at this home), moves what
 was there aside to `<name>.before-restore-<time>`, and puts the memories
 back with `pg_restore --clean`. `--only NAME,...` puts back some of it,
 and `--new-passphrase` chooses a new passphrase.

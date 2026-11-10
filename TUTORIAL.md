@@ -2226,6 +2226,14 @@ Each file is safe to put anywhere: without the passphrase it's noise.
 
 Anything already in the way is moved aside, never deleted: you'll see
 `actors.toml.before-restore-20261024-090000` beside the restored one.
+On a computer where your home folder is a different one (another user
+name), the paths inside the programs' own files follow too. You should
+see lines like:
+
+    dvara paths              3 moved from /home/oldname to ~
+    setu paths               6 moved from /home/oldname to ~
+
+A `NOT MOVED:` line names the command to run for that one by hand.
 `--only setu,dvara` puts back only those. If Smritikosh isn't on the new
 computer yet, the restore says so: clone it where it says, then
 `sarathi restore FILE --only smritikosh`.

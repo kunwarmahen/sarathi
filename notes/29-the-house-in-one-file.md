@@ -259,12 +259,49 @@ the first night's backup after the rebuild is their first.
   need APOC or a reader of its own, and its restore a writer.
 * **The programs themselves.** A backup holds what is yours. A new
   computer installs them first (the tutorial's Step 1), then restores.
-* **Paths inside other programs' files** are not rewritten on a new
-  home. Dvara's and Setu's settings name few, and they are theirs to
-  say.
+* ~~**Paths inside other programs' files** are not rewritten on a new
+  home.~~ Each program that names whole paths moves its own (*A new
+  home, each program's own paths*, below).
 * **A browser profile in use** is copied as it is. A Chrome writing at
   that moment may leave its last cookie out. It signs in again on the
   next use if so.
 * **Off-computer copies.** `[backup] folder` can be a USB disk's
   folder. Copying to another machine or a cloud is yours to choose:
   the file is safe to put anywhere, since only the passphrase opens it.
+
+## A new home, each program's own paths
+
+Sarathi moved the paths in its own `sarathi.toml` when the backup came
+from another home, and left the rest. But Dvara's actors file names each
+person's Setu folder by its whole path, `signins.json` is kept by those
+folders, and every Setu folder's vault names each browser profile the
+same way (`/home/old/.local/state/setu/profiles/amazon-personal`). On a
+computer with another home, every person's accounts and every browser
+sign-in pointed at a folder that wasn't there.
+
+**EACH PROGRAM MOVES ITS OWN, WHEN ASKED.** A program whose `keeps
+--json` says `"rehome": true` takes `keeps --rehome OLD NEW` and moves
+the paths at or under OLD to under NEW in its own files, answering
+`{"rehomed": [{"file", "paths"}]}`. After putting the files back, when
+the backup's home isn't this one, `restore` asks each program that says
+it can (Dvara with the folders `sarathi.toml` now names, and with
+`--setu` so it can ask Setu for each person's folder) and says what each
+moved. Sarathi still edits no other program's file. One that fails gets
+a `NOT MOVED:` line with the command to run by hand; the restore goes
+on. Dvara and Setu answer it; Samay, Prahari, Vidhi, Sparsh and Yantra
+keep no whole home paths in their settings, so they don't say they can.
+
+A scratch house's files, the real `dvara` and `setu`:
+
+```
+$ dvara --actors …/actors.toml --state …/state keeps --rehome /home/oldbox /home/mahen --setu …/setu
+…/actors.toml: 2 path(s) moved under /home/mahen
+…/state/signins.json: 1 path(s) moved under /home/mahen
+…/state/setu/asha/vault.json: 1 path(s) moved under /home/mahen
+$ SETU_HOME=…/setu-home setu keeps --rehome /home/oldbox /home/mahen
+…/setu-home/vault.json: 1 path(s) moved under /home/mahen
+…/setu-home/config.json: 1 path(s) moved under /home/mahen
+```
+
+The owner's comment in the actors file and the vault's sealed secret
+were as they had been.

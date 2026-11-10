@@ -311,6 +311,58 @@ class TestTheRestore:
         assert "sarathi down" in capsys.readouterr().err
 
 
+class TestEachProgramMovesItsOwnPaths:
+    """Restored on a new home, each program that says it can moves its own
+    paths (keeps --rehome); Sarathi asks and reports, never edits theirs."""
+
+    def _house(self, world, monkeypatch, *, setu_ok=True):
+        bin_dir = world / "bin"
+        # setu says it can, and moves 5; dvara says it can, moves 2 and passes on setu's
+        program(bin_dir, "setu", "")
+        program(bin_dir, "dvara", "")
+        program(bin_dir, "samay", "")
+        asked = []
+
+        def run(argv, **kw):
+            asked.append(argv)
+            name = Path(argv[0]).name
+            if "--rehome" in argv:
+                out = {"setu": {"rehomed": [{"file": "vault.json", "paths": 5}]},
+                       "dvara": {"rehomed": [{"file": "actors.toml", "paths": 2},
+                                             {"file": "/s/setu/asha",
+                                              "problem": "setu couldn't move its paths"}]}
+                       }[name]
+                code = 0 if setu_ok or name != "setu" else 1
+                return subprocess.CompletedProcess(argv, code, json.dumps(out), "")
+            says = {"setu": {"rehome": True}, "dvara": {"rehome": True},
+                    "samay": {"format": "samay.keeps.v1"}}.get(name, {})
+            return subprocess.CompletedProcess(argv, 0, json.dumps(says), "")
+
+        monkeypatch.setattr(cli, "_settings_or_none", lambda: parse(
+            '[model]\nprovider = "ollama"\n[dvara]\non = true\nroot = "/n/agents"\n'
+            'actors = "/n/actors.toml"\nstate = "/n/state"\n'))
+        return run, asked
+
+    def test_each_program_that_can_is_asked_and_its_answer_said(self, world, monkeypatch):
+        run, asked = self._house(world, monkeypatch)
+        lines = cli.rehome_programs("/home/old", "/home/new", run=run)
+        rehomes = [a for a in asked if "--rehome" in a]
+        assert [Path(a[0]).name for a in rehomes] == ["setu", "dvara"]  # samay can't: not asked
+        dvara = next(a for a in rehomes if a[0].endswith("dvara"))
+        assert dvara[:7] == [dvara[0], "--root", "/n/agents", "--actors", "/n/actors.toml",
+                             "--state", "/n/state"]
+        assert "--setu" in dvara                                    # for each person's folder
+        assert any("setu paths" in ln and "5 moved" in ln for ln in lines)
+        assert any("dvara paths" in ln and "2 moved" in ln for ln in lines)
+        assert "NOT MOVED: /s/setu/asha: setu couldn't move its paths" in lines
+
+    def test_a_program_that_fails_is_said_with_the_command_to_run(self, world, monkeypatch):
+        run, _ = self._house(world, monkeypatch, setu_ok=False)
+        lines = cli.rehome_programs("/home/old", "/home/new", run=run)
+        assert any(ln.startswith("NOT MOVED: setu") and "setu keeps --rehome /home/old"
+                   in ln for ln in lines)
+
+
 def _unpack_from(file: Path, old: Path, new: Path, **kw) -> backup.Restored:
     restored = backup.unpack(file, WORDS, home=new, **kw)
     backup.finish(restored)

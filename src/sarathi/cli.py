@@ -59,6 +59,7 @@ import argparse
 import errno
 import json
 import os
+import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -343,6 +344,51 @@ def door_folders(config) -> list[str] | None:
         return None
     return ["--root", str(door.path("root")), "--actors", str(door.path("actors")),
             "--state", str(door.path("state"))]
+
+
+def rehome_programs(old: str, new: str, only: set[str] | None = None,
+                    run=subprocess.run) -> list[str]:
+    """After a restore on a computer whose home isn't the old one's: each
+    program that says it can (``keeps --json``'s ``rehome``) moves the
+    paths in its own files, ``keeps --rehome OLD NEW``. Sarathi edits none
+    of them; it asks, and says what each said."""
+    config = _settings_or_none()
+    lines = []
+    setu = locate(next(s for s in SIBLINGS if s.name == "setu"))
+    for s in SIBLINGS:
+        if s.status_format is None or (only is not None and s.name not in only):
+            continue
+        hit = locate(s)
+        if hit is None:
+            continue
+        before = []
+        if s.name == "dvara":
+            if config is None or config.door is None:
+                continue
+            before = door_folders(config) or []
+        extra = ["--setu", setu[0]] if s.name == "dvara" and setu else []
+        try:
+            asked = run([hit[0], *before, "keeps", "--json"], capture_output=True,
+                        text=True, timeout=60, check=False)
+            if not json.loads(asked.stdout or "{}").get("rehome"):
+                continue
+            done = run([hit[0], *before, "keeps", "--rehome", old, new, *extra, "--json"],
+                       capture_output=True, text=True, timeout=180, check=False)
+            rows = json.loads(done.stdout or "{}").get("rehomed") if done.returncode == 0 \
+                else None
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            rows = None
+        if rows is None:
+            lines.append(f"NOT MOVED: {s.name} couldn't move its paths from {old} to "
+                         f"{_home(new)} (`{s.name} keeps --rehome {old} {new}`)")
+            continue
+        moved = sum(r.get("paths", 0) for r in rows if isinstance(r, dict))
+        if moved:
+            lines.append(f"  {s.name + ' paths':<24} {moved} moved from {old} to "
+                         f"{_home(new)}")
+        lines += [f"NOT MOVED: {r['file']}: {r['problem']}" for r in rows
+                  if isinstance(r, dict) and r.get("problem")]
+    return lines
 
 
 def _settings_or_none():
@@ -701,6 +747,9 @@ def _restore(args) -> int:
         except (backup.BackupError, ConfigError) as exc:
             lines.append(f"NOT PUT BACK: {exc}")
             code = 1
+    old_home = restored.manifest.get("home", "")
+    if old_home and Path(old_home) != Path.home():
+        lines += rehome_programs(old_home, str(Path.home()), only)
     stores = restored.manifest.get("stores") or []
     if stores and (only is None or "smritikosh" in only):
         put, aside, failed = backup.restore_stores(
