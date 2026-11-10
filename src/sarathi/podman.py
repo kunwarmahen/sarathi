@@ -810,6 +810,27 @@ def lan_ports(config: Config) -> list[int]:
     return ports
 
 
+def setu_page_lines(config: Config) -> tuple[str, str]:
+    """SETU'S PAGE INSIDE YANTRA'S, ON THIS ROAD TOO. Yantra's page frames
+    Setu's in its Connections panel, but in a container it can't start a
+    Setu page a browser reaches, nor tell that a tab here is here (it
+    arrives through Podman's bridge). Setu's page already runs, for the
+    same folder, on ``pages.setu_port``. So Yantra is told where
+    (``YANTRA_SETU_PAGE``; it reads the page's key from the shared folder,
+    so nothing secret is in its environment), and Setu's page names
+    Yantra's page as allowed to frame it (``SETU_PAGE_EMBED``): on this
+    computer, and under the house's name when there is one.
+    (Yantra's lines, Setu's lines); nothing with the pages off."""
+    if not config.pages.on:
+        return "", ""
+    yantra = (f"Environment=YANTRA_SETU_PAGE=http://127.0.0.1:"
+              f"{config.pages.setu_port}/\n")
+    origins = [f"http://127.0.0.1:{config.web_port}", f"http://localhost:{config.web_port}"]
+    if config.house:
+        origins.append(config.link(config.web_port).rstrip("/"))
+    return yantra, f"Environment=SETU_PAGE_EMBED={' '.join(dict.fromkeys(origins))}\n"
+
+
 def lan(config: Config, port: int, inner: int) -> str:
     """A second PublishPort, on the house address, with ``[house]``."""
     address = config.people_host() if config.house else None
@@ -1030,7 +1051,7 @@ def units(config: Config) -> dict[str, str]:
         "Sarathi: Yantra's page", UNITS["yantra"], page_exec,
         f"127.0.0.1:{config.web_port}:{PAGE_PORT}", config, page_unit,
         extra_container=lan(config, config.web_port, PAGE_PORT) + phone_env(config)
-        + memory_env + (setu_window_lines(config, yantra_window(config))
+        + memory_env + setu_page_lines(config)[0] + (setu_window_lines(config, yantra_window(config))
                         if yantra_window(config) else ""),
         more_volumes=phone_dirs(config) + memory_dirs)
     if config.pages.on:
@@ -1046,7 +1067,8 @@ def units(config: Config) -> dict[str, str]:
             f"127.0.0.1:{pages.setu_port}:{SETU_PAGE_PORT}", config,
             # people's links open on their phones (config.people_host)
             extra_container=(f"PublishPort={phones}:{pages.setu_port}:{SETU_PAGE_PORT}\n"
-                             if phones else "") + setu_window_lines(config),
+                             if phones else "") + setu_window_lines(config)
+            + setu_page_lines(config)[1],
             more_volumes=[folders] if folders else None)
         if config.phone is not None:
             # the phones' own page: the same phones and logs as Yantra's page

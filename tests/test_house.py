@@ -149,3 +149,26 @@ def test_smritikosh_is_on_the_house_by_its_dashboard_alone(host, monkeypatch):  
             'exec .venv/bin/uvicorn' in units["sarathi-smritikosh.container"])
     published = podman.lan_ports(config)
     assert 3000 in published and not {5432, 6379, 8080, 8770} & set(published)
+
+
+def test_yantras_panel_frames_the_houses_own_setu_page(host):  # noqa: F811
+    """In a container Yantra can't start a Setu page a browser reaches, nor
+    tell a tab here from one elsewhere: it is told where Setu's page is
+    (no key in its environment), and Setu's page lets it frame it, here
+    and under the house's name."""
+    config = housed()
+    made = podman.units(config)
+    page = made["sarathi-yantra.container"]
+    assert "Environment=YANTRA_SETU_PAGE=http://127.0.0.1:8775/" in page
+    assert "SETU_PAGE_TOKEN" not in page
+    setu = made["sarathi-setu.container"]
+    assert ("Environment=SETU_PAGE_EMBED=http://127.0.0.1:8321 http://localhost:8321 "
+            "http://beast.local:8321") in setu
+
+
+def test_with_the_pages_off_yantra_keeps_its_own_cards(host):  # noqa: F811
+    from dataclasses import replace
+
+    config = replace(housed(), pages=replace(housed().pages, on=False))
+    page = podman.units(config)["sarathi-yantra.container"]
+    assert "YANTRA_SETU_PAGE" not in page
