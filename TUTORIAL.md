@@ -680,7 +680,10 @@ sarathi image && sarathi down && sarathi up     # containers; plain programs: ju
 the same `sarathi image` line). Now an answer written in Hindi is read by the Hindi voice
 and an English one by the English voice, whoever asked. Hindi typed in
 English letters (*"kal kya hai"*) is read by the Hindi voice too, its
-numbers as Hindi says them (*9 baje* is *नौ बजे*). For Spanish, add
+numbers as Hindi says them (*9 baje* is *नौ बजे*, *3rd kist* is
+*तीसरी किस्त*). An answer that mixes the two, an English line with a
+Hindi sentence in it, is read sentence by sentence, each in its own
+voice, in one voice note. For Spanish, add
 `es_MX-claude-high` the same way (not `es_MX-ald-medium`: Piper can't
 read that one's card, so Dvara leaves it out). Other voices are
 listed at huggingface.co/rhasspy/piper-voices (`hi_IN-priyamvada-medium`
@@ -1257,11 +1260,13 @@ it; it puts it back on your list, and `/remember` keeps it from there.
 On Telegram it's `/remember declined`, then `/remember undo 1`.
 
 **Pictures and PDFs on Telegram.** A picture your agent sends (a
-screenshot, a chart) arrives as a photo in the chat, not a file to open.
-`/file NAME` still sends the original. To share a conversation from
-Telegram as something any phone opens, send `/chats export 1 pdf` (the
-number from `/chats`): Dvara prints it with the Chrome already in its
-image, so Hindi and emoji come out right.
+screenshot, a chart) arrives as a photo in the chat, not a file to open;
+several in one answer arrive as one album. `/file NAME` still sends the
+original. To share a conversation from Telegram as something any phone
+opens, send `/chats export 1 pdf` (the number from `/chats`): Dvara
+prints it with the Chrome already in its image, so Hindi and emoji come
+out right, and an answer's bold, lists and links print as they read,
+not as asterisks.
 
 To turn Dvara off again: `sarathi dvara --off`, then
 `sarathi down && sarathi up`.
