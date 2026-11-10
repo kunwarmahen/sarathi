@@ -1095,6 +1095,14 @@ def _handler(server: HomeServer):
                     return self._json(200, editing.vaani_view(server.home.config))
                 except editing.EditError as exc:
                     return self._json(exc.status, {"detail": str(exc)})
+            if url.path == "/api/settings/floors":
+                if self._owner() is None:
+                    return None
+                from sarathi import editing
+                try:
+                    return self._json(200, editing.prahari_floors(server.home.config))
+                except editing.EditError as exc:
+                    return self._json(exc.status, {"detail": str(exc)})
             if url.path == "/api/settings/phones-now":
                 if self._owner() is None:
                     return None
@@ -1417,6 +1425,8 @@ def _handler(server: HomeServer):
                             if made.get("kept") else
                             f"Not made: its test didn't pass.\n{test.get('output', '')}")
                     return self._json(200, {"said": said, "made": made})
+                elif what == "floor":
+                    said = editing.prahari_floor(config, body)
                 elif what == "setu":
                     said = editing.setu_set(name, body.get("value"))
                 elif what == "text":

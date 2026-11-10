@@ -32,6 +32,11 @@ then is it saved, in place of any Android (Sarathi gives out one phone).
 KEYS GO IN, NEVER OUT. A cloud key or the bot's token can be typed in;
 the page is only ever told whether one is set.
 
+PRAHARI'S FLOORS, ASKED OF IT RUNNING. How often one site may be called
+is kept in Prahari's own store, not a file, so the page asks Prahari's
+API with its page key (``/api/floors``), the way Samay's schedules are
+asked. Prahari refuses a site it can't read, in its own words.
+
 THE OWNER'S ALONE. Every route here answers 403 to a person signed in
 (home.py): these files decide what everybody else may do.
 """
@@ -321,6 +326,80 @@ def vaani_do(config: Config, body: dict) -> str:
 
 
 # ---- Sarathi's own -----------------------------------------------------------------
+
+# ---- Prahari's floors -------------------------------------------------------------
+#
+# How often one site may be called, for the whole house (prahari floors.py).
+# Prahari keeps and checks them; the page asks its running API with its
+# token, the way Samay's schedules are asked (home.py, _samay), so the same
+# road works whether Prahari runs as a program or in its container.
+
+_FLOOR_SITE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{1,99}$")
+
+
+def _prahari(config: Config, method: str, path: str, body: dict | None = None,
+             env: dict[str, str] | None = None) -> dict:
+    import urllib.error
+    import urllib.request
+
+    from sarathi.services import HOST
+
+    env = os.environ if env is None else env
+    if not config.watch_on:
+        raise EditError(409, "Prahari is off: turn it on under Settings → Sarathi first")
+    token = env.get("PRAHARI_TOKEN", "").strip()
+    if not token:
+        state = Path(env.get("PRAHARI_STATE", "").strip()
+                     or Path.home() / ".prahari").expanduser()
+        try:
+            token = (state / "serve.token").read_text().strip()
+        except OSError:
+            raise EditError(409, "Prahari's page key wasn't found: is Prahari running? "
+                                 "(sarathi up)") from None
+    request = urllib.request.Request(
+        f"http://{HOST}:{config.watch_port}/api/{path}", method=method,
+        data=json.dumps(body).encode() if body is not None else None,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=10) as answer:
+            return json.loads(answer.read() or b"{}")
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = json.loads(exc.read() or b"{}").get("detail")
+        except ValueError:
+            detail = None
+        raise EditError(exc.code if 400 <= exc.code < 500 else 502,
+                        detail or f"Prahari said {exc.code}") from None
+    except (OSError, ValueError) as exc:
+        raise EditError(502, f"Prahari didn't answer at port {config.watch_port}: "
+                             f"{exc}") from None
+
+
+def prahari_floors(config: Config) -> dict:
+    """Settings → Prahari's site floors: every floor Prahari keeps."""
+    if not config.watch_on:
+        return {"on": False, "floors": []}
+    got = _prahari(config, "GET", "floors")
+    return {"on": True, "floors": got.get("floors", []), "least": got.get("least", 300)}
+
+
+def prahari_floor(config: Config, body: dict) -> str:
+    """{"site", "every", "why"?}: set a floor; {"remove": site}: back to the
+    five minutes every call has. Prahari refuses what it can't keep."""
+    removing = str(body.get("remove") or "").strip()
+    if removing:
+        if not _FLOOR_SITE.match(removing):
+            raise EditError(400, f"{removing!r} isn't a site")
+        _prahari(config, "DELETE", f"floors/{removing}")
+        return f"{removing} is back to once every five minutes at most."
+    got = _prahari(config, "POST", "floors",
+                   {"site": str(body.get("site") or ""), "every": str(body.get("every")
+                                                                       or ""),
+                    "why": str(body.get("why") or "")})
+    slowed = got.get("slowed") or []
+    return (f"Saved: {got.get('said') or got.get('site')}."
+            + ("".join(f"\n{line[0].upper()}{line[1:]}." for line in slowed)))
+
 
 def sarathi_view(config: Config) -> dict:
     """sarathi.toml as the form shows it, and which keys are set."""

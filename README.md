@@ -246,7 +246,8 @@ itself; watches you made before move onto it when you say so
 (`prahari indriya add NAME --from-watch ID --move`), and back to their own
 call with `prahari edit ID --look-itself`. A reading sped up for a watch
 slows back down when that watch goes, and a site that wants fewer calls
-gets a floor once for the house (`prahari floor set open-meteo.com 15m`).
+gets a floor once for the house: Settings → Sarathi → *Prahari: how often a
+site may be called* (or `prahari floor set open-meteo.com 15m`).
 A number Home Assistant
 already knows (a room's own thermometer) can be *sent in* instead:
 `prahari indriya add guestroom-temp --pushed`, and a `rest_command` in
@@ -1516,7 +1517,8 @@ src/sarathi/
   editing.py    every settings file from the page: each program checks
                 and writes its own (dvara settings, setu config / site
                 file), sarathi.toml and secrets.env here  (notes/16);
-                the phone card's steps, Sparsh's own, run here  (notes/17)
+                the phone card's steps, Sparsh's own, run here  (notes/17);
+                Prahari's site floors, asked of its running API
   people.py     the people in the house signing in to the home page: an
                 invite that works once, a password, a session per device,
                 each one an id in Dvara's actors file  (notes/14)

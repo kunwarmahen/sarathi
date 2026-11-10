@@ -200,3 +200,97 @@ def test_its_line_counts_the_readings_watches_share():
     assert _say_prahari(status).endswith("0 paused; readings: 1 kept up to date")
     status["indriyas"] = {"active": 1, "paused": 2}
     assert _say_prahari(status).endswith("readings: 1 kept up to date, 2 paused")
+
+
+class TestSiteFloorsFromSettings:
+    """Settings → Prahari's site floors: Sarathi only asks the running
+    Prahari with its page key, and shows Prahari's own words back --
+    including a refusal, never one of its own."""
+
+    def _prahari(self, monkeypatch, tmp_path):
+        import json
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        seen = []
+
+        class Stand(BaseHTTPRequestHandler):
+            def log_message(self, *_):
+                pass
+
+            def _answer(self, code, body):
+                raw = json.dumps(body).encode()
+                self.send_response(code)
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+
+            def _hear(self):
+                size = int(self.headers.get("Content-Length") or 0)
+                body = json.loads(self.rfile.read(size) or b"{}") if size else {}
+                seen.append((self.command, self.path, self.headers["Authorization"], body))
+                return body
+
+            def do_GET(self):
+                self._hear()
+                self._answer(200, {"floors": [{"site": "weather_now", "every": "1h",
+                                               "why": ""}], "least": 300})
+
+            def do_POST(self):
+                body = self._hear()
+                if " " in body["site"]:
+                    return self._answer(400, {"detail": "a site is a host, not 'a b'"})
+                self._answer(201, {"site": body["site"], "said":
+                                   f"{body['site']} is called no more than once every "
+                                   "15 minutes", "slowed": ["watch ab12 (rain) now looks "
+                                                            "every 15 minutes"]})
+
+            def do_DELETE(self):
+                self._hear()
+                self._answer(200, {"removed": self.path.rsplit("/", 1)[1]})
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Stand)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        (tmp_path / "serve.token").write_text("prahari-key\n")
+        monkeypatch.setenv("PRAHARI_STATE", str(tmp_path))
+        monkeypatch.delenv("PRAHARI_TOKEN", raising=False)
+        config = Config("ollama", watch_port=server.server_address[1])
+        return server, config, seen
+
+    def test_the_floors_are_asked_of_prahari_with_its_key(self, monkeypatch, tmp_path):
+        from sarathi import editing
+
+        server, config, seen = self._prahari(monkeypatch, tmp_path)
+        try:
+            got = editing.prahari_floors(config)
+            said = editing.prahari_floor(config, {"site": "open-meteo.com", "every": "15m"})
+            gone = editing.prahari_floor(config, {"remove": "weather_now"})
+        finally:
+            server.shutdown()
+            server.server_close()
+        assert got["floors"][0]["site"] == "weather_now"
+        assert seen[0][2] == "Bearer prahari-key"
+        assert said.startswith("Saved: open-meteo.com is called no more than once")
+        assert "Watch ab12 (rain) now looks every 15 minutes." in said
+        assert seen[2][:2] == ("DELETE", "/api/floors/weather_now")
+        assert "five minutes" in gone
+
+    def test_prahari_refusing_is_said_in_its_words(self, monkeypatch, tmp_path):
+        import pytest
+
+        from sarathi import editing
+
+        server, config, _ = self._prahari(monkeypatch, tmp_path)
+        try:
+            with pytest.raises(editing.EditError) as caught:
+                editing.prahari_floor(config, {"site": "a b", "every": "1h"})
+        finally:
+            server.shutdown()
+            server.server_close()
+        assert caught.value.status == 400 and "a site is a host" in str(caught.value)
+
+    def test_prahari_off_has_no_floors_to_ask(self):
+        from sarathi import editing
+
+        assert editing.prahari_floors(Config("ollama", watch_on=False)) == {
+            "on": False, "floors": []}

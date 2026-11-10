@@ -1770,7 +1770,16 @@ speeds the reading up; when that watch is removed or ends, the reading
 goes back to the pace you gave it, and says so. `prahari indriya edit
 outside-temp --every 30m` is always the last word. If a site asks for
 fewer calls (a free weather service, a shop that turns bots away), tell
-Prahari once, for the whole house:
+Prahari once, for the whole house: **Settings → Sarathi → Prahari: how
+often a site may be called**. Type the site (`api.open-meteo.com`, or a
+whole web address: its host is kept), *At most once every* `15m`, a why if
+you like, and **Add**. You should see:
+
+> Saved: api.open-meteo.com is called no more than once every 15 minutes (their free tier).
+> Watch f303989c (rain soon) now looks every 15 minutes (it looked every 5 minutes).
+
+The site is listed on the card with a **Remove** (back to once every five
+minutes). From a terminal it's the same:
 
 ```bash
 podman exec sarathi-prahari prahari floor set open-meteo.com 15m --why "their free tier"

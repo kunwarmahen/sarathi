@@ -804,6 +804,7 @@ function drawSarathiTab() {
         "`vaani init`; it answers through Dvara)"),
       h("label.inline", {}, pagesOn, " The pages (Setu's, Dvara's, this one)"),
       field("How it runs", road)),
+    s.prahari?.on ? floorsCard() : null,
     phoneCard(phoneOn, phoneAt, wdaAt, awake, s.run.road, s.phone?.named || []),
     h("details.card", {}, h("summary", {}, "Ports"),
       field("Yantra", ports.yantra), field("Samay", ports.samay),
@@ -821,6 +822,36 @@ function drawSarathiTab() {
     row(go),
     asText("sarathi", "", s.text, "~/.config/sarathi/sarathi.toml"),
   ];
+}
+
+// Prahari's site floors: how often one site may be called, for the whole
+// house (Prahari's floors.py, the same as `prahari floor`). Asked of the
+// running Prahari after the card is drawn; Prahari checks every change and
+// slows what already calls faster, saying which.
+function floorsCard() {
+  const list = h("div", { "aria-live": "polite" }, h("p.meta", {}, "Asking Prahari…"));
+  const site = text("", { autocapitalize: "none", placeholder: "api.open-meteo.com" });
+  const every = text("", { autocapitalize: "none", placeholder: "15m" });
+  const why = text("", { placeholder: "its free tier asks this" });
+  const add = button("Add", () => save("/api/settings/floor", {
+    site: site.value.trim(), every: every.value.trim(), why: why.value.trim() }));
+  api("/api/settings/floors").then((data) => {
+    const floors = data.floors || [];
+    list.replaceChildren(...(floors.length ? floors.map((f) => h("div.row",
+      { style: "gap: .75rem; align-items: center" },
+      h("span", {}, h("b", {}, f.site), ` — once every ${f.every} at most`,
+        f.why ? ` (${f.why})` : ""),
+      button("Remove", () => save("/api/settings/floor", { remove: f.site }))))
+      : [h("p.meta", {}, "None yet: every site is called at most once every five minutes.")]));
+  }).catch((err) => list.replaceChildren(h("p.meta", {}, `Couldn't ask Prahari: ${err.message}`)));
+  return h("div.card.form", {}, h("h3", {}, "Prahari: how often a site may be called"),
+    h("p.meta", {}, "For the whole house. A watch or a reading asking more often is refused; " +
+      "one already asking more often is slowed to it, and you're told which."),
+    list,
+    field("Site", site, "A web address's host (its subdomains too), or a tool's name " +
+          "(mcp__homeassistant-home__get_state)."),
+    field("At most once every", every, "15m, 1h, 6h…"),
+    field("Why (optional)", why), row(add));
 }
 
 // The phone: its settings (saved with the rest), and the steps that reach it
