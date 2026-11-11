@@ -2467,7 +2467,9 @@ If a reviewer later finds a routine they signed was a mistake, they can
 take their review back. Your Vidhi checks for that every six hours: the
 routine is paused, any run of it stopped, and your chat says who took it
 back and why. It won't start again as it was; if you still want it,
-change it on the canvas and it's yours.
+change it on the canvas and it's yours. A Prahari reading you installed
+from the marketplace is paused the same way, within the hour (change it
+with `prahari indriya edit` to keep it).
 
 ### Your own marketplace, step by step
 
