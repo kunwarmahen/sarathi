@@ -227,7 +227,11 @@ readings) from; `market_port = 8787` runs one of your own, alone (only
 `/market/`) in `sarathi-vidhi-market`, on 127.0.0.1 where Vidhi's
 `deploy/public-market-tailscale.sh` puts it on the internet. It keeps
 `~/.vidhi-market`, and with no `market_url` the house fetches from it.
-Both are under Settings.
+Both are under Settings. Every six hours the house's Vidhi reads the
+reviews taken back on the marketplaces it fetched from, believes one
+only when a reviewer you trust signed it, and pauses the routine it
+names, saying why in your chat. The tutorial's *Your own marketplace,
+step by step* puts one on the internet with its reviewers.
 
 **Samay or Prahari?** Samay does things *at a time* ("every morning at
 8", "on Friday"); Prahari waits for something *to happen* ("when the

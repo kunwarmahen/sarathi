@@ -2416,8 +2416,13 @@ keeps them.
    check"* makes a Prahari watch that does.
 5. **When a routine asks you.** A step can be **Ask me**: the run stops
    and your chat gets the question with **Yes** and **No**, or with two
-   or three choices of its own (*Heat*, *Cool*, *Leave it*), or asking
-   for a few words you type. Press one, now or hours later; the buttons
+   or three choices of its own (*Heat*, *Cool*, *Leave it*), or choices
+   an earlier step found (*which of these three flights?*: the button
+   shows the start, your answer is the whole line), or asking for a few
+   words you type. A typed answer can have to be a number (*from 60 to
+   80*) or a time of day (*7:30pm*): a wrong one gets a reply saying
+   what it must be, and the question waits for a right one. Press one,
+   now or hours later; the buttons
    are on a phone's ntfy notification too. For words: on the home page,
    open the bell and type in the box under the question; on Telegram,
    reply to the question's message (it ends *"Or reply to this message
@@ -2432,8 +2437,11 @@ keeps them.
    wrong, or the order it will run in and what it touches. **Save**.
    A **repeat** does some steps again, every so often, until a check
    says yes, a number of times at most (*look at the temperature every
-   15 minutes until it's above 68, four times at most*). **Runs after any
-   one of** joins two branches again.
+   15 minutes until it's above 68, four times at most*). Put several
+   waits in *Every*, separated by commas (*15m, 30m, 1h*), and each look
+   waits longer than the last. **Runs after any one of** joins two
+   branches again. On an **Ask me** step, *I answer with* picks yes/no
+   or buttons, lines a step found, words, a number, or a time.
 7. **One routine, two places.** A schedule or a watch can fill a
    routine's blanks its own way: *"start my morning brief for Durham at
    7, and for Cary at 7:05"* is one routine and two schedules
@@ -2451,10 +2459,62 @@ install only what's signed by reviewers you trust. That's Vidhi's own
 README (*Sharing: the marketplace*). Put a marketplace's address in
 Settings → *Vidhi's marketplace*, and Vidhi's page lists what it has,
 with **Get it**. To run one for others: Settings → Ports → *Vidhi's
-marketplace alone* (8787), `sarathi up`, then Vidhi's
-`deploy/public-market-tailscale.sh` puts it on the internet and prints
-its address; its page at that address shows what's listed and the
-reviewers' keys.
+marketplace alone* (8787), `sarathi up`, then follow *Your own
+marketplace, step by step* below.
+
+If a reviewer later finds a routine they signed was a mistake, they can
+take their review back. Your Vidhi checks for that every six hours: the
+routine is paused, any run of it stopped, and your chat says who took it
+back and why. It won't start again as it was; if you still want it,
+change it on the canvas and it's yours.
+
+### Your own marketplace, step by step
+
+You need: Sarathi running, and a free Tailscale account (the script
+signs you in; you don't need a domain or to open your router).
+
+1. **Run it alone.** Settings → Ports → *Vidhi's marketplace alone*:
+   8787. **Save**, then `sarathi up`. Check it answers:
+   `curl -s localhost:8787/market/index` prints `[]` (nothing listed
+   yet).
+2. **Put it on the internet.** From Vidhi's folder:
+   `deploy/public-market-tailscale.sh 8787`. It asks for your password
+   (sudo), and the first time it prints a Tailscale link to sign in, and
+   maybe one more to allow *Funnel* for this computer: open each, allow,
+   and run the script again. At the end it prints the public address,
+   like `https://your-computer.your-tailnet.ts.net:10000/market/`, and
+   *Its list answers: 200*. Open that address on your phone with Wi-Fi
+   off: the marketplace page.
+3. **Tell your house where it is.** Settings → *Vidhi's marketplace*:
+   paste the address without `/market/`. **Save**, `sarathi up`.
+4. **Make yourself a reviewer.** A key only for reviewing:
+   `ssh-keygen -t ed25519 -C YOUR-NAME -f ~/.ssh/vidhi-review` (press
+   Enter for no passphrase, or set one). Then let it approve:
+   `podman exec sarathi-vidhi-market vidhi market reviewer YOUR-NAME
+   "$(cat ~/.ssh/vidhi-review.pub)" --dir $HOME/.vidhi-market`.
+5. **Add the other reviewers.** Each one, on their own computer,
+   installs Vidhi (`uv tool install git+https://github.com/kunwarmahen/vidhi`)
+   and runs the same `ssh-keygen` line with their name, then sends you
+   the one line in their `~/.ssh/vidhi-review.pub` (it starts
+   `ssh-ed25519`; it's fine to send it in a chat). You run step 4's
+   `podman exec` line with their name and their line.
+6. **Publish the keys where people can compare them.** Each reviewer
+   puts their `.pub` line somewhere people already know is theirs (a
+   GitHub profile, their own page). The marketplace page shows the same
+   lines; somebody trusting a reviewer compares the two first.
+7. **Trust your reviewers in your own house too**, so your Vidhi
+   installs what they sign: `podman exec sarathi-vidhi vidhi market
+   trust NAME "ssh-ed25519 AAAA…"` for each one.
+8. **Review something.** Anyone sends a routine with `vidhi market
+   publish FILE --to ADDRESS --as THEIR-NAME`. A reviewer sees the queue
+   with `vidhi market queue --from ADDRESS`, reads one with `vidhi market
+   show ID --from ADDRESS`, and signs it with `vidhi market approve ID
+   --from ADDRESS --key ~/.ssh/vidhi-review --as THEIR-NAME`. It's
+   listed. To take a review back later: `vidhi market revoke NAME
+   --version 1 --why "what was wrong" --from ADDRESS --key
+   ~/.ssh/vidhi-review --as THEIR-NAME`.
+
+To take it off the internet: `sudo tailscale funnel --https=10000 off`.
 
 ## When something goes wrong
 
