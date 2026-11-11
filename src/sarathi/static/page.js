@@ -1618,8 +1618,12 @@ function noticeRoutine(n) {
     drawNotices(false);
   };
   if (typed) {
-    const box = h("input", { type: "text", maxlength: "200", placeholder: "Your answer",
-                             "aria-label": "Your answer" });
+    // A question whose words Vidhi checks says what they must be ("Answer
+    // with a number from 1 to 8: ..."); the box says it too.
+    const wants = /Answer with ((?:a number|a time of day).*?): \/routines say/.exec(n.text || "");
+    const hint = wants ? wants[1].replace(/^a /, "A ") : "Your answer";
+    const box = h("input", { type: "text", maxlength: "200", placeholder: hint,
+                             "aria-label": hint });
     const ok = h("button.yes", { type: "button" }, "Send");
     const go = async () => {
       const words = box.value.trim();

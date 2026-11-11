@@ -2420,8 +2420,9 @@ keeps them.
    an earlier step found (*which of these three flights?*: the button
    shows the start, your answer is the whole line), or asking for a few
    words you type. A typed answer can have to be a number (*from 60 to
-   80*) or a time of day (*7:30pm*): a wrong one gets a reply saying
-   what it must be, and the question waits for a right one. Press one,
+   80*) or a time of day (*7:30pm*): the bell's box says which, a wrong
+   one gets a reply in the chat saying what it must be, and the question
+   waits for a right one. Press one,
    now or hours later; the buttons
    are on a phone's ntfy notification too. For words: on the home page,
    open the bell and type in the box under the question; on Telegram,
