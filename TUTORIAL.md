@@ -1701,6 +1701,17 @@ when its line is crossed, and no model is asked in between: a night
 below 60 is one *heat* turn, not one an hour. A second line on the same
 side (*below 60* and *below 50*) is still one watch, mended.
 
+**Moving a line.** Changed your mind, and the cool one should wait for
+80? Say so in the chat (*"make the guestroom cool one 80"*), or type
+`/watches when 2 above 80`. Its name and words move with it, so
+*Cool the guestroom above 70* becomes *Cool the guestroom above 80*. You
+can do it on a page too: **Mend** on Prahari's page, or **edit** in the
+Watches panel on the agent's page. Change `above 70` to `above 80` in
+the *When* box and the name box changes to match before you save.
+Schedules change the same way: `/schedules when 1 at 08:00`, `/schedules
+does 1 the weather and my calendar`, or **Change** on Samay's page. It's
+the same schedule after, with its past runs kept.
+
 **One reading for many watches.** Those two watches each check the
 weather on their own. An **indriya** (Sanskrit for *a sense*, said
 *in-dree-yuh*) is one reading Prahari keeps up to date, such as *the
