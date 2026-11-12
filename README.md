@@ -216,7 +216,8 @@ a few steps you draw once on Vidhi's page (a morning brief that fetches
 the weather, your mail and the headlines side by side and writes them
 into one message), started by **Run now**, `/routines run 1` in a chat,
 your agent, a Samay schedule (`--runner vidhi`) or a Prahari watch
-(`--routine`). A run that asks you puts the question in your chat with
+(`--routine`); its card's **What starts it**, Samay's and Prahari's pages
+and `/routines at` / `on` in a chat make those for you. A run that asks you puts the question in your chat with
 buttons (Yes and No, or its choices), on the home page's bell (with a box for one that takes a few words) and on ntfy too; on Telegram a reply to the question answers it. Vidhi's folder (`~/.vidhi`) is mounted in every
 container, since starting a run is adding it there; its page is
 published on the house address with `[house]` (port 8786, in the
