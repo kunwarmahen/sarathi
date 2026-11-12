@@ -2416,15 +2416,28 @@ keeps them.
    step as it was drawn, read only, with anything worth a second look in
    red (there's nothing in the brief). Fill
    its blanks (your latitude and longitude, fahrenheit or celsius, which
-   Gmail account) and press **Install**.
+   Gmail account: a list of the ones you connected in Setu) and press
+   **Install**. A blank that names a reading (the *Cold night warning*'s
+   *Which reading*) is a list of your Prahari readings, each with its
+   value now.
 3. **Run it.** **Run now** on its card. Under **Runs**, open the run:
    each step, what it gave, and why a step was skipped. The weather, mail
    and headlines are fetched at the same time; the brief comes to your
-   chat.
-4. **Every morning.** In a chat: *"Start my morning brief every weekday
-   at 7:30."* Your agent makes a Samay schedule that starts the routine,
-   after your yes. Or: *"When the porch goes below 60, start my coat
-   check"* makes a Prahari watch that does.
+   chat. Press **Draw** to see the same run on the canvas: each box says
+   what it gave last time (*✓ 31*, *✓ yes*, *– skipped*). Click a box,
+   then **Try this step**, to see what it gives now: a reading is read
+   and a check checks, but a question or a message is only written out,
+   never sent. Under each field, *Reads as* says `{{temp}}` in words
+   (*«The temperature now» (31)*).
+4. **Every morning.** On the card, open **What starts it**. Type *at
+   7:30 on mon-fri* and **Add** (a Samay schedule), or pick a reading,
+   *below*, a number and **Add** (a Prahari watch: *start the cold night
+   warning when outside-temp drops below 35*, no model). Everything that
+   starts the routine is listed there, with **Remove**. The same choices
+   are on Samay's page (**New schedule → Start one of my routines**) and
+   Prahari's (**New watch** or **Mend → Then start one of my routines**).
+   Or ask in a chat: *"Start my morning brief every weekday at 7:30"*:
+   your agent makes the schedule, after your yes.
 5. **When a routine asks you.** A step can be **Ask me**: the run stops
    and your chat gets the question with **Yes** and **No**, or with two
    or three choices of its own (*Heat*, *Cool*, *Leave it*), or choices
@@ -2460,7 +2473,11 @@ keeps them.
    (`samay add morning-brief --runner vidhi --input city=Durham ...`).
 
 In any chat, `/routines` lists them and any question waiting, `/routines
-run 1` starts one, and `/routines 1` says how it went.
+run 1` starts one, and `/routines 1` says what fills its blanks, what
+starts it and how it went. `/routines set 1 line=33` fills a blank,
+`/routines at 1 20:00` and `/routines on 1 outside-temp below 35` start
+it by itself, and `/routines drop 1 samay:ID` (the words `/routines 1`
+gives) stops one.
 
 **Which model.** A routine asks the model only where a step says *ask*;
 the morning brief asks once. `qwen3.8` wrote it in about half a minute.
