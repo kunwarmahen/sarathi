@@ -596,12 +596,14 @@ function drawRulesTab() {
   redraw();
   return [warnBox(d.policy_problem),
     h("p.meta", {}, "A standing answer for a tool, so nobody is asked each time. The " +
-      "strictest matching rule wins. An Allow takes exact values only: a * in it is refused."),
+      "strictest matching rule wins. An Allow takes exact values only: a * in it is refused. " +
+      "A rule with an Until day stops answering after it, and you're asked again."),
     list,
     row(button("Add a rule", () => { rows.push({ tool: "", args: {}, verdict: "ask" }); redraw(); },
                    "linkish"),
             button("Save the rules", () => save("/api/settings/rules", { rules: rows.map((r) => ({
               tool: r.tool, verdict: r.verdict, reason: r.reason || null,
+              until: r.until || null,
               args: Object.keys(r.args || {}).length ? r.args : null })) }))),
     asText("policy", "", d.policy.text || "", d.policy.path)];
 }
@@ -622,8 +624,10 @@ function ruleRow(r, i, rows, redraw) {
   verdict.addEventListener("change", () => { r.verdict = verdict.value; });
   const reason = text(r.reason || "", { placeholder: "why (shown when refused)" });
   reason.addEventListener("input", () => { r.reason = reason.value; });
+  const until = text(r.until || "", { type: "date" });
+  until.addEventListener("input", () => { r.until = until.value; });
   return h("div.rule", {}, field("Tool", tool), field("When", args), field("Answer", verdict),
-           field("Why", reason),
+           field("Why", reason), field("Until", until),
            button("Remove", () => { rows.splice(i, 1); redraw(); }, "linkish"));
 }
 

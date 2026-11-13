@@ -719,7 +719,11 @@ ticked stays ticked while it's hidden. Under each agent, *Skills its
   answers: once a turn has read an email, a page or anything a
   connection returned, a change after it is always put to you, with what
   was read on the card's first line. A line in an email can't give your
-  agent orders.
+  agent orders. A rule with an **Until** day stops answering after that
+  day, and you're asked again. To see every standing yes in the house
+  together (rules, each person's rung, what each schedule and watch may
+  use, and how often each was used), open Dvara's page from *Your pages*
+  and scroll to *Who may do what unasked*, or type `dvara grants`.
 * **Accounts**: Setu's settings, and the rules of each site you added.
 * **Sarathi**: the model, Dvara and its bot, notices on phones, your
   phone, ports.

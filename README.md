@@ -1407,7 +1407,9 @@ example; the skills its people kept, and **Make it a tool** for one with
 a script; a long list of boxes or skills gets a box above it that keeps
 only what matches what you type, and a ticked tool stays ticked while
 hidden),
-**Rules** (Dvara's standing answers), **Accounts** (Setu's settings,
+**Rules** (Dvara's standing answers, each with an optional *Until* day
+after which it asks again; every standing yes together is on Dvara's
+page, *Who may do what unasked*), **Accounts** (Setu's settings,
 each added site's rules, and which tools of each MCP server of your own
 only read), **Sarathi** (this file: the model, Dvara and
 its bot, the house address, ntfy, road, ports, and your phone, with
