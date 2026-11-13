@@ -985,7 +985,16 @@ What goes into the containers:
   container that holds their data, which `up` stops first.
 * **Ollama stays on your machine.** The containers reach it at
   `host.containers.internal`, so Ollama has to listen on more than
-  127.0.0.1 (`OLLAMA_HOST=0.0.0.0`).
+  127.0.0.1 (`OLLAMA_HOST=0.0.0.0`). Where that name points is worked
+  out each time a container starts: every unit wants the one-shot
+  `sarathi-host-address`, which runs `sarathi host-address` and writes
+  this computer's address now into a containers.conf module of Sarathi's
+  own (`host-address.conf` in its state folder), and each unit loads it
+  (`ContainersConfModule=`). A new address from the router is picked up
+  at the next start. While running, the doctor says it and `up` restarts
+  them with it. Your own containers.conf isn't touched, and the module
+  wins over a pin left there
+  ([notes/39](notes/39-where-the-containers-find-this-computer.md)).
 * **A home folder Chrome can write to.** Inside a container your home's
   path would be a folder Podman made only to hold the mounts, owned by
   root, and Chrome dies at start there. So it's a scratch folder of
@@ -1076,7 +1085,24 @@ Smritikosh's own model calls, read with one `SELECT` from its
 `llm_usage` table. Local turns show tokens and minutes; a billed one its
 dollars; a cloud turn with no list price says *with no price*, never
 $0. `--days 7` for the week, `--json` for `sarathi.usage.v1`. It reads
-and changes nothing.
+and changes nothing. Settings → Check → **Model use today** shows the
+same for today.
+
+A line for the whole house's day:
+
+```toml
+[usage]
+day_usd = 2.50       # billed models' dollars a day, every program together; 0: no limit
+day_minutes = 120    # minutes of answering a day, local models too; 0: no line
+```
+
+`day_usd` reaches every program as `YANTRA_HOUSE_DAY_USD`. Once the
+day's billed dollars reach it, a billed model isn't asked until
+midnight: a local model standing by answers, or the answer says *Nothing
+was done: the house's $2.50 for today is spent…*. `day_minutes` stops
+nothing. The doctor says when a day went past it. Check's `usage` line
+is amber near the dollar line, at it, and the morning after a day that
+reached it ([notes/38](notes/38-a-line-for-the-house-s-day.md)).
 
 ### When something's wrong: `sarathi doctor`
 
@@ -1548,7 +1574,9 @@ src/sarathi/
                 each checkout's version and commit as the image's label,
                 and a VERSION file in each project for its --version  (notes/32)
   usage.py      sarathi usage: every program's model turns (Yantra's
-                usage file) beside Smritikosh's own calls, by day
+                usage file) beside Smritikosh's own calls, by day; a day
+                against [usage] day_usd / day_minutes, the Model use today
+                card  (notes/38)
   drill.py      sarathi backup drill: the newest backup opened in a throwaway
                 folder and its memories restored into a throwaway database,
                 counted, both removed (notes/37)
@@ -1556,7 +1584,9 @@ src/sarathi/
                 with its fix, from each sibling's own status, what `up`
                 started, the image's age, the firewall, the disk, last
                 night's backup and the last drill, memories that fell away,
-                watches Prahari paused by itself; the home page's
+                watches Prahari paused by itself; the house's day against
+                [usage] (notes/38); the containers' host address moved
+                (notes/39); the home page's
                 Settings → Check asks the same  (notes/28, notes/36)
   backup.py     sarathi backup / restore: each program asked what it keeps,
                 one file sealed to a key only your passphrase opens, SQLite
@@ -1612,12 +1642,12 @@ src/sarathi/
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | dvara | phone | smritikosh | road | image | up | down |
                 status [--json] | doctor | version | backup [list|delete|set|drill] |
-                restore | usage | home | invite | people
+                restore | usage | host-address | home | invite | people
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
   test_pages_up.py  test_phone.py  test_phones_named.py  test_names.py  test_smritikosh.py  test_people.py
   test_house.py  test_prahari.py  test_doctor.py  test_backup.py  test_version.py
-  test_drill.py  test_usage.py
+  test_drill.py  test_usage.py  test_house_day.py
 ```
 
 ## Status

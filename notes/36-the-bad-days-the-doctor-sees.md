@@ -90,3 +90,5 @@ they come back. A few tidied away is not a loss. A watch Prahari stopped
 itself is amber, and a person's pause is not. Prahari's
 `tests/test_cli.py`: `stopped_itself` names watches and readings paused on
 their own, never a person's pause.
+
+*The doctor also puts the house's day beside `[usage]` ([note 38](38-a-line-for-the-house-s-day.md)), and says when the containers' host address has moved ([note 39](39-where-the-containers-find-this-computer.md)).*

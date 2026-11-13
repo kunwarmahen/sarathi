@@ -263,6 +263,8 @@ def build_parser() -> argparse.ArgumentParser:
                       help="today and the N-1 days before it (default 1: today)")
     used.add_argument("--json", dest="json_out", action="store_true",
                       help="print sarathi.usage.v1")
+    subs.add_parser("host-address", help="write this computer's address where the "
+                    "containers look for it (run by each container as it starts)")
     restore = subs.add_parser("restore", help="put a backup back, here or on a new "
                               "computer")
     restore.add_argument("file", help="the .sarathi-backup file")
@@ -933,6 +935,11 @@ def main(argv: list[str] | None = None) -> int:
         return _backup(args)
     if args.command == "usage":
         return _usage(args)
+    if args.command == "host-address":
+        from sarathi import podman
+
+        print(podman.host_address_line(podman.refresh_host_address(wait=30.0)))
+        return 0
     if args.command == "restore":
         return _restore(args)
     if args.command == "home":

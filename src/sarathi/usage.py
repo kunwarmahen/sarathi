@@ -14,6 +14,14 @@ share it (``~/.local/state/yantra``). Smritikosh's table is asked with one
 how it is: nothing is changed, and a database that isn't running is said
 rather than guessed.
 
+THE DAY'S LINES, HELD TO THE HOUSE'S OWN. ``[usage] day_usd`` is what the
+billed models may come to in a day, every program together; Yantra holds
+each program to it from the same file (its usage_log.py), so the number
+here and the number that stops a turn can't disagree. ``day_minutes`` is a
+line for a local house, where nothing is billed and a GPU's afternoon is
+the cost: passed, it's said, never stopped. ``against`` puts a day next to
+both, for the doctor's lines and the home page's card.
+
 MONEY ONLY WHERE THERE IS A PRICE. A local model's turns are counted in
 tokens and seconds, and their dollars are blank, never $0.00. A turn on a
 model with no list price says *no price*, so a cloud turn of unknown cost
@@ -42,7 +50,11 @@ def usage_file() -> Path:
     return Path(state) / "yantra" / "usage.jsonl"
 
 
-def turns(path: Path, since: float) -> list[dict]:
+#: Billed spend this share of the day's ceiling is worth a look.
+NEAR = 0.8
+
+
+def turns(path: Path, since: float, until: float | None = None) -> list[dict]:
     from datetime import datetime
     out: list[dict] = []
     try:
@@ -56,7 +68,8 @@ def turns(path: Path, since: float) -> list[dict]:
                 at = datetime.strptime(row["at"], "%Y-%m-%dT%H:%M:%S%z").timestamp()
             except (ValueError, KeyError, TypeError):
                 continue
-            if row.get("format") == LINE_FORMAT and at >= since:
+            if row.get("format") == LINE_FORMAT and at >= since and (
+                    until is None or at < until):
                 out.append(row)
     return out
 
@@ -177,3 +190,29 @@ def since_days(days: int, now: float | None = None) -> float:
     day = time.localtime(now)
     midnight = time.mktime((day.tm_year, day.tm_mon, day.tm_mday, 0, 0, 0, 0, 0, -1))
     return midnight - (max(1, days) - 1) * 86400
+
+
+def against(data: dict, day_usd: float, day_minutes: int) -> dict:
+    """One day's report beside the house's lines ([usage]): the billed
+    dollars Yantra counts (its usage file's, not Smritikosh's, which no
+    ceiling holds) and the minutes of answering."""
+    billed = round(sum(b["usd"] for b in data["programs"].values()), 4)
+    minutes = round(data["total"]["seconds"] / 60, 1)
+    return {"day_usd": day_usd, "day_minutes": day_minutes, "billed_usd": billed,
+            "minutes": minutes,
+            "usd_reached": bool(day_usd) and billed >= day_usd,
+            "usd_near": bool(day_usd) and billed >= NEAR * day_usd,
+            "minutes_passed": bool(day_minutes) and minutes > day_minutes}
+
+
+def day(config: Any, days_ago: int = 0, now: float | None = None,
+        memory: bool = True) -> dict:
+    """The report of one day (today, or ``days_ago``), with ``against``."""
+    start = since_days(1, now) - days_ago * 86400
+    rows = turns(usage_file(), start, start + 86400 if days_ago else None)
+    calls, why = memory_calls(config, start) if memory and not days_ago else ([], None)
+    data = report(rows, calls, why, 1)
+    kept = getattr(config, "usage", None)
+    data["against"] = against(data, getattr(kept, "day_usd", 0.0) or 0.0,
+                              getattr(kept, "day_minutes", 0) or 0)
+    return data

@@ -244,3 +244,5 @@ Tue 6 Oct 00:53  ok            the clock works
   too. The page's own schedules run plain Yantra and don't.
 
 *The pieces here are called by their old names (clock, door, page, owner, home); they go by their projects' names now ([note 09](09-each-by-its-own-name.md)).*
+
+*Where the containers find this computer (`host.containers.internal`) is worked out each time one starts: [note 39](39-where-the-containers-find-this-computer.md).*

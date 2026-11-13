@@ -40,6 +40,20 @@ there last time (``new``) and which are gone (``gone``), and the doctor
 remembers this answer for the next. A phone left unplugged all week is
 told once.
 
+THE HOST'S ADDRESS, AS THE CONTAINERS WERE TOLD IT. On the Podman road
+each container reaches this computer at the address ``sarathi
+host-address`` wrote as it started (podman.py). The router handing out a
+new one moves this computer out from under them, and Ollama goes quiet in
+every container at once: that's red, with Start everything again, which
+writes the new address and starts them again.
+
+THE HOUSE'S DAY, AGAINST ITS LINES. With ``[usage]`` set, the billed
+dollars and minutes of answering today and yesterday (usage.py) are put
+beside ``day_usd`` and ``day_minutes``: amber near the dollar ceiling, at
+it (billed turns are waiting for midnight), when yesterday reached it, and
+when a day went past its minutes. Yesterday's is the morning's news: the
+day the house ran out is told the morning after, once.
+
 WHAT IT CAN'T SEE, IT SAYS. ufw's rules are root's to read; the doctor
 tries ``sudo -n`` (which never asks for a password) and, when that
 can't, says so in amber with the line to run, instead of guessing
@@ -118,6 +132,10 @@ class Probes:
     now: Callable[[], float] = field(default=lambda: time.time())
     #: The last restore drill's answer (drill.json), or None.
     drilled: Callable[[], dict | None] = field(default=lambda: _last_drill())
+    #: This computer's address now, and the one the containers were told.
+    host: Callable[[], dict] = field(default=lambda: host_state())
+    #: Today's and yesterday's use beside [usage] (usage.against).
+    usage: Callable[[Any], tuple[dict, dict]] = field(default=lambda config: _days(config))
 
 
 def examine(config: Any, found: list[Found], started: list[dict],
@@ -134,10 +152,14 @@ def examine(config: Any, found: list[Found], started: list[dict],
     if config is not None:
         if config.road == "podman":
             lines += _image(probes.image(config), config)
+            lines += _host(probes.host())
         lines += _firewall(probes.firewall(config))
         lines += _memory(config, memory, probes)
         lines += _backups(probes.backups(config), probes.now())
         lines += _drilled(probes.drilled(), probes.backups(config), probes.now())
+        kept = getattr(config, "usage", None)
+        if kept is not None and (kept.day_usd or kept.day_minutes):
+            lines += _usage(*probes.usage(config))
     lines += _disk(probes)
     return sorted(lines, key=lambda line: LEVELS.index(line.level))
 
@@ -780,3 +802,66 @@ def _disk(probes: Probes) -> list[Line]:
         else:
             lines.append(Line("green", "disk", size))
     return lines
+
+
+def _days(config: Any) -> tuple[dict, dict]:
+    from sarathi import usage
+
+    return (usage.day(config, 0, memory=False)["against"],
+            usage.day(config, 1, memory=False)["against"])
+
+
+SETTINGS_USAGE = "Settings → Sarathi → Which model answers, if the line should move"
+
+
+def _usage(today: dict, yesterday: dict) -> list[Line]:
+    """The house's day against [usage] (usage.against)."""
+    lines: list[Line] = []
+    ceiling, spent = today["day_usd"], today["billed_usd"]
+    if today["usd_reached"]:
+        lines.append(Line("amber", "usage", f"the billed models have come to ${spent:.2f} "
+                          f"today, the house's ${ceiling:.2f} a day: billed turns wait for "
+                          "midnight (a local model standing by answers them)", SETTINGS_USAGE))
+    elif today["usd_near"]:
+        lines.append(Line("amber", "usage", f"the billed models have come to ${spent:.2f} of "
+                          f"today's ${ceiling:.2f}", "sarathi usage says which programs"))
+    if yesterday["usd_reached"]:
+        lines.append(Line("amber", "usage", f"yesterday the billed models reached the house's "
+                          f"${yesterday['day_usd']:.2f} a day (${yesterday['billed_usd']:.2f}): "
+                          "turns after that went to a standby or weren't answered",
+                          "sarathi usage --days 2 says which programs"))
+    for name, d in (("today", today), ("yesterday", yesterday)):
+        if d["minutes_passed"]:
+            lines.append(Line("amber", "usage", f"{d['minutes']:.0f} minutes of answering "
+                              f"{name}, past the house's {d['day_minutes']} a day",
+                              "sarathi usage says which programs"))
+    if not lines:
+        said = []
+        if ceiling:
+            said.append(f"${spent:.2f} billed of ${ceiling:.2f} a day")
+        if today["day_minutes"]:
+            said.append(f"{today['minutes']:.0f} of {today['day_minutes']} minutes")
+        lines.append(Line("green", "usage", "today: " + ", ".join(said)))
+    return lines
+
+
+def host_state() -> dict:
+    from sarathi import podman
+
+    return {"now": podman.this_address(), "told": podman.written_host_address()}
+
+
+def _host(state: dict) -> list[Line]:
+    """Whether the containers still look for this computer where it is."""
+    now, told = state.get("now"), state.get("told")
+    if told is None:
+        return [Line("amber", "host", "the containers haven't been told this computer's "
+                     "address yet, so Ollama may not answer them", "sarathi up", UP)]
+    if now is None:
+        return [Line("amber", "host", f"this computer has no address on a network right "
+                     f"now; the containers look for it at {told}")]
+    if now != told:
+        return [Line("red", "host", f"this computer's address moved from {told} to {now}: "
+                     "the containers still look for it at the old one, so Ollama doesn't "
+                     "answer them", "sarathi up (it tells them, and starts them again)", UP)]
+    return [Line("green", "host", f"the containers reach this computer at {now}")]

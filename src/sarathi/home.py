@@ -89,6 +89,8 @@ and writes its own file; a person signed in gets 403:
                                            doctor key, which opens this and nothing else)
     POST /api/doctor/morning               Samay asked once to run the doctor each morning
                                            ({"at": "06:45"}: then, or moved there)
+    GET  /api/usage                        `sarathi usage --json` for today, beside
+                                           [usage]'s lines (usage.day)
     GET  /api/backup                       the backups: the folder, the newest, the key
     POST /api/backup                       `sarathi backup`, now (and Samay's backup road,
                                            by the backup key, which opens this alone)
@@ -584,6 +586,12 @@ class Home:
             return 500, {"detail": f"the backup didn't finish: {exc}"}
         finally:
             self._backing_up.release()
+
+    def usage(self) -> dict[str, Any]:
+        """Today's model use, every program's, beside [usage] (usage.day)."""
+        from sarathi import usage
+
+        return usage.day(self.config)
 
     def backups(self) -> dict[str, Any]:
         """Where they go, the newest there, and whether the key is chosen."""
@@ -1083,6 +1091,10 @@ def _handler(server: HomeServer):
                 if self._owner() is None:
                     return None
                 return self._json(200, server.home.backups())
+            if url.path == "/api/usage":
+                if self._owner() is None:
+                    return None
+                return self._json(200, server.home.usage())
             if url.path == "/api/schedules/house":
                 if self._owner() is None:
                     return None

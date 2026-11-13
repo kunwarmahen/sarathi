@@ -111,6 +111,7 @@ KNOWN: dict[str, set[str]] = {
     "memory": {"via"},
     "house": {"name", "address"},
     "backup": {"folder", "keep", "also", "copy_to"},
+    "usage": {"day_usd", "day_minutes"},
     "smritikosh": {"checkout", "port", "database", "volume", "db_port", "full", "neo4j",
                    "mongodb", "redis", "dashboard", "dashboard_port"},
 }
@@ -272,6 +273,20 @@ class Backup:
 
 
 @dataclass(frozen=True)
+class Usage:
+    """The house's day, every program together (``sarathi usage``):
+    ``[usage]``. 0 is no line."""
+
+    #: Billed models' dollars a day. Reached, a billed model isn't asked
+    #: until midnight: a local one standing by answers, or the turn says why
+    #: (Yantra's usage_log.py, YANTRA_HOUSE_DAY_USD).
+    day_usd: float = 0.0
+    #: Minutes of answering a day, local models too. Told, never stopped:
+    #: a doctor line when a day passed it.
+    day_minutes: int = 0
+
+
+@dataclass(frozen=True)
 class Smritikosh:
     """The memory server, as ``sarathi smritikosh`` set it up: ``[smritikosh]``."""
 
@@ -360,6 +375,7 @@ class Config:
     #: public address. Empty with a market_port: this house's own.
     routine_market_url: str = ""
     backup: Backup = Backup()
+    usage: Usage = Usage()
 
     @property
     def remembers_in_smritikosh(self) -> bool:
@@ -732,11 +748,21 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
     backup = Backup(folder=kept.get("folder") or Backup.folder, keep=keep,
                     also=tuple(a.strip() for a in also),
                     copy_to=tuple(c.strip() for c in copy_to))
+    used = data.get("usage", {})
+    day_usd, day_minutes = used.get("day_usd", 0), used.get("day_minutes", 0)
+    if isinstance(day_usd, bool) or not isinstance(day_usd, (int, float)) or day_usd < 0:
+        raise ConfigError(f"{where}: usage.day_usd must be dollars a day, like 2.50 "
+                          f"(0: no ceiling), not {day_usd!r}")
+    if isinstance(day_minutes, bool) or not isinstance(day_minutes, int) or day_minutes < 0:
+        raise ConfigError(f"{where}: usage.day_minutes must be whole minutes a day, like "
+                          f"120 (0: none), not {day_minutes!r}")
+    usage = Usage(day_usd=float(day_usd), day_minutes=day_minutes)
     if via == "smritikosh" and smritikosh.checkout is None:
         raise ConfigError(f"{where}: memory.via = \"smritikosh\" but it isn't set up "
                           "yet: run `sarathi smritikosh`")
     return Config(provider=provider, road=road, door=door, pages=pages, phone=phone,
                   memory=via, smritikosh=smritikosh, house=house, backup=backup,
+                  usage=usage,
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
                   context_window=window, fallback=", ".join(
@@ -885,6 +911,7 @@ sparsh_port = {config.pages.sparsh_port}
 
 {_render_house(config.house)}
 {_render_backup(config.backup)}
+{_render_usage(config.usage)}
 {_render_door(config.door)}
 {_render_phone(config.phone)}
 {_render_memory(config)}"""
@@ -922,6 +949,18 @@ folder = "{backup.folder}"
 keep = {backup.keep}
 {also}
 {copy_to}
+"""
+
+
+def _render_usage(usage: Usage) -> str:
+    return f"""# The house's day, every program together (`sarathi usage`). day_usd:
+# what billed models may come to in a day; once reached, a billed model
+# isn't asked until midnight (a local model standing by answers, or the
+# turn says why). day_minutes: minutes of answering a day, local models
+# too; the doctor says when a day went past it. 0: no line.
+[usage]
+day_usd = {usage.day_usd:g}
+day_minutes = {usage.day_minutes}
 """
 
 

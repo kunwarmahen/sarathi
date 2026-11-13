@@ -678,6 +678,8 @@ function drawSarathiTab() {
   const base = text(s.model.base_url || "", { placeholder: "the usual address" });
   const ctx = text(s.model.context_window || "", { inputmode: "numeric", placeholder: "8192" });
   const spare = text(s.model.fallback || "", { placeholder: "anthropic:claude-sonnet-5-5" });
+  const dayUsd = text(s.usage?.day_usd || "", { inputmode: "decimal", placeholder: "no limit" });
+  const dayMin = text(s.usage?.day_minutes || "", { inputmode: "numeric", placeholder: "no line" });
   const samayOn = check(s.samay.on);
   const prahariOn = check(s.prahari ? s.prahari.on : true);
   const vidhiOn = check(s.vidhi ? s.vidhi.on : true);
@@ -727,6 +729,7 @@ function drawSarathiTab() {
   const go = button("Save", () => save("/api/settings/sarathi", {
     model: { provider: provider.value, model: model.value.trim(), base_url: base.value.trim(),
              context_window: ctx.value.trim() || null, fallback: spare.value.trim() },
+    usage: { day_usd: dayUsd.value.trim() || 0, day_minutes: dayMin.value.trim() || 0 },
     yantra: { port: ports.yantra.value },
     samay: { on: samayOn.checked, port: ports.samay.value },
     prahari: { on: prahariOn.checked, port: ports.prahari.value,
@@ -763,7 +766,13 @@ function drawSarathiTab() {
       field("When it doesn't answer", spare, "Models to try instead, in order, like " +
             "anthropic:claude-sonnet-5-5 or ollama:gemma4:12b@http://other-box:11434/v1. " +
             "The answer says which one did. A cloud one needs its key under Keys. Empty: " +
-            "say the model is down and do nothing.")),
+            "say the model is down and do nothing."),
+      field("Most a day for billed models (US dollars)", dayUsd, "Every program " +
+            "together. Once it's reached, a billed model isn't asked until midnight: a " +
+            "local model standing by answers, or the answer says why. Empty: no limit. " +
+            "Needs Apply."),
+      field("Minutes of answering a day", dayMin, "Local models too. Nothing is " +
+            "stopped: Check says when a day went past it. Empty: no line.")),
     h("div.card.form", {}, h("h3", {}, "Dvara: your agents for other people, and your phone"),
       h("label.inline", {}, dvaraOn, " On"),
       field("A Telegram bot answers as", bot, "The bot's token goes under Keys."),
@@ -1014,7 +1023,7 @@ function drawCheckTab() {
     "it, change the time and press the button again.");
   if (sets.checked) drawCheck(out, sets.checked);
   return [intro, row(go, ...morning.slice(0, 1), at, ...morning.slice(1)), out,
-          versionCard(), backupsCard()];
+          usageCard(), versionCard(), backupsCard()];
 }
 
 // ---- Version: `sarathi version`, which commit of each project runs -----------------
@@ -1157,6 +1166,50 @@ async function showHouseRun(runner, b, onWords, at = null) {
       b.title = `Samay's schedule ${run.id}: stop or change it on Samay's page`;
     }
   }
+}
+
+// ---- Model use today: `sarathi usage`, from here ------------------------------------
+
+function usageCard() {
+  const out = h("div", { "aria-live": "polite" }, h("p.meta", {}, "…"));
+  showUsage(out);
+  return h("div.card.form", {}, h("h3", {}, "Model use today"),
+    h("p.meta", {}, "Every program's turns since midnight: which model, local or " +
+      "billed, minutes of answering, dollars where there's a price. Words never are. " +
+      "The most a day: Settings → Sarathi → Which model answers."),
+    out, row(button("Look again", () => showUsage(out), "linkish")));
+}
+
+const money = (usd) => (usd ? `$${usd < 0.01 ? usd.toFixed(4) : usd.toFixed(2)}` : "");
+
+async function showUsage(out) {
+  try {
+    const u = await api("/api/usage");
+    const a = u.against, t = u.total;
+    const head = [`${t.turns} turns, ${Math.round(t.seconds / 60)} minutes of answering`];
+    if (a.day_usd) head.push(`${money(a.billed_usd) || "$0.00"} billed of $${a.day_usd.toFixed(2)} a day`);
+    else if (t.usd) head.push(`${money(t.usd)} billed`);
+    else head.push("nothing billed");
+    if (a.day_minutes) head.push(`the line is ${a.day_minutes} minutes`);
+    const warn = a.usd_reached ? "The billed models reached today's most: billed turns " +
+      "wait for midnight." : a.usd_near ? "Close to today's most for billed models." :
+      a.minutes_passed ? "Past today's minutes of answering." : "";
+    const rows = Object.entries(u.programs).sort((x, y) => y[1].turns - x[1].turns)
+      .map(([name, b]) => h("li", {}, h("strong", {}, name), ` ${b.turns} turns, ` +
+        (b.local === b.turns ? "local" : b.local ? `${b.local} local` : "billed") +
+        `, ${(b.seconds / 60).toFixed(1)} min` +
+        (b.usd ? `, ${money(b.usd)}` : "") + (b.unpriced ? ` (+${b.unpriced} with no price)` : "") +
+        ` · ${Object.keys(b.models).join(", ")}`));
+    for (const m of u.memory) {
+      rows.push(h("li", {}, h("strong", {}, "smritikosh"),
+        ` ${m.calls} calls filing memories · ${m.model}` + (m.usd ? `, ${money(m.usd)}` : "")));
+    }
+    out.replaceChildren(h("p", {}, head.join(" · ") + "."),
+      ...(warn ? [h("p.meta", {}, warn)] : []),
+      rows.length ? h("ul", {}, ...rows)
+        : h("p.meta", {}, "No turns yet today. Programs write theirs as each one ends."),
+      ...(u.memory_why ? [h("p.meta", {}, `Smritikosh: ${u.memory_why}`)] : []));
+  } catch (err) { out.replaceChildren(h("p.meta", {}, err.message)); }
 }
 
 // ---- Backups: `sarathi backup`, from here -------------------------------------------

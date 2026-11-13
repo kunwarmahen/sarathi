@@ -65,7 +65,14 @@ def probes(**kw) -> doctor.Probes:
                          counts=kw.get("counts", lambda: Path(tempfile.mkdtemp()) / "c.json"),
                          drilled=lambda: kw.get("drilled", {"at": NOW - 86400, "ok": True,
                                                              "memories": 84, "places": 20}),
+                         # never this computer's address, nor its usage file
+                         host=lambda: kw.get("host", {"now": "10.0.0.5", "told": "10.0.0.5"}),
+                         usage=kw.get("usage", lambda c: (QUIET_DAY, QUIET_DAY)),
                          now=lambda: kw.get("now", NOW))
+
+
+QUIET_DAY = {"day_usd": 0.0, "day_minutes": 0, "billed_usd": 0.0, "minutes": 0.0,
+             "usd_reached": False, "usd_near": False, "minutes_passed": False}
 
 
 NOW = 1_800_000_000.0
@@ -262,6 +269,7 @@ class TestADoctorThatCriesWolf:
 
     def test_one_disk_is_one_line(self):
         many = doctor.Probes(image=lambda c: None, firewall=lambda c: None,
+                             host=lambda: {"now": "10.0.0.5", "told": "10.0.0.5"},
                              disk=lambda p: 50 * 1024**3,
                              disk_paths=lambda: [Path("/"), Path("/")])
         got = doctor.examine(CONFIG, world(), STARTED, None, many)

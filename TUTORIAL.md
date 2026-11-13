@@ -780,7 +780,12 @@ Four things to know on this road:
 
 * **On your own computer's model:** Ollama has to accept connections
   from the containers. Start it with `OLLAMA_HOST=0.0.0.0 ollama serve`
-  (or set that in its service settings).
+  (or set that in its service settings). The containers find this
+  computer by its address on your network, which Sarathi works out each
+  time one starts, so a new address from your router doesn't cut them
+  off. `sarathi up` prints it (*host  the containers reach this computer
+  at 192.168.1.44*). If it moves while they run, Check says so in red,
+  with **Start everything again**.
 * **Your Yantra `.env` stays behind.** The containers are built from
   what's committed, and `.env` never is. A setting you put there, like
   `OLLAMA_CONTEXT_WINDOW=64000` for a 64k model, goes in `sarathi.toml`
@@ -2653,7 +2658,18 @@ Setu's page**). Other fixes, like opening the firewall, you type.
 turns (the chat, Telegram, schedules, watches, routines) with how long
 the model spent and, for a cloud model, what it cost, and Smritikosh's
 own calls as it files memories. `--days 7` for the week. A local model
-shows minutes and tokens, never dollars.
+shows minutes and tokens, never dollars. Settings → Check → **Model use
+today** shows the same on the page.
+
+**Can I cap what the house spends?** Settings → Sarathi → *Which model
+answers* → **Most a day for billed models**, say 2.50. It covers every
+program together. Once the day's cloud turns reach it, the cloud model
+isn't asked again until midnight. Your local model answers instead if
+it's set under *When it doesn't answer*. If it isn't, the answer says
+*Nothing was done: the house's $2.50 for today is spent…*. Press
+**Apply**. **Minutes of answering a day** is the same idea for a local
+house, but it never stops anything: Check tells you, and the morning
+check says it once, the morning after.
 
 **Is my fix in there?** `sarathi version` (or the line at the bottom of
 the home page, which opens **Settings → Check → Version**) shows which

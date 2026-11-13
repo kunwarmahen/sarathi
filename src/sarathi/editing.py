@@ -447,6 +447,7 @@ def sarathi_view(config: Config) -> dict:
         "memory": {"via": config.memory},
         "backup": {"folder": config.backup.folder, "keep": config.backup.keep,
                    "also": list(config.backup.also)},
+        "usage": {"day_usd": config.usage.day_usd, "day_minutes": config.usage.day_minutes},
         "house": None if config.house is None else {"name": config.house.name,
                                                     "address": config.house.address},
         "keys": {k: k in have for k in KEYS},
@@ -614,6 +615,20 @@ def sarathi_apply(changes: dict) -> Config:
             kept, folder=folder, also=tuple(also), copy_to=tuple(copy_to),
             keep=kept.keep if b.get("keep") in (None, "") else
             _num(b.get("keep"), "how many backups are kept", low=0, high=10_000)))
+    if "usage" in changes:
+        u, kept = changes["usage"], config.usage
+        raw = u.get("day_usd", kept.day_usd)
+        try:
+            day_usd = float(raw) if raw not in (None, "") else 0.0
+        except (TypeError, ValueError):
+            raise EditError(400, f"the most a day must be dollars, like 2.50, "
+                                 f"not {raw!r}") from None
+        if not 0 <= day_usd <= 100_000:
+            raise EditError(400, "the most a day must be between 0 and 100000 dollars")
+        config = replace(config, usage=replace(
+            kept, day_usd=day_usd,
+            day_minutes=_num(u.get("day_minutes", kept.day_minutes), "minutes a day",
+                             low=0, high=1440) or 0))
     if "house" in changes:
         h = changes["house"]
         config = replace(config, house=None if not h or not h.get("name") else

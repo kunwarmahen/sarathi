@@ -59,6 +59,21 @@ container, so the local road's address becomes
 has to listen on more than 127.0.0.1 for that to reach it
 (``OLLAMA_HOST=0.0.0.0``).
 
+THE HOST'S ADDRESS IS WORKED OUT EACH TIME A CONTAINER STARTS. Podman 5.7
+points ``host.containers.internal`` at 169.254.1.2, which doesn't reach
+this computer from the sarathi network, and pinning this computer's
+address in containers.conf breaks quietly the day the router hands out
+another. So every container wants ``sarathi-host-address``, a one-shot
+service that runs ``sarathi host-address`` before it: this computer's
+address now (``ip route get``'s source, the one Ollama is reached on) is
+written to a containers.conf module of Sarathi's own
+(``host-address.conf`` in its state folder), and each unit loads that
+module (``ContainersConfModule=``). Your own containers.conf is never
+touched, and the module wins over a pin left in it. With no network yet at
+login it waits a little, then keeps the address it wrote last time. ``up``
+writes it too, and starts the containers again when it moved; the doctor
+says when the address has moved since.
+
 YANTRA'S .env IS NOT IN THE IMAGE. The image is built from each
 checkout's last commit, and ``.env`` is never committed, so a setting
 that works in a terminal on this machine is absent in a container. What
@@ -258,6 +273,9 @@ OLD_UNITS = ("sarathi-clock", "sarathi-door", "sarathi-page", "sarathi-owner")
 #: The sarathi.toml key that moves each one's host port.
 SETTINGS = services.PORT_SETTINGS
 NETWORK = "sarathi"
+#: The one-shot every container wants first: this computer's address,
+#: written where the containers look for it (the module docstring).
+HOST_UNIT = "sarathi-host-address"
 READY_TIMEOUT = 90.0
 #: Where ufw keeps its on/off switch, readable without root.
 UFW_CONF = Path("/etc/ufw/ufw.conf")
@@ -478,6 +496,9 @@ def container_env(config: Config) -> dict[str, str]:
         env[f"{prefix}_CONTEXT_WINDOW"] = str(config.context_window)
     if config.fallback:
         env["YANTRA_FALLBACK"] = fallback_in_container(config.fallback)
+    if config.usage.day_usd:
+        # the house's dollars a day, every container held to it together
+        env["YANTRA_HOUSE_DAY_USD"] = f"{config.usage.day_usd:g}"
     return env
 
 
@@ -1116,8 +1137,115 @@ def units(config: Config) -> dict[str, str]:
                 extra_container=lan(config, pages.door_port, OWNER_PAGE_PORT)
                 + f"Environment=DVARA_URL=http://{UNITS['dvara']}:{DOOR_PORT}\n",
                 more_volumes=door_dirs(config))
+    out = {name: (with_host_address(text) if name.endswith(".container") else text)
+           for name, text in out.items()}
     out[f"{NETWORK}.network"] = (f"{HEADER}\n[Network]\nNetworkName={NETWORK}\n")
     return out
+
+
+# ---- this computer's address, for host.containers.internal ----------------------
+
+
+def host_address_file() -> Path:
+    return state_dir() / "host-address.conf"
+
+
+def this_address() -> str | None:
+    """This computer's address on its network: the source ``ip route get``
+    names for the way out, which is where a container reaches Ollama."""
+    if not shutil.which("ip"):
+        return None
+    said = run(["ip", "-4", "route", "get", "1.1.1.1"]).stdout.split()
+    if "src" in said[:-1]:
+        at = said[said.index("src") + 1]
+        try:
+            return str(ipaddress.IPv4Address(at))
+        except ValueError:
+            return None
+    return None
+
+
+def written_host_address() -> str | None:
+    """The address the containers were last told, or None."""
+    try:
+        text = host_address_file().read_text()
+    except OSError:
+        return None
+    for line in text.splitlines():
+        key, _, value = line.partition("=")
+        if key.strip() == "host_containers_internal_ip":
+            return value.strip().strip('"') or None
+    return None
+
+
+def refresh_host_address(wait: float = 0.0) -> tuple[str | None, str | None]:
+    """Write this computer's address into Sarathi's containers.conf module:
+    (before, now). With no address (no network yet), wait up to ``wait``
+    seconds for one, then keep what was written before."""
+    before = written_host_address()
+    deadline = time.monotonic() + wait
+    address = this_address()
+    while address is None and time.monotonic() < deadline:
+        time.sleep(1.0)
+        address = this_address()
+    path = host_address_file()
+    if address is None and path.exists():
+        return before, before
+    if address is None or address != before:
+        # a module that isn't there stops every container starting, so one
+        # with no address yet is still written: Podman's own answer, then
+        key = f'host_containers_internal_ip = "{address}"\n' if address else ""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fresh = path.with_suffix(".tmp")
+        fresh.write_text("# Written by `sarathi host-address` each time a Sarathi container\n"
+                         "# starts: where a container reaches this computer\n"
+                         f"# (host.containers.internal). Not yours to edit.\n[containers]\n{key}")
+        fresh.replace(path)    # whole, never half-written for a starting container
+    return before, address
+
+
+def host_address_line(moved: tuple[str | None, str | None]) -> str:
+    before, now = moved
+    if now is None:
+        return (f"{'host':<{WIDTH}} no address on a network yet: the containers can't "
+                "reach this computer until there is one")
+    if before not in (None, now):
+        return f"{'host':<{WIDTH}} the containers reach this computer at {now} (was {before})"
+    return f"{'host':<{WIDTH}} the containers reach this computer at {now}"
+
+
+def host_unit() -> str:
+    """The one-shot each container wants before it starts. No [Install]:
+    it runs because a container asks for it, never by itself."""
+    return f"""{HEADER}
+[Unit]
+Description=Sarathi: this computer's address, where the containers look for it
+
+[Service]
+Type=oneshot
+ExecStart={services.sarathi_program()} host-address
+Environment=SARATHI_STATE={state_dir()}
+"""
+
+
+def with_host_address(text: str) -> str:
+    """A container's unit, wanting the address first and loading it."""
+    return (text.replace("[Unit]\n", f"[Unit]\nWants={HOST_UNIT}.service\n"
+                         f"After={HOST_UNIT}.service\n", 1)
+            .replace("[Container]\n", f"[Container]\nContainersConfModule="
+                     f"{host_address_file()}\n", 1))
+
+
+def install_host_unit() -> bool:
+    """Write the one-shot's file (not enabled: the containers want it)."""
+    path = service_dir() / f"{HOST_UNIT}.service"
+    text = host_unit()
+    if path.exists() and path.read_text() == text:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    run(["systemctl", "--user", "daemon-reload"])
+    return True
 
 
 def ntfy_unit(config: Config) -> str:
@@ -1552,7 +1680,12 @@ def up(config: Config) -> tuple[list[str], bool]:
         folder.mkdir(parents=True, exist_ok=True)
     write_env_files(config)
     retired = retire_old()
+    install_host_unit()
+    moved = refresh_host_address()
     changed = install(units(config))
+    if moved[0] not in (None, moved[1]):
+        # a running container keeps the address it started with
+        changed |= {name for name in units(config) if name.endswith(".container")}
     if install_home(home_unit(config)):
         changed.add(unit_file("sarathi").name)
     dash = dashboard_unit(config)
@@ -1562,7 +1695,8 @@ def up(config: Config) -> tuple[list[str], bool]:
     lent = install_home(lend, "adb")
     if lent:
         changed.add(unit_file("adb").name)
-    lines = retired + (["units rewritten from sarathi.toml"] if changed else [])
+    lines = retired + (["units rewritten from sarathi.toml"] if changed else []) + \
+        [host_address_line(moved)]
     if lend is not None:
         run(["systemctl", "--user", "restart" if lent else "start", f"{UNITS['adb']}.service"])
         lines.append(f"{'adb':<{WIDTH}} the phone on this computer's cable, lent to the "
@@ -1772,6 +1906,7 @@ def down(remove: bool = False) -> list[str]:
         if unit_file("adb").exists():
             run(["systemctl", "--user", "stop", f"{UNITS['adb']}.service"])
         install_home(None, "adb")
+        (service_dir() / f"{HOST_UNIT}.service").unlink(missing_ok=True)
         run(["podman", "network", "rm", NETWORK])    # quadlet made it; nothing uses it now
         lines.append("units removed: nothing starts at login until the next `sarathi up`")
     else:
