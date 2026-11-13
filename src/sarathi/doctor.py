@@ -75,6 +75,15 @@ ROOM = 1.25
 WDA_DAYS = 3.0
 #: A Google sign-in this close to its end (an app in Testing) too.
 SIGN_IN_DAYS = 3.0
+#: The newest backup older than this means last night's didn't happen;
+#: older than the second, the house has gone a week unsaved.
+BACKUP_AMBER_HOURS, BACKUP_RED_HOURS = 30, 7 * 24
+#: Memories falling below this share of the most seen lately is a loss
+#: (a test once wiped the store: 99 facts, then 0), not a tidy-up; looked
+#: at only once there are this many, and the most is kept this long.
+MEMORY_DROP, MEMORY_AT_LEAST, MEMORY_PEAK_DAYS = 0.7, 20, 14
+#: Where the doctor keeps the most memories it has seen lately.
+COUNTS_FILE = "doctor-counts.json"
 UP = {"do": "up", "label": "Start everything again"}
 SETU_PAGE = {"do": "page", "page": "setu", "label": "Open Setu's page"}
 
@@ -102,6 +111,11 @@ class Probes:
     firewall: Callable[[Any], dict | None] = lambda config: firewall_state(config)
     disk: Callable[[Path], int] = lambda path: shutil.disk_usage(path).free
     disk_paths: Callable[[], list[Path]] = field(default=lambda: disk_paths())
+    #: The backups made, newest first (backup.listing), each with its file.
+    backups: Callable[[Any], list[dict]] = field(default=lambda config: backups_made(config))
+    #: The file the most memories seen lately is kept in.
+    counts: Callable[[], Path] = field(default=lambda: _counts_file())
+    now: Callable[[], float] = field(default=lambda: time.time())
 
 
 def examine(config: Any, found: list[Found], started: list[dict],
@@ -119,7 +133,8 @@ def examine(config: Any, found: list[Found], started: list[dict],
         if config.road == "podman":
             lines += _image(probes.image(config), config)
         lines += _firewall(probes.firewall(config))
-        lines += _memory(config, memory)
+        lines += _memory(config, memory, probes)
+        lines += _backups(probes.backups(config), probes.now())
     lines += _disk(probes)
     return sorted(lines, key=lambda line: LEVELS.index(line.level))
 
@@ -308,7 +323,12 @@ def _prahari(data: dict, config: Any) -> list[Line]:
     if not data.get("serving"):
         return [Line("red", "prahari", "Prahari isn't running: no watch looks or "
                      "hears a knock", "sarathi up", act=UP)]
-    return [Line("green", "prahari", "Prahari is watching")]
+    # paused by Prahari itself, not by a person: gone quiet, and nobody knows
+    lines = [Line("amber", "prahari", f"Prahari paused the {item.get('kind', 'watch')} "
+                  f"\"{item.get('name')}\" by itself: {item.get('why')}",
+                  "Prahari's page: Mend or Resume it, or say so in a chat")
+             for item in data.get("stopped_itself") or [] if isinstance(item, dict)]
+    return lines or [Line("green", "prahari", "Prahari is watching")]
 
 
 def _vidhi(data: dict, config: Any) -> list[Line]:
@@ -618,13 +638,83 @@ def _firewall(state: dict | None) -> list[Line]:
 # ---- memory and disk -------------------------------------------------------------
 
 
-def _memory(config: Any, memory: dict | None) -> list[Line]:
+def _memory(config: Any, memory: dict | None, probes: Probes | None = None) -> list[Line]:
     if memory is None or not config.remembers_in_smritikosh:
         return []
     if memory.get("up") is False:
         return [Line("red", "memory", "Smritikosh isn't answering: nothing is remembered "
                      "or recalled", "sarathi up", act=UP)]
+    count = memory.get("memories")
+    if isinstance(count, int) and probes is not None:
+        peak, at = _peak(probes.counts(), count, probes.now())
+        if peak >= MEMORY_AT_LEAST and count < peak * MEMORY_DROP:
+            return [Line("red", "memory", f"Smritikosh holds {count} memories; it held "
+                         f"{peak} on {time.strftime('%a %d %b', time.localtime(at))}. That "
+                         f"is a loss, not a tidy-up",
+                         "put them back from last night's backup: sarathi backup list, "
+                         "then sarathi restore FILE --only smritikosh")]
+        return [Line("green", "memory", f"Smritikosh is answering, {count} memories")]
     return [Line("green", "memory", "Smritikosh is answering")]
+
+
+def _counts_file() -> Path:
+    from sarathi.config import state_dir
+    return state_dir() / COUNTS_FILE
+
+
+def _peak(path: Path, count: int, now: float) -> tuple[int, float]:
+    """The most memories seen in the last ``MEMORY_PEAK_DAYS``, and when,
+    with today's count taken in. Kept in ``path``; a file that can't be
+    read starts over, never an error."""
+    try:
+        kept = json.loads(path.read_text())
+        peak, at = int(kept["peak"]), float(kept["at"])
+    except (OSError, ValueError, KeyError, TypeError):
+        peak, at = count, now
+    if count >= peak or now - at > MEMORY_PEAK_DAYS * 86400:
+        peak, at = count, now
+    try:
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        staged = path.with_suffix(".tmp")
+        staged.write_text(json.dumps({"peak": peak, "at": at}))
+        os.replace(staged, path)
+    except OSError:
+        pass
+    return peak, at
+
+
+def backups_made(config: Any) -> list[dict]:
+    from sarathi import backup
+    try:
+        rows = backup.listing(config.backup.path())
+    except OSError:
+        return []
+    for row in rows:
+        try:
+            row["mtime"] = Path(row["path"]).stat().st_mtime
+        except OSError:
+            row["mtime"] = 0.0
+    return rows
+
+
+def _backups(rows: list[dict], now: float) -> list[Line]:
+    """Whether last night's backup happened: the newest one's age."""
+    if not rows:
+        return [Line("amber", "backup", "no backup of the house has been made yet: a disk "
+                     "that dies takes the accounts, conversations and memories with it",
+                     "sarathi backup, then Settings → Backups → every night")]
+    newest = rows[0]
+    hours = (now - float(newest.get("mtime") or 0)) / 3600
+    said = f"the newest backup is from {newest.get('made')}"
+    if hours > BACKUP_RED_HOURS:
+        return [Line("red", "backup", f"{said}, {hours / 24:.0f} days ago: nothing since "
+                     "has been saved", "sarathi backup now; then see why the nightly one "
+                     "stopped (Samay's page: the backup schedule's last run)")]
+    if hours > BACKUP_AMBER_HOURS:
+        return [Line("amber", "backup", f"{said}, {hours:.0f} hours ago: last night's "
+                     "didn't happen", "Samay's page: the backup schedule's last run says "
+                     "why; sarathi backup makes one now")]
+    return [Line("green", "backup", f"{said} ({len(rows)} kept)")]
 
 
 def disk_paths() -> list[Path]:

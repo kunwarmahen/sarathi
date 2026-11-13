@@ -1087,7 +1087,10 @@ read answers aloud in every voice `[dvara] voices` asks for), what `up` started,
 Podman's image against each checkout's last commit (and containers still
 on an older one, and an image built without a voice asked for since), the firewall's ports for the phones (`sudo -n ufw
 status`, which never asks for a password; unreadable is amber, never
-"open"), and free disk. **Red** is broken now, **amber** is worth a
+"open"), free disk, the newest backup (more than 30 hours old: last
+night's didn't happen), Smritikosh's count of memories against the most
+it held in two weeks (below 70%: red, a loss), and every watch or reading
+Prahari paused by itself ([notes/36](notes/36-the-bad-days-the-doctor-sees.md)). **Red** is broken now, **amber** is worth a
 look, **green** is fine. It changes nothing, and exits 1 when anything
 is red. `--json` prints `sarathi.doctor.v1`. The same check is a
 **Check** tab in the home page's Settings

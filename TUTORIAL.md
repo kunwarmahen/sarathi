@@ -2643,7 +2643,11 @@ it, change the time and press the button again (*"Moved: every morning
 at 06:45 …"*). To stop it, pause or delete that schedule on Samay's page.
 Your morning might say *"gmail:personal: Google ends this sign-in Sun
 25 Oct"* with what to do, while a phone you left unplugged all week
-is mentioned only once.
+is mentioned only once. It also notices the quiet troubles: a night
+with no backup (*"the newest backup is from Mon 2 Nov, 40 hours ago:
+last night's didn't happen"*), memories that went missing (*"Smritikosh
+holds 3 memories; it held 99 on Fri 30 Oct"*, with the restore line),
+and a watch Prahari paused by itself after failing again and again.
 
 **Everyone else gets their own check.** Anyone in the house can send
 `/doctor` to the bot (or in the home page's chat). They get only what's

@@ -15,6 +15,8 @@ Two biases, pulling against each other:
 
 from __future__ import annotations
 
+import tempfile
+
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -56,9 +58,15 @@ def probes(**kw) -> doctor.Probes:
                                                           "newer": [], "behind": []}),
                          firewall=kw.get("firewall", lambda c: None),
                          disk=kw.get("disk", lambda p: 50 * 1024**3),
-                         disk_paths=lambda: [Path("/")])
+                         disk_paths=lambda: [Path("/")],
+                         # never this computer's backups or counts in a test
+                         backups=kw.get("backups", lambda c: [
+                             {"made": "Thu 12 Nov 2026 02:30", "mtime": NOW - 3600}]),
+                         counts=kw.get("counts", lambda: Path(tempfile.mkdtemp()) / "c.json"),
+                         now=lambda: kw.get("now", NOW))
 
 
+NOW = 1_800_000_000.0
 CONFIG = Config(provider="ollama")
 STARTED = [{"name": "yantra", "alive": True, "log": []}]
 
@@ -463,3 +471,46 @@ class TestTheMorningRoad:
 def doctor_home_morning():
     from sarathi.home import MORNING
     return MORNING
+
+
+class TestTheBadDaysAreSeen:
+    """The checks the house's own bad days asked for: a night with no
+    backup, memories that went missing, a watch that stopped itself."""
+
+    def test_last_nights_backup_missing_is_amber_and_a_week_red(self):
+        old = [{"made": "Mon 2 Nov 2026 02:30", "mtime": NOW - 40 * 3600}]
+        assert level(lines(backups=lambda c: old), "backup") == ["amber"]
+        older = [{"made": "Mon 2 Nov 2026 02:30", "mtime": NOW - 9 * 86400}]
+        assert level(lines(backups=lambda c: older), "backup") == ["red"]
+        assert level(lines(), "backup") == ["green"]
+        assert level(lines(backups=lambda c: []), "backup") == ["amber"]
+
+    def test_memories_that_fell_away_are_red_until_they_come_back(self, tmp_path):
+        from dataclasses import replace
+        config = replace(CONFIG, memory="smritikosh")
+        counts = tmp_path / "counts.json"
+        seen = lambda n: lines(config=config, memory={"up": True, "memories": n},  # noqa: E731
+                               counts=lambda: counts)
+        assert level(seen(99), "memory") == ["green"]
+        lost = seen(3)
+        assert level(lost, "memory") == ["red"]
+        assert "held 99" in next(x.said for x in lost if x.about == "memory")
+        assert level(seen(3), "memory") == ["red"]        # still lost the next day
+        assert level(seen(95), "memory") == ["green"]     # put back
+
+    def test_a_few_memories_tidied_away_is_not_a_loss(self, tmp_path):
+        from dataclasses import replace
+        config = replace(CONFIG, memory="smritikosh")
+        counts = tmp_path / "c.json"
+        lines(config=config, memory={"up": True, "memories": 10}, counts=lambda: counts)
+        assert level(lines(config=config, memory={"up": True, "memories": 2},
+                           counts=lambda: counts), "memory") == ["green"]
+
+    def test_a_watch_prahari_stopped_itself_is_amber_and_a_persons_pause_is_not(self):
+        stopped = world(prahari={"serving": True, "stopped_itself": [
+            {"kind": "watch", "name": "Ice cream", "why": "failed 5 times in a row"}]})
+        got = lines(stopped)
+        assert level(got, "prahari") == ["amber"]
+        assert "Ice cream" in next(x.said for x in got if x.about == "prahari")
+        assert level(lines(world(prahari={"serving": True, "stopped_itself": []})),
+                     "prahari") == ["green"]
