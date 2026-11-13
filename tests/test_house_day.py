@@ -175,3 +175,21 @@ class TestTheAddress:
         assert "moved from 192.168.1.44 to 192.168.1.61" in line.said
         [line] = doctor._host({"now": "192.168.1.44", "told": "192.168.1.44"})
         assert line.level == "green"
+
+
+def test_every_command_still_reaches_podman_from_main(monkeypatch):
+    """`host-address` once imported podman inside main(), which made the
+    name local to all of main() and broke `sarathi image` and `up`."""
+    from sarathi import cli
+
+    called = []
+    monkeypatch.setattr(podman, "build", lambda **kw: called.append(kw) or 0)
+    monkeypatch.setattr(cli, "_settings_or_none", lambda: None, raising=False)
+    try:
+        cli.main(["image"])
+    except SystemExit:
+        pass
+    except UnboundLocalError as exc:            # the bug itself
+        raise AssertionError(exc) from None
+    except Exception:  # noqa: BLE001 -- anything after podman is reached is fine here
+        pass

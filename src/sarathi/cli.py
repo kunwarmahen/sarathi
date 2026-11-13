@@ -936,8 +936,6 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "usage":
         return _usage(args)
     if args.command == "host-address":
-        from sarathi import podman
-
         print(podman.host_address_line(podman.refresh_host_address(wait=30.0)))
         return 0
     if args.command == "restore":
