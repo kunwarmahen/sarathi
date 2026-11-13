@@ -2319,6 +2319,29 @@ works too (`--copy-to /media/you/second-disk`). Old copies there aren't
 removed: that computer's copies are yours to keep or delete. Each file
 is safe to put anywhere: without the passphrase it's noise.
 
+**Does it come back?** A backup you've never opened is a hope. Once a
+month, open last night's somewhere harmless:
+
+```
+$ sarathi backup drill
+the backup's passphrase:
+opening sarathi-beast-20261113-023000.sarathi-backup in a throwaway folder…
+✓ it opens: sarathi-beast-20261113-023000.sarathi-backup (made 2026-11-13T02:30:00-0500)
+  21 places came back
+  4 conversations, 412 runs, 9 schedules, 6 watches, 1 readings
+  84 memories restored into a throwaway database (the house has 84 now)
+  nothing here was changed; the drill's copy is gone
+```
+
+Nothing of yours is touched. The files are unpacked into a folder of
+the drill's own, and the memories are restored into a new database that
+exists only for those few seconds (no network, deleted after), never
+into yours. `sarathi backup drill 2` opens the second newest. If
+something doesn't come back (a damaged file, a dump that won't restore,
+far fewer memories than you have now), it says **NOT ALL THERE** and
+why, and Settings → Check shows it red until a drill passes. Check also
+reminds you when the last drill is more than five weeks old.
+
 **Putting it back**, on this computer or a new one (a Raspberry Pi):
 
 1. Install the programs (Step 1). A backup holds what's yours, not the

@@ -78,9 +78,9 @@ so it isn't listed.
 * **No count of facts and beliefs.** Smritikosh's health answers a count
   of memories, and that's the number that fell on the bad day. Its graph
   facts follow its memories.
-* **No check that a backup can be opened.** That's the restore drill's
-  job: it unpacks the newest pack into throwaway stores, which is far too
-  slow for a morning check.
+* ~~**No check that a backup can be opened.**~~ That's the restore drill
+  (`sarathi backup drill`, [notes/37](37-a-backup-that-comes-back.md)):
+  it needs the passphrase, so Check says when it last ran.
 
 ## Tests
 

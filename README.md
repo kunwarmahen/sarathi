@@ -1209,6 +1209,17 @@ numbers what's there, newest first; `sarathi backup delete N|FILE...`
 (or `--all-but N`) deletes after a yes, only `*.sarathi-backup` files,
 only in that folder.
 
+**A drill: does it come back?** `sarathi backup drill [N|FILE]` asks the
+passphrase and opens the newest backup (or that one) in a throwaway
+folder under Sarathi's state: every place counted, each SQLite file
+checked (`PRAGMA quick_check`) and its schedules, runs, watches,
+readings and conversations counted, and Smritikosh's dump restored
+into a **new** container from the live database's image (`--network
+none`, no volume, removed after), its memories counted against the
+house's now. Nothing live is connected to. The answer is kept
+(`drill.json`): Check shows it, red if it failed, amber after 35 days
+([notes/37](notes/37-a-backup-that-comes-back.md)).
+
 Settings → **Check** has a **Backups** card: the newest file, **Back up
 now**, and **Back up every night**, which asks Samay once for a 02:30
 schedule on its backup road. Samay asks with a key that makes a backup
@@ -1509,6 +1520,9 @@ src/sarathi/
                 image's voices, [dvara] voices, said after a build  (notes/30, notes/31);
                 each checkout's version and commit as the image's label,
                 and a VERSION file in each project for its --version  (notes/32)
+  drill.py      sarathi backup drill: the newest backup opened in a throwaway
+                folder and its memories restored into a throwaway database,
+                counted, both removed (notes/37)
   doctor.py     sarathi doctor: what's wrong, green / amber / red, each
                 with its fix, from each sibling's own status, what `up`
                 started, the image's age, the firewall, the disk; the

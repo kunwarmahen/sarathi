@@ -218,7 +218,16 @@ def build_parser() -> argparse.ArgumentParser:
                              "the one they were made with)")
     backup.add_argument("--json", dest="json_out", action="store_true",
                         help="print sarathi.backup.made.v1")
-    kinds = backup.add_subparsers(dest="backup_cmd", metavar="list|delete|set")
+    kinds = backup.add_subparsers(dest="backup_cmd", metavar="list|delete|set|drill")
+    drilled = kinds.add_parser("drill", help="open the newest backup somewhere harmless "
+                               "and count what came back; nothing live is touched")
+    drilled.add_argument("pick", nargs="?", default="1", metavar="N|FILE",
+                         help="a number from `sarathi backup list` (default 1, the newest) "
+                              "or a file")
+    drilled.add_argument("--from", dest="source", metavar="FOLDER",
+                         help="another folder (default: [backup] folder)")
+    drilled.add_argument("--json", dest="json_out", action="store_true",
+                         help="print sarathi.backup.drill.v1")
     listed = kinds.add_parser("list", help="the backups there, newest first, numbered")
     listed.add_argument("--from", dest="source", metavar="FOLDER",
                         help="another folder (default: [backup] folder)")
@@ -784,6 +793,39 @@ def _restore(args) -> int:
     return code
 
 
+def _drill(args, config, folder: Path) -> int:
+    """`sarathi backup drill`: the newest backup (or the one named) opened in
+    a throwaway folder, its memories restored into a throwaway database,
+    counted, and both removed (drill.py). The answer is kept for Check."""
+    from sarathi import backup, drill
+    from sarathi.config import state_dir
+
+    rows = backup.listing(folder)
+    pick = args.pick
+    row = next((r for r in rows if str(r["n"]) == pick or r["name"] == pick), None)
+    file = Path(row["path"]) if row else Path(pick).expanduser()
+    if not file.is_file():
+        print(f"error: no backup {pick!r} in {_home(str(folder))} (sarathi backup list)",
+              file=sys.stderr)
+        return 2
+    try:
+        passphrase = backup.ask_passphrase(twice=False)
+    except backup.BackupError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    now = (_memory(config) or {}).get("memories") if config is not None else None
+    if not args.json_out:
+        print(f"opening {file.name} in a throwaway folder…", flush=True)
+    done = drill.drill(file, passphrase, state_dir() / "drills", config=config,
+                       memories_now=now if isinstance(now, int) else None)
+    drill.keep(state_dir() / drill.RECORD, done)
+    if args.json_out:
+        print(json.dumps({"format": "sarathi.backup.drill.v1", **done.as_json()}, indent=2))
+    else:
+        print("\n".join(drill.lines(done)))
+    return 0 if done.ok else 1
+
+
 def _backup_kept(args) -> int:
     """`sarathi backup list | delete | set`: the files that are there, and
     the settings for the next ones. None of them makes a backup."""
@@ -812,6 +854,8 @@ def _backup_kept(args) -> int:
             print(f"note: {gone} The next backup says so too, and makes nothing.")
         return 0
     folder = Path(args.source).expanduser() if args.source else settings.path()
+    if args.backup_cmd == "drill":
+        return _drill(args, config, folder)
     if args.backup_cmd == "list":
         rows = backup.listing(folder)
         if args.json_out:

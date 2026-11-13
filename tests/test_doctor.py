@@ -63,6 +63,8 @@ def probes(**kw) -> doctor.Probes:
                          backups=kw.get("backups", lambda c: [
                              {"made": "Thu 12 Nov 2026 02:30", "mtime": NOW - 3600}]),
                          counts=kw.get("counts", lambda: Path(tempfile.mkdtemp()) / "c.json"),
+                         drilled=lambda: kw.get("drilled", {"at": NOW - 86400, "ok": True,
+                                                             "memories": 84, "places": 20}),
                          now=lambda: kw.get("now", NOW))
 
 
@@ -514,3 +516,15 @@ class TestTheBadDaysAreSeen:
         assert "Ice cream" in next(x.said for x in got if x.about == "prahari")
         assert level(lines(world(prahari={"serving": True, "stopped_itself": []})),
                      "prahari") == ["green"]
+
+
+class TestABackupNobodyOpened:
+    def test_never_drilled_is_amber_failed_red_long_ago_amber_lately_green(self):
+        assert level(lines(drilled=None), "drill") == ["amber"]
+        assert level(lines(drilled={"at": NOW - 86400, "ok": False,
+                                    "problems": ["the dump didn't restore"]}), "drill") == ["red"]
+        assert level(lines(drilled={"at": NOW - 40 * 86400, "ok": True}), "drill") == ["amber"]
+        assert level(lines(), "drill") == ["green"]
+
+    def test_with_no_backup_at_all_the_drill_says_nothing(self):
+        assert level(lines(backups=lambda c: [], drilled=None), "drill") == []

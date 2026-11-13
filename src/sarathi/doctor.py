@@ -116,6 +116,8 @@ class Probes:
     #: The file the most memories seen lately is kept in.
     counts: Callable[[], Path] = field(default=lambda: _counts_file())
     now: Callable[[], float] = field(default=lambda: time.time())
+    #: The last restore drill's answer (drill.json), or None.
+    drilled: Callable[[], dict | None] = field(default=lambda: _last_drill())
 
 
 def examine(config: Any, found: list[Found], started: list[dict],
@@ -135,6 +137,7 @@ def examine(config: Any, found: list[Found], started: list[dict],
         lines += _firewall(probes.firewall(config))
         lines += _memory(config, memory, probes)
         lines += _backups(probes.backups(config), probes.now())
+        lines += _drilled(probes.drilled(), probes.backups(config), probes.now())
     lines += _disk(probes)
     return sorted(lines, key=lambda line: LEVELS.index(line.level))
 
@@ -681,6 +684,37 @@ def _peak(path: Path, count: int, now: float) -> tuple[int, float]:
     except OSError:
         pass
     return peak, at
+
+
+def _last_drill() -> dict | None:
+    from sarathi import drill
+    from sarathi.config import state_dir
+    return drill.last(state_dir() / drill.RECORD)
+
+
+def _drilled(last: dict | None, backups: list[dict], now: float) -> list[Line]:
+    """Whether a backup has been opened lately (drill.py): a backup never
+    put back is a backup nobody knows works."""
+    from sarathi import drill
+    if not backups:
+        return []
+    if last is None:
+        return [Line("amber", "drill", "no backup has been opened to see that it comes "
+                     "back", "sarathi backup drill (it asks the passphrase; nothing live is "
+                     "touched)")]
+    days = (now - float(last.get("at") or 0)) / 86400
+    when = time.strftime("%a %d %b", time.localtime(float(last.get("at") or 0)))
+    if not last.get("ok"):
+        why = "; ".join((last.get("problems") or [])[:2]) or "something was missing"
+        return [Line("red", "drill", f"the last drill ({when}) found a backup that "
+                     f"doesn't all come back: {why}", "sarathi backup drill shows it again; "
+                     "make a new one with sarathi backup")]
+    if days > drill.DUE_DAYS:
+        return [Line("amber", "drill", f"the last drill was {when}, {days:.0f} days ago",
+                     "sarathi backup drill")]
+    return [Line("green", "drill", f"drilled {when}: "
+                 f"{last.get('memories') if last.get('memories') is not None else 'no'} "
+                 f"memories and {last.get('places', 0)} places came back")]
 
 
 def backups_made(config: Any) -> list[dict]:
