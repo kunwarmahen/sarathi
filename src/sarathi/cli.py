@@ -257,6 +257,12 @@ def build_parser() -> argparse.ArgumentParser:
                       "computer's folder over SSH (pi.local:sarathi-backups) or a folder")
     sets.add_argument("--no-copy-to", dest="no_copy_to", action="append", default=[],
                       metavar="PLACE", help="stop copying there")
+    used = subs.add_parser("usage", help="what the house's models did today: each "
+                           "program's turns, local or billed, tokens, minutes, dollars")
+    used.add_argument("--days", type=int, default=1, metavar="N",
+                      help="today and the N-1 days before it (default 1: today)")
+    used.add_argument("--json", dest="json_out", action="store_true",
+                      help="print sarathi.usage.v1")
     restore = subs.add_parser("restore", help="put a backup back, here or on a new "
                               "computer")
     restore.add_argument("file", help="the .sarathi-backup file")
@@ -793,6 +799,22 @@ def _restore(args) -> int:
     return code
 
 
+def _usage(args) -> int:
+    """`sarathi usage`: every program's model turns (Yantra's usage file)
+    and Smritikosh's own calls, side by side (usage.py)."""
+    from sarathi import usage
+
+    config = _settings_or_none()
+    since = usage.since_days(args.days)
+    memory, why = usage.memory_calls(config, since)
+    data = usage.report(usage.turns(usage.usage_file(), since), memory, why, args.days)
+    if args.json_out:
+        print(json.dumps(data, indent=2))
+    else:
+        print("\n".join(usage.lines(data)))
+    return 0
+
+
 def _drill(args, config, folder: Path) -> int:
     """`sarathi backup drill`: the newest backup (or the one named) opened in
     a throwaway folder, its memories restored into a throwaway database,
@@ -909,6 +931,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "backup":
         return _backup(args)
+    if args.command == "usage":
+        return _usage(args)
     if args.command == "restore":
         return _restore(args)
     if args.command == "home":

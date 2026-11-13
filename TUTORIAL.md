@@ -2648,6 +2648,12 @@ itself. Under a line the page can fix, there's a button (**Start
 everything again**, **Rebuild and restart**, **Bring it back**, **Open
 Setu's page**). Other fixes, like opening the firewall, you type.
 
+**What did the models do today?** `sarathi usage` lists each program's
+turns (the chat, Telegram, schedules, watches, routines) with how long
+the model spent and, for a cloud model, what it cost, and Smritikosh's
+own calls as it files memories. `--days 7` for the week. A local model
+shows minutes and tokens, never dollars.
+
 **Is my fix in there?** `sarathi version` (or the line at the bottom of
 the home page, which opens **Settings → Check → Version**) shows which
 version of each project is running. A version is the day of the last

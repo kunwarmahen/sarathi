@@ -1057,6 +1057,27 @@ Setu and Samay are all found and readable, and 1 otherwise. Dvara,
 Sparsh and Smritikosh are optional: a missing one is reported and never fails the
 check.
 
+### What the models did today: `sarathi usage`
+
+```
+$ sarathi usage
+The house's models, today: 38 turns, 21 minutes of answering, nothing billed
+  dvara       24 turns  local      310.2k in /   9.1k out   14.0 min
+           qwen3.8-64k:latest ×24
+           for owner ×20, asha ×4
+  samay        9 turns  local       88.0k in /   2.2k out    5.1 min
+  prahari      5 turns  local        6.3k in /     40 out    1.9 min
+  smritikosh   51 calls  filing memories    10.7k in /    488 out
+```
+
+Every program's turns, from the one file they all write (Yantra's
+`usage.jsonl`, shared by the containers; Yantra's notes/160), and
+Smritikosh's own model calls, read with one `SELECT` from its
+`llm_usage` table. Local turns show tokens and minutes; a billed one its
+dollars; a cloud turn with no list price says *with no price*, never
+$0. `--days 7` for the week, `--json` for `sarathi.usage.v1`. It reads
+and changes nothing.
+
 ### When something's wrong: `sarathi doctor`
 
 `status` says what each piece is doing. `doctor` says what's wrong, and
@@ -1520,6 +1541,8 @@ src/sarathi/
                 image's voices, [dvara] voices, said after a build  (notes/30, notes/31);
                 each checkout's version and commit as the image's label,
                 and a VERSION file in each project for its --version  (notes/32)
+  usage.py      sarathi usage: every program's model turns (Yantra's
+                usage file) beside Smritikosh's own calls, by day
   drill.py      sarathi backup drill: the newest backup opened in a throwaway
                 folder and its memories restored into a throwaway database,
                 counted, both removed (notes/37)
