@@ -95,7 +95,7 @@ DOOR_ROOT, DOOR_ACTORS, DOOR_STATE = "~/dvara/agents", "~/dvara/actors.toml", "~
 DOOR_TOKEN, BOT_TOKEN = "DVARA_TOKEN", "TELEGRAM_TOKEN"
 
 KNOWN: dict[str, set[str]] = {
-    "model": {"provider", "model", "base_url", "context_window"},
+    "model": {"provider", "model", "base_url", "context_window", "fallback"},
     "yantra": {"port"},
     "samay": {"on", "port"},
     "prahari": {"on", "port", "inlet_port", "public_url", "people", "see_model"},
@@ -322,6 +322,9 @@ class Config:
     #: How many tokens the model holds, as Yantra's <PROVIDER>_CONTEXT_WINDOW:
     #: when to shorten a long conversation. None: Yantra's default.
     context_window: int | None = None
+    #: Models to try, in order, when this one doesn't answer: Yantra's
+    #: YANTRA_FALLBACK, "PROVIDER:MODEL[@ADDRESS], ..." ("": none).
+    fallback: str = ""
     #: ``local`` (Yantra's built-in file) or ``smritikosh``.
     memory: str = "local"
     smritikosh: Smritikosh = Smritikosh()
@@ -542,6 +545,19 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                                or window < 1024):
         raise ConfigError(f"{where}: model.context_window must be a number of tokens "
                           f"(1024 or more), not {window!r}")
+    fallback = model.get("fallback", "")
+    if not isinstance(fallback, str):
+        raise ConfigError(f"{where}: model.fallback is text, like "
+                          f'"anthropic:claude-sonnet-5-5"')
+    for entry in (e.strip() for e in fallback.split(",") if e.strip()):
+        name, _, rest = entry.partition(":")
+        slug, at, address = rest.partition("@")
+        if name not in PROVIDERS or not slug.strip() or (
+                at and not address.strip().startswith(("http://", "https://"))):
+            raise ConfigError(
+                f"{where}: model.fallback entry {entry!r} is PROVIDER:MODEL (provider one "
+                f"of {', '.join(PROVIDERS)}), or PROVIDER:MODEL@ADDRESS, like "
+                f'"ollama:gemma4:12b@http://other-box:11434/v1"')
     clock = data.get("samay", {})
     if not isinstance(clock.get("on", True), bool):
         raise ConfigError(f"{where}: samay.on must be true or false")
@@ -723,7 +739,8 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   memory=via, smritikosh=smritikosh, house=house, backup=backup,
                   model=model.get("model") or None,
                   base_url=model.get("base_url") or None,
-                  context_window=window,
+                  context_window=window, fallback=", ".join(
+                      e.strip() for e in fallback.split(",") if e.strip()),
                   web_port=_port(data.get("yantra", {}), "port", DEFAULT_WEB_PORT, "yantra"),
                   clock_on=clock.get("on", True),
                   clock_port=_port(clock, "port", DEFAULT_CLOCK_PORT, "samay"),
@@ -785,6 +802,8 @@ def render(config: Config) -> str:
     base = f'base_url = "{config.base_url}"' if config.base_url else '# base_url = "..."'
     window = (f"context_window = {config.context_window}" if config.context_window
               else "# context_window = 8192")
+    fallback = (f'fallback = "{config.fallback}"' if config.fallback
+                else '# fallback = "anthropic:claude-sonnet-5-5"')
     return f"""\
 # Sarathi's settings. `sarathi up` reads this every time it starts things;
 # edit it and run `sarathi down && sarathi up`. Keys never go here: a cloud
@@ -796,11 +815,16 @@ def render(config: Config) -> str:
 # base_url: unset means the provider's usual address
 # context_window: the tokens your model holds (a 64k Ollama model: 64000);
 #   unset means Yantra's default, which shortens a long chat early
+# fallback: models to try, in order, when this one doesn't answer
+#   ("PROVIDER:MODEL", or "PROVIDER:MODEL@ADDRESS" for another computer's
+#   Ollama); the answer says which one did. An agent whose agent.toml says
+#   [model] when_down = "wait" never switches. A cloud one needs its key.
 [model]
 provider = "{config.provider}"
 {model}
 {base}
 {window}
+{fallback}
 
 # Yantra's page.
 [yantra]

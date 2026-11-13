@@ -476,7 +476,24 @@ def container_env(config: Config) -> dict[str, str]:
         env[f"{prefix}_BASE_URL"] = from_container(base)
     if config.context_window:
         env[f"{prefix}_CONTEXT_WINDOW"] = str(config.context_window)
+    if config.fallback:
+        env["YANTRA_FALLBACK"] = fallback_in_container(config.fallback)
     return env
+
+
+def fallback_in_container(raw: str) -> str:
+    """``[model] fallback`` as a container reaches it: an @ADDRESS on this
+    computer (localhost) becomes the host's address, as the model's own
+    base_url does; an Ollama standby with no address gets this computer's."""
+    out = []
+    for entry in (e.strip() for e in raw.split(",") if e.strip()):
+        head, at, address = entry.partition("@")
+        if at:
+            entry = f"{head}@{from_container(address)}"
+        elif head.startswith("ollama:"):
+            entry = f"{head}@{from_container('http://localhost:11434/v1')}"
+        out.append(entry)
+    return ", ".join(out)
 
 
 def phone_dirs(config: Config) -> list[Path]:
@@ -567,6 +584,11 @@ def unit_secrets(config: Config) -> dict[str, dict[str, str]]:
     held = read_secrets()
     key = KEY_NAMES.get(config.provider)
     model = {key: held[key]} if key and key in held else {}
+    # a cloud model standing by needs its own key, beside the usual one's
+    for entry in (e.strip() for e in config.fallback.split(",") if e.strip()):
+        spare = KEY_NAMES.get(entry.partition(":")[0])
+        if spare and spare in held:
+            model[spare] = held[spare]
     door = {} if config.door is None or DOOR_TOKEN not in held else \
         {"SAMAY_DVARA_TOKEN": held[DOOR_TOKEN]}
     # Yantra's page wants its token in the container, where it listens on

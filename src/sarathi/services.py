@@ -191,6 +191,8 @@ def model_env(config: Config, environ: dict[str, str] | None = None) -> dict[str
         env[f"{prefix}_BASE_URL"] = config.base_url
     if config.context_window:
         env[f"{prefix}_CONTEXT_WINDOW"] = str(config.context_window)
+    if config.fallback:
+        env["YANTRA_FALLBACK"] = config.fallback   # Yantra's providers/standby.py
     # the door's two tokens go to the door alone (and the clock its token,
     # as SAMAY_DVARA_TOKEN), and your Smritikosh key only to what runs as
     # you (Yantra's page, Samay's runs): never to every piece that reads

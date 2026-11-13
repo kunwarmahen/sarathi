@@ -413,7 +413,8 @@ def sarathi_view(config: Config) -> dict:
         "text": text, "providers": list(PROVIDERS), "roads": list(ROADS),
         "awake": list(AWAKE), "memory_roads": list(MEMORY_ROADS),
         "model": {"provider": config.provider, "model": config.model,
-                  "base_url": config.base_url, "context_window": config.context_window},
+                  "base_url": config.base_url, "context_window": config.context_window,
+                  "fallback": config.fallback},
         "yantra": {"port": config.web_port},
         "samay": {"on": config.clock_on, "port": config.clock_port},
         "vaani": {"on": config.voice_on, "port": config.voice_port,
@@ -502,7 +503,8 @@ def sarathi_apply(changes: dict) -> Config:
                          base_url=m.get("base_url", config.base_url) or None,
                          context_window=_num(m.get("context_window", config.context_window),
                                              "the context window", low=1024,
-                                             high=10_000_000))
+                                             high=10_000_000),
+                         fallback=str(m.get("fallback", config.fallback) or "").strip())
     if "yantra" in changes:
         config = replace(config, web_port=_num(changes["yantra"].get("port"),
                                                "Yantra's port") or config.web_port)

@@ -154,6 +154,22 @@ Sarathi hands it to every piece as `OLLAMA_CONTEXT_WINDOW` (or the
 cloud provider's own name). Without it, the model still answers, but
 Yantra shortens a long chat much earlier than it needs to.
 
+**When the model doesn't answer.** One more line names models standing
+by, tried in order when yours doesn't answer (Ollama stopped, the
+computer's GPU busy elsewhere). Every road (the page, the chat, Telegram,
+schedules, watches) uses them, and each answer that came from one says so
+under it:
+
+```toml
+fallback = "ollama:gemma4:12b@http://other-box:11434/v1, anthropic:claude-sonnet-5-5"
+```
+
+Settings → Sarathi → *When it doesn't answer* writes it. A cloud model
+needs its key under Keys, and gets it beside the usual one. An agent whose
+`agent.toml` says `when_down = "wait"` under `[model]` never switches.
+Empty: a turn whose model is down says so in words, and nothing is done
+(Yantra's notes/159).
+
 ### Every day: `sarathi up` and `sarathi down`
 
 ```

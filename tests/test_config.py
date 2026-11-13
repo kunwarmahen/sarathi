@@ -41,6 +41,8 @@ def test_what_init_writes_reads_back_as_the_same_settings(world):
     ('[model]\nprovider = "ollama"\n[run]\nroad = "docker"\n', "run.road must be one of"),
     ('[model]\nprovider = "ollama"\ncontext_window = "64k"\n', "model.context_window must be"),
     ('[model]\nprovider = "ollama"\ncontext_window = 64\n', "model.context_window must be"),
+    ('[model]\nprovider = "ollama"\nfallback = "gemini:pro"\n', "model.fallback entry"),
+    ('[model]\nprovider = "ollama"\nfallback = "ollama:x@box:11434"\n', "model.fallback entry"),
     ('[model\n', "not valid TOML"),
 ])
 def test_a_setting_it_does_not_know_stops_everything_by_name(text, says):
@@ -127,3 +129,23 @@ def test_the_context_window_reaches_yantra_on_both_roads(world):
     unset = parse('[model]\nprovider = "ollama"\n')
     assert "OLLAMA_CONTEXT_WINDOW" not in services.model_env(unset, {})
     assert "OLLAMA_CONTEXT_WINDOW" not in podman.container_env(unset)
+
+
+def test_a_model_standing_by_reaches_yantra_on_both_roads_with_its_key(world, monkeypatch):
+    from sarathi import podman, services
+    from sarathi.config import save_secret
+    monkeypatch.setattr(podman, "from_container",
+                        lambda url: url.replace("localhost", "host.containers.internal"))
+    chosen = parse('[model]\nprovider = "ollama"\n'
+                   'fallback = "anthropic:claude-sonnet-5-5, ollama:gemma4:12b"\n')
+    assert parse(render(chosen)) == chosen
+    assert services.model_env(chosen, {"ANTHROPIC_API_KEY": "k"})["YANTRA_FALLBACK"] \
+        == "anthropic:claude-sonnet-5-5, ollama:gemma4:12b"
+    assert podman.container_env(chosen)["YANTRA_FALLBACK"] == (
+        "anthropic:claude-sonnet-5-5, "
+        "ollama:gemma4:12b@http://host.containers.internal:11434/v1")
+    save_secret("ANTHROPIC_API_KEY", "sk-ant-test")
+    secrets = podman.unit_secrets(chosen)
+    assert all(unit.get("ANTHROPIC_API_KEY") == "sk-ant-test"
+               for unit in secrets.values() if unit)
+    assert "YANTRA_FALLBACK" not in podman.container_env(parse('[model]\nprovider = "ollama"\n'))

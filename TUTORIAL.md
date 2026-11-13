@@ -2687,6 +2687,8 @@ moment it happens. The messages you're most likely to meet:
 | You see | What it means | Do this |
 |---|---|---|
 | `Ollama is not answering at http://localhost:11434` | Ollama isn't running | `ollama serve`, or start the Ollama app |
+| *The model didn't answer (nothing is listening there), so nothing was done* (in a chat) | the model stopped while things were running | start Ollama again; to have another model answer meanwhile, **Settings → Sarathi → When it doesn't answer** (`fallback` under `[model]`), **Apply** |
+| *↪ qwen3.8 … didn't answer …, so gemma4:12b … answered* (under an answer) | your usual model was down and the one standing by answered | nothing, if that's fine; the next message tries your usual model first |
 | `qwen3.8:latest is not pulled yet` | the model isn't downloaded | `ollama pull qwen3.8:latest` |
 | `no key for anthropic: run sarathi init or set ANTHROPIC_API_KEY` | no key saved | `sarathi init --force` and paste it |
 | `yantra not started: something else is listening on port 8321` | another program uses that port | **Settings → Sarathi → Ports**, change Yantra's, **Save**, **Apply** (or `port` under `[yantra]` in sarathi.toml) |

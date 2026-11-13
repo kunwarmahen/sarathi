@@ -677,6 +677,7 @@ function drawSarathiTab() {
   const model = text(s.model.model || "", { placeholder: "the provider's default" });
   const base = text(s.model.base_url || "", { placeholder: "the usual address" });
   const ctx = text(s.model.context_window || "", { inputmode: "numeric", placeholder: "8192" });
+  const spare = text(s.model.fallback || "", { placeholder: "anthropic:claude-sonnet-5-5" });
   const samayOn = check(s.samay.on);
   const prahariOn = check(s.prahari ? s.prahari.on : true);
   const vidhiOn = check(s.vidhi ? s.vidhi.on : true);
@@ -725,7 +726,7 @@ function drawSarathiTab() {
   };
   const go = button("Save", () => save("/api/settings/sarathi", {
     model: { provider: provider.value, model: model.value.trim(), base_url: base.value.trim(),
-             context_window: ctx.value.trim() || null },
+             context_window: ctx.value.trim() || null, fallback: spare.value.trim() },
     yantra: { port: ports.yantra.value },
     samay: { on: samayOn.checked, port: ports.samay.value },
     prahari: { on: prahariOn.checked, port: ports.prahari.value,
@@ -758,7 +759,11 @@ function drawSarathiTab() {
       field("Provider", provider, "ollama: a model on this computer. anthropic, openai: a cloud " +
             "key, under Keys."),
       field("Model", model), field("Address", base),
-      field("Tokens your model holds", ctx, "A 64k Ollama model: 64000.")),
+      field("Tokens your model holds", ctx, "A 64k Ollama model: 64000."),
+      field("When it doesn't answer", spare, "Models to try instead, in order, like " +
+            "anthropic:claude-sonnet-5-5 or ollama:gemma4:12b@http://other-box:11434/v1. " +
+            "The answer says which one did. A cloud one needs its key under Keys. Empty: " +
+            "say the model is down and do nothing.")),
     h("div.card.form", {}, h("h3", {}, "Dvara: your agents for other people, and your phone"),
       h("label.inline", {}, dvaraOn, " On"),
       field("A Telegram bot answers as", bot, "The bot's token goes under Keys."),
