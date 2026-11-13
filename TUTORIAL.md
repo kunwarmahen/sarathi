@@ -730,8 +730,9 @@ ticked stays ticked while it's hidden. Under each agent, *Skills its
   use, and how often each was used), open Dvara's page from *Your pages*
   and scroll to *Who may do what unasked*, or type `dvara grants`.
 * **Accounts**: Setu's settings, and the rules of each site you added.
-* **Sarathi**: the model, Dvara and its bot, notices on phones, your
-  phone, ports.
+* **Sarathi**: the model (and *When it doesn't answer*, a model standing
+  by), Dvara and its bot, notices on phones, your phone, the model that
+  looks at camera pictures, ports.
 * **Keys**: a cloud key or the bot's token, typed in once and never
   shown back.
 

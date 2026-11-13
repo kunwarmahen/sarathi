@@ -1245,7 +1245,10 @@ Settings → **Check** has a **Backups** card: the newest file, **Back up
 now**, and **Back up every night**, which asks Samay once for a 02:30
 schedule on its backup road. Samay asks with a key that makes a backup
 and opens nothing, and you hear only when a night fails
-([notes/29](notes/29-the-house-in-one-file.md)).
+([notes/29](notes/29-the-house-in-one-file.md)). The Check list says
+whether last night's was made, and when a backup was last opened by
+`sarathi backup drill` (amber after 35 days, red if one didn't come back;
+[notes/37](notes/37-a-backup-that-comes-back.md)).
 
 ### Every page in one place: `sarathi home`
 
@@ -1469,8 +1472,9 @@ hidden),
 after which it asks again; every standing yes together is on Dvara's
 page, *Who may do what unasked*), **Accounts** (Setu's settings,
 each added site's rules, and which tools of each MCP server of your own
-only read), **Sarathi** (this file: the model, Dvara and
-its bot, the house address, ntfy, road, ports, and your phone, with
+only read), **Sarathi** (this file: the model and the one standing by
+when it doesn't answer, Dvara and its bot, the house address, ntfy, road,
+ports, the model that looks at camera pictures, and your phone, with
 buttons that reach it from this computer's USB cable) and **Keys**
 (typed in, never shown back). Each program checks a change the way it
 reads its file at start-up, and refuses one it couldn't load in its own
@@ -1522,7 +1526,9 @@ src/sarathi/
   config.py     sarathi.toml and secrets.env: read, checked, written  (notes/02);
                 each table by its project's name, old names still read  (notes/09);
                 [house], every page on the home network, links by its
-                name; Yantra's page's token, made once  (notes/23)
+                name; Yantra's page's token, made once  (notes/23);
+                [model] fallback and [prahari] see_model, passed to every
+                piece as YANTRA_FALLBACK and PRAHARI_SEE_MODEL
   first_run.py  sarathi init: which model answers, asked once  (notes/02)
   services.py   sarathi up / down: start Samay and the page, know
                 which are ours  (notes/02); and the pages  (notes/06);
@@ -1548,8 +1554,10 @@ src/sarathi/
                 counted, both removed (notes/37)
   doctor.py     sarathi doctor: what's wrong, green / amber / red, each
                 with its fix, from each sibling's own status, what `up`
-                started, the image's age, the firewall, the disk; the
-                home page's Settings → Check asks the same  (notes/28)
+                started, the image's age, the firewall, the disk, last
+                night's backup and the last drill, memories that fell away,
+                watches Prahari paused by itself; the home page's
+                Settings → Check asks the same  (notes/28, notes/36)
   backup.py     sarathi backup / restore: each program asked what it keeps,
                 one file sealed to a key only your passphrase opens, SQLite
                 copied whole, Smritikosh's pg_dump and its Neo4j and
@@ -1603,12 +1611,13 @@ src/sarathi/
                 started; its line in status, its card on the home page  (notes/13)
   Containerfile one image, every program, a browser and bubblewrap  (notes/05)
   cli.py        sarathi init | dvara | phone | smritikosh | road | image | up | down |
-                status [--json] | doctor | version | backup | restore | home | invite |
-                people
+                status [--json] | doctor | version | backup [list|delete|set|drill] |
+                restore | usage | home | invite | people
 tests/
   test_status.py  test_config.py  test_up.py  test_podman.py  test_door.py  test_home.py
   test_pages_up.py  test_phone.py  test_phones_named.py  test_names.py  test_smritikosh.py  test_people.py
   test_house.py  test_prahari.py  test_doctor.py  test_backup.py  test_version.py
+  test_drill.py  test_usage.py
 ```
 
 ## Status
