@@ -98,7 +98,7 @@ KNOWN: dict[str, set[str]] = {
     "model": {"provider", "model", "base_url", "context_window"},
     "yantra": {"port"},
     "samay": {"on", "port"},
-    "prahari": {"on", "port", "inlet_port", "public_url", "people"},
+    "prahari": {"on", "port", "inlet_port", "public_url", "people", "see_model"},
     "vidhi": {"on", "port", "market_port", "market_url"},
     "vaani": {"on", "port", "page_port"},
     "run": {"road"},
@@ -335,6 +335,9 @@ class Config:
     watch_inlet_port: int = 0
     #: Where the internet reaches that inlet (its Tailscale Funnel name).
     watch_public: str = ""
+    #: The model Prahari puts a camera's picture to (a ``see`` pick):
+    #: one Ollama marks vision. "": Yantra's own model.
+    watch_see_model: str = ""
     #: Vaani, a voice puck's listener: off until ``[vaani] on = true`` (its
     #: pucks are vaani.toml's, set up with `vaani init`); it answers
     #: through Dvara, so it needs Dvara on too.
@@ -568,6 +571,10 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
             market_url and not market_url.startswith(("https://", "http://"))):
         raise ConfigError(f"{where}: vidhi.market_url is a marketplace's address, like "
                           f"https://<computer>.<tailnet>.ts.net:10000 -- not {market_url!r}")
+    watch_see = watch.get("see_model", "")
+    if not isinstance(watch_see, str) or any(c.isspace() for c in watch_see.strip()):
+        raise ConfigError(f"{where}: prahari.see_model is one model's name, like "
+                          f'"gemma4:12b" -- not {watch_see!r}')
     if watch_public and not watch_inlet:
         raise ConfigError(f"{where}: prahari.public_url needs prahari.inlet_port: the "
                           "public road reaches the inlet alone, on a port of its own")
@@ -723,6 +730,7 @@ def parse(text: str, where: str = "sarathi.toml") -> Config:
                   watch_on=watch.get("on", True),
                   watch_port=_port(watch, "port", DEFAULT_WATCH_PORT, "prahari"),
                   watch_inlet_port=watch_inlet, watch_public=watch_public.rstrip("/"),
+                  watch_see_model=watch_see.strip(),
                   watch_people=tuple(n.strip() for n in watch_people),
                   routine_on=routine.get("on", True),
                   routine_port=_port(routine, "port", DEFAULT_ROUTINE_PORT, "vidhi"),
@@ -755,6 +763,8 @@ def _render_watch_extra(config: Config) -> str:
         lines.append(f"inlet_port = {config.watch_inlet_port}")
     if config.watch_public:
         lines.append(f'public_url = "{config.watch_public}"')
+    if config.watch_see_model:
+        lines.append(f'see_model = "{config.watch_see_model}"')
     if config.watch_people:
         lines.append("people = [" + ", ".join(f'"{n}"' for n in config.watch_people) + "]")
     return "\n".join(lines) + ("\n" if lines else "")

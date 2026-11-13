@@ -421,6 +421,7 @@ def sarathi_view(config: Config) -> dict:
         "prahari": {"on": config.watch_on, "port": config.watch_port,
                     "inlet_port": config.watch_inlet_port,
                     "public_url": config.watch_public,
+                    "see_model": config.watch_see_model,
                     "people": list(config.watch_people)},
         "vidhi": {"on": config.routine_on, "port": config.routine_port,
                   "market_port": config.routine_market_port,
@@ -519,6 +520,8 @@ def sarathi_apply(changes: dict) -> Config:
         if "public_url" in w:
             config = replace(config, watch_public=str(w.get("public_url") or "")
                              .strip().rstrip("/"))
+        if "see_model" in w:
+            config = replace(config, watch_see_model=str(w.get("see_model") or "").strip())
         if "people" in w:
             people = w.get("people") or []
             if isinstance(people, str):

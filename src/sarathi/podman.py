@@ -940,6 +940,8 @@ def units(config: Config) -> dict[str, str]:
                                f"{WATCH_INLET_PORT}\n" if config.watch_inlet_port else "")
                             + (f"Environment=PRAHARI_INLET_PUBLIC_URL={config.watch_public}\n"
                                if config.watch_public else "")
+                            + (f"Environment=PRAHARI_SEE_MODEL={config.watch_see_model}\n"
+                               if config.watch_see_model else "")
                             + f"Environment=PRAHARI_PUBLIC_URL={config.link(config.watch_port)}\n"
                             + (f"Environment=PRAHARI_DVARA_URL=http://{UNITS['dvara']}:"
                                f"{DOOR_PORT}\n"

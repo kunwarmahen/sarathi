@@ -687,6 +687,7 @@ function drawSarathiTab() {
                              { placeholder: "https://beast.tail1234.ts.net:8443" });
   const prahariPeople = text((s.prahari?.people || []).join(", "),
                              { placeholder: "everyone in Dvara's list" });
+  const prahariSee = text(s.prahari?.see_model || "", { placeholder: "the model above" });
   const road = pick([["process", "Plain programs"], ["podman", "Containers (Podman)"]], s.run.road);
   const pagesOn = check(s.pages.on);
   const dv = s.dvara || {};
@@ -729,7 +730,8 @@ function drawSarathiTab() {
     samay: { on: samayOn.checked, port: ports.samay.value },
     prahari: { on: prahariOn.checked, port: ports.prahari.value,
                inlet_port: ports.prahariInlet.value.trim() || 0,
-               public_url: prahariPublic.value.trim(), people: prahariPeople.value },
+               public_url: prahariPublic.value.trim(), people: prahariPeople.value,
+               see_model: prahariSee.value.trim() },
     vidhi: { on: vidhiOn.checked, port: ports.vidhi.value,
              market_port: ports.vidhiMarket.value.trim() || 0,
              market_url: vidhiMarketUrl.value.trim() },
@@ -796,6 +798,9 @@ function drawSarathiTab() {
       h("label.inline", {}, prahariOn, " Prahari: tells you when something happens"),
       field("Prahari's watches are for", prahariPeople, "Names from Dvara's people list, " +
             "with commas. Empty: everyone; each person's watch looks with their own accounts."),
+      field("Model that looks at camera pictures", prahariSee, "For a watch on a camera " +
+            "(\"is there a package at the door?\"). One that can see, like gemma4:12b; " +
+            "empty: the model above."),
       field("Prahari's inlet from outside", prahariPublic, "Its Tailscale Funnel address " +
             "(Prahari's deploy/public-inlet-tailscale.sh prints it), for a webhook or " +
             "Gmail's push. Needs the inlet's own port, under Ports."),

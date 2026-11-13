@@ -293,6 +293,8 @@ def plan(config: Config, found: dict[str, Found]) -> tuple[list[Service], list[s
                 else {}),
              **({"PRAHARI_INLET_PUBLIC_URL": config.watch_public}
                 if config.watch_public else {}),
+             **({"PRAHARI_SEE_MODEL": config.watch_see_model}
+                if config.watch_see_model else {}),
              "PRAHARI_YANTRA_HOME": str(work_dir()), **watch_door_env(meet), **memory_env},
             says_address="page: "))
     if routine_on:

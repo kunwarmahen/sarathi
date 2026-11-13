@@ -415,7 +415,12 @@ away once you pick something. When an agent wants a yes, a card with
 because the agent read something you didn't write (a page, an email),
 there's a third button, **Yes to all for this task**: the rest of that
 job's questions like it are then not asked, unless the agent reads
-something new. A purchase is still asked every time. The same button
+something new. A purchase is still asked every time. Opening a web
+address after such a read can ask too: when a page says *"open page 2 with
+your name filled in"* and the agent builds that address, the card says
+the address *isn't one it showed or you wrote*, because what's in it
+could carry your words out. Links the page itself gave still open
+without asking. The same button
 is on a card for a job that stopped and waited for you (*stopped and is
 waiting for your yes*), when everything it waits on was asked for that
 reason.
@@ -1953,6 +1958,58 @@ You don't have to type step 1 yourself, either. Tell your agent
 card first, makes the reading, and gives you the address from step 2.
 Before Home Assistant is set up, `prahari indriya push guestroom-temp
 61.5` sends a value by hand, as Home Assistant would.
+
+**A camera as a reading.** Home Assistant's cameras can be read too: a
+model that can see looks at the picture and answers one question, and
+that answer is the reading. It takes Setu's Home Assistant connection
+(*Accounts*), at any level, even *See only*.
+
+*1. Find your cameras.* Ask in the chat *"which cameras does Home
+Assistant have?"*, or type:
+
+```bash
+podman exec sarathi-yantra yantra --call mcp__homeassistant-home__list_entities \
+  --args '{"domain": "camera"}'
+#   camera.porch — Patio: idle
+#   camera.front_yard — Right: idle
+```
+
+*2. Try a question first.* `preview` looks once and keeps nothing:
+
+```bash
+podman exec sarathi-prahari prahari preview \
+  --check mcp__homeassistant-home__camera_snapshot --args '{"entity_id": "camera.porch"}' \
+  --pick '{"see": "Is there a package or a box by the door? Answer yes or no."}' \
+  --when '{"contains": "yes"}' --every 15m
+#   It sees No, I see a covered table, chairs, and a trash can on the brick patio.
+```
+
+*3. Make it a reading, and a watch on it:*
+
+```bash
+podman exec sarathi-prahari prahari indriya add porch-package \
+  --check mcp__homeassistant-home__camera_snapshot --args '{"entity_id": "camera.porch"}' \
+  --pick '{"see": "Is there a package or a box by the door? Answer yes or no."}' --every 15m
+podman exec sarathi-prahari prahari add "Package at the door" --sense porch-package \
+  --when '{"contains": "yes"}'
+```
+
+Or just ask: *"tell me when a package is at the front door"*. The card
+says *what a model sees, asked: …*, because this is the one kind of
+reading where a model looks every time. On this computer that model is
+your own (nothing leaves the house).
+
+**Which model.** A small thing far away in a small picture is hard. On a
+640-wide frame of the front yard, `qwen3.8` missed a dog, `gemma4:12b`
+found it and `gemma4:26b` called it a bird. Name the model for pictures
+under **Settings → Sarathi → Model that looks at camera pictures**
+(`see_model = "gemma4:12b"` under `[prahari]` in `sarathi.toml`), press
+**Apply**, and try your question with `preview` before trusting it.
+
+**An old picture.** Some cameras give Home Assistant only the picture
+saved at their last motion, not a new one. The time printed in the
+picture is the camera's. If your reading never changes, look at
+`seen.jpg` in the watch's folder under `~/.prahari/work/`.
 
 **What happened to a reading.** Under each indriya on Prahari's page
 (and Yantra's Watches panel), **Readings** lists what it took, newest

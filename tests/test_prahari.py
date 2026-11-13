@@ -150,6 +150,23 @@ class TestThePodmanRoad:
         assert "192.168.1.44:8783" not in unit and 8783 not in podman.lan_ports(config)
         assert "Environment=PRAHARI_INLET_PUBLIC_URL=https://b.ts.net:8443" in unit
 
+    def test_the_camera_model_reaches_the_container_and_the_plain_road(self, host,  # noqa: F811
+                                                                         world, monkeypatch):
+        from sarathi import config as config_mod
+        installed(world)
+        config = Config("ollama", road="podman", pages=Pages(on=False),
+                        watch_see_model="gemma4:12b")
+        unit = podman.units(config)["sarathi-prahari.container"]
+        assert "Environment=PRAHARI_SEE_MODEL=gemma4:12b" in unit
+        assert "PRAHARI_SEE_MODEL" not in podman.units(
+            Config("ollama", road="podman", pages=Pages(on=False)))["sarathi-prahari.container"]
+        monkeypatch.setattr(services, "model_env", lambda c: {})
+        planned, _ = services.plan(Config("ollama", pages=Pages(on=False),
+                                          watch_see_model="gemma4:12b"), found(*ALL))
+        assert next(s for s in planned if s.name == "prahari").env["PRAHARI_SEE_MODEL"] \
+            == "gemma4:12b"
+        assert 'see_model = "gemma4:12b"' in config_mod.render(config)
+
     def test_with_a_house_the_inlet_is_published_for_a_phone(self, host, world):  # noqa: F811
         installed(world)
         config = Config("ollama", road="podman", house=House("beast.local", "192.168.1.44"),

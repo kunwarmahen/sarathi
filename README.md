@@ -128,6 +128,7 @@ port = 8780
 [prahari]
 on = true              # started when Prahari is on this computer; optional
 port = 8782
+# see_model = "gemma4:12b"   # the model a camera's picture is put to (a see pick)
 
 [vidhi]
 on = true              # started when Vidhi is on this computer; optional
@@ -307,6 +308,12 @@ What `up` wires for you:
   `deploy/public-inlet-tailscale.sh` gives it a public HTTPS name through
   Tailscale Funnel, and `public_url = "https://…:8443"` tells Prahari
   that name, so its page and your agent show it.
+* **A camera as a reading**: with Home Assistant connected in Setu, a
+  watch can ask a model what a camera sees (*"is there a package at the
+  door?"*, Prahari's `see` pick). `see_model` under `[prahari]` (Settings →
+  Sarathi → *Model that looks at camera pictures*) names a model that can
+  see for it; empty, the house's model is used (TUTORIAL, *A camera as a
+  reading*).
 
 ### A puck you talk to: Vaani
 
